@@ -15,3 +15,5 @@ session*
 SESSION*
 makefile
 .state
+nek5000
+*.swp
