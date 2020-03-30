@@ -1,18 +1,18 @@
 [GENERAL]
-startFrom = BF_1cyl0.f00001
+startFrom = 0 #BF_1cyl0.f00001
 
 stopAt = endTime
-endTime = 10000.
+endTime = 1000.
 
-userParam01 = 3  #0:dns,1:stabilization,3:stability
-userParam02 = 50  #krylov snapshot to load
+userParam01 = 1  #0:dns,1:stabilization,3:stability
+userParam02 = 0  #krylov snapshot to load
 
 userParam03 = 1.1  #stabilization: 1:sfd, 1.1:sfd_ab3
 userParam04 = 0.15  #St mode  -> omega_c = pi St
 userParam05 = 0.19  #Sigma mode
 
-dt = 9.9930836E-03
-variableDt = no
+dt = 0
+variableDt = yes
 timeStepper = bdf3
 targetCFL = 0.5
 
@@ -21,9 +21,9 @@ writeInterval = 20.
 writeDoublePrecision = yes
 
 dealiasing = yes
-filtering = explicit
-filterWeight = 0.01
-filterCutoffRatio = 0.84
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
 
 [PROBLEMTYPE]
 equation = incompns
@@ -35,12 +35,12 @@ writeToFieldFile = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-09
+residualTol = 1.0E-08
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-09
+residualTol = 1.0E-08
 residualProj = yes
 density = 1.0
 viscosity = -100.0

@@ -43,7 +43,6 @@ def plot_rs(ax, filename, sized = 0, color='gray', label=None):
     plt.axhline(y=file.r.min(), c=color,lw=0.18+sized,ls='--')
     plt.axvline(x=file.t.max(), c=color,lw=0.18+sized,ls='--')
 
-
     return
 
 ########################################
@@ -61,10 +60,8 @@ if __name__ == '__main__':
     plt.axhline(y=1e-08, lw=0.1, c='k', ls='dotted')
     plt.axhline(y=1e-10, lw=0.1, c='k', ls='dotted')
 
-    plot_rs(plt, 'residu.dat_ab3', 0.2, 'g', r'Re=100 AB3')
-
-    plot_rs(plt, 'residu.dat_euler', 0, 'b', r'Re=100 Euler')
-
+    #plot_rs(plt, 'residu.dat_ab3', 0.2, 'g', r'Re=100 AB3')
+    #plot_rs(plt, 'residu.dat_euler', 0, 'b', r'Re=100 Euler')
     plot_rs(plt, 'residu.dat',   -0.05, 'm', r'Re=100')
 
 
