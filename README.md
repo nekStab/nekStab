@@ -56,3 +56,52 @@ PERIODIC ORBIT FOR UNFORCED CASES (2 cyl and Jet-in-Crossflow)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!! 
+PROGRAMMING BEST PRACTICES: The best style is consistent style!
+function and subroutine when possible
+1) always use implicit none with exception from .usr file
+2) comments with ! instead of c
+3) one tab is 3 spaces
+4) use small caps
+5) proper define real numbers: 1 -> 1. -> 1.0d0, 0.0d0
+6) subroutine -> return, end
+7) use nelv or nelt? we should pick only one
+8) to print output we use write(6,*)
+9) stop the code with call exitt
+
+
+local field declarations with
+real, save, dimension(lt) :: field1,field2,field3,
+
+shared variables:
+
+in SIZE we follow the standard from vx,vy,vz
+
+to discuss:
+11) Limit line length increased to 132 to avoid excissive use of continuation tabs, modern editors can do soft wrap, bust most cases we are slightly over the 72 characters standard
+5. File and folder structur: clustering subroutine in files with a clean structure 
+6. Naming conventions
+
+
+
+
+
