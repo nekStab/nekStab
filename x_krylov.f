@@ -1246,21 +1246,27 @@ c-----------------------------------------------------------------------
       include 'SIZE'            !
       include 'INPUT'           ! IF3D
       include 'PARALLEL'        ! GLLEL
-      include 'SOLN'            ! JPreal ffx, ffy, ffz
-      integer ix, iy, iz, ieg, iel, ip
+      include 'SOLN'            ! JP
+      real ffx, ffy, ffz
+      integer ix,iy,iz,ieg,iel,ip
+
       iel=GLLEL(ieg)
-      ip=ix+NX1*(iy-1+NY1*(iz-1+NZ1*(iel-1)))
-      if (JP.eq.0) then ! dns
-        ffx = ffx + SPNG_FUN(ip)*(SPNG_VR(ip,1) - VX(ix,iy,iz,iel))
-        ffy = ffy + SPNG_FUN(ip)*(SPNG_VR(ip,2) - VY(ix,iy,iz,iel))
-        if (IF3D) ffz = ffz + SPNG_FUN(ip)*(SPNG_VR(ip,NDIM)-VZ(ix,iy,iz,iel))
-      else ! perturbation
-        ffx = ffx - SPNG_FUN(ip)*VXP(ip,JP)
-        ffy = ffy - SPNG_FUN(ip)*VYP(ip,JP)
-        if(IF3D) ffz = ffz - SPNG_FUN(ip)*VZP(ip,JP)
+      if (SPNG_STR.gt.0.0) then
+         ip=ix+NX1*(iy-1+NY1*(iz-1+NZ1*(iel-1)))
+         if (JP.eq.0) then
+            ! dns
+            ffx = ffx + SPNG_FUN(ip)*(SPNG_VR(ip,1) - VX(ix,iy,iz,iel))
+            ffy = ffy + SPNG_FUN(ip)*(SPNG_VR(ip,2) - VY(ix,iy,iz,iel))
+            if (IF3D) ffz = ffz + SPNG_FUN(ip)*(SPNG_VR(ip,NDIM) - VZ(ix,iy,iz,iel))
+         else
+            ! perturbation
+            ffx = ffx - SPNG_FUN(ip)*VXP(ip,JP)
+            ffy = ffy - SPNG_FUN(ip)*VYP(ip,JP)
+            if(IF3D) ffz = ffz - SPNG_FUN(ip)*VZP(ip,JP)
+         endif
       endif
       return
-      end subroutine spng_forcing
+      end subroutine
 c-----------------------------------------------------------------------
       subroutine spng_init
       implicit none
@@ -1302,21 +1308,21 @@ c-----------------------------------------------------------------------
         bmax(NDIM) = glmax(ZM1,ntot)
       endif
 
-      spng_wl(1)=WIDTHLX
-      spng_wl(2)=WIDTHLY
-      if(IF3D)spng_wl(3)=WIDTHLZ
+      !spng_wl(1)=WIDTHLX
+      !spng_wl(2)=WIDTHLY
+      !if(IF3D)spng_wl(3)=WIDTHLZ
 
-      spng_wr(1)=WIDTHRX
-      spng_wr(2)=WIDTHRY
-      if(IF3D)spng_wr(3)=WIDTHRZ
+      !spng_wr(1)=WIDTHRX
+      !spng_wr(2)=WIDTHRY
+      !if(IF3D)spng_wr(3)=WIDTHRZ
 
-      spng_dl(1)=DROPLX
-      spng_dl(2)=DROPLY
-      if(IF3D)spng_dl(3)=DROPLZ
+      !spng_dl(1)=DROPLX
+      !spng_dl(2)=DROPLY
+      !if(IF3D)spng_dl(3)=DROPLZ
 
-      spng_dr(1)=DROPRX
-      spng_dr(2)=DROPRY
-      if(IF3D)spng_dr(3)=DROPRZ
+      !spng_dr(1)=DROPRX
+      !spng_dr(2)=DROPRY
+      !if(IF3D)spng_dr(3)=DROPRZ
 
       call rzero(spng_fun,ntot)
 
@@ -1381,5 +1387,30 @@ c-----------------------------------------------------------------------
       ifto = ltmp
 
       return
-      end subroutine spng_init
+      end
 c-----------------------------------------------------------------------
+      real function mth_stepf(x)
+      implicit none
+      real x, xdmin, xdmax
+      parameter (xdmin = 0.001, xdmax = 0.999)
+      if (x.le.xdmin) then
+         mth_stepf = 0.0d0
+      else if (x.le.xdmax) then
+         mth_stepf = 1.0d0/( 1.0d0 + exp(1.0d0/(x - 1.0d0) + 1.0d0/x) )
+      else
+         mth_stepf = 1.0d0
+      end if
+      end function mth_stepf
+c-----------------------------------------------------------------------
+      subroutine opadd3 (a1,a2,a3,b1,b2,b3,c1,c2,c3)
+      implicit none
+      include 'SIZE'
+      integer ntot1
+      real a1(1),a2(1),a3(1),b1(1),b2(1),b3(1),c1(1),c2(1),c3(1)
+      ntot1=nx1*ny1*nz1*nelv
+      call add3(a1,b1,c1,ntot1)
+      call add3(a2,b2,c2,ntot1)
+      if (ndim.eq.3) call add3(a3,b3,c3,ntot1)
+      return
+      end
+c----------------------------------------------------------------------

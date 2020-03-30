@@ -358,7 +358,7 @@ c-----------------------------------------------------------------------
       include 'NEKUSE'
 
       integer e,eg
-      if(uparam(1).gt.1)then    !forcing on
+      if(uparam(1).gt.1)then    !pre composed forced on
          e = gllel(eg)
          ffx = fcx(ix,iy,iz,e)
          ffy = fcy(ix,iy,iz,e)
@@ -367,10 +367,31 @@ c-----------------------------------------------------------------------
          ffx=0.0d0; ffy=0.0d0; ffz=0.0d0
       endif
 
-      !add forcing to ff
+      
+      spng_str = 1.0
       if(spng_str.gt.0.0)then
-        if(istep.eq.0)call spng_init
-        call spng_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+        if(istep.eq.0)then 
+
+                  spng_wl(1)=1.0 ! Sponge left section width; dimension X
+                  spng_wl(2)=0.0  ! Sponge left section width; dimension Y
+          if(IF3D)spng_wl(3)=0.0  ! Sponge left section width; dimension Z
+
+                 spng_wr(1)=40.0 ! Sponge right section width; dimension X
+                 spng_wr(2)= 0.0
+          if(IF3D)spng_wr(3)=0.0
+  
+                 spng_dl(1)=0.333*spng_wl(1) ! Sponge left drop/rise section width; dimension X
+                 spng_dl(2)=0.333*spng_wl(2)
+         if(IF3D)spng_dl(3)=0.333*spng_wl(3)
+   
+                spng_dr(1)=0.333*spng_wr(1) ! Sponge right drop/rise section width; dimension X
+                spng_dr(2)=0.333*spng_wr(2)
+        if(IF3D)spng_dr(3)=0.333*spng_wr(3)
+
+        call spng_init
+
+       endif
+       call spng_forcing(ffx,ffy,ffz,ix,iy,iz,eg) !add forcing to ff
       endif
 
       return

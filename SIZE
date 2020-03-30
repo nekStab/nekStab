@@ -14,7 +14,7 @@ c
       parameter (lxd=09)!09,12,15,18   ! GL  points for over-integration (dealiasing)
       parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
 
-      parameter (lelg=1472)            ! max number of global elements
+      parameter (lelg=2520)            ! max number of global elements
       parameter (lpmin=  8)            ! min number of MPI ranks
       parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
       parameter (ldimt=3)              ! max auxiliary fields (temperature + scalars)
@@ -65,3 +65,13 @@ c
      $    ,fcy(lx1,ly1,lz1,lelt)
      $    ,fcz(lx1,ly1,lz1,lelt)
       common /force/ fcx, fcy, fcz !general forcing array
+
+      real spng_fun(LX1*LY1*LZ1*LELV)     ! sponge function
+     $    ,spng_vr(LX1*LY1*LZ1*LELV,LDIM) ! reference velocity field
+      common /SPONGEV/ spng_fun, spng_vr
+      real spng_str      !var sponge strength
+      real spng_wl(LDIM) !var sponge width (left section; every dmension separately)
+      real spng_wr(LDIM) !var sponge width (right section)
+      real spng_dl(LDIM) !var sponge drop/rise width (left section)
+      real spng_dr(LDIM) !var sponge drop/rise width (right section)
+      common /SPONGER/ spng_str, spng_wl, spng_wr, spng_dl, spng_dr
