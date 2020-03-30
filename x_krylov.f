@@ -1,68 +1,22 @@
-      subroutine add_noise(qx, qy, qz)
-      implicit none
-      include 'SIZE'            ! NX1, NY1, NZ1, NELV, NID
-      include 'TSTEP'           ! TIME, DT
-      include 'PARALLEL'        ! LGLEL
-      include 'INPUT'           ! IF3D
-      include 'SOLN'            ! VX, VY, VZ, VMULT
-      include 'GEOM'            ! XM1, YM1, ZM1
+!!!!!!!!!
+!!! norm           -> return |u|
+!!! orthonormalize -> return u/|u|
+!!! switch_to_lnse_steady -> move somewhere else
 
-      real, dimension(lx1,ly1,lz1,lelv) :: qx, qy, qz
-      integer iel,ieg,il,jl,kl,nl
-      real xl(LDIM),mth_rand,fcoeff(3) !< coefficients for random distribution
+!!! krylov_schur
+!!! Arnoldi_fact
+!!! check_conv
+!!! Schur_decomp
+!!! Schur_fact
+!!! matrix_vector_product (fx, fy, fz, fp, qx, qy, qz)
+!!! outpost_ks(VP,FP,Qx,Qy,Qz,Qp,residu)
 
-      do iel=1,NELV
-       do kl=1,NZ1
-        do jl=1,NY1
-         do il=1,NX1
+!!! select_eigenvalue
+!!! matrix_matrix
+!!! eigen_decomp
+!!! sort_eigendecomp
+!!! matvec
 
-         ieg = LGLEL(iel)
-         xl(1) = XM1(il,jl,kl,iel)
-         xl(2) = YM1(il,jl,kl,iel)
-         if (if3D) xl(NDIM) = ZM1(il,jl,kl,iel)
-
-         fcoeff(1)=  3.0e4;fcoeff(2)= -1.5e3;fcoeff(3)=  0.5e5
-         qx(il,jl,kl,iel)=qx(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-
-         fcoeff(1)=  2.3e4;fcoeff(2)=  2.3e3;fcoeff(3)= -2.0e5
-         qy(il,jl,kl,iel)=qy(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-
-         if (IF3D) then
-           fcoeff(1)= 2.e4;fcoeff(2)= 1.e3;fcoeff(3)= 1.e5
-           qz(il,jl,kl,iel)=qz(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-         endif
-
-          enddo
-         enddo
-        enddo
-       enddo
-
-      ! face averaging
-      call opdssum(qx, qy, qz)
-      call opcolv (qx, qy, qz, VMULT)
-
-      call dsavg(qx)
-      call dsavg(qy)
-      if(if3D) call dsavg(qz)
-
-      call bcdirvc(qx, qy, qz,v1mask,v2mask,v3mask)
-
-      return
-      end subroutine
-c-----------------------------------------------------------------------
-      real function mth_rand(ix,iy,iz,ieg,xl,fcoeff)
-      implicit none
-      include 'SIZE'
-      include 'INPUT'       ! IF3D
-      integer ix,iy,iz,ieg
-      real xl(LDIM), fcoeff(3)
-      mth_rand = fcoeff(1)*(ieg+xl(1)*sin(xl(2))) + fcoeff(2)*ix*iy+fcoeff(3)*ix
-      if (IF3D) mth_rand = fcoeff(1)*(ieg +xl(NDIM)*sin(mth_rand))+fcoeff(2)*iz*ix+fcoeff(3)*iz
-      mth_rand = 1.e3*sin(mth_rand)
-      mth_rand = 1.e3*sin(mth_rand)
-      mth_rand = cos(mth_rand)
-      return
-      end function mth_rand
 c----------------------------------------------------------------------
       subroutine norm(qx, qy, qz, alpha) ! Compute vector norm
       implicit none
@@ -384,16 +338,12 @@ c     ----- Output all the spectrums and converged eigenmodes -----
       call outpost_ks( VP , FP , V_x , V_y , V_z , Pressure , residu )
 
       if(nid.eq.0)write(6,*)'Stopping code...'
-      lastep=1
-      call nek_end
+      call exitt
 
       return
       end
-
 c-----------------------------------------------------------------------
-
       subroutine Arnoldi_fact(Qx,Qy,Qz,Qp,H,beta,mstart)
-
       implicit none
       include 'SIZE'
       include 'TSTEP'
@@ -509,7 +459,7 @@ c     ----- Normalizes the orthogonal residual and uses it as a new Krylov vecto
          call opcopy(Qx(:,mstep+1),Qy(:,mstep+1),Qz(:,mstep+1),f_xr,f_yr,f_zr)
          if(ifpo) call copy(Qp(:,mstep+1),f_pr,n2)
 
-         if(nid.eq.0)write(6,*) ''
+         if(nid.eq.0)write(6,*)
          if(nid.eq.0)write(6,*) ' Outposting Krylov subspace to'
 
          time=real(time*mstep)
@@ -566,10 +516,46 @@ c     ----- Normalizes the orthogonal residual and uses it as a new Krylov vecto
       enddo !mstep = mstart, k_dim
 
       return
-      end subroutine
+      end
+c-----------------------------------------------------------------------
+      subroutine check_conv(res,have_cnv,beta,tol,H,n) !check convergence
+      implicit none
 
+!-----Inputs -----!
+
+      integer              :: n
+      real, dimension(n,n) :: H
+      real                 :: tol, beta
+
+!-----Outputs -----!
+
+      real, dimension(n) :: res
+      integer            :: have_cnv
+
+!-----Miscellaneous -----!
+
+      complex*16, dimension(n)   :: VP
+      complex*16, dimension(n,n) :: FP
+      integer :: i
+
+!-----Compute the eigedecomposition of H -----!
+
+      VP = ( 0.0D0 , 0.0D0 ); FP = ( 0.0D0 , 0.0D0 )
+      call eigen_decomp(H,n,VP,FP)
+
+!-----Compute the number of converged Ritz pairs -----!
+
+      have_cnv = 0; res = 1.0D0
+      do i = 1,n
+         res(i) = abs( beta * FP(n,i) )
+         if ( res(i) .LT. tol ) then
+            have_cnv = have_cnv + 1
+         endif
+      enddo
+
+      return
+      end
 c----------------------------------------------------------------------
-
       subroutine Schur_decomp(A,VS,VP,n,sdim)
       implicit none
 
@@ -647,202 +633,7 @@ c     ----- Compute the eigenvectors of T -----
 
       return
       end
-
-c----------------------------------------------------------------------
-
-      subroutine outpost_ks(VP,FP,Qx,Qy,Qz,Qp,residu)
-
-      implicit none
-
-      include 'SIZE'
-      include 'TSTEP'
-      include 'INPUT'
-      include 'CTIMER'
-      include 'GEOM'
-      include 'SOLN'
-      include 'MASS'
-
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-
-c     ----- Krylov basis V for the projection M*V = V*H -----
-
-      real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
-      common /ugrad/ wo1,wo2,wo3,vort
-
-      real, dimension(lt,k_dim+1)        :: Qx, Qy, Qz
-      real, dimension(lt2,k_dim+1)       :: Qp
-
-c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-
-      complex*16, dimension(k_dim)       :: VP
-      complex*16, dimension(k_dim,k_dim) :: FP
-
-c     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
-
-      complex*16, dimension(lt)          :: FP_Cx, FP_Cy, FP_Cz
-      complex*16, dimension(lt2)         :: FP_Cp
-
-c     ----- Miscellaneous -----
-
-      integer :: ifich1 = 10, ifich2 = 20, ifich3 = 30
-      integer :: n, n2, i, j
-
-      real                               :: sampling_period
-      real, dimension(k_dim)             :: residu
-      real                               :: glsc3,alpha!, beta
-
-      sampling_period = dt*nsteps
-
-      n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
-
-c     ----- Output all the spectrums and converged eigenmodes -----
-
-      if(nid.EQ.0) then
-       open(unit=ifich1,file='Spectre_H.dat'      ,form='formatted')
-       open(unit=ifich2,file='Spectre_NS.dat'     ,form='formatted')
-       open(unit=ifich3,file='Spectre_NS_conv.dat',form='formatted')
-      endif
-
-      do i = 1,k_dim
-
-         time = real(i) !here for the outposted files have different times
-
-         if(nid.EQ.0) then
-
-            !Spectre_H.dat
-           write(ifich1,"(3E15.7)") real(VP(i)),
-     $                              aimag(VP(i)),
-     $                              residu(i)
-
-            !Spectre_NS.dat
-           write(ifich2,"(3E15.7)") log(abs(VP(i)))/sampling_period,
-     $             ATAN2(aimag(VP(i)),real(VP(i)))/sampling_period,
-     $             residu(i)
-
-         endif
-
-         if(residu(i).LT.eigen_tol)then !just the converged oned
-
-            !Spectre_NS_conv.dat
-          if(nid.EQ.0)write(ifich3,"(3E15.7)")
-     $     log(abs(VP(i)))/sampling_period,
-     $     ATAN2(aimag(VP(i)),real(VP(i)))/sampling_period
-
-c     ----- Computation of the corresponding eigenmode -----
-
-            FP_Cx = (0.0D0,0.0D0)
-            FP_Cy = (0.0D0,0.0D0)
-            if(if3D) FP_Cz = (0.0D0,0.0D0)
-            if(ifpo) FP_Cp = (0.0D0,0.0D0)
-
-            call matvec(FP_Cx,Qx(:,1:k_dim),FP(:,i),lt)
-            call matvec(FP_Cy,Qy(:,1:k_dim),FP(:,i),lt)
-            if(if3D)
-     $      call matvec(FP_Cz,Qz(:,1:k_dim),FP(:,i),lt)
-            if(ifpo)
-     $      call matvec(FP_Cp,Qp(:,1:k_dim),FP(:,i),lt2)
-
-c     ----- Normalization to be unit-norm -----
-c     Note: volume integral of FP*conj(FP) = 1.
-
-            alpha = glsc3(real(FP_Cx),bm1,real(FP_Cx),n)
-     $           +  glsc3(real(FP_Cy),bm1,real(FP_Cy),n)
-     $           +  glsc3(aimag(FP_Cx),bm1,aimag(FP_Cx),n)
-     $           +  glsc3(aimag(FP_Cy),bm1,aimag(FP_Cy),n)
-
-            if(if3D) alpha = alpha
-     $           +  glsc3(real(FP_Cz),bm1,real(FP_Cz),n)
-     $           +  glsc3(aimag(FP_Cz),bm1,aimag(FP_Cz),n)
-
-            alpha = 1.0D0/sqrt(alpha)
-
-c     ----- Output the imaginary part -----
-
-            call opcopy(vx,vy,vz
-     $           ,aimag(FP_Cx)
-     $           ,aimag(FP_Cy)
-     $           ,aimag(FP_Cz))
-            if(ifpo) call copy(pr,aimag(FP_Cp),n2)
-
-            call opcmult(vx,vy,vz,alpha)
-            if(ifpo) call cmult(pr,alpha,n2)
-            ifto = .false.; ifpo = .true.
-            call outpost(vx,vy,vz,pr,t,'Im_')
-
-c     ----- Output the real part -----
-
-            call opcopy(vx,vy,vz
-     $           ,real(FP_Cx)
-     $           ,real(FP_Cy)
-     $           ,real(FP_Cz))
-            if(ifpo) call copy(pr,real(FP_Cp),n2)
-
-            call opcmult(vx,vy,vz,alpha)
-            if(ifpo) call cmult(pr,alpha,n2)
-            ifto = .false.; ifpo = .true.
-            call outpost(vx,vy,vz,pr,t,'Re_')
-
-            call oprzero(wo1,wo2,wo3)
-            call comp_vort3(vort,wo1,wo2,vx,vy,vz)
-            ifto = .false.; ifpo = .false.
-            call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'Rev')
-            ifto = .true.; ifpo = .true.
-
-       endif
-
-      enddo
-
-      if(nid.EQ.0)then
-         close(ifich1);         close(ifich2);         close(ifich3)
-      endif
-
-      return
-      end
-
 c-----------------------------------------------------------------------
-
-      subroutine check_conv(res,have_cnv,beta,tol,H,n)
-      implicit none
-
-!-----Inputs -----!
-
-      integer              :: n
-      real, dimension(n,n) :: H
-      real                 :: tol, beta
-
-!-----Outputs -----!
-
-      real, dimension(n) :: res
-      integer            :: have_cnv
-
-!-----Miscellaneous -----!
-
-      complex*16, dimension(n)   :: VP
-      complex*16, dimension(n,n) :: FP
-      integer :: i
-
-!-----Compute the eigedecomposition of H -----!
-
-      VP = ( 0.0D0 , 0.0D0 ); FP = ( 0.0D0 , 0.0D0 )
-      call eigen_decomp(H,n,VP,FP)
-
-!-----Compute the number of converged Ritz pairs -----!
-
-      have_cnv = 0; res = 1.0D0
-      do i = 1,n
-         res(i) = abs( beta * FP(n,i) )
-         if ( res(i) .LT. tol ) then
-            have_cnv = have_cnv + 1
-         endif
-      enddo
-
-      return
-      end
-
-c-----------------------------------------------------------------------
-
       subroutine Schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
 
       implicit none
@@ -1011,6 +802,8 @@ c----------------------------------------------------------------------
       time = 0.0D0
       do istep = 1, nsteps
 
+!     ----- Prepare the base flow to vx,vy,vz
+
         if(ifldbf)then
 
           if(nid.eq.0)write(6,*)'Copying base flow!'
@@ -1028,6 +821,8 @@ c----------------------------------------------------------------------
 
         endif
 
+!      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
+
          call nek_advance
 
       enddo
@@ -1038,7 +833,7 @@ c----------------------------------------------------------------------
       return
       end
 c----------------------------------------------------------------------
-      subroutine matrix_vector_product_original(fx, fy, fz, fp, qx, qy, qz)
+      subroutine outpost_ks(VP,FP,Qx,Qy,Qz,Qp,residu) !outposting vectors
       implicit none
       include 'SIZE'
       include 'TSTEP'
@@ -1047,29 +842,144 @@ c----------------------------------------------------------------------
       include 'GEOM'
       include 'SOLN'
       include 'MASS'
-      include 'ADJOINT'
+
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-      real, dimension(lt)                :: fx, fy, fz, qx, qy, qz
-      real, dimension(lt2)               :: fp
-      integer n, n2
-      n = nx1*ny1*nz1*nelt; n2 = nx2*ny2*nz2*nelt
 
-!     ----- Initial condition -----
+c     ----- Krylov basis V for the projection M*V = V*H -----
 
-      call opcopy(vxp, vyp, vzp, qx, qy, qz)
-      call opcopy(vx , vy , vz , ubase,vbase,wbase)
+      real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
+      common /ugrad/ wo1,wo2,wo3,vort
 
-!     ----- Time-stepper matrix-vector product -----
+      real, dimension(lt,k_dim+1)        :: Qx, Qy, Qz
+      real, dimension(lt2,k_dim+1)       :: Qp
 
-      time = 0.0D0
-      do istep = 1, nsteps
-       call opcopy(vx , vy , vz , ubase,vbase,wbase)
-       call nek_advance
+c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+
+      complex*16, dimension(k_dim)       :: VP
+      complex*16, dimension(k_dim,k_dim) :: FP
+
+c     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
+
+      complex*16, dimension(lt)          :: FP_Cx, FP_Cy, FP_Cz
+      complex*16, dimension(lt2)         :: FP_Cp
+
+c     ----- Miscellaneous -----
+
+      integer :: ifich1 = 10, ifich2 = 20, ifich3 = 30
+      integer :: n, n2, i, j
+
+      real                               :: sampling_period
+      real, dimension(k_dim)             :: residu
+      real                               :: glsc3,alpha!, beta
+
+      sampling_period = dt*nsteps
+
+      n = nx1*ny1*nz1*nelt
+      n2 = nx2*ny2*nz2*nelt
+
+c     ----- Output all the spectrums and converged eigenmodes -----
+
+      if(nid.EQ.0) then
+       open(unit=ifich1,file='Spectre_H.dat'      ,form='formatted')
+       open(unit=ifich2,file='Spectre_NS.dat'     ,form='formatted')
+       open(unit=ifich3,file='Spectre_NS_conv.dat',form='formatted')
+      endif
+
+      do i = 1,k_dim
+
+         time = real(i) !here for the outposted files have different times
+
+         if(nid.EQ.0) then
+
+            !Spectre_H.dat
+           write(ifich1,"(3E15.7)") real(VP(i)),
+     $                              aimag(VP(i)),
+     $                              residu(i)
+
+            !Spectre_NS.dat
+           write(ifich2,"(3E15.7)") log(abs(VP(i)))/sampling_period,
+     $             ATAN2(aimag(VP(i)),real(VP(i)))/sampling_period,
+     $             residu(i)
+
+         endif
+
+         if(residu(i).LT.eigen_tol)then !just the converged oned
+
+            !Spectre_NS_conv.dat
+          if(nid.EQ.0)write(ifich3,"(3E15.7)")
+     $     log(abs(VP(i)))/sampling_period,
+     $     ATAN2(aimag(VP(i)),real(VP(i)))/sampling_period
+
+c     ----- Computation of the corresponding eigenmode -----
+
+            FP_Cx = (0.0D0,0.0D0)
+            FP_Cy = (0.0D0,0.0D0)
+            if(if3D) FP_Cz = (0.0D0,0.0D0)
+            if(ifpo) FP_Cp = (0.0D0,0.0D0)
+
+            call matvec(FP_Cx,Qx(:,1:k_dim),FP(:,i),lt)
+            call matvec(FP_Cy,Qy(:,1:k_dim),FP(:,i),lt)
+            if(if3D)
+     $      call matvec(FP_Cz,Qz(:,1:k_dim),FP(:,i),lt)
+            if(ifpo)
+     $      call matvec(FP_Cp,Qp(:,1:k_dim),FP(:,i),lt2)
+
+c     ----- Normalization to be unit-norm -----
+c     Note: volume integral of FP*conj(FP) = 1.
+
+            alpha = glsc3(real(FP_Cx),bm1,real(FP_Cx),n)
+     $           +  glsc3(real(FP_Cy),bm1,real(FP_Cy),n)
+     $           +  glsc3(aimag(FP_Cx),bm1,aimag(FP_Cx),n)
+     $           +  glsc3(aimag(FP_Cy),bm1,aimag(FP_Cy),n)
+
+            if(if3D) alpha = alpha
+     $           +  glsc3(real(FP_Cz),bm1,real(FP_Cz),n)
+     $           +  glsc3(aimag(FP_Cz),bm1,aimag(FP_Cz),n)
+
+            alpha = 1.0D0/sqrt(alpha)
+
+c     ----- Output the imaginary part -----
+
+            call opcopy(vx,vy,vz
+     $           ,aimag(FP_Cx)
+     $           ,aimag(FP_Cy)
+     $           ,aimag(FP_Cz))
+            if(ifpo) call copy(pr,aimag(FP_Cp),n2)
+
+            call opcmult(vx,vy,vz,alpha)
+            if(ifpo) call cmult(pr,alpha,n2)
+            ifto = .false.; ifpo = .true.
+            call outpost(vx,vy,vz,pr,t,'Im_')
+
+c     ----- Output the real part -----
+
+            call opcopy(vx,vy,vz
+     $           ,real(FP_Cx)
+     $           ,real(FP_Cy)
+     $           ,real(FP_Cz))
+            if(ifpo) call copy(pr,real(FP_Cp),n2)
+
+            call opcmult(vx,vy,vz,alpha)
+            if(ifpo) call cmult(pr,alpha,n2)
+            ifto = .false.; ifpo = .true.
+            call outpost(vx,vy,vz,pr,t,'Re_')
+
+c     ----- Output vorticity from real part -----
+
+            call oprzero(wo1,wo2,wo3)
+            call comp_vort3(vort,wo1,wo2,vx,vy,vz)
+            ifto = .false.; ifpo = .false.
+            call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'Rev')
+            ifto = .true.; ifpo = .true.
+
+       endif
+
       enddo
 
-      call opcopy(fx, fy, fz, vxp, vyp, vzp)
-      if(ifpo) call copy(fp, prp, n2)
+      if(nid.EQ.0)then
+         close(ifich1);         close(ifich2);         close(ifich3)
+      endif
 
       return
       end
@@ -1078,7 +988,7 @@ c---------------------------------------------------------------
       implicit none
       include 'SIZE'
       logical :: select_eigenvalue
-      real wr, wi
+      real :: wr, wi
       select_eigenvalue = .false.
       if(sqrt(wr**2+wi**2).GT.(1.0D0-schur_del))select_eigenvalue=.true.
       end
@@ -1103,39 +1013,6 @@ c     ----- Matrix-matrix multiplication -----
       return
       end subroutine
 c-----------------------------------------------------------------------
-      subroutine sort_eigendecomp(VP,FP,n)
-      implicit none
-      integer                    :: n
-      complex*16, dimension(n)   :: VP
-      complex*16, dimension(n,n) :: FP
-      real, dimension(n)         :: norm
-      real                       :: temp_real
-      complex*16                 :: temp_complex
-      complex*16, dimension(n)   :: temp_n
-      integer                    :: k, l
-
-c     ----- Sorting the eigenvalues according to their norm -----
-
-      temp_n   = (0.0D0,0.0D0)
-      norm = sqrt( real(VP)**2 + aimag(VP)**2 )
-      do k = 1,n-1
-         do l = k+1,n
-            if (norm(k).LT.norm(l)) then
-               temp_real    = norm(k)
-               temp_complex = VP(k)
-               temp_n       = FP(:,k)
-               norm(k) = norm(l)
-               norm(l) = temp_real
-               VP(k)  = VP(l)
-               VP(l)  = temp_complex
-               FP(:,k) = FP(:,l)
-               FP(:,l) = temp_n
-            endif
-         enddo
-      enddo
-      return
-      end
-c-----------------------------------------------------------------------
       subroutine eigen_decomp(A,n,VP,VR)
       implicit none
 c     ----- Required variables for zgeev (eigenpairs computations) -----
@@ -1156,6 +1033,37 @@ c     ----- Sort the eigedecomposition -----
       return
       end
 c-----------------------------------------------------------------------
+      subroutine sort_eigendecomp(VP,FP,n)
+      implicit none
+      integer                    :: n
+      complex*16, dimension(n)   :: VP
+      complex*16, dimension(n,n) :: FP
+      real, dimension(n)         :: norm
+      real                       :: temp_real
+      complex*16                 :: temp_complex
+      complex*16, dimension(n)   :: temp_n
+      integer                    :: k, l
+c     ----- Sorting the eigenvalues according to their norm -----
+      temp_n   = (0.0D0,0.0D0)
+      norm = sqrt( real(VP)**2 + aimag(VP)**2 )
+      do k = 1,n-1
+         do l = k+1,n
+            if (norm(k).LT.norm(l)) then
+               temp_real    = norm(k)
+               temp_complex = VP(k)
+               temp_n       = FP(:,k)
+               norm(k) = norm(l)
+               norm(l) = temp_real
+               VP(k)  = VP(l)
+               VP(l)  = temp_complex
+               FP(:,k) = FP(:,l)
+               FP(:,l) = temp_n
+            endif
+         enddo
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine matvec(FP_Cx,Qx,FP,n)
       implicit none
       include 'SIZE'
@@ -1170,247 +1078,3 @@ c-----------------------------------------------------------------------
       enddo
       return
       end
-c-----------------------------------------------------------------------
-      subroutine whereyouwant(resnam,posfil)
-      character*3 resnam
-      integer posfil
-      common /RES_WANT/ nopen(99,2)
-
-      !in prepost.f change in mfo_open_files function the declaration of
-      !nopen variable from "save nopen" to "common /RES_WANT/ nopen"
-      !!integer nopen(99,2)
-      !!common  /RES_WANT/ nopen
-      !!data    nopen  / 198*0 /
-      !subroutine mfo_open_files in line 1094 in prepost.f
-
-      iprefix          = i_find_prefix(resnam,99)
-      nopen(iprefix,1) = posfil -1
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine load_files(V_x,V_y,V_z,P_r,mstart,kd,fname)
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-      integer                            :: kd,    mstart,n,n2,i,j
-
-c     ----- Krylov basis V for the projection M*V = V*H -----
-
-      real, dimension(lt,kd+1)        :: V_x, V_y, V_z
-      real, dimension(lt2,kd+1)       :: P_r
-      character*3  fname
-      character*60  filename
-      character(len=7)   :: tl
-      character(len=20)  :: fmt
-
-      n     = nx1*ny1*nz1*nelt
-      n2    = nx2*ny2*nz2*nelt
-
-c     ----- Upload the snapshots -----
-
-      do i = 1, mstart
-
-         if(i.lt.10)                        fmt = '(i1.1)' ! 1 to 9
-         if(i.ge.10.and.i.lt.100)           fmt = '(i2.2)' ! 10 to 99
-         if(i.ge.100.and.i.lt.1000)         fmt = '(i3.3)' ! 100 to 999
-         if(i.ge.1000.and.i.lt.10000)       fmt = '(i4.4)' ! 1000 to 9999
-         if(i.ge.10000.and.i.lt.100000)     fmt = '(i5.5)' ! 10000 to 99999
-
-         j=i
-         write(tl,fmt) j
-         if(i.lt.10)
-     $        filename = trim(fname)//trim(SESSION)//'0.f0000'//trim(tl)
-         if(i.ge.10.and.i.lt.100)
-     $        filename = trim(fname)//trim(SESSION)//'0.f000'//trim(tl)
-         if(i.ge.100.and.i.lt.1000)
-     $        filename = trim(fname)//trim(SESSION)//'0.f00'//trim(tl)
-         if(i.ge.1000.and.i.lt.10000)
-     $        filename = trim(fname)//trim(SESSION)//'0.f0'//trim(tl)
-         if(i.ge.10000.and.i.lt.100000)
-     $        filename = trim(fname)//trim(SESSION)//'0.f'//trim(tl)
-
-         call load_fld(filename)
-         call opcopy(V_x(:,i),V_y(:,i),V_z(:,i),vx,vy,vz)
-         call copy(P_r(:,i),pr,n2)
-
-      enddo
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine spng_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
-      implicit none
-      include 'SIZE'            !
-      include 'INPUT'           ! IF3D
-      include 'PARALLEL'        ! GLLEL
-      include 'SOLN'            ! JP
-      real ffx, ffy, ffz
-      integer ix,iy,iz,ieg,iel,ip
-
-      iel=GLLEL(ieg)
-      if (SPNG_STR.gt.0.0) then
-         ip=ix+NX1*(iy-1+NY1*(iz-1+NZ1*(iel-1)))
-         if (JP.eq.0) then
-            ! dns
-            ffx = ffx + SPNG_FUN(ip)*(SPNG_VR(ip,1) - VX(ix,iy,iz,iel))
-            ffy = ffy + SPNG_FUN(ip)*(SPNG_VR(ip,2) - VY(ix,iy,iz,iel))
-            if (IF3D) ffz = ffz + SPNG_FUN(ip)*(SPNG_VR(ip,NDIM) - VZ(ix,iy,iz,iel))
-         else
-            ! perturbation
-            ffx = ffx - SPNG_FUN(ip)*VXP(ip,JP)
-            ffy = ffy - SPNG_FUN(ip)*VYP(ip,JP)
-            if(IF3D) ffz = ffz - SPNG_FUN(ip)*VZP(ip,JP)
-         endif
-      endif
-      return
-      end subroutine
-c-----------------------------------------------------------------------
-      subroutine spng_init
-      implicit none
-      include 'SIZE'
-      integer nn
-      real vtmp(lx1*ly1*lz1*lelt,ldim)
-      common /CTMP1/ vtmp
-
-      nn = lx1*ly1*lz1*lelt*ldim
-      call rzero(vtmp,nn)
-      call spng_set(vtmp(1,1),vtmp(1,2),vtmp(1,ndim))
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine spng_set(lvx,lvy,lvz)
-      implicit none
-      include 'SIZE'
-      include 'INPUT'
-      include 'GEOM'
-
-      real lvx   (LX1*LY1*LZ1*LELV),lvy(LX1*LY1*LZ1*LELV),lvz(LX1*LY1*LZ1*LELV)
-      real lcoord(LX1*LY1*LZ1*LELV)
-      common /SCRUZ/ lcoord
-
-      integer ierr, nhour, nmin, itmp, ntot, il, jl
-      real rtmp, ltim, bmin(LDIM), bmax(LDIM)
-      real xxmax, xxmax_c, xxmin, xxmin_c, arg
-      real glmin, glmax, mth_stepf
-      logical ltmp
-
-      ntot = NX1*NY1*NZ1*NELV
-      bmin(1) = glmin(XM1,ntot)
-      bmax(1) = glmax(XM1,ntot)
-      bmin(2) = glmin(YM1,ntot)
-      bmax(2) = glmax(YM1,ntot)
-      if(IF3D) then
-        bmin(NDIM) = glmin(ZM1,ntot)
-        bmax(NDIM) = glmax(ZM1,ntot)
-      endif
-
-      !spng_wl(1)=WIDTHLX
-      !spng_wl(2)=WIDTHLY
-      !if(IF3D)spng_wl(3)=WIDTHLZ
-
-      !spng_wr(1)=WIDTHRX
-      !spng_wr(2)=WIDTHRY
-      !if(IF3D)spng_wr(3)=WIDTHRZ
-
-      !spng_dl(1)=DROPLX
-      !spng_dl(2)=DROPLY
-      !if(IF3D)spng_dl(3)=DROPLZ
-
-      !spng_dr(1)=DROPRX
-      !spng_dr(2)=DROPRY
-      !if(IF3D)spng_dr(3)=DROPRZ
-
-      call rzero(spng_fun,ntot)
-
-         ! save reference field
-         call copy(spng_vr(1,1),lvx,ntot)
-         call copy(spng_vr(1,2),lvy,ntot)
-         if (IF3D) call copy(spng_vr(1,NDIM),lvz, ntot)
-
-         ! for every dimension
-         do il=1,NDIM
-
-          if (spng_wl(il).gt.0.0.or.spng_wr(il).gt.0.0) then
-
-             if (spng_wl(il).lt.spng_dl(il).or.spng_wr(il).lt.spng_dr(il)) then
-                write(6,*)'Wrong sponge parameters!'
-             endif
-
-             xxmax   = bmax(il) - spng_wr(il)! sponge beginning (rise at xmax; right)
-             xxmin   = bmin(il) + spng_wl(il)! end (drop at xmin; left)
-             xxmax_c = xxmax    + spng_dr(il)! beginnign of constant part (right)
-             xxmin_c = xxmin    - spng_dl(il)! beginnign of constant part (left)
-
-             ! get SPNG_FUN
-             if (xxmax.le.xxmin) then
-                write(6,*)'Sponge too wide'
-             else
-                ! this should be done by pointers, but for now I avoid it
-                if (il.eq.1) then
-                   call copy(lcoord,XM1, ntot)
-                elseif (il.eq.2) then
-                   call copy(lcoord,YM1, ntot)
-                elseif (il.eq.3) then
-                   call copy(lcoord,ZM1, ntot)
-                endif
-
-                do jl=1,ntot
-                   rtmp = lcoord(jl)
-                   if(rtmp.le.xxmin_c) then ! constant; xmin
-                      rtmp=spng_str
-                   elseif(rtmp.lt.xxmin) then ! fall; xmin
-                      arg = (xxmin-rtmp)/spng_wl(il)
-                      rtmp = mth_stepf(arg)
-                   elseif (rtmp.le.xxmax) then ! zero
-                      rtmp = 0.0
-                   elseif (rtmp.lt.xxmax_c) then ! rise
-                      arg = (rtmp-xxmax)/spng_wr(il)
-                      rtmp = mth_stepf(arg)
-                   else    ! constant
-                      rtmp = spng_str
-                   endif
-                   spng_fun(jl)=max(spng_fun(jl),rtmp)
-                enddo
-
-             endif  ! xxmax.le.xxmin
-
-          endif  ! spng_w(il).gt.0.0
-       enddo
-
-      ltmp = ifto
-      ifto = .TRUE.
-      call outpost2(spng_vr,spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
-      ifto = ltmp
-
-      return
-      end
-c-----------------------------------------------------------------------
-      real function mth_stepf(x)
-      implicit none
-      real x, xdmin, xdmax
-      parameter (xdmin = 0.001, xdmax = 0.999)
-      if (x.le.xdmin) then
-         mth_stepf = 0.0d0
-      else if (x.le.xdmax) then
-         mth_stepf = 1.0d0/( 1.0d0 + exp(1.0d0/(x - 1.0d0) + 1.0d0/x) )
-      else
-         mth_stepf = 1.0d0
-      end if
-      end function mth_stepf
-c-----------------------------------------------------------------------
-      subroutine opadd3 (a1,a2,a3,b1,b2,b3,c1,c2,c3)
-      implicit none
-      include 'SIZE'
-      integer ntot1
-      real a1(1),a2(1),a3(1),b1(1),b2(1),b3(1),c1(1),c2(1),c3(1)
-      ntot1=nx1*ny1*nz1*nelv
-      call add3(a1,b1,c1,ntot1)
-      call add3(a2,b2,c2,ntot1)
-      if (ndim.eq.3) call add3(a3,b3,c3,ntot1)
-      return
-      end
-c----------------------------------------------------------------------
