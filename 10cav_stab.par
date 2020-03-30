@@ -1,0 +1,44 @@
+[GENERAL] 
+startFrom = 0
+stopAt = numSteps #numSteps #endTime
+numSteps = 4000
+
+userParam01 = 3  #0:dns,3:stab
+userParam02 = 0  #stab restart
+
+dt = 5.0E-04
+timeStepper = bdf3
+variableDt = no
+targetCFL = 0.5
+writeControl = runTime #timeStep #runTime
+writeInterval = 9999.
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+equation = incomplinns
+solveBaseflow = no
+numberOfPerturbations = 1
+
+[MESH]
+writeToFieldFile = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.e-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.e-9
+residualProj = yes
+density = 1.
+viscosity = -830.0
+writeToFieldFile = yes
+
+[TEMPERATURE] # vorticity
+solver = none
+writeToFieldFile = yes
