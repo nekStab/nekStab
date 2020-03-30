@@ -19,7 +19,7 @@ uparam(10)=
 when steady state we can dynamically extract: which norm to ensure steadystate?
 0.1 POD proper orthogonal decomposition (space-only)
 0.2 SPOD spectral proper orthogonal decomposition (space-time, single frequency modes)
-0.3 DMD dynamic mode decomposition  (https://arxiv.org/pdf/1406.7187.pdf) 
+0.3 DMD dynamic mode decomposition  (https://arxiv.org/pdf/1406.7187.pdf)
 
 STABILITY FRAMEWORK
 
@@ -37,7 +37,7 @@ STABILITY FRAMEWORK
 
 BASE FLOW OPTIONS
 a) prescribed in useric (e.g. Blasius solution)
-b) load fixed point BF_ + casename + 0.f00001 
+b) load fixed point BF_ + casename + 0.f00001
 c) compute with 1.1 or 1.2, dumpt to disk and switch to 3 -> requires the frequency of the mode to T
 
 
@@ -75,7 +75,7 @@ PERIODIC ORBIT FOR UNFORCED CASES (2 cyl and Jet-in-Crossflow)
 
 
 
-!!!!!!!!!!!!!!!!!!!!!! 
+!!!!!!!!!!!!!!!!!!!!!!
 PROGRAMMING BEST PRACTICES: The best style is consistent style!
 function and subroutine when possible
 1) always use implicit none with exception from .usr file
@@ -104,10 +104,5 @@ c     Solution data
 
 to discuss:
 11) Limit line length increased to 132 to avoid excissive use of continuation tabs, modern editors can do soft wrap, bust most cases we are slightly over the 72 characters standard
-5. File and folder structur: clustering subroutine in files with a clean structure 
+5. File and folder structur: clustering subroutine in files with a clean structure
 6. Naming conventions
-
-
-
-
-
