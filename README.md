@@ -96,6 +96,12 @@ shared variables:
 
 in SIZE we follow the standard from vx,vy,vz
 
+c     Solution data
+      real vx     (lx1,ly1,lz1,lelv)
+     $    ,vy     (lx1,ly1,lz1,lelv)
+     $    ,vz     (lx1,ly1,lz1,lelv)
+      common /vptsol/ vx, vy, vz
+
 to discuss:
 11) Limit line length increased to 132 to avoid excissive use of continuation tabs, modern editors can do soft wrap, bust most cases we are slightly over the 72 characters standard
 5. File and folder structur: clustering subroutine in files with a clean structure 
