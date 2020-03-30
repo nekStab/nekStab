@@ -37,6 +37,7 @@ c
       parameter (lbelt=1)              ! lelt for mhd
       parameter (lpelt=lelt)           ! lelt for linear stability
       parameter (lcvelt=1)             ! lelt for cvode
+
       ! INTERNALS
       include 'SIZE.inc'
 
