@@ -7,7 +7,7 @@ endTime = 1000.
 userParam01 = 1  #0:dns,1:stabilization,3:stability
 userParam02 = 0  #krylov snapshot to load
 
-userParam03 = 1.1  #stabilization: 1:sfd, 1.1:sfd_ab3
+userParam03 = 1.  #stabilization: 1:sfd, 1.1:sfd_ab3
 userParam04 = 0.15  #St mode  -> omega_c = pi St
 userParam05 = 0.19  #Sigma mode
 
