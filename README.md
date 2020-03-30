@@ -1,16 +1,22 @@
 # nekStab
 Global stability framework for Nek5000
 
-uparam(1)=
-uparam(2)=
-uparam(3)=
-uparam(4)=
-uparam(5)=
-uparam(6)=
-uparam(7)=
-uparam(8)=
-uparam(9)=
-uparam(10)=
+
+
+- uparam(1) =
+- uparam(2) =
+- uparam(3) =
+- uparam(4) =
+- uparam(5) =
+- uparam(6) =
+- uparam(7) =
+- uparam(8) =
+- uparam(9) =
+- uparam(10) =
+
+
+
+### Main features 
 
 0: dns only
 0.1 turbulent statistics (full 3d (jet-crossflow), 2 averged (cylinder and boundary layer), 3: channel flow
@@ -21,7 +27,7 @@ when steady state we can dynamically extract: which norm to ensure steadystate?
 0.2 SPOD spectral proper orthogonal decomposition (space-time, single frequency modes)
 0.3 DMD dynamic mode decomposition  (https://arxiv.org/pdf/1406.7187.pdf)
 
-STABILITY FRAMEWORK
+## STABILITY FRAMEWORK
 
 1: forcing
 1.1 SFD
@@ -60,49 +66,39 @@ PERIODIC ORBIT FOR UNFORCED CASES (2 cyl and Jet-in-Crossflow)
 
 
 
+# PROGRAMMING BEST PRACTICES
 
+> The best style is consistent style!
+> Function and subroutines when possible...
 
+1. Always use **implicit none** with exception from _.usr_
 
-
-
-
-
-
-
-
-
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!
-PROGRAMMING BEST PRACTICES: The best style is consistent style!
-function and subroutine when possible
-1) always use implicit none with exception from .usr file
-2) comments with ! instead of c
-3) one tab is 3 spaces
-4) use small caps
-5) proper define real numbers: 1 -> 1. -> 1.0d0, 0.0d0
-6) subroutine -> return, end
-7) use nelv or nelt? we should pick only one
-8) to print output we use write(6,*)
-9) stop the code with call exitt
-
+2. Comments with ! instead of c
+3. One tab is 3 spaces
+4. se small caps
+5. proper define real numbers: 1 -> 1. -> 1.0d0, 0.0d0
+6. subroutine -> return, end
+7. use *nelv* or *nelt*? we should pick only one
+8. to print output we use write(6,*)
+9. stop the code with _call **exitt**_
 
 local field declarations with
-real, save, dimension(lt) :: field1,field2,field3,
 
-shared variables:
+```fortran
+real, save, dimension(lt) :: field1,field2,field3
+```
 
-in SIZE we follow the standard from vx,vy,vz
+shared variables in SIZE we follow the standard nek style like in /core
 
+```fortran
 c     Solution data
       real vx     (lx1,ly1,lz1,lelv)
      $    ,vy     (lx1,ly1,lz1,lelv)
      $    ,vz     (lx1,ly1,lz1,lelv)
       common /vptsol/ vx, vy, vz
+```
 
 to discuss:
-11) Limit line length increased to 132 to avoid excissive use of continuation tabs, modern editors can do soft wrap, bust most cases we are slightly over the 72 characters standard
-5. File and folder structur: clustering subroutine in files with a clean structure
-6. Naming conventions
+11) Limit line length increased to 132 to avoid excessive use of continuation tabs, modern editors can do soft wrap, bust most cases we are slightly over the 72 characters standard
+
+5. Naming conventions

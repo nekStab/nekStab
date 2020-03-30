@@ -1,4 +1,5 @@
-      ! LINEAR STABILITY
+      ! LINEAR STABILITY FRAMEWORK
+      ! Shared memory bounded arrays and parameters
 
       logical, parameter :: ifnois = .true.
       logical, parameter :: ifldbf = .true.
