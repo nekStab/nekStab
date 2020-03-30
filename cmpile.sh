@@ -1,5 +1,4 @@
 #!/bin/bash
-
 function error_quit {
     echo -e "$@"
     echo
@@ -12,18 +11,22 @@ function error_quit {
     exit 1
 }
 
-#parameters
-export CASE="10cav_stab"
-export CASE="1cyl"
-export SOURCE_ROOT="$HOME/Nek5000"
-export USR="x_krylov.o"
+export CASE="1cyl" #--> case name goes here
+export SOURCE_ROOT="$HOME/Nek5000" #--> path to main code
+
+## INTEL
 export FC="mpiifort"; export CC="mpiicc"
 export FFLAGS="-mcmodel=medium -shared-intel -xHost -extend-source -mkl -g -traceback"
-#export FFLAGS="-mcmodel=medium -shared-intel -xHost -qopt-zmm-usage=high -fp-model fast=2 -extend-source -mkl -g -traceback"
 #export USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
-#export PPLIST="VENDOR_BLAS"
-#export USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
-# arguments
+
+## GCC
+#export FC="mpif77"; export CC="mpicc"
+#export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none -g -fbacktrace"
+#export USR_LFLAGS+="-L/usr/lib -lblas -llapack" #sudo apt install libblas-dev liblapack-dev
+
+export USR="x_krylov.o x_stablz.o x_usrext.o x_sponge_noise.o x_inout.o "
+#export PPLIST="VENDOR_BLAS" # this substitute the main code eigensolvers
+
 args=("$@")
 argsnr=$#
 
