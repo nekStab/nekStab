@@ -14,6 +14,8 @@ c-----------------------------------------------------------------------
       include 'NEKUSE'
       integer e
 
+      if(uparam(10).gt.0)call spng_forcing
+      
       e = gllel(ieg)
       ffx = fcx(ix,iy,iz,e)
       ffy = fcy(ix,iy,iz,e)
