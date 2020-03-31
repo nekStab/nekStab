@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     #plot_rs(plt, 'residu.dat_ab3', 0.2, 'g', r'Re=100 AB3')
     #plot_rs(plt, 'residu.dat_euler', 0, 'b', r'Re=100 Euler')
-    plot_rs(plt, 'residu.dat',   -0.05, 'm', r'Re=100')
+    plot_rs(plt, 'residu.dat',   0.2, 'm', r'Re=100')
 
 
     plt.legend(loc='best',fontsize=6);
