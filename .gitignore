@@ -1,13 +1,10 @@
 \obj
 *.png
-*.his
 fort*
-BF*
+BFL*
 *.nek5000
 *log*
 H*
-*0.0*
-*0.f*
 *.dat*
 Re*
 Im*
@@ -16,11 +13,12 @@ SESSION*
 makefile
 .state
 nek5000
-
+vor*
+KRY*
 # text editors stuff
 *.swp
 *~
-
+1cyl0.f*
 # python stuff
 *.pyc
 .cache
