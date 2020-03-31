@@ -8,24 +8,26 @@
 ! add_noise
 ! mth_rand
 c-----------------------------------------------------------------------
-      subroutine switch_to_lnse_steady(steps_in)
+      subroutine switch_to_lnse_steady!(steps_in)
       include 'SIZE'
       include 'TOTAL'
       include 'DOMAIN'
       include 'OPCTR'
       include 'CTIMER'
 
-      integer, intent(in), optional :: steps_in
+      !integer, intent(in), optional :: steps_in
       integer steps
       real sampling_period
 
-      if(.not.present(steps_in))then
-        steps = steps_in
-      else
-        if(nid.eq.0)write(6,*)' nsteps not specified: computing with uparam(04)'
-        sampling_period = real(1.0d0/uparam(04))
-        steps = int(sampling_period/dt)
-      endif
+      !if(.not.present(steps_in))then
+      !  steps = steps_in
+      !else
+      !  if(nid.eq.0)write(6,*)' nsteps not specified: computing with uparam(04)'
+      !  sampling_period = real(1.0d0/uparam(04))
+      !  steps = int(sampling_period/dt)
+      !endif
+
+      steps = int(uparam(08))
 
       if(nid.eq.0)then
        write(6,*)' Switching to linearized solver...'
@@ -57,27 +59,74 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine spng_init
+      subroutine spng_forcing !compute sponge
       implicit none
       include 'SIZE'
-      integer nn
-      real vtmp(lx1*ly1*lz1*lelt,ldim)
-      common /CTMP1/ vtmp
+      include 'TOTAL'
+      integer, parameter :: lt=lx1*ly1*lz1*lelt
+      real, dimension(lt) :: do1,do2,do3
 
-      nn = lx1*ly1*lz1*lelt*ldim
-      call rzero(vtmp,nn)
-      call spng_set(vtmp(1,1),vtmp(1,2),vtmp(1,ndim))
+      if(istep.eq.0)then
+         call spng_init
+      else
+         if (JP.eq.0) then ! dns
+
+            !ffx = ffx + spng_fun(ip)*( - VX )
+            !ffy = ffy + spng_fun(ip)*(spng_vr(ip,2) - VY )
+            !if (IF3D) ffz = ffz + spng_fun*(spng_vr(ip,NDIM) - VZ
+
+           call opsub3 (do1,do2,do3, spng_vr(:,1),spng_vr(:,2),spng_vr(:,3), vx,vy,vz)
+           call opadd2col(fcx,fcy,fcz, do1,do2,do3, spng_fun)
+
+         else !perturbation
+
+            !ffx = ffx - spng_fun*VXP(ip,JP)
+            !ffy = ffy - spng_fun*VYP(ip,JP)
+            !if(IF3D) ffz = ffz - spng_fun*VZP(,JP)
+
+                !opadd2col(a1,a2,a3,b1,b2,b3,c) ! a1=a1+b1*c
+            call opadd2col(fcx,fcy,fcz,vxp(:,JP),vyp(:,JP),vzp(:,JP),-spng_fun)
+
+         endif
+      endif
 
       return
       end
 c-----------------------------------------------------------------------
-      subroutine spng_set(lvx,lvy,lvz) !set sponge function and refernece fields
+      subroutine spng_init
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+                  spng_wl(1)=1.0 ! Sponge left section width; dimension X
+                  spng_wl(2)=0.0 ! Sponge left section width; dimension Y
+          if(IF3D)spng_wl(3)=0.0 ! Sponge left section width; dimension Z
+
+                 spng_wr(1)=40.0 ! Sponge right section width; dimension X
+                 spng_wr(2)= 0.0
+          if(IF3D)spng_wr(3)=0.0
+
+                 spng_dl(1)=0.333*spng_wl(1) ! Sponge left drop/rise section width; dimension X
+                 spng_dl(2)=0.333*spng_wl(2)
+         if(IF3D)spng_dl(3)=0.333*spng_wl(3)
+
+                spng_dr(1)=0.333*spng_wr(1) ! Sponge right drop/rise section width; dimension X
+                spng_dr(2)=0.333*spng_wr(2)
+        if(IF3D)spng_dr(3)=0.333*spng_wr(3)
+
+      ! save reference field -> sponge value reference
+      call opcopy(spng_vr(1,1),spng_vr(1,3),spng_vr(1,4),vx,vy,vz) !only DNS
+      call spng_set ! -> compute spng_fun
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine spng_set !set sponge function and refernece fields
       implicit none
       include 'SIZE'
       include 'INPUT'
       include 'GEOM'
 
-      real lvx   (LX1*LY1*LZ1*LELV),lvy(LX1*LY1*LZ1*LELV),lvz(LX1*LY1*LZ1*LELV)
       real lcoord(LX1*LY1*LZ1*LELV)
       common /SCRUZ/ lcoord
 
@@ -97,29 +146,7 @@ c-----------------------------------------------------------------------
         bmax(NDIM) = glmax(ZM1,ntot)
       endif
 
-      !spng_wl(1)=WIDTHLX
-      !spng_wl(2)=WIDTHLY
-      !if(IF3D)spng_wl(3)=WIDTHLZ
-
-      !spng_wr(1)=WIDTHRX
-      !spng_wr(2)=WIDTHRY
-      !if(IF3D)spng_wr(3)=WIDTHRZ
-
-      !spng_dl(1)=DROPLX
-      !spng_dl(2)=DROPLY
-      !if(IF3D)spng_dl(3)=DROPLZ
-
-      !spng_dr(1)=DROPRX
-      !spng_dr(2)=DROPRY
-      !if(IF3D)spng_dr(3)=DROPRZ
-
-      call rzero(spng_fun,ntot)
-
-         ! save reference field
-         call copy(spng_vr(1,1),lvx,ntot)
-         call copy(spng_vr(1,2),lvy,ntot)
-         if (IF3D) call copy(spng_vr(1,NDIM),lvz, ntot)
-
+         call rzero(spng_fun,ntot)
          ! for every dimension
          do il=1,NDIM
 
@@ -166,12 +193,11 @@ c-----------------------------------------------------------------------
                 enddo
 
              endif  ! xxmax.le.xxmin
-
           endif  ! spng_w(il).gt.0.0
        enddo
 
       ltmp = ifto
-      ifto = .TRUE.
+      ifto = .true.
       call outpost2(spng_vr,spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
       ifto = ltmp
 
@@ -181,7 +207,7 @@ c-----------------------------------------------------------------------
       real function mth_stepf(x) !compute sponge function
       implicit none
       real x, xdmin, xdmax
-      parameter (xdmin = 0.001, xdmax = 0.999)
+      parameter (xdmin = 0.0010d0, xdmax = 0.9990d0)
       if (x.le.xdmin) then
          mth_stepf = 0.0d0
       else if (x.le.xdmax) then
@@ -189,29 +215,6 @@ c-----------------------------------------------------------------------
       else
          mth_stepf = 1.0d0
       end if
-      end
-c-----------------------------------------------------------------------
-      subroutine spng_forcing(ffx,ffy,ffz,ix,iy,iz,ieg) !compute sponge
-      implicit none
-      include 'SIZE'            !
-      include 'INPUT'           ! IF3D
-      include 'PARALLEL'        ! GLLEL
-      include 'SOLN'            ! JP
-      real ffx, ffy, ffz
-      integer ix,iy,iz,ieg,iel,ip
-
-      iel=GLLEL(ieg)
-      ip=ix+NX1*(iy-1+NY1*(iz-1+NZ1*(iel-1)))
-      if (JP.eq.0) then ! dns
-         ffx = ffx + SPNG_FUN(ip)*(SPNG_VR(ip,1) - VX(ix,iy,iz,iel))
-         ffy = ffy + SPNG_FUN(ip)*(SPNG_VR(ip,2) - VY(ix,iy,iz,iel))
-         if (IF3D) ffz = ffz + SPNG_FUN(ip)*(SPNG_VR(ip,NDIM) - VZ(ix,iy,iz,iel))
-      else !perturbation
-         ffx = ffx - SPNG_FUN(ip)*VXP(ip,JP)
-         ffy = ffy - SPNG_FUN(ip)*VYP(ip,JP)
-         if(IF3D) ffz = ffz - SPNG_FUN(ip)*VZP(ip,JP)
-      endif
-      return
       end
 c-----------------------------------------------------------------------
       subroutine add_noise(qx, qy, qz) !input random number to fields
