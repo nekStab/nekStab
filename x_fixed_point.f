@@ -49,7 +49,7 @@ c-----------------------------------------------------------------------
         call normvc (h1,semi,l2,linf,vxo,vyo,vzo)
         residu = l2/dt; rate = (residu-residu0); residu0 = residu
 
-        call opcopy(vxo,vyo,vzo, vx,vy,vz)
+        call opcopy (vxo,vyo,vzo, vx,vy,vz)
 
           if(nid.eq.0)then
             write(10,"(3E15.7)")time,residu,rate
