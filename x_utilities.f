@@ -67,6 +67,7 @@ c-----------------------------------------------------------------------
       real, dimension(lt) :: do1,do2,do3
 
       if(istep.eq.0)then
+         if(nid.eq.0)write(6,*)' Initializing sponge...'
          call spng_init
       else
          if (JP.eq.0) then ! dns
@@ -97,12 +98,18 @@ c-----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      real glmin,glmax,deltax,xmn,xmx
+      integer n
 
-                  spng_wl(1)=1.0 ! Sponge left section width; dimension X
+      n = nx1*ny1*nz1*nelv
+      xmn = glmin(xm1,n); xmx = glmax(xm1,n)
+      deltax = xmx - xmn
+
+                  spng_wl(1)=0.02*deltax ! Sponge left section width; dimension X
                   spng_wl(2)=0.0 ! Sponge left section width; dimension Y
           if(IF3D)spng_wl(3)=0.0 ! Sponge left section width; dimension Z
 
-                 spng_wr(1)=40.0 ! Sponge right section width; dimension X
+                 spng_wr(1)=0.1*deltax ! Sponge right section width; dimension X
                  spng_wr(2)= 0.0
           if(IF3D)spng_wr(3)=0.0
 
@@ -113,6 +120,13 @@ c-----------------------------------------------------------------------
                 spng_dr(1)=0.333*spng_wr(1) ! Sponge right drop/rise section width; dimension X
                 spng_dr(2)=0.333*spng_wr(2)
         if(IF3D)spng_dr(3)=0.333*spng_wr(3)
+
+         if(nid.eq.0)then
+            write(6,*)' Sponge left section width: ',spng_wl
+            write(6,*)' Sponge right section width: ',spng_wr
+            write(6,*)' Sponge left drop/rise section width: ',spng_dl
+            write(6,*)' Sponge right drop/rise section width: ',spng_dr
+         endif
 
       ! save reference field -> sponge value reference
       call opcopy(spng_vr(1,1),spng_vr(1,3),spng_vr(1,4),vx,vy,vz) !only DNS
