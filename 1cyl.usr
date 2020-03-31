@@ -12,7 +12,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
       integer e
-      
+
       e = gllel(ieg)
       ffx = fcx(ix,iy,iz,e)
       ffy = fcy(ix,iy,iz,e)
@@ -25,7 +25,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      integer e,eg
+      integer e
 
       if (JP.eq.0) then         ! velocity
          e  = gllel(ieg)
@@ -47,7 +47,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      integer e,eg
+      integer e
 
       if (JP.eq.0) then         ! velocity
          e  = gllel(ieg)
