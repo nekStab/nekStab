@@ -1,0 +1,23 @@
+language: fortran
+
+sudo: required
+
+before_install:
+  - export ROOT_DIR=`pwd`
+
+  - export NEK_SOURCE_ROOT=$ROOT_DIR
+  - export EXAMPLES_ROOT=$ROOT_DIR/short_tests
+  - export VERBOSE_TESTS=true
+  - export PARALLEL_PROCS=2
+
+  # Install MPICH
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libmpich-dev mpich
+#  - sudo apt-get install -y gfortran openmpi-bin libopenmpi-dev
+
+install: true
+
+script:
+  - make clean
+  - export FLOW_TYPE=Channel-flow
+  - make
