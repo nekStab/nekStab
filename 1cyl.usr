@@ -7,13 +7,13 @@ c-----------------------------------------------------------------------
 
       end
 c-----------------------------------------------------------------------
-      subroutine userf (ix,iy,iz,eg)
+      subroutine userf (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      integer e,eg
-
-      e = gllel(eg)
+      integer e
+      
+      e = gllel(ieg)
       ffx = fcx(ix,iy,iz,e)
       ffy = fcy(ix,iy,iz,e)
       ffz = fcz(ix,iy,iz,e)
@@ -21,14 +21,14 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine useric (ix,iy,iz,eg)
+      subroutine useric (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
       integer e,eg
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(eg)
+         e  = gllel(ieg)
          ux=1.0d0
          uy=0.0d0
          uz=0.0d0
@@ -43,14 +43,14 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine userbc (ix,iy,iz,iside,eg)
+      subroutine userbc (ix,iy,iz,iside,ieg)
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
       integer e,eg
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(eg)
+         e  = gllel(ieg)
          ux = 1.0d0
          uy = 0.0d0
          uz = 0.0d0
@@ -65,7 +65,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine uservp (ix,iy,iz,eg)
+      subroutine uservp (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
@@ -74,7 +74,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine userq (ix,iy,iz,eg)
+      subroutine userq (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
