@@ -55,7 +55,7 @@ c----------------------------------------------------------------------
       n2     = nx2*ny2*nz2*nelt
 
       call norm(qx, qy, qz, alpha)
-      beta_tmp = 1.0D0/alpha
+      beta_tmp = 1.0d0/alpha
 
       call opcmult(qx, qy, qz, beta_tmp)
       if(ifpo) call cmult(qp,beta_tmp,n2)
@@ -83,7 +83,7 @@ c----------------------------------------------------------------------
       if( if3d ) alpha = alpha + glsc3(qz,bm1,qz,n)
       alpha = sqrt(alpha)
 
-      beta = 1.0D0/alpha
+      beta = 1.0d0/alpha
       call opcmult(qx, qy, qz, beta)
       if(ifpo) call cmult(qp,beta,n2)
 
@@ -131,18 +131,18 @@ c     ----- Miscellaneous -----
       character(len=30)                  :: filename
       n      = nx1*ny1*nz1*nelt
       n2     = nx2*ny2*nz2*nelt
-      time   = 0.0D0
-      H_mat  = 0.0D0
-      b_vec  = 0.0D0
-      residu = 0.0D0
+      time   = 0.0d0
+      H_mat  = 0.0d0
+      b_vec  = 0.0d0
+      residu = 0.0d0
 
       call oprzero(wo1,wo2,wo3)
       call oprzero(V_x,V_y,V_z)
-      if(ifpo)Pressure = 0.0D0
+      if(ifpo)Pressure = 0.0d0
 
       !if(ifldbf)then
          if(.not. ifbfcv)then !skip loading if single run
-          if(nid.eq.0)write(*,*)'Loading base flow: ',bf_handle
+          if(nid.eq.0)write(6,*)'Loading base flow: ',bf_handle
           call load_fld(bf_handle)
          endif
          ifto = .true. ;ifpo = .true.
@@ -178,9 +178,7 @@ c     ======================================
 
 c     ----- Storing the starting vector in the Krylov basis -----
 
-
       if(nid.eq.0)write(6,*)'Restarting from:',uparam(2)
-
 
       if (uparam(2).gt.0) then
 
@@ -189,8 +187,7 @@ c     ----- Storing the starting vector in the Krylov basis -----
          if(nid.eq.0)then
           write(6,'(a,a,i4.4)')' Loading Hessenberg matrix: HES',trim(SESSION),mstart
           write(filename,'(a,a,i4.4)')'HES',trim(SESSION),mstart
-          open(67,file=trim(filename),
-     $            status='unknown',form='formatted')
+          open(67,file=trim(filename),status='unknown',form='formatted')
           read(67,*) beta
           write(6,*)'Loading beta',beta
 
@@ -237,11 +234,12 @@ c     ----- Storing the starting vector in the Krylov basis -----
 
         if(nid.eq.0)write(6,*)'Starting new Arnoldi decomposition...'
 
-         mstart = 1; istep = 1; time = 0.0D0
+         mstart = 1; istep = 1; time = 0.0d0
          call opcopy(v_x(:,1),v_y(:,1),v_z(:,1),vxp,vyp,vzp)
          if(ifpo) call copy(Pressure(:,1),prp(:,1),n2)
          call whereyouwant('KRY',1)
          if(nid.eq.0)write(6,*)'Sanity check: ensure line 1094 of prepost changed to common!'
+
          ifto=.false.
          call outpost(v_x(:,1),v_y(:,1),v_z(:,1), Pressure(:,1),t,'KRY')
 
@@ -252,9 +250,7 @@ c     ----- Storing the starting vector in the Krylov basis -----
 
 c     ----- m-step Arnoldi factorization -----
 
-
          call Arnoldi_fact(V_x,V_y,V_z,Pressure,H_mat,beta,mstart)
-
 
 c     ----- Check the convergence of the Ritz eigenpairs -----
 
@@ -269,10 +265,16 @@ c     ----- Check the convergence of the Ritz eigenpairs -----
 
          else
                 if ( have_converged .GE. schur_tgt ) then
+
                     is_converged = .true.
                 else
+
+                    if(nid.eq.0)write(6,*)'Outposting before restart...'
+                    call eigen_decomp( H_mat , k_dim , VP , FP )
+                    call outpost_ks( VP , FP , V_x , V_y , V_z , Pressure , residu )
                     if(nid.eq.0)write(6,*)'Starting Schur factorization...'
                     call Schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
+
                 endif
 
          endif
@@ -355,9 +357,9 @@ c     =========================================
 
       n  = nx1*ny1*nz1*nelt
       n2 = nx2*ny2*nz2*nelt
-      h_vec(:) = 0.0D0
+      h_vec(:) = 0.0d0
       call oprzero(F_xr,F_yr,F_zr)
-      if(ifpo)F_pr = 0.0D0
+      if(ifpo)F_pr = 0.0d0
 
 c     ----- Arnoldi factorization -----
 
@@ -374,7 +376,7 @@ c     ----- Matrix-vector product w = M*v -----
 
 c     ----- Compute the orthogonal residual f with respect to all previous Krylov vectors -----
 
-         h_vec(:) = 0.0D0
+         h_vec(:) = 0.0d0
          do i = 1, mstep
 
             call opcopy(work1,work2,work3, qx(:,i),qy(:,i),qz(:,i))
@@ -404,40 +406,43 @@ c     ----- Compute the norm of the orthogonal residual f -----
 c     ----- Normalizes the orthogonal residual and uses it as a new Krylov vector
 
          if ( mstep.lt.k_dim ) H(mstep+1,mstep) = beta
-         beta = 1.0D0/beta
+         beta = 1.0d0/beta
          call opcmult(f_xr,f_yr,f_zr,beta)
          if(ifpo) call cmult(f_pr,beta,n2)
 
          call opcopy(Qx(:,mstep+1),Qy(:,mstep+1),Qz(:,mstep+1),f_xr,f_yr,f_zr)
          if(ifpo) call copy(Qp(:,mstep+1),f_pr,n2)
 
-         if(nid.eq.0)write(6,*)
-         if(nid.eq.0)write(6,*) ' Outposting Krylov subspace to'
+         if(nid.eq.0)then
+            write(6,*)
+            write(6,*)' Outposting Krylov subspace to'
+         endif
 
          time=real(time*mstep)
          call whereyouwant('KRY',mstep+1); ifto = .false.
          call outpost(f_xr,f_yr,f_zr,f_pr,t,'KRY')
 
-         VP(1:mstep)=0.0D0; FP(1:mstep,1:mstep)=0.0D0
+         VP(1:mstep)=0.0d0; FP(1:mstep,1:mstep)=0.0d0
          call eigen_decomp( H(1:mstep,1:mstep) , mstep , VP(1:mstep) , FP(1:mstep,1:mstep) )
 
-         have_cnv = 0; resd = 0.0D0
+         have_cnv = 0; resd = 0.0d0
          if(nid.eq.0)then ! outpost Hessenberg matrix spectre
           !write(6,'(a,a,i4.4)') ' Ouposting Hessenberg matrix spectre to: HSP',trim(SESSION),mstep
           !write(filename,'(a,a,i4.4)')'HSP',trim(SESSION),mstep
 
             write(6,'(a,a,i4.4)') ' Ouposting Hessenberg matrix spectre to: H',trim(SESSION),mstep
             write(filename,'(a,i4.4)')'H',mstep
+            write(6,*)
 
-          write(6,*) ''
           open(67,file=trim(filename),status='unknown',form='formatted')
           do i = 1,mstep
-          resd = abs(beta*FP(mstep,i))
-          if( (resd .LT. eigen_tol)) have_cnv = have_cnv + 1
-          !write(67,"(3E15.7)")log(abs(VP(i)))/time,ATAN2(aimag(VP(i)),real(VP(i)))/time,resd
-          write(67,"(3E15.7)")real(VP(i)),aimag(VP(i)),resd
+           resd = abs(beta*FP(mstep,i))
+           if( (resd .lt. eigen_tol)) have_cnv = have_cnv + 1
+           !write(67,"(3E15.7)")log(abs(VP(i)))/time,ATAN2(aimag(VP(i)),real(VP(i)))/time,resd
+           write(67,"(3E15.7)")real(VP(i)),aimag(VP(i)),resd
           enddo
           close(67)
+
          endif
 
          if(nid.eq.0)then
@@ -492,12 +497,12 @@ c-----------------------------------------------------------------------
 
 !-----Compute the eigedecomposition of H -----!
 
-      VP = ( 0.0D0 , 0.0D0 ); FP = ( 0.0D0 , 0.0D0 )
+      VP = ( 0.0d0 , 0.0d0 ); FP = ( 0.0d0 , 0.0d0 )
       call eigen_decomp(H,n,VP,FP)
 
 !-----Compute the number of converged Ritz pairs -----!
 
-      have_cnv = 0; res = 1.0D0
+      have_cnv = 0; res = 1.0d0
       do i = 1,n
          res(i) = abs( beta * FP(n,i) )
          if ( res(i) .LT. tol ) then
@@ -561,26 +566,26 @@ c     =========================================
       n  = nx1*ny1*nz1*nelt
       n2 = nx2*ny2*nz2*nelt
 
-      Q1 = 0.0D0
+      Q1 = 0.0d0
 
-      b_vec          = 0.0D0
+      b_vec          = 0.0d0
       b_vec(1,k_dim) = beta
 
 c     ----- Compute the Schur decomposition -----
 
-      VP = ( 0.0D0 , 0.0D0 )
-      Q1 = 0.0D0
+      VP = ( 0.0d0 , 0.0d0 )
+      Q1 = 0.0d0
 
       call Schur_decomp(H_mat,Q1,VP,k_dim,mstart)
 
-      H_mat(1:mstart,mstart+1:k_dim)       = 0.0D0
-      H_mat(mstart+1:k_dim,1:mstart)       = 0.0D0
-      H_mat(mstart+1:k_dim,mstart+1:k_dim) = 0.0D0
+      H_mat(1:mstart,mstart+1:k_dim)       = 0.0d0
+      H_mat(mstart+1:k_dim,1:mstart)       = 0.0d0
+      H_mat(mstart+1:k_dim,mstart+1:k_dim) = 0.0d0
 
       if ( mstart.EQ.0 ) then
 
          mstart = 1
-         H_mat  = 0.0D0
+         H_mat  = 0.0d0
 
          call opcopy( V_x(:,mstart), V_y(:,mstart), V_z(:,mstart),
      $        V_x(:,k_dim+1), V_y(:,k_dim+1), V_z(:,k_dim+1) )
@@ -590,16 +595,14 @@ c     ----- Compute the Schur decomposition -----
 
       else
 
-         if ( nid.EQ.0 ) then
-            write(*,*) mstart,
-     $           'Ritz eigenpairs have been selected'
-            write(*,*)
+         if ( nid.eq.0 ) then
+            write(6,*) mstart,'Ritz eigenpairs have been selected'
+            write(6,*)
 
             do i = 1, k_dim
-               write(*,*) 'Residual of eigenvalue',
-     $              i, ' : ', residu(i)
+               write(6,*) 'Residual of eigenvalue',i,' : ',residu(i)
             enddo
-            write(*,*)
+            write(6,*)
          endif
 
 c     ----- Re-order the Krylov basis -----
@@ -673,7 +676,7 @@ c----------------------------------------------------------------------
       call opcopy(vxp, vyp, vzp, qx, qy, qz)
 
 !     ----- Time-stepper matrix-vector product -----
-      time = 0.0D0
+      time = 0.0d0
       do istep = 1, nsteps
 
 !     ----- Prepare the base flow to vx,vy,vz
@@ -718,7 +721,7 @@ c-----------------------------------------------------------------------
       complex*16, dimension(n)   :: temp_n
       integer                    :: k, l
 c     ----- Sorting the eigenvalues according to their norm -----
-      temp_n   = (0.0D0,0.0D0)
+      temp_n   = (0.0d0,0.0d0)
       norm = sqrt( real(VP)**2 + aimag(VP)**2 )
       do k = 1,n-1
          do l = k+1,n
@@ -746,7 +749,7 @@ c-----------------------------------------------------------------------
       complex*16, dimension(n)       :: FP_Cx
       complex*16, dimension(k_dim)   :: FP
       real      , dimension(n,k_dim) :: Qx
-      FP_Cx = (0.0D0,0.0D0)
+      FP_Cx = (0.0d0,0.0d0)
       do i = 1,k_dim
          FP_Cx = FP_Cx + Qx(:,i)*FP(i)
       enddo
@@ -759,7 +762,7 @@ c---------------------------------------------------------------
       logical :: select_eigenvalue
       real :: wr, wi
       select_eigenvalue = .false.
-      if(sqrt(wr**2+wi**2).GT.(1.0D0-schur_del))select_eigenvalue=.true.
+      if(sqrt(wr**2+wi**2).GT.(1.0d0-schur_del))select_eigenvalue=.true.
       end
 c----------------------------------------------------------------------
       subroutine outpost_ks(VP,FP,Qx,Qy,Qz,Qp,residu) !outposting vectors
@@ -842,10 +845,10 @@ c     ----- Output all the spectrums and converged eigenmodes -----
 
 c     ----- Computation of the corresponding eigenmode -----
 
-            FP_Cx = (0.0D0,0.0D0)
-            FP_Cy = (0.0D0,0.0D0)
-            if(if3D) FP_Cz = (0.0D0,0.0D0)
-            if(ifpo) FP_Cp = (0.0D0,0.0D0)
+            FP_Cx = (0.0d0,0.0d0)
+            FP_Cy = (0.0d0,0.0d0)
+            if(if3D) FP_Cz = (0.0d0,0.0d0)
+            if(ifpo) FP_Cp = (0.0d0,0.0d0)
 
             call matvec(FP_Cx,Qx(:,1:k_dim),FP(:,i),lt)
             call matvec(FP_Cy,Qy(:,1:k_dim),FP(:,i),lt)
@@ -866,7 +869,7 @@ c     Note: volume integral of FP*conj(FP) = 1.
      $           +  glsc3(real(FP_Cz),bm1,real(FP_Cz),n)
      $           +  glsc3(aimag(FP_Cz),bm1,aimag(FP_Cz),n)
 
-            alpha = 1.0D0/sqrt(alpha)
+            alpha = 1.0d0/sqrt(alpha)
 
 c     ----- Output the imaginary part -----
 

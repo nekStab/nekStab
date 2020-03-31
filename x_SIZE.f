@@ -6,11 +6,11 @@
 
       character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
 
-      integer, parameter :: k_dim  = 60
+      integer, parameter :: k_dim  = 32
       integer, parameter :: schur_tgt  = 4 !schur on if >1
 
       real, parameter    :: eigen_tol  = 1.0E-6 !standard value
-      real, parameter    :: schur_del  = 0.10D0
+      real, parameter    :: schur_del  = 0.20D0
 
       logical              ifbfcv
       common /lst_logical/ ifbfcv
