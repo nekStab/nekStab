@@ -201,19 +201,15 @@ c-----------------------------------------------------------------------
       integer ix,iy,iz,ieg,iel,ip
 
       iel=GLLEL(ieg)
-      if (SPNG_STR.gt.0.0) then
-         ip=ix+NX1*(iy-1+NY1*(iz-1+NZ1*(iel-1)))
-         if (JP.eq.0) then
-            ! dns
-            ffx = ffx + SPNG_FUN(ip)*(SPNG_VR(ip,1) - VX(ix,iy,iz,iel))
-            ffy = ffy + SPNG_FUN(ip)*(SPNG_VR(ip,2) - VY(ix,iy,iz,iel))
-            if (IF3D) ffz = ffz + SPNG_FUN(ip)*(SPNG_VR(ip,NDIM) - VZ(ix,iy,iz,iel))
-         else
-            ! perturbation
-            ffx = ffx - SPNG_FUN(ip)*VXP(ip,JP)
-            ffy = ffy - SPNG_FUN(ip)*VYP(ip,JP)
-            if(IF3D) ffz = ffz - SPNG_FUN(ip)*VZP(ip,JP)
-         endif
+      ip=ix+NX1*(iy-1+NY1*(iz-1+NZ1*(iel-1)))
+      if (JP.eq.0) then ! dns
+         ffx = ffx + SPNG_FUN(ip)*(SPNG_VR(ip,1) - VX(ix,iy,iz,iel))
+         ffy = ffy + SPNG_FUN(ip)*(SPNG_VR(ip,2) - VY(ix,iy,iz,iel))
+         if (IF3D) ffz = ffz + SPNG_FUN(ip)*(SPNG_VR(ip,NDIM) - VZ(ix,iy,iz,iel))
+      else !perturbation
+         ffx = ffx - SPNG_FUN(ip)*VXP(ip,JP)
+         ffy = ffy - SPNG_FUN(ip)*VYP(ip,JP)
+         if(IF3D) ffz = ffz - SPNG_FUN(ip)*VZP(ip,JP)
       endif
       return
       end

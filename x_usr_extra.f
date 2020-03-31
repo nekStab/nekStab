@@ -104,7 +104,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine nekStab_forcing !here we compose fcx,fcy,fcz
+      subroutine sponge !here we compose fcx,fcy,fcz
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -169,13 +169,13 @@ c-----------------------------------------------------------------------
       real, save :: deltatime
       real telapsed,tpernondt,tmiss
 
-      if (courno.gt.2.0d0) then
+      if (courno.gt.4.0d0) then
         if (nio.eq.0)then
-          write(6,*)' '
-          write(6,*)'    cfl > 2. stopping'
-          write(6,*)' '
-        endif
-        lastep = 1
+          write(6,*)
+          write(6,*)'    cfl > 4. stopping'
+          write(6,*)
+         endif
+        call exitt
       endif
 
       if (nio.ne.0) return
@@ -319,3 +319,4 @@ c-----------------------------------------------------------------------
          write(6,*)'uparam10=',uparam(10)
       endif
       end
+c-----------------------------------------------------------------------
