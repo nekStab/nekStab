@@ -1,5 +1,5 @@
 [GENERAL]
-startFrom = 1cyl0.f00008 #BF_1cyl0.f00001
+startFrom = 0 #BF_1cyl0.f00001
 
 stopAt = endTime
 endTime = 10000.
@@ -7,7 +7,7 @@ endTime = 10000.
 userParam01 = 1  #0:dns,1:stabilization,3:stability
 userParam02 = 0  #krylov snapshot to load
 
-userParam03 = 1.  #stabilization: 1:sfd, 1.1:sfd_ab3
+userParam03 = 1.1  #stabilization: 1:sfd, 1.1:sfd_ab3
 userParam04 = 0.063  #St mode  -> omega_c = pi St
 userParam05 = 0.125  #gain = 2 sigma mode    
 

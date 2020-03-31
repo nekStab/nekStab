@@ -54,7 +54,7 @@ stratification: which parameter to activate coupling between T
 #### STEADY FLOWS: MEAN OR BASE
 
 a) prescribed in useric (e.g. Blasius solution)
-b) load steady state (base or mean) as:  BF_ + casename + 0.f00001
+b) load steady state as:  BF_ + casename + 0.f00001
 c) compute with 1.1 or 1.2, dumpt to disk and switch to 3 -> requires the frequency of the mode to T
 
  ####  LIMIT CYCLES WITH FORCED SYMMETRY
@@ -89,7 +89,7 @@ b) load PER or Fourier modes and run 3
 1. Always use **implicit none** with exception from _.usr_
 
 2. Comments with ! instead of c
-3. One tab is 3 spaces
+3. Tav lenght 
 4. small caps for fortran syntax : for, do, return
 5. proper define real numbers: 0.0d0, 0.50d0, 1.0d0
 6. subroutine -> return, end 
