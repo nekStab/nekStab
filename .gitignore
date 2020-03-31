@@ -16,4 +16,12 @@ SESSION*
 makefile
 .state
 nek5000
+
+# text editors stuff
 *.swp
+*~
+
+# python stuff
+*.pyc
+.cache
+__pycache__
