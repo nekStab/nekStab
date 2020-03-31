@@ -114,5 +114,4 @@ def fft_probe(fl,tsk,nps,prb,fld,ttl):
     plt.close()
     plt.clf()
 
-fft_probe(fl='1cyl.his',tsk=850.,nps=1,prb=1,fld=1,ttl=r'$x,y,z=0.25,0.25,0.$')
-
+fft_probe(fl='1cyl.his',tsk=0.,nps=1,prb=1,fld=1,ttl=r'$x,y,z=0.25,0.25,0.$')

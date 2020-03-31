@@ -1,15 +1,15 @@
 [GENERAL]
-startFrom = 0 #BF_1cyl0.f00001
+startFrom = 1cyl0.f00008 #BF_1cyl0.f00001
 
 stopAt = endTime
-endTime = 1000.
+endTime = 10000.
 
 userParam01 = 1  #0:dns,1:stabilization,3:stability
 userParam02 = 0  #krylov snapshot to load
 
 userParam03 = 1.  #stabilization: 1:sfd, 1.1:sfd_ab3
-userParam04 = 0.16  #St mode  -> omega_c = pi St
-userParam05 = 0.1  #Sigma mode
+userParam04 = 0.063  #St mode  -> omega_c = pi St
+userParam05 = 0.125  #gain = 2 sigma mode    
 
 dt = 0
 variableDt = yes
@@ -43,7 +43,7 @@ writeToFieldFile = yes
 residualTol = 1.0E-08
 residualProj = yes
 density = 1.0
-viscosity = -100.0
+viscosity = -60.0
 
 [TEMPERATURE] # vorticity
 solver = none

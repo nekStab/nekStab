@@ -24,7 +24,7 @@ export FFLAGS="-mcmodel=medium -shared-intel -xHost -extend-source -mkl -g -trac
 #export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none -g -fbacktrace"
 #export USR_LFLAGS+="-L/usr/lib -lblas -llapack" #sudo apt install libblas-dev liblapack-dev
 
-export USR="x_krylov.o x_stablz.o x_usrext.o x_sponge_noise.o x_inout.o "
+export USR="x_eigensolvers.o x_linalg.o x_fixed_point.o x_usr_extra.o x_utilities.o x_IO.o x_postprocessing.o"
 #export PPLIST="VENDOR_BLAS" # this substitute the main code eigensolvers
 
 args=("$@")
