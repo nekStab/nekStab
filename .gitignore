@@ -18,6 +18,7 @@ KRY*
 # text editors stuff
 *.swp
 *~
+SPG*
 1cyl0.f*
 # python stuff
 *.pyc
