@@ -1,24 +1,50 @@
 # nekStab
 Global stability framework for Nek5000
 
+- uparam(1) = mode (0: DNS, 1:SD, 2:SA, 3:D-A, 4:Res)
 
+- uparam(2) = stability restart starting vector 
 
-- uparam(1) =
-- uparam(2) =
-- uparam(3) =
-- uparam(4) =
-- uparam(5) =
-- uparam(6) =
-- uparam(7) =
-- uparam(8) =
-- uparam(9) =
-- uparam(10) =
+- uparam(3) = forcing mode (1:SFD, 2:boosconv, 3:TDF)
 
+- uparam(4) = frequency input
 
+- uparam(5) = gain input or forcing amplitude 
+
+- uparam(6) = tripping position 
+
+- uparam(7) = 
+
+- uparam(8) = 
+
+- uparam(9) = 
+
+- uparam(10): sponge intensity
+
+  
 
 ### Main features 
 
-0:  dns only
+
+
+## OUR STABILITY FRAMEWORK
+
+
+
+uparam(1) = 0 - > Direct numerical simulation
+
+uparam(1) = 1 - > Direct mode computation
+
+uparam(1) = 2 - > Adjoint mode computation
+
+uparam(1) = 3 - > Direct-adjoint mode computation for transient growth analysis
+
+uparam(1) = 4 - > Resolvent analysis for optimal perturbation
+
+
+
+
+
 0.1 turbulent statistics (full 3d (jet-cross-flow), 2 averaged (cylinder and boundary layer), 3: channel flow
 0.2 DMT (space-time Fourier) - not sure how can be useful
 
@@ -29,27 +55,18 @@ Global stability framework for Nek5000
 
    
 
-## STABILITY FRAMEWORK
-
 ### Forcing 
 
 1.1 SFD 
 1.2 BOOSTCONV
 1.3 TDF
 
-
-
-sponge: which parameter to activate
-
 stratification: which parameter to activate coupling between T
 
 
 
 ### Stability
-3.1 direct
-3.2 adjoint
-3.3 direct-adjoint (for transient growth)
-3.4 resolvent (for optimal perturbation)
+
 
 #### STEADY FLOWS: MEAN OR BASE
 
@@ -84,26 +101,24 @@ b) load PER or Fourier modes and run 3
 # PROGRAMMING BEST PRACTICES
 
 > The best style is consistent style!
-> Function and subroutines when possible...
 
 1. Always use **implicit none** with exception from _.usr_
-
 2. Comments with ! instead of c
-3. Tav lenght 
-4. small caps for fortran syntax : for, do, return
+3. Use tab length with 3 space characters
+4. small caps for fortran syntax : while, for, do, etc. 
 5. proper define real numbers: 0.0d0, 0.50d0, 1.0d0
 6. subroutine -> return, end 
-7. use *nelv* or *nelt*? we should pick only one
-8. to print output we use write(6,*)
-9. stop the code with _call **exitt**_
-
-local field declarations with
+7. to print output we use write(6,*)
+8. stop the code with _call **exitt**_
+9. use *nelv* instead of _*nelt*_ for consistency as we must respect velocity mesh
+10. use *n* and *n2* for loops instead of *ntot1* 
+11. local field declarations with *lt*
 
 ```fortran
-real, save, dimension(lt) :: field1,field2,field3
+real, save, intent(inout), dimension(lt) :: field1,field2,field3
 ```
 
-shared variables in SIZE we follow the standard nek style like in /core
+11. shared variables in our custom x_SIZE.f  respecting the standard Nek style like in /core
 
 ```fortran
 c     Solution data
@@ -113,7 +128,5 @@ c     Solution data
       common /vptsol/ vx, vy, vz
 ```
 
-to discuss:
-11) Limit line length increased to 132 to avoid excessive use of continuation tabs, modern editors can do soft wrap, bust most cases we are slightly over the 72 characters standard
-
-5. Naming conventions
+12. Limit line length increased to 132 to avoid excessive use of continuation tabs, in most cases we are slightly over the 72 characters standard
+13. 
