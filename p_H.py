@@ -99,7 +99,7 @@ def plot_NS(ax, vp_real, vp_imag, freq=False, sized = 0, color='gray',label=None
 
 ########################################
 if __name__ == '__main__':
-    for i in range(1,100,1):
+    for i in range(2,100,1):
         fname = 'H' + str(i).zfill(4)
         try:
             file = SpectreH(fname)

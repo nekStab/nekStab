@@ -124,7 +124,11 @@ if __name__ == '__main__':
     plt.ylabel(r'$\Im (\lambda)$');plt.ylim(-0.2,0.2)
 
     # plt.axvline(x=0, lw=0.4, color='g', ls='dashdot',label='S1')
-    # plt.axvline(x=0.12*2*pi, lw=0.4, color='m', ls='dashed',label='T1')
+    plt.axhline(y=0.1266, lw=0.4, color='m', ls='dashed',label='Mantic-Lugo et al. (2015) Re=100')
+    plt.axvline(x=0.74,   lw=0.4, color='m', ls='dashed')#,label='Mantic-Lugo et al. (2015) Re=100')
+    plt.axvline(x=0.753,   lw=0.4, color='g', ls='dashed',label='Mantic-Lugo et al. (2015) Re=50')
+
+
 
     file = SpectreNS('marquet2019_re50.ref')
     plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'blue', r'Marquet et al. (2019) Re=50')

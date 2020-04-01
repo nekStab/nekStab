@@ -16,7 +16,14 @@ c-----------------------------------------------------------------------
       save eek,n,re,ntot
 
       call oprzero(fcx,fcy,fcz) ! never comment this!
-      if(istep.eq.0)call print_parameters
+      if(istep.eq.0) then
+         call print_parameters
+         if(uparam(10).gt.0)then
+            if(nid.eq.0)write(6,*)' Initializing sponge...'
+            spng_str = 1.0d0
+            call spng_init
+         endif
+      endif
 
       if(uparam(1).ne.3)then
 

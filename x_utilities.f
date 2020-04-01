@@ -64,32 +64,31 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       integer, parameter :: lt=lx1*ly1*lz1*lelt
-      real, dimension(lt) :: do1,do2,do3
+      real, dimension(lt) :: do1,do2,do3,
+     $                       re1,re2,re3
 
-      if(istep.eq.0)then
-         if(nid.eq.0)write(6,*)' Initializing sponge...'
-         call spng_init
-      else
-         if (JP.eq.0) then ! dns
+      !opadd2   (a1,a2,a3,b1,b2,b3)   #--> a1(i)=a1(i)+b1(i)
+      !opadd2col(a1,a2,a3,b1,b2,b3,c) #--> a1(i)=a1(i)+b1(i)*c(i)
 
-            !ffx = ffx + spng_fun(ip)*( - VX )
-            !ffy = ffy + spng_fun(ip)*(spng_vr(ip,2) - VY )
-            !if (IF3D) ffz = ffz + spng_fun*(spng_vr(ip,NDIM) - VZ
+      !opsub3                         #--> A(I)=B(I)-C(I)
 
-           call opsub3 (do1,do2,do3, spng_vr(:,1),spng_vr(:,2),spng_vr(:,3), vx,vy,vz)
-           call opadd2col(fcx,fcy,fcz, do1,do2,do3, spng_fun)
+      call opcopy(re1,re2,re3, fcx,fcy,fcz)
+      if (JP.eq.0) then ! dns
 
-         else !perturbation
+         !ffx = ffx + spng_fun(ip)*(spng_vr(ip,2)- VX )
+         call opsub3 (do1,do2,do3, spng_vr(1,1),spng_vr(1,2),spng_vr(1,3), vx,vy,vz)
+         call opcmult(do1,do2,do3, spng_fun)
+         call opadd2 (re1,re2,re3, do1,do2,do3)
 
-            !ffx = ffx - spng_fun*VXP(ip,JP)
-            !ffy = ffy - spng_fun*VYP(ip,JP)
-            !if(IF3D) ffz = ffz - spng_fun*VZP(,JP)
+      else ! perturbation
 
-                !opadd2col(a1,a2,a3,b1,b2,b3,c) ! a1=a1+b1*c
-            call opadd2col(fcx,fcy,fcz,vxp(:,JP),vyp(:,JP),vzp(:,JP),-spng_fun)
+         !ffx = ffx - spng_fun*VXP(ip,JP)
+         call opcopy (do1,do2,do3, vxp(1,JP),vyp(1,JP),vzp(1,JP))
+         call opcmult(do1,do2,do3, -spng_fun)
+         call opadd2 (re1,re2,re3, do1,do2,do3)
 
-         endif
       endif
+      call opcopy(fcx,fcy,fcz, re1,re2,re3)
 
       return
       end
@@ -99,29 +98,35 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       real glmin,glmax,deltax,xmn,xmx
+      real left_sponge,right_sponge
       integer n
 
       n = nx1*ny1*nz1*nelv
       xmn = glmin(xm1,n); xmx = glmax(xm1,n)
       deltax = xmx - xmn
 
-                  spng_wl(1)=0.02*deltax ! Sponge left section width; dimension X
-                  spng_wl(2)=0.0 ! Sponge left section width; dimension Y
-          if(IF3D)spng_wl(3)=0.0 ! Sponge left section width; dimension Z
+      left_sponge = 0.05*deltax
+      right_sponge = 0.10*deltax
 
-                 spng_wr(1)=0.1*deltax ! Sponge right section width; dimension X
-                 spng_wr(2)= 0.0
+                  spng_wl(1)=(2./3.)*left_sponge ! Sponge left section width; dimension X
+                  spng_wl(2)=0.0
+          if(IF3D)spng_wl(3)=0.0
+
+                  spng_wr(1)=(2./3.)*right_sponge! Sponge right section width; dimension X
+                  spng_wr(2)=0.0
           if(IF3D)spng_wr(3)=0.0
 
-                 spng_dl(1)=0.333*spng_wl(1) ! Sponge left drop/rise section width; dimension X
-                 spng_dl(2)=0.333*spng_wl(2)
-         if(IF3D)spng_dl(3)=0.333*spng_wl(3)
+                 spng_dl(1)=(1./3.)*left_sponge ! Sponge left drop/rise section width; dimension X
+                 spng_dl(2)=0.0
+         if(IF3D)spng_dl(3)=0.0
 
-                spng_dr(1)=0.333*spng_wr(1) ! Sponge right drop/rise section width; dimension X
-                spng_dr(2)=0.333*spng_wr(2)
-        if(IF3D)spng_dr(3)=0.333*spng_wr(3)
+                spng_dr(1)=(1./3.)*right_sponge ! Sponge right drop/rise section width; dimension X
+                spng_dr(2)=0.0
+        if(IF3D)spng_dr(3)=0.0
 
          if(nid.eq.0)then
+            write(6,*)' Left sponge width: ',left_sponge
+            write(6,*)' Right sponge width: ',right_sponge
             write(6,*)' Sponge left section width: ',spng_wl
             write(6,*)' Sponge right section width: ',spng_wr
             write(6,*)' Sponge left drop/rise section width: ',spng_dl
@@ -129,7 +134,7 @@ c-----------------------------------------------------------------------
          endif
 
       ! save reference field -> sponge value reference
-      call opcopy(spng_vr(1,1),spng_vr(1,3),spng_vr(1,4),vx,vy,vz) !only DNS
+      call opcopy(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),vx,vy,vz) !only DNS
       call spng_set ! -> compute spng_fun
 
       return
@@ -138,9 +143,10 @@ c-----------------------------------------------------------------------
       subroutine spng_set !set sponge function and refernece fields
       implicit none
       include 'SIZE'
-      include 'INPUT'
-      include 'GEOM'
+      include 'TOTAL'
 
+      !include 'INPUT'
+      !include 'GEOM'
       real lcoord(LX1*LY1*LZ1*LELV)
       common /SCRUZ/ lcoord
 
@@ -148,7 +154,7 @@ c-----------------------------------------------------------------------
       real rtmp, ltim, bmin(LDIM), bmax(LDIM)
       real xxmax, xxmax_c, xxmin, xxmin_c, arg
       real glmin, glmax, mth_stepf
-      logical ltmp
+      logical ltmp, ltmp2
 
       ntot = NX1*NY1*NZ1*NELV
       bmin(1) = glmin(XM1,ntot)
@@ -210,10 +216,10 @@ c-----------------------------------------------------------------------
           endif  ! spng_w(il).gt.0.0
        enddo
 
-      ltmp = ifto
-      ifto = .true.
-      call outpost2(spng_vr,spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
-      ifto = ltmp
+      ltmp = ifto; ltmp2 = ifpo
+      ifto = .true.; ifpo= .false.
+      call outpost2(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
+      ifto = ltmp; ifpo = ltmp2
 
       return
       end

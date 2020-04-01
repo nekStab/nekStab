@@ -133,7 +133,7 @@ c-----------------------------------------------------------------------
             write(6,*)
           endif
 
-          if( residu .lt. 1.0e-09 )then !save to disk and change flag
+          if( istep.gt.100 .and. residu .lt. 1.0e-09 )then !save to disk and change flag
             if(nid.eq.0)write(6,*)' Converged base flow to 1.0E-09...'
             ifbfcv = .true.
             call outpost(vx,vy,vz,pr,t,'BF_')
