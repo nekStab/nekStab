@@ -1,27 +1,27 @@
 [GENERAL]
 startFrom = BF_1cyl0.f00001
 
-stopAt = endTime
-endTime = 10000.
+stopAt = numSteps #endTime
+#endTime = 10000.
+numSteps = 1150
 
-userParam01 = 1  #0:dns,1:stabilization,3:stability
-userParam02 = 0  #krylov snapshot to load
+userParam01 = 3  # 0:dns,1:stabilization,3:stability
+userParam02 = 0  # krylov snapshot to load
 
-userParam03 = 1.1  #stabilization: 1:sfd, 1.1:sfd_ab3
-userParam04 = 0.063  #St mode  -> omega_c = pi St
-userParam05 = 0.125  #gain = 2 sigma mode
+userParam03 = 1.1    # stabilization: 1:sfd, 1.1:sfd_ab3
+userParam04 = 0.063  # St mode  -> omega_c = pi St
+userParam05 = 0.125  # gain = 2 sigma mode
 
-userParam08 = 400 #nsteps
-userParam10 = 1.0   #sponge strenght
+userParam08 = 1150   # nsteps
+userParam10 = 0   # sponge strenght
 
-
-dt = 0
-variableDt = yes
+dt = 6.9197688E-03
+variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime #timestep #runTime
-writeInterval = 20.
+writeInterval = 20
 writeDoublePrecision = yes
 
 dealiasing = yes
@@ -30,7 +30,7 @@ dealiasing = yes
 #filterCutoffRatio = 0.84
 
 [PROBLEMTYPE]
-equation = incompns
+equation = incomplinns
 solveBaseflow = no
 numberOfPerturbations = 1
 
@@ -47,7 +47,7 @@ writeToFieldFile = yes
 residualTol = 1.0E-08
 residualProj = yes
 density = 1.0
-viscosity = -60.0
+viscosity = -50.0
 
 [TEMPERATURE] # vorticity
 solver = none
