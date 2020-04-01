@@ -6,8 +6,8 @@
 
       character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
 
-      integer, parameter :: k_dim  = 32
-      integer, parameter :: schur_tgt  = 4 !schur on if >1
+      integer, parameter :: k_dim  = 96
+      integer, parameter :: schur_tgt  = 0 !schur on if >1
 
       real, parameter    :: eigen_tol  = 1.0E-6 !standard value
       real, parameter    :: schur_del  = 0.20D0
@@ -28,6 +28,7 @@
       real spng_fun(LX1*LY1*LZ1*LELV)     ! sponge function
      $    ,spng_vr(LX1*LY1*LZ1*LELV,LDIM) ! reference velocity field
       common /SPONGEV/ spng_fun, spng_vr
+
       real spng_str      !var sponge strength
       real spng_wl(LDIM) !var sponge width (left section; every dmension separately)
       real spng_wr(LDIM) !var sponge width (right section)

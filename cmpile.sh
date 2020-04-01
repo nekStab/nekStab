@@ -19,10 +19,10 @@ export FC="mpiifort"; export CC="mpiicc"
 export FFLAGS="-mcmodel=medium -shared-intel -xHost -extend-source -mkl -g -traceback"
 #export USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
 
-## GCC
-#export FC="mpif77"; export CC="mpicc"
+## GCC #sudo apt install -y libmpich-dev mpich libblas-dev liblapack-dev
+#export FC="mpif77"; export CC="mpicc" #sudo apt install -y libmpich-dev mpich
 #export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none -g -fbacktrace"
-#export USR_LFLAGS+="-L/usr/lib -lblas -llapack" #sudo apt install libblas-dev liblapack-dev
+#export USR_LFLAGS+="-L/usr/lib -lblas -llapack" #sudo apt install -y libblas-dev liblapack-dev
 
 export USR="x_eigensolvers.o x_linalg.o x_fixed_point.o x_usr_extra.o x_utilities.o x_IO.o x_postprocessing.o"
 #export PPLIST="VENDOR_BLAS" # this substitute the main code eigensolvers

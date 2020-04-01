@@ -140,17 +140,30 @@ c     ----- Miscellaneous -----
       call oprzero(V_x,V_y,V_z)
       if(ifpo)Pressure = 0.0d0
 
-      !if(ifldbf)then
-         if(.not. ifbfcv)then !skip loading if single run
-          if(nid.eq.0)write(6,*)'Loading base flow: ',bf_handle
-          call load_fld(bf_handle)
-         endif
-         ifto = .true. ;ifpo = .true.
-         call comp_vort3(t(1,1,1,1,2),wo1,wo2,vx,vy,vz)
-         call lambda2(t(1,1,1,1,3))
-         call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
-         call opcopy(ubase,vbase,wbase,vx,vy,vz)
-       !endif!ifldbf
+c     ----- Loading baseflow from disk (optional) -----
+
+      if(.not. ifbfcv)then !skip loading if single run
+       if(nid.eq.0)write(6,*)'Loading base flow: ',bf_handle
+       call load_fld(bf_handle)
+      endif
+
+
+      if(nid.eq.0)write(6,*)('testing implied do loop ',i,' : ',residu(i),i=1,k_dim)
+
+
+c     ----- Save baseflow to disk (recommended) -----
+
+      ifto = .true. ;ifpo = .true.
+      call comp_vort3(t(1,1,1,1,2),wo1,wo2,vx,vy,vz)
+      call lambda2(t(1,1,1,1,3))
+      call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
+      call opcopy(ubase,vbase,wbase,vx,vy,vz)
+
+c     ----- First vector (new from noise or restart) -----
+
+      if (uparam(2).eq.0) then
+
+        if(nid.eq.0)write(6,*)'Starting new Arnoldi decomposition...'
 
 c     ----- Creates seed vector for the Krylov subspace -----
 
@@ -160,7 +173,7 @@ c     ----- Creates seed vector for the Krylov subspace -----
          call orthonormalize(vxp,vyp,vzp,prp,alpha)
          call matrix_vector_product(vxp,vyp,vzp,prp, vxp,vyp,vzp)
 
-	      else !ifnois.eq..false.
+         else !ifnois.eq..false.
 
           call opcopy(vxp,vyp,vzp,ubase,vbase,wbase)
 
@@ -168,26 +181,30 @@ c     ----- Creates seed vector for the Krylov subspace -----
 
 c     ----- Normalized to unit-norm -----
 
-      call orthonormalize(vxp,vyp,vzp,prp,alpha)
+         call orthonormalize(vxp,vyp,vzp,prp,alpha)
 
-c     ======================================
-c     =====                            =====
-c     ===== Krylov-Schur decomposition =====
-c     =====                            =====
-c     ======================================
+         mstart = 1; istep = 1; time = 0.0d0
+         call opcopy(v_x(:,1),v_y(:,1),v_z(:,1),vxp,vyp,vzp)
+         if(ifpo) call copy(Pressure(:,1),prp(:,1),n2)
+         call whereyouwant('KRY',1)
+
+         if(nid.eq.0)write(6,*)'Sanity check: ensure line 1094 of prepost changed to common!'
 
 c     ----- Storing the starting vector in the Krylov basis -----
 
-      if(nid.eq.0)write(6,*)'Restarting from:',uparam(2)
+         ifto=.false.
+         call outpost(v_x(:,1),v_y(:,1),v_z(:,1), Pressure(:,1),t,'KRY')
 
-      if (uparam(2).gt.0) then
+      elseif(uparam(2).gt.0)then
 
-        mstart = uparam(2)
+         mstart = uparam(2)
 
          if(nid.eq.0)then
+          write(6,*)'Restarting from:',mstart
           write(6,'(a,a,i4.4)')' Loading Hessenberg matrix: HES',trim(SESSION),mstart
           write(filename,'(a,a,i4.4)')'HES',trim(SESSION),mstart
-          open(67,file=trim(filename),status='unknown',form='formatted')
+          open(67,file=trim(filename),
+     $            status='unknown',form='formatted')
           read(67,*) beta
           write(6,*)'Loading beta',beta
 
@@ -229,21 +246,13 @@ c     ----- Storing the starting vector in the Krylov basis -----
          call load_files(V_x, V_y, V_z, Pressure, mstart, k_dim+1, 'KRY')
          !k_dim+1 is the dim of V_x
 
-      else !uparam(2).eq.0
+      endif !(uparam(02))
 
-
-        if(nid.eq.0)write(6,*)'Starting new Arnoldi decomposition...'
-
-         mstart = 1; istep = 1; time = 0.0d0
-         call opcopy(v_x(:,1),v_y(:,1),v_z(:,1),vxp,vyp,vzp)
-         if(ifpo) call copy(Pressure(:,1),prp(:,1),n2)
-         call whereyouwant('KRY',1)
-         if(nid.eq.0)write(6,*)'Sanity check: ensure line 1094 of prepost changed to common!'
-
-         ifto=.false.
-         call outpost(v_x(:,1),v_y(:,1),v_z(:,1), Pressure(:,1),t,'KRY')
-
-      endif
+c     ======================================
+c     =====                            =====
+c     ===== Krylov-Schur decomposition =====
+c     =====                            =====
+c     ======================================
 
       is_converged = .false.
       do while ( .not. is_converged )
@@ -272,6 +281,7 @@ c     ----- Check the convergence of the Ritz eigenpairs -----
                     if(nid.eq.0)write(6,*)'Outposting before restart...'
                     call eigen_decomp( H_mat , k_dim , VP , FP )
                     call outpost_ks( VP , FP , V_x , V_y , V_z , Pressure , residu )
+
                     if(nid.eq.0)write(6,*)'Starting Schur factorization...'
                     call Schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
 
@@ -599,9 +609,13 @@ c     ----- Compute the Schur decomposition -----
             write(6,*) mstart,'Ritz eigenpairs have been selected'
             write(6,*)
 
-            do i = 1, k_dim
-               write(6,*) 'Residual of eigenvalue',i,' : ',residu(i)
-            enddo
+            !do i = 1, k_dim
+            !   write(6,*) 'Residual of eigenvalue',i,' : ',residu(i)
+            !!enddo
+
+         write(6,*)('Residual of eigenvalue',i,' : ',residu(i), i=1,k_dim)
+               !WRITE (6,1111) (I, I=1,20)
+
             write(6,*)
          endif
 
