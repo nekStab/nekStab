@@ -1,102 +1,204 @@
-c-----------------------------------------------------------------------
-      subroutine Schur_decomp(A,VS,VP,n,sdim)
+!-----------------------------------------------------------------------
+      
+      
+      
+      
+      
+      subroutine schur(A, vecs, vals, n)
+
+!     This function computes the Schur decomposition of a general matrix A.
+!     Both the eigenvalues and the corresponding Schur basis are returned.
+!     Note that the matrix A is overwritten with its Schur factorization.
+!
+!     INPUTS
+!     ------
+!
+!     A : n x n real matrix
+!     Matrix to be factorized.
+!
+!     n : float
+!     Number of rows/columns of A.
+!
+!     RETURNS
+!     -------
+!
+!     A : n x n real matrix
+!     Schur decomposition of the input matrix A, in canonical form.
+!
+!     vecs : n x n real matrix
+!     Schur basis asssociated to A.
+!
+!     vals : n-dimensional complex array.
+!     Unsorted eigenvalues of matrix A.
+!
+!     
+!     Last edit : April 1st 2020 by JC Loiseau.     
+       
       implicit none
-
-c     ----- Required variables for dgees -----
-
-      character*1           :: JOBVS = 'V', SORT = 'S'
-      integer               :: n, LDA, SDIM, LDVS, LWORK, INFO
-      real, dimension(n,n)  :: A, VS
-      real, dimension(n)    :: WR, WI
-      real, dimension(3*n)  :: WORK
-      logical, dimension(n) :: BWORK
-      complex*16, dimension(n) :: VP
-
-      external select_eigenvalue
-
-c     ----- Schur decomposition -----
-
-      LDA   = max(1,n)
-      LDVS  = max(1,n)
-      LWORK = max(1,3*n)
-
-      call dgees(JOBVS, SORT, SELECT_EIGENVALUE, N, A, LDA
-     $     , SDIM, WR, WI, VS, LDVS, WORK, LWORK, BWORK, INFO)
-
-      VP = WR*(1.0D0,0.0D0) + WI*(0.0D0,1.0D0)
-
+      character*1 :: jobvs = "V", sort = "S"
+      integer  :: n, lda, sdim, ldvs, lwork, info
+      real, dimension(n, n) :: A, vecs
+      real, dimension(n) :: wr, wi
+      real, dimension(3*n) :: work
+      logical, dimension(n) :: bwork
+      complex*16, dimension(n) :: vals
+      
+      external select_eigvals
+      
+!     --> Perform the Schur decomposition.
+      lda = max(1, n)
+      ldvs = max(1, n)
+      lwork = max(1, 3*n)
+      
+      call dgees(jobvs, sort, select_eigvals, n, A, lda
+     $     , sdim, wr, wi, vecs, ldvs, work, lwork, bwork, info)
+      
+!     --> Eigenvalues.
+      vals = wr*(1.0D0, 0.0D0) + wi*(0.0D0, 1.0D0)
+      
       return
       end
+      
+      
+      
+      
+      
+!-----------------------------------------------------------------------
+      
+      
+      
+      
+      subroutine ordschur(T, Q, selected, n)
+      
+!     Given a matrix T in canonical Schur form and the corresponding Schur basis Q,
+!     this function reorder the Schur factorization and returns the reorder Schur
+!     matrix and corresponding Schur vectors such that the selected eigenvalues are
+!     in the upper-left block of the matrix. Note that, after completion, both T
+!     and Q are overwritten by the reordered Schur matrix and vectors.
+!
+!     INPUTS
+!     ------
+!
+!     T : n x n real matrix
+!     Matrix in canonical Schur form to be reordered.
+!     
+!     Q : n x n real matrix
+!     Matrix of Schur vectors to be reordered.
+!
+!     selected : logical n-dimensional array.
+!     Logical array indicating which eigenvalues need to be moved to the upper left block.
+!
+!     n : integer
+!     Number of rows/columns of T and Q.
+!
+!     RETURNS
+!     -------
+!
+!     T : n x n real matrix
+!     Reordered Schur matrix.
+!
+!     Q : n x n real matrix.
+!     Reordered Schur vectors.
+!
+!     Last edit : April 1st 2020 by JC Loiseau.
+      
+      implicit none
+      character*1 :: job = "N", compq = "V"
+      integer :: info, ldq, ldt, liwork, lwork, m, n
+      double precision :: s, sep      
+      logical, dimension(n) :: selected
+      real, dimension(n, n) :: T, Q
+      real, dimension(n) :: work, wr, wi
+      integer, dimension(1) :: iwork
+      
+!     --> Order the Schur decomposition.
+      ldt = max(1, n)
+      ldq = n
+      lwork = max(1, n)
+      liwork = 1
+      
+      call dtrsen(job, compq, selected, n, T, ldt, Q, ldq, wr, wi,
+     $     m, s, sep, work, lwork, iwork, liwork, info)
+      
+      return
+      end
+      
+      
+
+
+
 c-----------------------------------------------------------------------
-      /* subroutine compute_eigenvec_schur(A,FP,n)
+      subroutine eig(A, vecs, vals, n)
 
-      integer :: n
-      complex*16, dimension(n,n) :: FP
+!     This function computes the eigendecomposition of a general matrix A.
+!     Both the eigenvalues and the right eigenvectors are returned.
+!
+!     INPUTS
+!     ------
+!
+!     A : n x n real matrix.
+!     Matrix to be eigendecomposed.
+!
+!     n : integer
+!     Number of rows/columns of A.
+!
+!     RETURNS
+!     -------
+!
+!     vecs : n x n complex matrix.
+!     Matrix of eigenvectors.
+!
+!     vals : n-dimensional complex array.
+!     Array containing the eigenvalues.
+!
+!     Last edit : April 1st 2020 by JC Loiseau.
 
-c     ----- Required variables for ztrevc -----
+      implicit none
+      character*1 :: jobvl = "N", jobvr = "V"
+      integer :: n, lwork, info, lda, ldvl, ldvr
+      real, dimension(n, n) :: A, A_tilde, vr
+      real, dimension(1, n) :: vl
+      real, dimension(4*n) :: work
+      real, dimension(n) :: wr, wi
+      complex*16, dimension(n, n) :: vecs
+      complex*16, dimension(n) :: vals
+      integer :: i
+      integer, dimension(n) :: idx
 
-      character*1 :: JOB = 'R', HOWMY = 'A'
-      real, dimension(n,n) :: A
-      real, dimension(n,n) :: T, VR, VL
-      integer :: ldt, ldvl, ldvr, mm, m
-      real, dimension(3*n) :: WORK
-      integer :: INFO, i
-      real :: norme
+!     --> Compute the eigendecomposition of A.
+      lda = n
+      ldvl = 1
+      ldvr = n
+      lwork = 4*n
+      A_tilde = A
 
-c     ----- Compute the eigenvectors of T -----
+      call dgeev(jobvl, jobvr, n, A_tilde, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork, info)
 
-      T    = A
-      ldt  = max(1,n)
-      ldvl = max(1,n)
-      ldvr = max(1,n)
-      m    = n
-      mm   = m
+!     --> Transform from real to complex arithmetic.
+      vals = wr*(1.0D0, 0.0D0) + wi*(0.0D0, 1.0D0)
+      vecs = vr*(1.0D0, 0.0D0)
 
-      call dtrevc( JOB, HOWMY, select_eigenvalue, N, T, LDT, VL,
-     $     LDVL, VR, LDVR, MM, M, WORK, INFO )
-
-      i = 1
-      do while ( i.LT.n )
-
-         if ( abs(T(i+1,i)).LT.1e-8 ) then
-            FP(:,i) = VR(:,i)*(1.0D0,0.0D0)
-            norme   = sqrt( sum( VR(:,i)**2. ) )
-            FP(:,i) = FP(:,i)/norme
-            i = i + 1
-         else
-            FP(:,i)   = VR(:,i)*(1.0D0,0.0D0) + VR(:,i+1)*(0.0D0,1.0D0)
-            FP(:,i+1) = VR(:,i)*(1.0D0,0.0D0) - VR(:,i+1)*(0.0D0,1.0D0)
-            norme     = sqrt( sum( VR(:,i)**2 + VR(:,i+1)**2) )
-            FP(:,i)   = FP(:,i)/norme
-            FP(:,i+1) = FP(:,i+1)/norme
-            i = i + 2
+      do i = 1, n-1
+         if (wi(i) .gt. 0) then
+            vecs(:, i) = vr(:, i)*(1.0D0, 0.0D0) + vr(:, i+1)*(0.0D0, 1.0D0)
+            vecs(:, i+1) = vr(:, i)*(1.0D0, 0.0D0) - vr(:, i+1)*(0.0D0, 1.0D0)
+         else if (wi(i) .eq. 0) then
+            vecs(:, i) = vr(:, i)*(1.0D0, 0.0D0)
          endif
-
       enddo
 
-      return
-      end */
-c-----------------------------------------------------------------------
-      subroutine eigen_decomp(A,n,VP,VR)
-      implicit none
-c     ----- Required variables for zgeev (eigenpairs computations) -----
-      integer    :: INFO
-      integer    :: n, LWORK
-      real       :: A(n,n)
-      real       :: RWORK(2*n)
-      complex*16 :: VL(1,n)
-      complex*16 :: VR(n,n)
-      complex*16 :: WORK(4*n)
-      complex*16 :: VP(n)
-c     ----- Computation of eig(A) -----
-      LWORK = 4*n
-      call ZGEEV('N','V',n,A*(1.0,0.0),n,VP,VL,1,VR,n,
-     $     WORK,LWORK,RWORK,INFO)
-c     ----- Sort the eigedecomposition -----
-      call sort_eigendecomp(VP,VR,n)
+!     --> Sort the eigenvalues and eigenvectors by decreasing magnitudes.
+      call sort_eigendecomp(vals, vecs, n)
+
       return
       end
+
 c-----------------------------------------------------------------------
+
+
+
+
+      
       subroutine matrix_matrix(A,B,nra,nc,ncb)
       implicit none
       integer :: nra, nc, ncb
@@ -116,4 +218,85 @@ c     ----- Matrix-matrix multiplication -----
       A(:,1:ncb) = C
       return
       end subroutine
+
+
+
+
+      
 c-----------------------------------------------------------------------
+
+
+
+
+
+      subroutine sort_eigendecomp(vals, vecs, n)
+
+!     This function sorts the eigenvalues in decreasing magnitude using a very
+!     naive sorting algorithm.
+!
+!     INPUTS/OUTPUTS
+!     --------------
+!     
+!     vals : n-dimensional complex array.
+!     Array containing the eigenvalues to be sorted as input.
+!     It is overwritten with the ordered eigenvalues as output.
+!
+!     vecs : n x n complex matrix.
+!     Matrix of corresponding eigenvectors. It is also overwritten with
+!     the reordered eigenvectors as output.
+!
+!     Last edit : April 2nd by JC Loiseau
+      
+      implicit none
+      integer                    :: n
+      complex*16, dimension(n)   :: vals
+      complex*16, dimension(n,n) :: vecs
+      real, dimension(n)         :: norm
+      real                       :: temp_real
+      complex*16                 :: temp_complex
+      complex*16, dimension(n)   :: temp_n
+      integer                    :: k, l
+
+!     ----- Sorting the eigenvalues according to their norm -----
+      temp_n   = (0.0D0,0.0D0)
+      norm = sqrt( real(vals)**2 + aimag(vals)**2 )
+      do k = 1,n-1
+         do l = k+1,n
+            if (norm(k).LT.norm(l)) then
+               temp_real    = norm(k)
+               temp_complex = vals(k)
+               temp_n       = vecs(:,k)
+               norm(k) = norm(l)
+               norm(l) = temp_real
+               vals(k)  = vals(l)
+               vals(l)  = temp_complex
+               vecs(:,k) = vecs(:,l)
+               vecs(:,l) = temp_n
+            endif
+         enddo
+      enddo
+      return
+      end
+      
+!     -------------------------------------------------------------------
+
+
+
+
+      function select_eigvals(wr, wi)
+      implicit none
+      
+!     ----- Miscellaneous declarations     -----
+      logical :: select_eigvals
+      real :: wr, wi
+      
+!     --> Select eigenvalues based on its magnitude.
+      select_eigvals = .false.
+      if(sqrt(wr**2 + wi**2) .GT. 0.9) select_eigvals=.true.
+      
+      end
+      
+      
+      
+      
+      

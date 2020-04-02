@@ -112,7 +112,7 @@ b) load PER or Fourier modes and run 3
 8. stop the code with _call **exitt**_
 9. use *nelv* instead of _*nelt*_ for consistency as we must respect velocity mesh
 10. use *n* and *n2* for loops instead of *ntot1* 
-11. local field declarations with *lt*
+11. local field declarations with *lt* and *lt2*
 
 ```fortran
 real, save, intent(inout), dimension(lt) :: field1,field2,field3

@@ -24,10 +24,10 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
+      integer, parameter               :: lt  = lx1*ly1*lz1*lelt
       real, intent(in), dimension(lt)  :: qx, qy, qz
-      real, intent(out)                              :: alpha
-      real                                           :: glsc3, alpha_tmp
+      real, intent(out)                :: alpha
+      real                             :: glsc3, alpha_tmp
       integer n
       n      = nx1*ny1*nz1*nelt
 
@@ -51,6 +51,7 @@ c----------------------------------------------------------------------
       real, dimension(lt2)  :: qp
       real                               :: alpha,beta_tmp
       real, intent(out), optional        :: beta
+
       integer n2
       n2     = nx2*ny2*nz2*nelt
 
@@ -147,10 +148,6 @@ c     ----- Loading baseflow from disk (optional) -----
        call load_fld(bf_handle)
       endif
 
-
-      if(nid.eq.0)write(6,*)('testing implied do loop ',i,' : ',residu(i),i=1,k_dim)
-
-
 c     ----- Save baseflow to disk (recommended) -----
 
       ifto = .true. ;ifpo = .true.
@@ -187,12 +184,7 @@ c     ----- Normalized to unit-norm -----
          call opcopy(v_x(:,1),v_y(:,1),v_z(:,1),vxp,vyp,vzp)
          if(ifpo) call copy(Pressure(:,1),prp(:,1),n2)
          call whereyouwant('KRY',1)
-
-         if(nid.eq.0)write(6,*)'Sanity check: ensure line 1094 of prepost changed to common!'
-
-c     ----- Storing the starting vector in the Krylov basis -----
-
-         ifto=.false.
+         ifto = .true.; ifpo= .true.
          call outpost(v_x(:,1),v_y(:,1),v_z(:,1), Pressure(:,1),t,'KRY')
 
       elseif(uparam(2).gt.0)then
@@ -203,8 +195,7 @@ c     ----- Storing the starting vector in the Krylov basis -----
           write(6,*)'Restarting from:',mstart
           write(6,'(a,a,i4.4)')' Loading Hessenberg matrix: HES',trim(SESSION),mstart
           write(filename,'(a,a,i4.4)')'HES',trim(SESSION),mstart
-          open(67,file=trim(filename),
-     $            status='unknown',form='formatted')
+          open(67,file=trim(filename),status='unknown',form='formatted')
           read(67,*) beta
           write(6,*)'Loading beta',beta
 
@@ -219,15 +210,18 @@ c     ----- Storing the starting vector in the Krylov basis -----
                enddo
             enddo
           else
-            do i = 1,mstart+1
-              do j = 1,mstart
-                 read(67,*) H_mat(i,j)
-              enddo
-            enddo
+            !do i = 1,mstart+1
+            !  do j = 1,mstart
+            !     read(67,*) H_mat(i,j)
+            !  enddo
+            !enddo
+            read(67,*)( ( H_mat(i,j), j = 1,mstart ), i = 1,mstart+1 )
           endif
 
           close(67)
-         endif!nid.eq.0
+          call bcast(H_mat,k_dim*k_dim*8) !broadcast H matrix to all procs
+          write(6,*)'H matrix broadcasted...'
+         endif !nid.eq.0
 
          !if(nid.eq.0)then !-> debug only
          ! write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
@@ -276,11 +270,13 @@ c     ----- Check the convergence of the Ritz eigenpairs -----
                 if ( have_converged .GE. schur_tgt ) then
 
                     is_converged = .true.
+
                 else
 
-                    if(nid.eq.0)write(6,*)'Outposting before restart...'
-                    call eigen_decomp( H_mat , k_dim , VP , FP )
-                    call outpost_ks( VP , FP , V_x , V_y , V_z , Pressure , residu )
+                    !apparenly this does not work !
+                    !if(nid.eq.0)write(6,*)'Outposting before restart...'
+                    !call eigen_decomp( H_mat , k_dim , VP , FP )
+                    !call outpost_ks( VP , FP , V_x , V_y , V_z , Pressure , residu )
 
                     if(nid.eq.0)write(6,*)'Starting Schur factorization...'
                     call Schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
@@ -294,7 +290,7 @@ c     ----- Check the convergence of the Ritz eigenpairs -----
 c     ----- Final computation of the eigenpairs of the Hessenberg matrix -----
 
       if(nid.eq.0)write(6,*)'Final eigendecomposition...'
-      call eigen_decomp( H_mat , k_dim , VP , FP )
+      call eig(H_mat, fp, vp, k_dim)
 
 c     ----- Output all the spectrums and converged eigenmodes -----
 
@@ -380,7 +376,7 @@ c     ----- Arnoldi factorization -----
          call opcopy(vxp,vyp,vzp, qx(:,mstep),qy(:,mstep),qz(:,mstep))
          if(ifpo) call copy(prp,qp(:,mstep),n2)
 
-c     ----- Matrix-vector product w = M*v -----
+!     ----- Matrix-vector product w = M*v -----
 
          call matrix_vector_product(f_xr, f_yr, f_zr, f_pr, qx(:,mstep), qy(:,mstep), qz(:,mstep))
 
@@ -429,13 +425,14 @@ c     ----- Normalizes the orthogonal residual and uses it as a new Krylov vecto
          endif
 
          time=real(time*mstep)
-         call whereyouwant('KRY',mstep+1); ifto = .false.
+         call whereyouwant('KRY',mstep+1)
+         ifto = .true.; ifpo = .true.
          call outpost(f_xr,f_yr,f_zr,f_pr,t,'KRY')
 
-         VP(1:mstep)=0.0d0; FP(1:mstep,1:mstep)=0.0d0
-         call eigen_decomp( H(1:mstep,1:mstep) , mstep , VP(1:mstep) , FP(1:mstep,1:mstep) )
+         vp = 0.0D0; fp = 0.0D0
+         call eig(H(1:mstep, 1:mstep), fp(1:mstep, 1:mstep), vp(1:mstep), mstep)
 
-         have_cnv = 0; resd = 0.0d0
+         have_cnv = 0; resd = 1.0D0
          if(nid.eq.0)then ! outpost Hessenberg matrix spectre
           !write(6,'(a,a,i4.4)') ' Ouposting Hessenberg matrix spectre to: HSP',trim(SESSION),mstep
           !write(filename,'(a,a,i4.4)')'HSP',trim(SESSION),mstep
@@ -507,23 +504,22 @@ c-----------------------------------------------------------------------
 
 !-----Compute the eigedecomposition of H -----!
 
-      VP = ( 0.0d0 , 0.0d0 ); FP = ( 0.0d0 , 0.0d0 )
-      call eigen_decomp(H,n,VP,FP)
+      VP = ( 0.0D0 , 0.0D0 )
+      FP = ( 0.0D0 , 0.0D0 )
+      call eig(H, fp, vp, n)
 
 !-----Compute the number of converged Ritz pairs -----!
 
       have_cnv = 0; res = 1.0d0
       do i = 1,n
          res(i) = abs( beta * FP(n,i) )
-         if ( res(i) .LT. tol ) then
-            have_cnv = have_cnv + 1
-         endif
+         if ( res(i) .LT. tol ) have_cnv = have_cnv + 1
       enddo
 
       return
       end
 c-----------------------------------------------------------------------
-      subroutine Schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
+      subroutine schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
 
       implicit none
       include 'SIZE'
@@ -562,6 +558,8 @@ c     ----- Miscellaneous -----
       integer :: mstart,n,n2,i,j
       real beta
       real, dimension(k_dim)             :: residu
+      logical, dimension(k_dim)          :: selected
+      integer, dimension(k_dim)          :: idx
 
 c     ----- Schur and Hessenberg decomposition -----
 
@@ -576,47 +574,43 @@ c     =========================================
       n  = nx1*ny1*nz1*nelt
       n2 = nx2*ny2*nz2*nelt
 
-      Q1 = 0.0d0
+      Q1 = 0.0D+00
 
-      b_vec          = 0.0d0
+      b_vec          = 0.0D0
       b_vec(1,k_dim) = beta
 
-c     ----- Compute the Schur decomposition -----
+      VP = ( 0.0D0 , 0.0D0 )
+      Q1 = 0.0D0
 
-      VP = ( 0.0d0 , 0.0d0 )
-      Q1 = 0.0d0
+!     --> Perform the Schur decomposition.
+      call schur(H_mat, Q1, VP, k_dim)
 
-      call Schur_decomp(H_mat,Q1,VP,k_dim,mstart)
+!     --> Sort the eigenvalues based on their magnitude;
+      do i = 1, k_dim
+         idx(i) = i
+      enddo
+      call quicksort2(k_dim, abs(VP), idx)
 
-      H_mat(1:mstart,mstart+1:k_dim)       = 0.0d0
-      H_mat(mstart+1:k_dim,1:mstart)       = 0.0d0
-      H_mat(mstart+1:k_dim,mstart+1:k_dim) = 0.0d0
+!     --> Partition the eigenvalues in wanted / unwanted.
+      call select_eigenvalues(selected, mstart, vp, idx, schur_del, schur_tgt, k_dim)
 
-      if ( mstart.EQ.0 ) then
+!     --> Re-order the Schur decomposition based on the partition.
+      call ordschur(H_mat, Q1, selected, k_dim)
 
-         mstart = 1
-         H_mat  = 0.0d0
+      H_mat(1:mstart,mstart+1:k_dim)       = 0.0D0
+      H_mat(mstart+1:k_dim,1:mstart)       = 0.0D0
+      H_mat(mstart+1:k_dim,mstart+1:k_dim) = 0.0D0
 
-         call opcopy( V_x(:,mstart), V_y(:,mstart), V_z(:,mstart),
-     $        V_x(:,k_dim+1), V_y(:,k_dim+1), V_z(:,k_dim+1) )
+      if ( nid.EQ.0 ) then
+         write(*,*) mstart,
+     $        'Ritz eigenpairs have been selected'
+         write(*,*)
 
-         if(ifpo) call copy( Pressure(:,mstart) ,
-     $        Pressure(:,k_dim+1), n2)
-
-      else
-
-         if ( nid.eq.0 ) then
-            write(6,*) mstart,'Ritz eigenpairs have been selected'
-            write(6,*)
-
-            !do i = 1, k_dim
-            !   write(6,*) 'Residual of eigenvalue',i,' : ',residu(i)
-            !!enddo
-
-         write(6,*)('Residual of eigenvalue',i,' : ',residu(i), i=1,k_dim)
-               !WRITE (6,1111) (I, I=1,20)
-
-            write(6,*)
+         do i = 1, k_dim
+            write(*,*) 'Residual of eigenvalue',
+     $           i, ' : ', residu(i)
+         enddo
+         write(*,*)
          endif
 
 c     ----- Re-order the Krylov basis -----
@@ -638,33 +632,6 @@ c     ----- Update the matrix with b(prime)*Q -----
 
          call opcopy(V_x(:,mstart),  V_y(:,mstart),  V_z(:,mstart),
      $               V_x(:,k_dim+1), V_y(:,k_dim+1), V_z(:,k_dim+1))
-
-!           FIX RESTART WITH SCHUR STEP!!!
-!         if (nid.eq.0) then
-!            open(unit=ifich1,file='Hessenberg.dat',form='formatted')
-!            write(ifich1,*) k_dim
-!            !write(ifich1,*) mstart
-!            write(ifich1,*) beta
-!            do i = 1,k_dim
-!               do j = 1,k_dim
-!                  write(ifich1,*) H_mat(i,j)
-!               enddo
-!            enddo
-!            close(ifich1)
-!            open( unit = ifich2,
-!     $           file  = 'Hessenberg_info.dat',
-!     $           form  = 'formatted')
-!            write(ifich2,*) mstart
-!            write(ifich2,*) beta
-!            close(ifich2)
-!         endif
-
-         do j = 1,mstart
-            call  whereyouwant('KRY',j)
-            call  outpost(V_x(:,j),V_y(:,j),V_z(:,j),Pressure(:,j),t,'KRY')
-         enddo
-
-      endif
 
       return
       end
@@ -724,37 +691,6 @@ c----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine sort_eigendecomp(VP,FP,n)
-      implicit none
-      integer                    :: n
-      complex*16, dimension(n)   :: VP
-      complex*16, dimension(n,n) :: FP
-      real, dimension(n)         :: norm
-      real                       :: temp_real
-      complex*16                 :: temp_complex
-      complex*16, dimension(n)   :: temp_n
-      integer                    :: k, l
-c     ----- Sorting the eigenvalues according to their norm -----
-      temp_n   = (0.0d0,0.0d0)
-      norm = sqrt( real(VP)**2 + aimag(VP)**2 )
-      do k = 1,n-1
-         do l = k+1,n
-            if (norm(k).LT.norm(l)) then
-               temp_real    = norm(k)
-               temp_complex = VP(k)
-               temp_n       = FP(:,k)
-               norm(k) = norm(l)
-               norm(l) = temp_real
-               VP(k)  = VP(l)
-               VP(l)  = temp_complex
-               FP(:,k) = FP(:,l)
-               FP(:,l) = temp_n
-            endif
-         enddo
-      enddo
-      return
-      end
-c-----------------------------------------------------------------------
       subroutine matvec(FP_Cx,Qx,FP,n)
       implicit none
       include 'SIZE'
@@ -768,15 +704,6 @@ c-----------------------------------------------------------------------
          FP_Cx = FP_Cx + Qx(:,i)*FP(i)
       enddo
       return
-      end
-c---------------------------------------------------------------
-      function select_eigenvalue(wr,wi)
-      implicit none
-      include 'SIZE'
-      logical :: select_eigenvalue
-      real :: wr, wi
-      select_eigenvalue = .false.
-      if(sqrt(wr**2+wi**2).GT.(1.0d0-schur_del))select_eigenvalue=.true.
       end
 c----------------------------------------------------------------------
       subroutine outpost_ks(VP,FP,Qx,Qy,Qz,Qp,residu) !outposting vectors
@@ -930,3 +857,33 @@ c     ----- Output vorticity from real part -----
       return
       end
 c-----------------------------------------------------------------------
+
+      subroutine select_eigenvalues(selected, cnt, vals, idx, delta, nev, n)
+      implicit none
+
+!     ----- Input arguments -----
+      integer :: nev
+      integer :: n
+      integer, dimension(n) :: idx
+      complex*16, dimension(n) :: vals
+      real :: delta
+
+!     ----- Output argument -----
+      logical, dimension(n) :: selected
+      integer :: cnt
+
+!     ----- Miscellaneous -----
+      integer :: i
+
+      cnt = 0
+      selected = .false.
+
+      do i = n, 1, -1
+         if ((abs(vals(idx(i))) .ge. 1.0d0-delta) .or. (cnt .le. nev+4)) then
+            selected(idx(i)) = .true.
+            cnt = cnt + 1
+         endif
+      enddo
+
+      return
+      end
