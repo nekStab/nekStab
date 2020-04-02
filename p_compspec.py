@@ -22,7 +22,7 @@ plt.style.use('seaborn-white')
 
 formt = 'png'
 ajust = 'tight'
-qual = 1500
+qual = 900
 fig_width = 3.5 #5.33
 fig_height = 2.45 #5.33/3
 
@@ -120,8 +120,8 @@ if __name__ == '__main__':
     print('------------------------------------------')
 
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
-    plt.xlabel(r'$\Re (\lambda)$');plt.xlim(-1,1)
-    plt.ylabel(r'$\Im (\lambda)$');plt.ylim(-0.2,0.2)
+    plt.xlabel(r'$\Re (\lambda)$');#plt.xlim(-1,1)
+    plt.ylabel(r'$\Im (\lambda)$');#plt.ylim(-0.2,0.2)
 
     # plt.axvline(x=0, lw=0.4, color='g', ls='dashdot',label='S1')
     plt.axhline(y=0.1266, lw=0.4, color='m', ls='dashed',label='Mantic-Lugo et al. (2015) Re=100')
@@ -131,18 +131,18 @@ if __name__ == '__main__':
 
 
     file = SpectreNS('marquet2019_re50.ref')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'blue', r'Marquet et al. (2019) Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, -1, 'g', r'Marquet et al. (2019) Re=50')
 
     file = SpectreNS('marquet2008_re100.ref')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'red', r'Marquet et al. (2008) Re=100')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, -1, 'm', r'Marquet et al. (2008) Re=100')
 
     file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'm', r'Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 1, 'b', r'Re=50')
 
 
 
     fname='Spectre_NS.'+formt
-    plt.legend(loc='best',fontsize=6);
+    plt.legend(loc='best',fontsize=4);
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')
 
@@ -155,15 +155,15 @@ if __name__ == '__main__':
     # plt.axvline(x=0.12, lw=0.4, color='m', ls='dashed',label='T1')
 
     file = SpectreNS('marquet2019_re50.ref')
-    plot_NS(plt, file.vp_real, file.vp_imag, True, 0, 'blue', r'Marquet et al. (2019) Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, True, -1, 'g', r'Marquet et al. (2019) Re=50')
 
     file = SpectreNS('marquet2008_re100.ref')
-    plot_NS(plt, file.vp_real, file.vp_imag, True, 0, 'red', r'Marquet et al. (2008) Re=100')
+    plot_NS(plt, file.vp_real, file.vp_imag, True, -1, 'm', r'Marquet et al. (2008) Re=100')
 
     file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, True, 0, 'm', r'Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, True, 1, 'b', r'Re=50')
 
-    plt.legend(loc='best',fontsize=6);
+    plt.legend(loc='best',fontsize=4);
     fname='Spectre_NSf.'+formt
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')

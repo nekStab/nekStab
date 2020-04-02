@@ -17,9 +17,9 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-      integer                            :: kd,    mstart,n,n2,i,j
+      integer, parameter                 :: lt  = lx1*ly1*lz1*lelv
+      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelv
+      integer                            :: kd,mstart,n,n2,i,j
 
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
@@ -30,8 +30,8 @@ c     ----- Krylov basis V for the projection M*V = V*H -----
       character(len=7)   :: tl
       character(len=20)  :: fmt
 
-      n     = nx1*ny1*nz1*nelt
-      n2    = nx2*ny2*nz2*nelt
+      n     = nx1*ny1*nz1*nelv
+      n2    = nx2*ny2*nz2*nelv
 
 c     ----- Upload the snapshots -----
 
