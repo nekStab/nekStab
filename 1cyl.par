@@ -3,7 +3,7 @@ startFrom = BF_1cyl0.f00001
 
 stopAt = numSteps #endTime
 #endTime = 10000.
-numSteps = 700 #T/8
+numSteps = 250 #T/8
 
 userParam01 = 3  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
@@ -12,10 +12,10 @@ userParam03 = 1.1    # stabilization: 1:sfd, 1.1:sfd_ab3
 userParam04 = 0.063  # St mode  -> omega_c = pi St
 userParam05 = 0.125  # gain = 2 sigma mode
 
-userParam08 = 800   # nsteps
+userParam08 = 250   # nsteps
 userParam10 = 0   # sponge strenght
 
-dt = 5.0E-03
+dt = 5E-03
 variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5
@@ -39,12 +39,12 @@ writeToFieldFile = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-09
+residualTol = 1.0E-06
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-09
+residualTol = 1.0E-08
 residualProj = yes
 density = 1.0
 advection = yes
