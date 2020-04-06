@@ -179,39 +179,38 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine spng_forcing !compute sponge
+      subroutine nekStab_forcing (ffx,ffy,ffz,ix,iy,iz,ieg)
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
-      real, dimension(lt) :: do1,do2,do3,
-     $                       re1,re2,re3
+      include 'SIZE'            !
+      include 'INPUT'           ! IF3D
+      include 'PARALLEL'        ! GLLEL
+      include 'SOLN'            ! JP
+      real ffx, ffy, ffz
+      integer ix,iy,iz,ieg,iel,ip
 
-      !opadd2   (a1,a2,a3,b1,b2,b3)   #--> a1(i)=a1(i)+b1(i)
-      !opadd2col(a1,a2,a3,b1,b2,b3,c) #--> a1(i)=a1(i)+b1(i)*c(i)
-
-      !opsub3                         #--> A(I)=B(I)-C(I)
-
-      call opcopy(re1,re2,re3, fcx,fcy,fcz)
-      if (JP.eq.0) then ! dns
-
-         !ffx = ffx + spng_fun(ip)*(spng_vr(ip,2)- VX )
-         call opsub3 (do1,do2,do3, spng_vr(1,1),spng_vr(1,2),spng_vr(1,3), vx,vy,vz)
-         call opcmult(do1,do2,do3, spng_fun)
-         call opadd2 (re1,re2,re3, do1,do2,do3)
-
-      else ! perturbation
-
-         !ffx = ffx - spng_fun*VXP(ip,JP)
-         call opcopy (do1,do2,do3, vxp(1,JP),vyp(1,JP),vzp(1,JP))
-         call opcmult(do1,do2,do3, -spng_fun)
-         call opadd2 (re1,re2,re3, do1,do2,do3)
-
+      iel=gllel(ieg)
+      if (jp.eq.0) then
+         ffx = ffx + fcx(ix,iy,iz,iel)
+         ffy = ffy + fcy(ix,iy,iz,iel)
+         if (if3d) ffz = ffz + fcz(ix,iy,iz,iel)
       endif
-      call opcopy(fcx,fcy,fcz, re1,re2,re3)
 
+      if (spng_str.gt.0.0) then
+      ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+         if (jp.eq.0) then
+            ! dns
+            ffx = ffx + spng_fun(ip)*(spng_vr(ip,1) - vx(ix,iy,iz,iel))
+            ffy = ffy + spng_fun(ip)*(spng_vr(ip,2) - vy(ix,iy,iz,iel))
+            if (if3d) ffz = ffz + spng_fun(ip)*(spng_vr(ip,ndim) - vz(ix,iy,iz,iel))
+         else
+            ! perturbation
+            ffx = ffx - spng_fun(ip)*vxp(ip,jp)
+            ffy = ffy - spng_fun(ip)*vyp(ip,jp)
+            if(if3d) ffz = ffz - spng_fun(ip)*vzp(ip,jp)
+         endif
+      endif
       return
-      end
+      end subroutine
 c-----------------------------------------------------------------------
       subroutine spng_init
       implicit none
@@ -225,8 +224,8 @@ c-----------------------------------------------------------------------
       xmn = glmin(xm1,n); xmx = glmax(xm1,n)
       deltax = xmx - xmn
 
-      left_sponge = 0.05*deltax
-      right_sponge = 0.10*deltax
+      left_sponge = 0.1*deltax
+      right_sponge = 0.15*deltax
 
                   spng_wl(1)=(2./3.)*left_sponge ! Sponge left section width; dimension X
                   spng_wl(2)=0.0
@@ -265,8 +264,6 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      !include 'INPUT'
-      !include 'GEOM'
       real lcoord(LX1*LY1*LZ1*LELV)
       common /SCRUZ/ lcoord
 
