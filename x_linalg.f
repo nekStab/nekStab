@@ -293,7 +293,8 @@ c-----------------------------------------------------------------------
 !     --> Select eigenvalues based on its magnitude.
       select_eigvals = .false.
       if(sqrt(wr**2 + wi**2) .GT. 0.9) select_eigvals=.true.
-      
+
+      return
       end
       
       
