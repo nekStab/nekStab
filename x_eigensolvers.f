@@ -1,154 +1,205 @@
-!!!!!!!!!
-!!! norm           -> return |u|
-!!! orthonormalize -> return u/|u|
-!!! switch_to_lnse_steady -> move somewhere else
+!-----------------------------------------------------------------------
 
-!!! krylov_schur
-!!! Arnoldi_fact
-!!! check_conv
-!!! Schur_decomp  -> Schur
-!!! compute_eigenvec_schur(A,FP,n)
-!!! Schur_fact
-!!! matrix_vector_product (fx, fy, fz, fp, qx, qy, qz)
-!!! outpost_ks(VP,FP,Qx,Qy,Qz,Qp,residu)
 
-!!! select_eigenvalue
-!!! matrix_matrix
-!!! eigen_decomp
-!!! sort_eigendecomp
-!!! matvec
 
-c-----------------------------------------------------------------------
-      subroutine norm(qx, qy, qz, alpha) ! Compute vector norm
+
+      
+      subroutine inner_product(alpha, px, py, pz, pp, qx, qy, qz, qp)
+
+!     This function provides the user-defined inner product to be used throughout
+!     the computation.
+!
+!     INPUTS
+!     ------
+!
+!     px, py, pz : nek arrays of size lt = lx1*ly1*lz1*lelv.
+!     Arrays containing the velocity fields of the first vector.
+!
+!     pp : nek array of size lt2 = lx2*ly2*lz2*lelv
+!     Array containing the pressure field of the first vector.
+!     
+!     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelv.
+!     Arrays containing the velocity fields of the second vector.
+!
+!     qp : nek array of size lt2 = lx2*ly2*lz2*lelv
+!     Array containing the pressure field of the second vector.
+!
+!     RETURN
+!     ------
+!
+!     alpha : real
+!     Value of the inner-product alpha = <p, q>.
+!
+!     Last edit : April 2nd 2020 by JC Loiseau.
+      
+      implicit none
+      include "SIZE"
+      include "TOTAL"
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+      real, dimension(lt), intent(in) :: px, py, pz
+      real, dimension(lt), intent(in) :: qx, qy, qz
+      real, dimension(lt2), intent(in) :: pp, qp
+
+      real, intent(out) :: alpha
+      real :: glsc3
+      integer :: n
+
+      n = nx1 * ny1 * nz1 * nelv
+
+      alpha = glsc3(px, bm1, qx, n) + glsc3(py, bm1, qy, n)
+      if (if3d) alpha = alpha + glsc3(pz, bm1, qz, n)
+      
+      return
+      end
+
+
+
+
+      
+!--------------------------------------------------------------------------
+
+
+
+
+      
+      subroutine norm(qx, qy, qz, qp, alpha) ! Compute vector norm
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
       integer, parameter               :: lt  = lx1*ly1*lz1*lelt
+      integer, parameter               :: lt2 = lx2*ly2*lz2*lelt
       real, intent(in), dimension(lt)  :: qx, qy, qz
+      real, intent(in), dimension(lt2) :: qp
       real, intent(out)                :: alpha
-      real                             :: glsc3, alpha_tmp
-      integer n
-      n      = nx1*ny1*nz1*nelt
 
-      alpha_tmp = 0.0d0 ; n = nx1*ny1*nz1*nelt
-      alpha_tmp = glsc3(qx,bm1,qx,n) + glsc3(qy,bm1,qy,n)
-      if( if3d ) alpha_tmp = alpha_tmp + glsc3(qz,bm1,qz,n)
+      call inner_product(alpha, qx, qy, qz, qp, qx, qy, qz, qp)
+      alpha = dsqrt(alpha)
 
-      alpha = sqrt(alpha_tmp)
-
+      return
       end
-c----------------------------------------------------------------------
-      subroutine orthonormalize2(qx, qy, qz, qp, beta) ! Normalize to the unit-norm
+
+
+
+
+      
+!----------------------------------------------------------------------
+
+
+
+
+      
+      subroutine normalize(qx, qy, qz, qp, alpha)
+
+!     This function normalizes the state vector [qx, qy, qz, qp]^T where
+!     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
+!     components while qp is the corresponding pressure field.
+!
+!     INPUTS / OUTPUTS
+!     ----------------
+!
+!     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelv.
+!     Arrays storing the velocity components.
+!
+!     qp : nek array of size lt2 = lx2*ly2*lz2*lelv
+!     Array storing the corresponding pressure field.
+!
+!     alpha : real
+!     Norm of the vector.
+!
+!     Last edit : April 2nd 2020 by JC Loiseau.
+      
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt)  :: qx, qy, qz
-      real, dimension(lt2)  :: qp
-      real                               :: alpha,beta_tmp
-      real, intent(out), optional        :: beta
-
+      integer, parameter                  :: lt  = lx1*ly1*lz1*lelt
+      integer, parameter                  :: lt2 = lx2*ly2*lz2*lelt
+      real, dimension(lt), intent(inout)  :: qx, qy, qz
+      real, dimension(lt2), intent(inout) :: qp
+      real, intent(out)                   :: alpha
+      real                                :: beta
       integer n2
-      n2     = nx2*ny2*nz2*nelt
 
-      call norm(qx, qy, qz, alpha)
-      beta_tmp = 1.0d0/alpha
+      n2 = nx2*ny2*nz2*nelt
 
-      call opcmult(qx, qy, qz, beta_tmp)
-      if(ifpo) call cmult(qp,beta_tmp,n2)
-      beta = beta_tmp
-
-      end
-c----------------------------------------------------------------------
-      subroutine orthonormalize(qx, qy, qz, qp, beta) ! Normalize to the unit-norm
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt)  :: qx, qy, qz
-      real, dimension(lt2)  :: qp
-      real                               :: alpha,beta,glsc3
-      integer n,n2
-      n      = nx1*ny1*nz1*nelt
-      n2     = nx2*ny2*nz2*nelt
-
-      alpha = 0.0d0
-      alpha = glsc3(qx,bm1,qx,n) + glsc3(qy,bm1,qy,n)
-      if( if3d ) alpha = alpha + glsc3(qz,bm1,qz,n)
-      alpha = sqrt(alpha)
-
+!     --> Compute the user-defined norm.
+      call norm(qx, qy, qz, qp, alpha)
       beta = 1.0d0/alpha
-      call opcmult(qx, qy, qz, beta)
-      if(ifpo) call cmult(qp,beta,n2)
 
+!     --> Normalize the vector.
+      call opcmult(qx, qy, qz, beta)
+      if(ifpo) call cmult(qp, beta, n2)
+
+      return
       end
 c-----------------------------------------------------------------------
-      subroutine krylov_schur
+
+
+
+
+      
+      subroutine krylov_schur()
+
+!
+!
+!     
+      
       implicit none
       include 'SIZE'
-      include 'TSTEP'
-      include 'INPUT'
-      include 'CTIMER'
-      include 'GEOM'
-      include 'SOLN'
-      include 'MASS'
+      include 'TOTAL'
 
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
-c     ----- Krylov basis V for the projection M*V = V*H -----
+!     ----- Krylov basis V for the projection M*V = V*H -----
+      real, dimension(lt,k_dim+1)        :: qx, qy, qz
+      real, dimension(lt2,k_dim+1)       :: qp
 
-      real, dimension(lt,k_dim+1)        :: V_x, V_y, V_z
-      real, dimension(lt2,k_dim+1)       :: Pressure
-
-c     ----- Upper Hessenberg matrix -----
-
-      real, dimension(k_dim,k_dim)       :: H_mat
+!     ----- Upper Hessenberg matrix -----
+      real, dimension(k_dim+1,k_dim)       :: H
       real, dimension(1,k_dim)           :: b_vec
 
-c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+      complex*16, dimension(k_dim)       :: vals
+      complex*16, dimension(k_dim,k_dim) :: vecs
 
-      complex*16, dimension(k_dim)       :: VP
-      complex*16, dimension(k_dim,k_dim) :: FP
-
-c     ----- Miscellaneous -----
-
+!     ----- Miscellaneous -----
       real wo1(lt),wo2(lt),wo3(lt)
       common /ugrad/ wo1,wo2,wo3
 
-      integer :: mstart
-      real, dimension(k_dim)             :: residu
+      integer :: mstart, cnt
+      real, dimension(k_dim)             :: residual
       real                               :: alpha, beta, dumm, glsc3
-      logical                            :: is_converged
+      logical                            :: converged
       integer                            :: have_converged, n, n2, i, j
       integer                            :: ifich3 = 30
       character(len=30)                  :: filename
+      
       n      = nx1*ny1*nz1*nelt
       n2     = nx2*ny2*nz2*nelt
       time   = 0.0d0
-      H_mat  = 0.0d0
+      H  = 0.0d0
       b_vec  = 0.0d0
-      residu = 0.0d0
+      residual = 0.0d0
 
-      call oprzero(wo1,wo2,wo3)
-      call oprzero(V_x,V_y,V_z)
-      if(ifpo)Pressure = 0.0d0
+      call oprzero(wo1, wo2, wo3)
+      do i = 1, k_dim+1
+         call oprzero(qx(:, i), qy(:, i), qz(:, i))
+         if (ifpo) call rzero(qp(:, i), n2)
+      enddo
 
-c     ----- Loading baseflow from disk (optional) -----
+!     ----- Loading baseflow from disk (optional) -----
 
       if(.not. ifbfcv)then !skip loading if single run
        if(nid.eq.0)write(6,*)'Loading base flow: ',bf_handle
        call load_fld(bf_handle)
       endif
 
-c     ----- Save baseflow to disk (recommended) -----
+!     ----- Save baseflow to disk (recommended) -----
 
       ifto = .true. ;ifpo = .true.
       call comp_vort3(t(1,1,1,1,2),wo1,wo2,vx,vy,vz)
@@ -156,18 +207,18 @@ c     ----- Save baseflow to disk (recommended) -----
       call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
 
-c     ----- First vector (new from noise or restart) -----
+!     ----- First vector (new from noise or restart) -----
 
       if (uparam(2).eq.0) then
 
         if(nid.eq.0)write(6,*)'Starting new Arnoldi decomposition...'
 
-c     ----- Creates seed vector for the Krylov subspace -----
+!     ----- Creates seed vector for the Krylov subspace -----
 
         if(ifnois)then
 
          call add_noise(vxp,vyp,vzp)
-         call orthonormalize(vxp,vyp,vzp,prp,alpha)
+         call normalize(vxp,vyp,vzp,prp,alpha)
          call matrix_vector_product(vxp,vyp,vzp,prp, vxp,vyp,vzp)
 
          else !ifnois.eq..false.
@@ -176,360 +227,245 @@ c     ----- Creates seed vector for the Krylov subspace -----
 
         endif
 
-c     ----- Normalized to unit-norm -----
+!     ----- Normalized to unit-norm -----
 
-         call orthonormalize(vxp,vyp,vzp,prp,alpha)
+         call normalize(vxp,vyp,vzp,prp,alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
-         call opcopy(v_x(:,1),v_y(:,1),v_z(:,1),vxp,vyp,vzp)
-         if(ifpo) call copy(Pressure(:,1),prp(:,1),n2)
+
+         call opcopy(qx(:,1), qy(:,1), qz(:,1), vxp, vyp, vzp)
+         if(ifpo) call copy(qp(:,1), prp(:,1), n2)
+         
          call whereyouwant('KRY',1)
          ifto = .true.; ifpo= .true.
-         call outpost(v_x(:,1),v_y(:,1),v_z(:,1), Pressure(:,1),t,'KRY')
+         call outpost(qx(:,1), qy(:,1), qz(:,1), qp(:,1), t, 'KRY')
 
       elseif(uparam(2).gt.0)then
 
          mstart = uparam(2)
-
-         if(nid.eq.0)then
-          write(6,*)'Restarting from:',mstart
-          write(6,'(a,a,i4.4)')' Loading Hessenberg matrix: HES',trim(SESSION),mstart
-          write(filename,'(a,a,i4.4)')'HES',trim(SESSION),mstart
-          open(67,file=trim(filename),status='unknown',form='formatted')
-          read(67,*) beta
-          write(6,*)'Loading beta',beta
-
-          if (k_dim.lt.mstart) then !subsampling
-            do i = 1,k_dim
-              do j = 1,mstart
-                  if (j.le.k_dim) then
-                     read(67,"(1E15.7)") H_mat(i,j)
-                  else
-                     read(67,"(1E15.7)") dumm
-                  endif
-               enddo
-            enddo
-          else
-            !do i = 1,mstart+1
-            !  do j = 1,mstart
-            !     read(67,*) H_mat(i,j)
-            !  enddo
-            !enddo
-            read(67,*)( ( H_mat(i,j), j = 1,mstart ), i = 1,mstart+1 )
-          endif
-
-          close(67)
-          call bcast(H_mat,k_dim*k_dim*8) !broadcast H matrix to all procs
-          write(6,*)'H matrix broadcasted...'
-         endif !nid.eq.0
-
-         !if(nid.eq.0)then !-> debug only
-         ! write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
-         ! write(6,*) ''
-         ! open(67,file=trim(filename),status='unknown',form='formatted')
-         ! write(67,*) beta
-         ! do i = 1,mstart+1
-         !   do j = 1,mstart
-         !      write(67,*) H_mat(i,j)
-         !   enddo
-         ! enddo
-         ! close(67)
-         !endif
-
-         mstart=mstart+1  !careful here!
-         call load_files(V_x, V_y, V_z, Pressure, mstart, k_dim+1, 'KRY')
-         !k_dim+1 is the dim of V_x
+c$$$
+c$$$         if(nid.eq.0)then
+c$$$          write(6,*)'Restarting from:',mstart
+c$$$          write(6,'(a,a,i4.4)')' Loading Hessenberg matrix: HES',trim(SESSION),mstart
+c$$$          write(filename,'(a,a,i4.4)')'HES',trim(SESSION),mstart
+c$$$          open(67,file=trim(filename),status='unknown',form='formatted')
+c$$$          read(67,*) beta
+c$$$          write(6,*)'Loading beta',beta
+c$$$
+c$$$          if (k_dim.lt.mstart) then !subsampling
+c$$$            do i = 1,k_dim
+c$$$              do j = 1,mstart
+c$$$                  if (j.le.k_dim) then
+c$$$                     read(67,"(1E15.7)") H(i,j)
+c$$$                  else
+c$$$                     read(67,"(1E15.7)") dumm
+c$$$                  endif
+c$$$               enddo
+c$$$            enddo
+c$$$          else
+c$$$            !do i = 1,mstart+1
+c$$$            !  do j = 1,mstart
+c$$$            !     read(67,*) H(i,j)
+c$$$            !  enddo
+c$$$            !enddo
+c$$$            read(67,*)( ( H(i,j), j = 1,mstart ), i = 1,mstart+1 )
+c$$$          endif
+c$$$
+c$$$          close(67)
+c$$$          call bcast(H,(k_dim+1)*k_dim*8) !broadcast H matrix to all procs
+c$$$          write(6,*)'H matrix broadcasted...'
+c$$$         endif !nid.eq.0
+c$$$
+c$$$         !if(nid.eq.0)then !-> debug only
+c$$$         ! write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
+c$$$         ! write(6,*) ''
+c$$$         ! open(67,file=trim(filename),status='unknown',form='formatted')
+c$$$         ! write(67,*) beta
+c$$$         ! do i = 1,mstart+1
+c$$$         !   do j = 1,mstart
+c$$$         !      write(67,*) H(i,j)
+c$$$         !   enddo
+c$$$         ! enddo
+c$$$         ! close(67)
+c$$$         !endif
+c$$$
+c$$$         mstart=mstart+1  !careful here!
+c$$$         call load_files(V_x, V_y, V_z, Pressure, mstart, k_dim+1, 'KRY')
+c$$$         !k_dim+1 is the dim of V_x
 
       endif !(uparam(02))
 
-c     ======================================
-c     =====                            =====
-c     ===== Krylov-Schur decomposition =====
-c     =====                            =====
-c     ======================================
+!     ======================================
+!     =====                            =====
+!     ===== Krylov-Schur decomposition =====
+!     =====                            =====
+!     ======================================
 
-      is_converged = .false.
-      do while ( .not. is_converged )
-
-c     ----- m-step Arnoldi factorization -----
-
-         call Arnoldi_fact(V_x,V_y,V_z,Pressure,H_mat,beta,mstart)
-
-c     ----- Check the convergence of the Ritz eigenpairs -----
-
-         call check_conv(residu,have_converged,beta,eigen_tol,H_mat,k_dim)
-
-         if(nid.eq.0)write(6,*)'Number of converged eigenvalues: ' ,have_converged
-
-         if( schur_tgt .le. 1 ) then
-
-          have_converged = k_dim; is_converged = .true.
-          if(nid.eq.0)write(6,*)'Schur step OFF. Outposting the converged eigenvalues: ',have_converged
-
-         else
-                if ( have_converged .GE. schur_tgt ) then
-
-                    is_converged = .true.
-
-                else
-
-                    !apparenly this does not work !
-                    !if(nid.eq.0)write(6,*)'Outposting before restart...'
-                    !call eigen_decomp( H_mat , k_dim , VP , FP )
-                    !call outpost_ks( VP , FP , V_x , V_y , V_z , Pressure , residu )
-
-                    if(nid.eq.0)write(6,*)'Starting Schur factorization...'
-                    call Schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
-
-                endif
-
-         endif
-
+      converged = .false.
+      do while ( .not. converged )
+!     --> Arnoldi factorization.
+         call arnoldi_factorization(qx, qy, qz, qp, H, mstart)
+         
+!     --> Compute the eigenspectrum of the Hessenberg matrix.
+         call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
+         
+!     --> Check the residual of the eigenvalues.
+         residual = abs(H(k_dim+1, k_dim) * vecs(k_dim, :))
+         cnt = count(residual .lt. eigen_tol)
+         
+!     --> Select whether to stop or apply Schur condensation depending on schur_tgt.
+         select case (schur_tgt)
+            
+!     --> k-step Arnoldi factorization completed.
+         case (:0)
+            converged = .true.
+            if (nid .eq. 0) write(6, *) 'Arnoldi factorization completed.'
+            
+!     --> Krylov-Schur factorization.
+         case (1:)
+            if (cnt .ge. schur_tgt) then ! Krylov-Schur factorization completed.
+               converged = .true.
+            else                ! Apply Schur condensation before restarting the factorization.
+               if (nid .eq. 0) write(6, *) 'Starting Schur condensation phase.'
+               call schur_condensation(mstart, H, qx, qy, qz, qp)
+            endif
+            
+         end select
+         
       enddo
-
-c     ----- Final computation of the eigenpairs of the Hessenberg matrix -----
-
-      if(nid.eq.0)write(6,*)'Final eigendecomposition...'
-      call eig(H_mat, fp, vp, k_dim)
-
-c     ----- Output all the spectrums and converged eigenmodes -----
-
+      
+!     ----- Output all the spectrums and converged eigenmodes -----
       if(nid.eq.0)write(6,*)'Exporting modes...'
-      call outpost_ks( VP , FP , V_x , V_y , V_z , Pressure , residu )
-
+      call outpost_ks( vals , vecs , qx , qy , qz , qp , residual )
+      
       if(nid.eq.0)write(6,*)'Stopping code...'
       call exitt
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine Arnoldi_fact(Qx,Qy,Qz,Qp,H,beta,mstart)
+
+
+
+
+      
+!-----------------------------------------------------------------------
+
+
+
+
+      
+      subroutine arnoldi_factorization(qx, qy, qz, qp, H, mstart)
+
+!     This function implements the k-step Arnoldi factorization of the linearized
+!     Navier-Stokes operator. The rank k of the Arnoldi factorization is set as a user
+!     parameter in x_SIZE.f (see parameter k_dim).
+!
+!     INPUT
+!     -----
+!
+!     mstart : integer
+!     Index at which to start the Arnoldi factorization. By default, it should be set to 1.
+!     Note that it changes when the Arnoldi factorization is used as part of the Krylov-Schur
+!     algorithm.
+!
+!     RETURNS
+!     -------
+!
+!     qx, qy, qz : nek arrays of size (lx1*ly1*lz1*lelv, k_dim).
+!     Arrays containing the various Krylov vectors associated to each velocity component.
+!
+!     qp : nek arrays of size (lx2*ly2*lz2*lelv, k_dim)
+!     Arrays containing the various Krylov vectors associated to the pressure field.
+!
+!     H : k x k real matrix.
+!     Upper Hessenberg matrix resulting from the Arnoldi factorization of the linearized
+!     Navier-Stokes operator.
+!
+!     Last edit : April 3rd 2020 by JC Loiseau.
+      
       implicit none
       include 'SIZE'
-      include 'TSTEP'
-      include 'INPUT'
-      include 'CTIMER'
-      include 'GEOM'
-      include 'SOLN'
-      include 'MASS'
+      include 'TOTAL'
 
-c     =================================================
-c     =====                                       =====
-c     ===== Declaration of the required variables =====
-c     =====                                       =====
-c     =================================================
+      integer, parameter                 :: lt  = lx1*ly1*lz1*lelv
+      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelv
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
+!     ----- Miscellaneous -----
+      real                               :: beta
+      integer                            :: mstep, mstart
+      integer                            :: n, n2
 
-c     ----- Miscellaneous -----
+!     ----- Krylov basis V for the projection MQ = QH -----
+      real, dimension(lt,k_dim+1)        :: qx, qy, qz
+      real, dimension(lt2,k_dim+1)       :: qp
 
-      real                               :: glsc3,beta,resd
-      integer                            :: mstep, mstart, n, n2, i, j, cvrgd
+!     ----- Orthogonal residual f = w - (Q,w)*Q -----
+      real, dimension(lt)                :: f_xr, f_yr, f_zr
+      real, dimension(lt2)               :: f_pr
 
-c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+!     ----- Upper Hessenberg matrix -----
+      real, dimension(k_dim+1, k_dim)       :: H
 
-      complex*16, dimension(k_dim)       :: VP
-      complex*16, dimension(k_dim,k_dim) :: FP
+      n  = nx1*ny1*nz1*nelv ; n2 = nx2*ny2*nz2*nelv
 
-c     ----- Krylov basis V for the projection MV = VH -----
+!     --> Initialize arrays.
+      call oprzero(f_xr, f_yr, f_zr)
+      if (ifpo) call rzero(f_pr, n2)
 
-      real, dimension(lt,k_dim+1)        :: Qx, Qy, Qz
-      real, dimension(lt2,k_dim+1)       :: Qp
-
-c     ----- Orthogonal residual f = w - (V,w)*V -----
-
-      real, dimension(lt)                :: F_xr, F_yr, F_zr
-      real, dimension(lt2)               :: F_pr
-
-c     ----- Upper Hessenberg matrix -----
-
-      real, dimension(k_dim,k_dim)       :: H
-      real, dimension(k_dim)             :: h_vec
-
-c     ----- Working arrays -----
-
-      real, dimension(lt)                :: work1, work2, work3
-      real, dimension(lt2)               :: workp
-
-      character(len=30) :: filename
-      integer :: have_cnv
-
-c     =========================================
-c     =====                               =====
-c     ===== Initialization of most arrays =====
-c     =====                               =====
-c     =========================================
-
-      n  = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
-      h_vec(:) = 0.0d0
-      call oprzero(F_xr,F_yr,F_zr)
-      if(ifpo)F_pr = 0.0d0
-
-c     ----- Arnoldi factorization -----
-
+!     --> Arnoldi factorization.
       do mstep = mstart, k_dim
-
          if (nid.EQ.0) write(6,*) 'Begin iteration :', mstep , '/' , k_dim
 
-         call opcopy(vxp,vyp,vzp, qx(:,mstep),qy(:,mstep),qz(:,mstep))
-         if(ifpo) call copy(prp,qp(:,mstep),n2)
-
-!     ----- Matrix-vector product w = M*v -----
-
+!     --> Matrix-vector product f = M * v (e.g. calling the linearized Navier-Stokes solver).
          call matrix_vector_product(f_xr, f_yr, f_zr, f_pr, qx(:,mstep), qy(:,mstep), qz(:,mstep))
-
-c     ----- Compute the orthogonal residual f with respect to all previous Krylov vectors -----
-
-         h_vec(:) = 0.0d0
-         do i = 1, mstep
-
-            call opcopy(work1,work2,work3, qx(:,i),qy(:,i),qz(:,i))
-            if(ifpo) call copy(workp,      qp(:,i),n2)
-
-            h_vec(i) = glsc3(work1,BM1,f_xr,n) + glsc3(work2,BM1,f_yr,n)
-            if( if3D ) h_vec(i) = h_vec(i) + glsc3(work3,BM1,f_zr,n)
-
-            call opcmult(work1,work2,work3, h_vec(i))
-            if(ifpo) call cmult(workp,h_vec(i),n2)
-
-            call opsub2(f_xr,f_yr,f_zr, work1,work2,work3)
-            if(ifpo) call sub2(f_pr,workp,n2)
-
-         enddo
-
-c     ----- Fills in the upper Hessenberg matrix -----
-
-         H(1:mstep,mstep) = h_vec(1:mstep)
-
-c     ----- Compute the norm of the orthogonal residual f -----
-
-         beta = glsc3(f_xr,BM1,f_xr,n)+glsc3(f_yr,BM1,f_yr,n)
-         if(if3D)beta = beta + glsc3(f_zr,BM1,f_zr,n)
-         beta = sqrt(beta)
-
-c     ----- Normalizes the orthogonal residual and uses it as a new Krylov vector
-
-         if ( mstep.lt.k_dim ) H(mstep+1,mstep) = beta
-         beta = 1.0d0/beta
-         call opcmult(f_xr,f_yr,f_zr,beta)
-         if(ifpo) call cmult(f_pr,beta,n2)
-
-         call opcopy(Qx(:,mstep+1),Qy(:,mstep+1),Qz(:,mstep+1),f_xr,f_yr,f_zr)
-         if(ifpo) call copy(Qp(:,mstep+1),f_pr,n2)
-
-         if(nid.eq.0)then
-            write(6,*)
-            write(6,*)' Outposting Krylov subspace to'
-         endif
-
-         time=real(time*mstep)
-         call whereyouwant('KRY',mstep+1)
-         ifto = .true.; ifpo = .true.
-         call outpost(f_xr,f_yr,f_zr,f_pr,t,'KRY')
-
-         vp = 0.0D0; fp = 0.0D0
-         call eig(H(1:mstep, 1:mstep), fp(1:mstep, 1:mstep), vp(1:mstep), mstep)
-
-         have_cnv = 0; resd = 1.0D0
-         if(nid.eq.0)then ! outpost Hessenberg matrix spectre
-          !write(6,'(a,a,i4.4)') ' Ouposting Hessenberg matrix spectre to: HSP',trim(SESSION),mstep
-          !write(filename,'(a,a,i4.4)')'HSP',trim(SESSION),mstep
-
-            write(6,'(a,a,i4.4)') ' Ouposting Hessenberg matrix spectre to: H',trim(SESSION),mstep
-            write(filename,'(a,i4.4)')'H',mstep
-            write(6,*)
-
-          open(67,file=trim(filename),status='unknown',form='formatted')
-          do i = 1,mstep
-           resd = abs(beta*FP(mstep,i))
-           if( (resd .lt. eigen_tol)) have_cnv = have_cnv + 1
-           !write(67,"(3E15.7)")log(abs(VP(i)))/time,ATAN2(aimag(VP(i)),real(VP(i)))/time,resd
-           write(67,"(3E15.7)")real(VP(i)),aimag(VP(i)),resd
-          enddo
-          close(67)
-
-         endif
-
-         if(nid.eq.0)then
-          if(mstep.eq.mstart)then
-               write(filename,'(a,i4.4,a,i4.4,a)')'Convegence',mstart,'_',k_dim,'.dat'
-          open(99,file=trim(filename),status='unknown',form='formatted')
-          write(99,*)'Tolerance:',eigen_tol
-          endif
-          write(99,'(2i8)')mstep,have_cnv
-         endif
-
-         if(nid.eq.0)then ! outpost Hessenberg matrix
-          write(6,'(a,a,i4.4)') ' Ouposting Hessenberg matrix to: HES',trim(SESSION),mstep
-          write(filename,'(a,a,i4.4)')'HES',trim(SESSION),mstep
-          write(6,*) ''
-          open(67,file=trim(filename),status='unknown',form='formatted')
-          write(67,*) beta
-          do i = 1,mstep+1
-            do j = 1,mstep
-               write(67,*) H(i,j)
-            enddo
-          enddo
-          close(67)
-         endif
-
-        if(nid.EQ.0) write(6,*) "End of iteration:", mstep
-
-      enddo !mstep = mstart, k_dim
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine check_conv(res,have_cnv,beta,tol,H,n) !check convergence
-      implicit none
-
-!-----Inputs -----!
-
-      integer              :: n
-      real, dimension(n,n) :: H
-      real                 :: tol, beta
-
-!-----Outputs -----!
-
-      real, dimension(n) :: res
-      integer            :: have_cnv
-
-!-----Miscellaneous -----!
-
-      complex*16, dimension(n)   :: VP
-      complex*16, dimension(n,n) :: FP
-      integer :: i
-
-!-----Compute the eigedecomposition of H -----!
-
-      VP = ( 0.0D0 , 0.0D0 )
-      FP = ( 0.0D0 , 0.0D0 )
-      call eig(H, fp, vp, n)
-
-!-----Compute the number of converged Ritz pairs -----!
-
-      have_cnv = 0; res = 1.0d0
-      do i = 1,n
-         res(i) = abs( beta * FP(n,i) )
-         if ( res(i) .LT. tol ) have_cnv = have_cnv + 1
+         
+!     --> Update Hessenberg matrix and compute the orthogonal residual f.
+         call update_hessenberg_matrix(
+     $        H(1:mstep, 1:mstep),
+     $        f_xr, f_yr, f_zr, f_pr,
+     $        qx(:, 1:mstep), qy(:, 1:mstep), qz(:, 1:mstep), qp(:, 1:mstep),
+     $        mstep)
+         
+!     --> Normalise the residual vector.
+         call normalize(f_xr, f_yr, f_zr, f_pr, beta)
+         
+!     --> Update the Hessenberg matrix.
+         H(mstep+1, mstep) = beta
+         
+!     --> Add the residual vector as the new Krylov vector.
+         call opcopy(qx(:,mstep+1), qy(:,mstep+1), qz(:,mstep+1), f_xr, f_yr, f_zr)
+         if(ifpo) call copy(qp(:,mstep+1), f_pr, n2)
+         
+!     --> Save checkpoint for restarting/run-time analysis.
+         call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, H(1:mstep+1, 1:mstep), mstep)
+         
+         if(nid.EQ.0) write(6,*) "End of iteration:", mstep
       enddo
-
+      
       return
       end
+
+
+
+
+      
+
+
+
+
+      
 c-----------------------------------------------------------------------
-      subroutine schur_fact(mstart,H_mat,V_x,V_y,V_z,Pressure,residu,beta)
+
+
+
+
+      
+      subroutine schur_condensation(mstart, H, qx, qy, qz, qp)
 
       implicit none
       include 'SIZE'
-      include 'TSTEP'
-      include 'INPUT'
-      include 'CTIMER'
-      include 'GEOM'
-      include 'SOLN'
-      include 'MASS'
-
+      include 'TOTAL'
+      
 c     =================================================
 c     =====                                       =====
 c     ===== Declaration of the required variables =====
@@ -541,102 +477,78 @@ c     =================================================
 
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
-      real, dimension(lt,k_dim+1)        :: V_x, V_y, V_z
-      real, dimension(lt2,k_dim+1)       :: Pressure
+      real, dimension(lt,k_dim+1)        :: qx, qy, qz
+      real, dimension(lt2,k_dim+1)       :: qp
 
 c     ----- Upper Hessenberg matrix -----
 
-      real, dimension(k_dim,k_dim)       :: H_mat
-      real, dimension(1,k_dim)           :: b_vec
+      real, dimension(k_dim+1, k_dim)     :: H
+      real, dimension(k_dim)           :: b_vec
 
 c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
-      complex*16, dimension(k_dim)       :: VP
+      complex*16, dimension(k_dim)       :: vals
 
 c     ----- Miscellaneous -----
 
       integer :: mstart,n,n2,i,j
       real beta
-      real, dimension(k_dim)             :: residu
       logical, dimension(k_dim)          :: selected
-      integer, dimension(k_dim)          :: idx
 
 c     ----- Schur and Hessenberg decomposition -----
 
-      real, dimension(k_dim,k_dim)       :: Q1
+      real, dimension(k_dim,k_dim)       :: vecs
 
-c     =========================================
-c     =====                               =====
-c     ===== Initialization of most arrays =====
-c     =====                               =====
-c     =========================================
+      n  = nx1*ny1*nz1*nelv ; n2 = nx2*ny2*nz2*nelv
 
-      n  = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
-
-      Q1 = 0.0D+00
-
-      b_vec          = 0.0D0
-      b_vec(1,k_dim) = beta
-
-      VP = ( 0.0D0 , 0.0D0 )
-      Q1 = 0.0D0
+!     --> Initialize arrays.
+      b_vec = 0.0D0 ; b_vec(k_dim) = H(k_dim+1, k_dim)
+      vals = ( 0.0D0 , 0.0D0 ) ; vecs = 0.0D0
 
 !     --> Perform the Schur decomposition.
-      call schur(H_mat, Q1, VP, k_dim)
-
-!     --> Sort the eigenvalues based on their magnitude;
-      do i = 1, k_dim
-         idx(i) = i
-      enddo
-      call quicksort2(k_dim, abs(VP), idx)
+      call schur(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
 
 !     --> Partition the eigenvalues in wanted / unwanted.
-      call select_eigenvalues(selected, mstart, vp, idx, schur_del, schur_tgt, k_dim)
-
+      call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, k_dim)
+      if ( nid.EQ.0 ) write(*,*) mstart, 'Ritz eigenpairs have been selected.'
+      
 !     --> Re-order the Schur decomposition based on the partition.
-      call ordschur(H_mat, Q1, selected, k_dim)
+      call ordschur(H(1:k_dim, 1:k_dim), vecs, selected, k_dim)
 
-      H_mat(1:mstart,mstart+1:k_dim)       = 0.0D0
-      H_mat(mstart+1:k_dim,1:mstart)       = 0.0D0
-      H_mat(mstart+1:k_dim,mstart+1:k_dim) = 0.0D0
+!     --> Zero-out the unwanted blocks of the Schur matrix.
+      H(1:mstart,mstart+1:k_dim) = 0.0D0
+      H(mstart+1:k_dim+1, :)     = 0.0D0
 
-      if ( nid.EQ.0 ) then
-         write(*,*) mstart,
-     $        'Ritz eigenpairs have been selected'
-         write(*,*)
+!     --> Re-order the Krylov basis accordingly.
+      qx(:, 1:k_dim) = matmul(qx(:, 1:k_dim), vecs)
+      qy(:, 1:k_dim) = matmul(qy(:, 1:k_dim), vecs)
+      if (if3d) qz(:, 1:k_dim) = matmul(qz(:, 1:k_dim), vecs)
+      if (ifpo) qp(:, 1:k_dim) = matmul(qp(:, 1:k_dim), vecs)
+      
+!     --> Update the Schur matrix with b.T @ Q corresponding to
+!     the residual beta in the new basis.
+      b_vec = matmul(b_vec, vecs)      
+      H(mstart+1, :) = b_vec
 
-         do i = 1, k_dim
-            write(*,*) 'Residual of eigenvalue',
-     $           i, ' : ', residu(i)
-         enddo
-         write(*,*)
-         endif
-
-c     ----- Re-order the Krylov basis -----
-
-         call matrix_matrix(V_x(:,1:k_dim),     Q1,lt ,k_dim,k_dim)
-         call matrix_matrix(V_y(:,1:k_dim),     Q1,lt ,k_dim,k_dim)
-          if(if3D)
-     $   call matrix_matrix(V_z(:,1:k_dim),     Q1,lt ,k_dim,k_dim)
-          if(ifpo)
-     $   call matrix_matrix(Pressure(:,1:k_dim),Q1,lt2,k_dim,k_dim)
-
-c     ----- Update the matrix with b(prime)*Q -----
-
-         call matrix_matrix(b_vec,Q1,1,k_dim,k_dim)
-
-         H_mat(mstart+1,1:mstart) = b_vec(1,1:mstart)
-
-         mstart = mstart + 1
-
-         call opcopy(V_x(:,mstart),  V_y(:,mstart),  V_z(:,mstart),
-     $               V_x(:,k_dim+1), V_y(:,k_dim+1), V_z(:,k_dim+1))
-
+!     --> Add the last generated Krylov vector as the new starting one.
+      mstart = mstart + 1
+      call opcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),
+     $     qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1))
+      
       return
       end
+
+
+
+
+      
 c----------------------------------------------------------------------
-      subroutine matrix_vector_product (fx, fy, fz, fp, qx, qy, qz)
+
+
+
+
+      
+      subroutine matrix_vector_product(fx, fy, fz, fp, qx, qy, qz)
       implicit none
       include 'SIZE'
       include 'TSTEP'
@@ -690,31 +602,21 @@ c----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine matvec(FP_Cx,Qx,FP,n)
+
+
+
+
+      
+c----------------------------------------------------------------------
+
+
+
+
+      
+      subroutine outpost_ks(vals, vecs, qx, qy, qz, qp, residual) !outposting vectors
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      integer i,n
-      complex*16, dimension(n)       :: FP_Cx
-      complex*16, dimension(k_dim)   :: FP
-      real      , dimension(n,k_dim) :: Qx
-      FP_Cx = (0.0d0,0.0d0)
-      do i = 1,k_dim
-         FP_Cx = FP_Cx + Qx(:,i)*FP(i)
-      enddo
-      return
-      end
-c----------------------------------------------------------------------
-      subroutine outpost_ks(VP,FP,Qx,Qy,Qz,Qp,residu) !outposting vectors
-      implicit none
-      include 'SIZE'
-      include 'TSTEP'
-      include 'INPUT'
-      include 'CTIMER'
-      include 'GEOM'
-      include 'SOLN'
-      include 'MASS'
 
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
@@ -724,18 +626,18 @@ c     ----- Krylov basis V for the projection M*V = V*H -----
       real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
       common /ugrad/ wo1,wo2,wo3,vort
 
-      real, dimension(lt,k_dim+1)        :: Qx, Qy, Qz
-      real, dimension(lt2,k_dim+1)       :: Qp
+      real, dimension(lt,k_dim+1)        :: qx, qy, qz
+      real, dimension(lt2,k_dim+1)       :: qp
 
 c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
-      complex*16, dimension(k_dim)       :: VP
-      complex*16, dimension(k_dim,k_dim) :: FP
+      complex*16, dimension(k_dim)       :: vals
+      complex*16, dimension(k_dim,k_dim) :: vecs
 
 c     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
 
-      complex*16, dimension(lt)          :: FP_Cx, FP_Cy, FP_Cz
-      complex*16, dimension(lt2)         :: FP_Cp
+      complex*16, dimension(lt)          :: fp_cx, fp_cy, fp_cz
+      complex*16, dimension(lt2)         :: fp_cp
 
 c     ----- Miscellaneous -----
 
@@ -743,122 +645,138 @@ c     ----- Miscellaneous -----
       integer :: n, n2, i, j
 
       real                               :: sampling_period
-      real, dimension(k_dim)             :: residu
-      real                               :: glsc3,alpha!, beta
+      real, dimension(k_dim)             :: residual
+      real                               :: alpha, alpha_r, alpha_i
+      complex :: log_transform
 
       sampling_period = dt*nsteps
 
-      n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
+      n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
 
 c     ----- Output all the spectrums and converged eigenmodes -----
 
       if(nid.EQ.0) then
-       open(unit=ifich1,file='Spectre_H.dat'      ,form='formatted')
-       open(unit=ifich2,file='Spectre_NS.dat'     ,form='formatted')
-       open(unit=ifich3,file='Spectre_NS_conv.dat',form='formatted')
+         open(unit=ifich1, file='Spectre_H.dat'      , form='formatted')
+         open(unit=ifich2, file='Spectre_NS.dat'     , form='formatted')
+         open(unit=ifich3, file='Spectre_NS_conv.dat', form='formatted')
       endif
-
-      do i = 1,k_dim
-
-         time = real(i) !here for the outposted files have different times
-
+      
+      do i = 1, k_dim
+         
+         time = real(i)         !here for the outposted files have different times
+         
          if(nid.EQ.0) then
-
-            !Spectre_H.dat
-           write(ifich1,"(3E15.7)") real(VP(i)),
-     $                              aimag(VP(i)),
-     $                              residu(i)
-
-            !Spectre_NS.dat
-           write(ifich2,"(3E15.7)") log(abs(VP(i)))/sampling_period,
-     $             ATAN2(aimag(VP(i)),real(VP(i)))/sampling_period,
-     $             residu(i)
-
+            
+!     --> Outpost the eigenspectrum of the Hessenberg matrix.
+            write(ifich1,"(3E15.7)") real(vals(i)), aimag(vals(i)), residual(i)
+            
+!     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
+            write(ifich2, "(3E15.7)") real(log_transform(vals(i))) / sampling_period,
+     $           aimag(log_transform(vals(i))) / sampling_period,
+     $           residual(i)
+            
          endif
-
-         if(residu(i).LT.eigen_tol)then !just the converged oned
-
-            !Spectre_NS_conv.dat
-          if(nid.EQ.0)write(ifich3,"(3E15.7)")
-     $     log(abs(VP(i)))/sampling_period,
-     $     ATAN2(aimag(VP(i)),real(VP(i)))/sampling_period
-
+         
+         if (residual(i) .lt. eigen_tol) then !just the converged oned
+            
+!     --> Outpost only the converged part of the log-transformed spectrum.
+            if (nid.EQ.0) then
+               write(ifich3, "(2E15.7)") real(log_transform(vals(i))) / sampling_period,
+     $              aimag(log_transform(vals(i))) / sampling_period
+               
+            endif
+            
 c     ----- Computation of the corresponding eigenmode -----
-
-            FP_Cx = (0.0d0,0.0d0)
-            FP_Cy = (0.0d0,0.0d0)
-            if(if3D) FP_Cz = (0.0d0,0.0d0)
-            if(ifpo) FP_Cp = (0.0d0,0.0d0)
-
-            call matvec(FP_Cx,Qx(:,1:k_dim),FP(:,i),lt)
-            call matvec(FP_Cy,Qy(:,1:k_dim),FP(:,i),lt)
-            if(if3D)
-     $      call matvec(FP_Cz,Qz(:,1:k_dim),FP(:,i),lt)
-            if(ifpo)
-     $      call matvec(FP_Cp,Qp(:,1:k_dim),FP(:,i),lt2)
-
+            fp_cx = matmul(qx(:, 1:k_dim), vecs(:, i))
+            fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
+            if (if3d) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
+            if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
+            
 c     ----- Normalization to be unit-norm -----
 c     Note: volume integral of FP*conj(FP) = 1.
-
-            alpha = glsc3(real(FP_Cx),bm1,real(FP_Cx),n)
-     $           +  glsc3(real(FP_Cy),bm1,real(FP_Cy),n)
-     $           +  glsc3(aimag(FP_Cx),bm1,aimag(FP_Cx),n)
-     $           +  glsc3(aimag(FP_Cy),bm1,aimag(FP_Cy),n)
-
-            if(if3D) alpha = alpha
-     $           +  glsc3(real(FP_Cz),bm1,real(FP_Cz),n)
-     $           +  glsc3(aimag(FP_Cz),bm1,aimag(FP_Cz),n)
-
+            call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), alpha_r)
+            call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), alpha_i)
+            alpha = alpha_r**2 + alpha_i**2
             alpha = 1.0d0/sqrt(alpha)
-
+            
 c     ----- Output the imaginary part -----
-
-            call opcopy(vx,vy,vz
-     $           ,aimag(FP_Cx)
-     $           ,aimag(FP_Cy)
-     $           ,aimag(FP_Cz))
-            if(ifpo) call copy(pr,aimag(FP_Cp),n2)
-
-            call opcmult(vx,vy,vz,alpha)
-            if(ifpo) call cmult(pr,alpha,n2)
-            ifto = .false.; ifpo = .true.
-            call outpost(vx,vy,vz,pr,t,'Im_')
-
+            call opcopy(vx, vy, vz, aimag(fp_cx), aimag(fp_cy), aimag(fp_cz))
+            if(ifpo) call copy(pr, aimag(fp_cp), n2)
+            
+            call opcmult(vx, vy, vz, alpha)
+            if(ifpo) call cmult(pr, alpha, n2)
+            ifto = .false. ; ifpo = .true.
+            call outpost(vx, vy, vz, pr, t, 'Im_')
+            
 c     ----- Output the real part -----
-
-            call opcopy(vx,vy,vz
-     $           ,real(FP_Cx)
-     $           ,real(FP_Cy)
-     $           ,real(FP_Cz))
-            if(ifpo) call copy(pr,real(FP_Cp),n2)
-
-            call opcmult(vx,vy,vz,alpha)
-            if(ifpo) call cmult(pr,alpha,n2)
-            ifto = .false.; ifpo = .true.
-            call outpost(vx,vy,vz,pr,t,'Re_')
-
+            call opcopy(vx, vy, vz, real(fp_cx), real(fp_cy), real(fp_cz))
+            if (ifpo) call copy(pr, real(fp_cp), n2)
+            
+            call opcmult(vx, vy, vz, alpha)
+            if (ifpo) call cmult(pr, alpha, n2)
+            ifto = .false. ; ifpo = .true.
+            call outpost(vx, vy, vz, pr, t, 'Re_')
+            
 c     ----- Output vorticity from real part -----
-
-            call oprzero(wo1,wo2,wo3)
-            call comp_vort3(vort,wo1,wo2,vx,vy,vz)
-            ifto = .false.; ifpo = .false.
-            call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'Rev')
-            ifto = .true.; ifpo = .true.
-
-       endif
-
+            call oprzero(wo1, wo2, wo3)
+            call comp_vort3(vort, wo1, wo2, vx, vy, vz)
+            ifto = .false. ; ifpo = .false.
+            call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, 'Rev')
+            ifto = .true. ; ifpo = .true.
+            
+         endif
+         
       enddo
-
-      if(nid.EQ.0)then
-         close(ifich1);         close(ifich2);         close(ifich3)
+      
+      if (nid .eq. 0) then
+         close(ifich1) ; close(ifich2) ;  close(ifich3)
       endif
-
+      
       return
       end
+
+
+
+
+      
 c-----------------------------------------------------------------------
 
-      subroutine select_eigenvalues(selected, cnt, vals, idx, delta, nev, n)
+
+
+
+      
+      subroutine select_eigenvalues(selected, cnt, vals, delta, nev, n)
+
+!     This function selects the eigenvalues to be placed in the upper left corner
+!     during the Schur condensation phase.
+!
+!     INPUTS
+!     ------
+!
+!     vals : n-dimensional complex array.
+!     Array containing the eigenvalues.
+
+!     delta : real
+!     All eigenvalues outside the circle of radius 1-delta will be selected.
+!
+!     nev : integer
+!     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
+!     to ensure "smooth" convergence of the Krylov-Schur iterations.
+!
+!     n : integer
+!     Total number of eigenvalues.
+!
+!     RETURNS
+!     -------
+!
+!     selected : n-dimensional logical array.
+!     Array indicating which eigenvalue has been selected (.true.).
+!
+!     cnt : integer
+!     Number of selected eigenvalues. cnt >= nev + 4.
+!
+!     Last edit : April 2nd 2020 by JC Loiseau.
+      
       implicit none
 
 !     ----- Input arguments -----
@@ -875,15 +793,226 @@ c-----------------------------------------------------------------------
 !     ----- Miscellaneous -----
       integer :: i
 
-      cnt = 0
-      selected = .false.
-
-      do i = n, 1, -1
-         if ((abs(vals(idx(i))) .ge. 1.0d0-delta) .or. (cnt .le. nev+4)) then
-            selected(idx(i)) = .true.
-            cnt = cnt + 1
-         endif
+!     --> Sort eigenvalues based on their magnitudes (Note : the array vals itself is not sorted).
+      do i = 1, n
+         idx(i) = i
       enddo
+      call quicksort2(n, abs(vals), idx)
 
+!     --> Select eigenvalues closer to the unit circle.
+      selected = abs(vals) .ge. (1.0d0-delta)
+
+!     --> Select at least the nev+4 largest eigenvalues.
+      selected(idx(n-(nev+3):n)) = .true.
+      if (aimag(vals(idx(n-(nev+3)))) .eq. -aimag(vals(idx(n-(nev+4))))) then
+         selected(idx(n-(nev+4))) = .true.
+      endif
+
+      cnt = count(selected)
+
+      return
+      end
+
+
+
+
+
+!     -------------------------------------------------------------------------
+
+
+
+
+
+      subroutine update_hessenberg_matrix(
+     $     H,
+     $     f_xr, f_yr, f_zr, f_pr,
+     $     qx, qy, qz, qp,
+     $     k)
+
+!     This function orthonormalizes the latest Krylov vector f w.r.t. all of the
+!     previous ones and updates the entries of the Hessenberg matrix accordingly.
+!
+!     INPUTS
+!     ------
+!
+!     k : int
+!     Current step of the Arnoldi factorization.
+!
+!     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt.
+!     Velocity components of the latest Krylov vector.
+!     When returned, it has been orthonormalized w.r.t. to all previous
+!     Krylov vectors.
+!
+!     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt.
+!     Pressure component of the latest Krylov vector.
+!
+!     qx, qy, qz : nek arrays of size (lt, k)
+!     Velocity components of the Krylov basis.
+!     
+!     qp : nek array of size (lt2, k).
+!     Pressure component of the Krylov basis.
+!
+!     H : k x k real matrix.
+!     Upper Hessenberg matrix.
+!
+!     Last edit : April 3rd 2020 by JC Loiseau.
+      
+      implicit none
+      include "SIZE"
+      include "TOTAL"
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelv
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelv
+      
+      integer, intent(in) :: k
+      real, dimension(k, k), intent(inout) :: H
+
+      real, dimension(lt, k), intent(in) :: qx, qy, qz
+      real, dimension(lt2, k), intent(in) :: qp
+
+      real, dimension(lt), intent(inout) :: f_xr, f_yr, f_zr
+      real, dimension(lt2), intent(inout) :: f_pr
+
+      integer i, j, n, n2
+      real alpha
+
+      real, dimension(lt) :: work1, work2, work3
+      real, dimension(lt2) :: workp
+      real, dimension(k) :: h_vec
+
+      n = nx1*ny1*nz1*nelv;      n2 = nx2*ny2*nz2*nelv
+
+!     --> Initialize array.
+      call rzero(h_vec, k)
+
+!     --> Orthonormalize f w.r.t the Krylov basis.
+      do i = 1, k
+
+!     --> Copy the i-th Krylov vector to the working arrays.
+         call opcopy(work1, work2, work3, qx(:, i), qy(:, i), qz(:, i))
+         if (ifpo) call copy(workp, qp(:, i), n2)
+
+!     --> Orthogonalize f w.r.t. to q_i.
+         call inner_product(alpha, f_xr, f_yr, f_zr, f_pr, work1, work2, work3, workp)
+
+         call opcmult(work1, work2, work3, alpha)
+         if (ifpo) call cmult(workp, alpha, n2)
+
+         call opsub2(f_xr, f_yr, f_zr, work1, work2, work3)
+         if (ifpo) call sub2(f_pr, workp, n2)
+
+!     --> Update the corresponding entry in the Hessenberg matrix.
+         H(i, k) = alpha
+
+      enddo
+         
+      return
+      end
+
+
+
+
+
+!     ------------------------------------------------------------------------------------
+
+
+
+
+
+      subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, H, k)
+
+!     This function implements a fairly simple checkpointing procedure in case one
+!     would need to restart the computation (e.g. in case of cluster shutdown).
+!
+!     INPUTS
+!     ------
+!
+!     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelv
+!     Velocity components of the latest Krylov vector.
+!
+!     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelv
+!     Pressure field of the latest Krylov vector.
+!
+!     H : k+1 x k real matrix.
+!     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
+!
+!     k : int
+!     Current iteration of the Arnoldi factorization.
+!
+!     Last edit : April 3rd 2020 by JC Loiseau.
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelv
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelv
+
+      real, dimension(lt), intent(in) :: f_xr, f_yr, f_zr
+      real, dimension(lt2), intent(in) :: f_pr
+
+      integer, intent(in) :: k
+      real, dimension(k+1,k), intent(in) :: H
+
+      integer :: i, j, cnt
+      real :: beta
+      complex*16, dimension(k) :: vals
+      complex*16, dimension(k,k) :: vecs
+      real, dimension(k) :: residual
+      character(len=80) filename
+
+!     -->
+      if(nid .eq. 0) then
+         write(6, *)
+         write(6, *) 'Outposting Krylov subspace to'
+      endif
+
+!     --> Outpost the latest Krylov vector.
+      call whereyouwant("KRY", k+1)
+      ifto = .true.; ifpo = .true.
+      call outpost(f_xr, f_yr, f_zr, f_pr, t, "KRY")
+
+!     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.
+      call eig(H(1:k, 1:k), vecs, vals, k)
+
+!     --> Compute the residual (assume H results from classical Arnoldi factorization).
+      residual = abs(H(k+1, k) * vecs(k, :))
+      cnt = count(residual .lt. eigen_tol)
+
+      if (nid.EQ.0) then
+!     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.      
+         write(filename, '(a, i4.4)') "H", k
+         write(6, *) 'Outposting the eigenspectrum of the Hessenberg matrix to : ', filename
+
+         open(67, file=trim(filename), status='unknown', form='formatted')
+         write(67, '(3E15.7)') (real(vals(i)), aimag(vals(i)), residual(i), i=1, k)
+         close(67)
+
+!     --> Outpost the Hessenberg matrix for restarting purposes (if needed).
+         write(filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
+         write(6, *) 'Outposting the current Hessenberg matrix to :', filename
+
+         open(67, file=trim(filename), status='unknown', form='formatted')
+         write(67, *) ((H(i, j), j=1, k), i=1, k+1)
+         close(67)
+
+!     --> Write to logfile the current number of converged eigenvalues.
+         write(6, *) 'So far', cnt, ' eigenvalues have converged.'
+      endif
+
+      return
+      end
+
+      function log_transform(x)
+      implicit none
+
+!     -->
+      complex :: x, y
+      complex :: log_transform
+
+!     -->
+      log_transform = log(x)
+      if (aimag(x) .eq. 0) log_transform = real(log_transform)
+      
       return
       end
