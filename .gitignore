@@ -20,6 +20,8 @@ KRY*
 *~
 SPG*
 1cyl0.f*
+1cyl.f
+BF_1cyl0.f00002
 # python stuff
 *.pyc
 .cache
