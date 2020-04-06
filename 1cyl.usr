@@ -12,14 +12,12 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      integer e
 
-      if(uparam(10).gt.0)call spng_forcing
-      
-      e = gllel(ieg)
-      ffx = fcx(ix,iy,iz,e)
-      ffy = fcy(ix,iy,iz,e)
-      ffz = fcz(ix,iy,iz,e)
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
       return
       end
