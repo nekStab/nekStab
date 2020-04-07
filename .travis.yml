@@ -15,7 +15,11 @@ install: true
 
 script:
 
-  - export $HOME='pwd'
+  - export $ROOT_DIR='pwd'
+  - pwd
+  - export NEKSTAB_SOURCE_ROOT="$ROOT_DIR" #--> path to nekStab
+  - export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+  - export PATH=$NEK_SOURCE_ROOT/bin:$PATH
   - ls
   - cd examples/1cyl
   - ls
