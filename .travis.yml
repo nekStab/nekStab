@@ -19,7 +19,9 @@ install: true
 script:
 
   - cd examples/1cyl
+  - ls
   - ./cmpile.sh all
+  - ls
   - export CASE='1cyl'
   - export CASE_DIR=`pwd`
   - echo $CASE > SESSION.NAME
