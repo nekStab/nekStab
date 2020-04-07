@@ -39,12 +39,12 @@ writeToFieldFile = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-12
+residualTol = 1.0E-9
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-12
+residualTol = 1.0E-9
 residualProj = yes
 density = 1.0
 advection = yes
