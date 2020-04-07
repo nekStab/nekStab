@@ -4,20 +4,21 @@ sudo: required
 
 before_install:
   - export ROOT_DIR=`pwd`
-  - export NEK_SOURCE_ROOT=$ROOT_DIR
+  - export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
 
-  # Install MPICH
   - sudo apt-get update -qq
   - sudo apt-get install -y libmpich-dev mpich libopenblas-dev
-#  - sudo apt-get install -y gfortran openmpi-bin libopenmpi-dev
 
 install: true
 
 script:
 
-  - pwd
-  - git clone -b v19.0 https://github.com/ricardofrantz/Nek5000.git .
+  - git clone --depth=50 https://github.com/ricardofrantz/Nek5000.git
+  - cd Nek5000;  git checkout -b v19 5afb617; cd ..
   - cd examples/1cyl
-  - export FLOW_TYPE=Channel-flow
   - ./cmpile.sh all
   - nekbmpi 1cyl 2
+
+
+
+
