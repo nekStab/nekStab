@@ -19,7 +19,7 @@ Global stability framework for Nek5000
 
 - uparam(9) = 
 
-- uparam(10): sponge intensity
+- uparam(10): sponge intensity (>0 to activate)
 
   
 
@@ -92,9 +92,23 @@ b) load PER or Fourier modes and run 3
 
 
 
+# ADAPTING YOUR EXISTING CASE TO NEKSTAB
 
+we recommend converting old _.rea_ files to __.par__ + __.re2__ and __.ma2__
 
+in *SIZE* be sure to modify and include:
 
+```fortran
+parameter (lpelt=lelt)
+include 'NEKSTAB.inc'
+```
+
+in your *.usr*, add to __userchk__ and __userf __respectively:
+
+```
+call nekStab
+call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+```
 
 
 
