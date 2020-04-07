@@ -2,6 +2,10 @@ language: ruby
 os: linux
 dist: bionic
 before_install:
+  - export ROOT_DIR='pwd'
+  - export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
+  - export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
+  - export PATH=$NEK_SOURCE_ROOT/bin:$PATH
   - sudo apt-get -y install libmpich-dev mpich libopenblas-dev
 addons:
   apt:
@@ -15,25 +19,10 @@ install: true
 
 script:
 
-  - export ROOT_DIR='pwd'
-  - pwd
-  - export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
-  - echo $NEKSTAB_SOURCE_ROOT
-  - export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
-  - echo $NEK_SOURCE_ROOT
-  - type makenek
-  - export PATH=$NEK_SOURCE_ROOT/bin:$PATH
-  - type makenek
-  - ls
   - cd examples/1cyl
-  - ls
   - ./cmpile.sh all
-  - ls
   - export CASE='1cyl'
   - export CASE_DIR=`pwd`
   - echo $CASE > SESSION.NAME
   - echo $CASE_DIR'/' >> SESSION.NAME
-  - more SESSION.NAME
-  - pwd
-  - which mpiexec
-  - mpiexec -np 1 ./nek5000
+  - mpiexec -np 2 ./nek5000
