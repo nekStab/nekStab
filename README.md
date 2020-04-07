@@ -1,5 +1,5 @@
 # nekStab
-Global stability framework for Nek5000
+[![Build Status](https://travis-ci.com/ricardofrantz/nekStab.svg?token=DpocmcBgXShNTZ9nAQ5y&branch=master)](https://travis-ci.com/ricardofrantz/nekStab) Global stability framework for Nek5000
 
 - uparam(1) = mode (0: DNS, 1:SD, 2:SA, 3:D-A, 4:Res)
 
