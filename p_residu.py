@@ -59,6 +59,8 @@ if __name__ == '__main__':
     plt.axhline(y=1e-06, lw=0.1, c='k', ls='dotted')
     plt.axhline(y=1e-08, lw=0.1, c='k', ls='dotted')
     plt.axhline(y=1e-10, lw=0.1, c='k', ls='dotted')
+    plt.axhline(y=1e-12, lw=0.1, c='k', ls='dotted')
+    plt.axhline(y=1e-13, lw=0.1, c='k', ls='dotted')
 
     #plot_rs(plt, 'residu.dat_ab3', 0.2, 'g', r'Re=100 AB3')
     #plot_rs(plt, 'residu.dat_euler', 0, 'b', r'Re=100 Euler')

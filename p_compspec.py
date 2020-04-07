@@ -109,6 +109,9 @@ if __name__ == '__main__':
     plt.yticks(xrz,xlabels);plt.ylim(-1.5,1.5);plt.ylabel(r'$\Im (\mu)$')
 
     file = SpectreH('Spectre_H.dat')
+    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 2, 'm', r'Re=50 sponge')
+
+    file = SpectreH('Spectre_H_sponge.dat')
     plot_H(plt, file.vp_real, file.vp_imag, file.residu, 0, 'm', r'Re=50')
 
     #file = SpectreH('830re_stab/Spectre_H.dat')
@@ -136,9 +139,11 @@ if __name__ == '__main__':
     file = SpectreNS('marquet2008_re100.ref')
     plot_NS(plt, file.vp_real, file.vp_imag, False, -1, 'm', r'Marquet et al. (2008) Re=100')
 
-    file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 1, 'b', r'Re=50')
+    file = SpectreNS('Spectre_NS_conv_sponge.dat')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 2, 'b', r'Re=50')
 
+    file = SpectreNS('Spectre_NS_conv.dat')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 1, 'b', r'Re=50 sponge')
 
 
     fname='Spectre_NS.'+formt

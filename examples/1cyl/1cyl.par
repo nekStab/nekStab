@@ -1,5 +1,5 @@
 [GENERAL]
-startFrom = BF_1cyl0.f00001
+startFrom = 0 #BF_1cyl0.f00001
 
 stopAt = numSteps #endTime
 #endTime = 10000.
@@ -39,12 +39,12 @@ writeToFieldFile = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-13
+residualTol = 1.0E-12
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-13
+residualTol = 1.0E-12
 residualProj = yes
 density = 1.0
 advection = yes
