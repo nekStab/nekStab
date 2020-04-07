@@ -14,6 +14,7 @@ function error_quit {
 export CASE="1cyl" #--> case name goes here
 export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
 export SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000" #--> path to main code
+export PATH=$NEKSTAB_SOURCE_ROOT/Nek5000/bin:$PATH
 
 ## GCC
 #export FC="mpif77"; export CC="mpicc" #sudo apt install -y libmpich-dev mpich

@@ -2,9 +2,6 @@ language: ruby
 os: linux
 dist: bionic
 before_install:
-  - export ROOT_DIR=`pwd`
-  - export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
-  - export PATH=$NEKSTAB_SOURCE_ROOT/Nek5000/bin:$PATH
   - sudo apt-get -y install libmpich-dev mpich libopenblas-dev
 addons:
   apt:
@@ -18,10 +15,9 @@ install: true
 
 script:
 
+  - pwd
+  - echo $HOME
   - ls
-  - ls Nek5000/
-  - ls Nek5000/bin
-  - ls core/
   - cd examples/1cyl
   - ls
   - ./cmpile.sh all
