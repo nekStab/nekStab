@@ -1,14 +1,15 @@
-language: fortran
-
-sudo: required
-
+os: linux
+dist: bionic
 before_install:
   - export ROOT_DIR=`pwd`
   - export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
-
-  - sudo apt-get update -qq
-  - sudo apt-get install -y libmpich-dev mpich libopenblas-dev
-
+  - sudo apt-get -y install libmpich-dev mpich libopenblas-dev
+addons:
+  apt:
+    update: true
+env:
+  global:
+    - MAKEFLAGS="-j 2"
 install: true
 
 script:
