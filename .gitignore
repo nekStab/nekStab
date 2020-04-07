@@ -13,6 +13,7 @@ SESSION*
 makefile
 .state
 nek5000
+Nek5000
 vor*
 KRY*
 # text editors stuff
