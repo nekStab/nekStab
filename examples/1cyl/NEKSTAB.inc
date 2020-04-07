@@ -6,7 +6,7 @@
 
       character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
 
-      integer, parameter :: k_dim  = 80
+      integer, parameter :: k_dim  = 100
       integer, parameter :: schur_tgt  = 2 !schur on if >1
 
       real, parameter    :: eigen_tol  = 1.0E-6 !standard value
