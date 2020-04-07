@@ -13,12 +13,7 @@ install: true
 
 script:
 
-  - git clone --depth=50 https://github.com/ricardofrantz/Nek5000.git
-  - cd Nek5000;  git checkout -b v19 5afb617; cd ..
   - cd examples/1cyl
   - ./cmpile.sh all
   - nekbmpi 1cyl 2
-
-
-
-
+  - tail -f logfile
