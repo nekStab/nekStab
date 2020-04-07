@@ -237,7 +237,7 @@ c-----------------------------------------------------------------------
          if(ifpo) call copy(qp(:,1), prp(:,1), n2)
          
          call whereyouwant('KRY',1)
-         ifto = .true.; ifpo= .true.
+         ifto = .true.; ifpo= .true.; time = 0.0d0
          call outpost(qx(:,1), qy(:,1), qz(:,1), qp(:,1), t, 'KRY')
 
       elseif(uparam(2).gt.0)then
@@ -955,7 +955,7 @@ c-----------------------------------------------------------------------
 
 !     --> Outpost the latest Krylov vector.
       call whereyouwant("KRY", k+1)
-      ifto = .true.; ifpo = .true.
+      ifto = .true.; ifpo = .true.; time = time * k !order in ParaView
       call outpost(f_xr, f_yr, f_zr, f_pr, t, "KRY")
 
 !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.

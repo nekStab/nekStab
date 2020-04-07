@@ -15,8 +15,7 @@ install: true
 
 script:
 
-  - pwd
-  - echo $HOME
+  - export $HOME='pwd'
   - ls
   - cd examples/1cyl
   - ls
