@@ -18,6 +18,10 @@ install: true
 
 script:
 
+  - ls
+  - ls Nek5000/
+  - ls Nek5000/bin
+  - ls core/
   - cd examples/1cyl
   - ls
   - ./cmpile.sh all
