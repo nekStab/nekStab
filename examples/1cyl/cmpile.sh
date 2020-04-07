@@ -12,18 +12,17 @@ function error_quit {
 }
 
 export CASE="1cyl" #--> case name goes here
-export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
-export SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000" #--> path to main code
-export PATH=$NEKSTAB_SOURCE_ROOT/Nek5000/bin:$PATH
 
-## GCC
-#export FC="mpif77"; export CC="mpicc" #sudo apt install -y libmpich-dev mpich
-#export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none -g -fbacktrace"
-#export USR_LFLAGS+="-L/usr/lib -lopenblas" #sudo apt install -y libopenblas-dev
+#add to .bashrc
+#export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
+#export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+#export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+
+## GCC  # sudo apt install -y libmpich-dev mpich libopenblas-dev
+export FC="mpif77"; export CC="mpicc"; export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none -g -fbacktrace"; export USR_LFLAGS+="-L/usr/lib -lopenblas"
 
 ## INTEL
-export FC="mpiifort"; export CC="mpiicc"
-export FFLAGS="-mcmodel=medium -shared-intel -xHost -extend-source -mkl -g -traceback"
+#export FC="mpiifort"; export CC="mpiicc"; export FFLAGS="-mcmodel=medium -shared-intel -xHost -extend-source -mkl -g -traceback"
 #export USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" #optional link for old versions
 
 #export PPLIST="VENDOR_BLAS" # this substitute the main code eigensolvers
@@ -36,6 +35,7 @@ export USR="x_eigensolvers.o \
 	    x_postprocessing.o"
 
 echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab.inc" > makefile_usr.inc
+export SOURCE_ROOT=$NEK_SOURCE_ROOT
 
 args=("$@")
 argsnr=$#
