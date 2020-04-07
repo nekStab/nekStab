@@ -18,7 +18,11 @@ env:
 install: true
 
 script:
-
+  - type makenek
+  - pwd
+  - echo $ROOT_DIR
+  - echo $NEKSTAB_SOURCE_ROOT
+  - echo $NEK_SOURCE_ROOT
   - cd examples/1cyl
   - ./cmpile.sh all
   - export CASE='1cyl'
