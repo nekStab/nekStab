@@ -1,0 +1,445 @@
+c-----------------------------------------------------------------------
+      subroutine sfd
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt=lx1*ly1*lz1*lelt
+
+      real qxo(lt),qyo(lt),qzo(lt)
+      common /filte/ qxo,qyo,qzo
+
+      real vxo(lt),vyo(lt),vzo(lt)
+      common /vel_o/ vxo,vyo,vzo
+
+      real do1(lt),do2(lt),do3(lt)
+      common /dummy/ do1,do2,do3
+
+      real utmp(lt),vtmp(lt),wtmp(lt),
+     $     uta(lt), vta(lt), wta(lt),
+     $     utb(lt), vtb(lt), wtb(lt),
+     $     utc(lt), vtc(lt), wtc(lt)
+
+      common /tempo/ utmp,vtmp,wtmp,
+     $               uta,vta,wta,
+     $               utb,vtb,wtb,
+     $               utc,vtc,wtc
+
+      real adt,bdt,cdt
+      !real omega_c,chi -> uparam(04),uparam(05)
+      real residu,h1,l2,semi,linf,residu0,rate
+      real glmin,glmax,glsum,glsc3
+      integer n,i
+      save n,residu0
+
+          if(istep.eq.0)then
+            n = nx1*ny1*nz1*nelt
+            call oprzero(fcx,fcy,fcz)
+            call oprzero(utmp,vtmp,wtmp)
+            call oprzero(uta,vta,wta)
+            call oprzero(utb,vtb,wtb)
+            call oprzero(utc,vtc,wtc)
+            residu0=0.0D0
+            if(nid.eq.0)open(unit=10,file='residu.dat')
+            call opcopy(qxo,qyo,qzo,vx,vy,vz)
+            call opcopy(vxo,vyo,vzo,vx,vy,vz)
+          endif
+
+          if(istep.eq.1)then !start with Euler
+
+            call opsub3(uta,vta,wta,vxo,vyo,vzo,qxo,qyo,qzo)!uta=vxo-qxo
+            utmp = uparam(04)*dt*uta
+            vtmp = uparam(04)*dt*vta
+            wtmp = uparam(04)*dt*wta
+            call opadd2(qxo,qyo,qzo,utmp,vtmp,wtmp)
+
+          elseif(istep.eq.2 .AND. param(27).gt.1)then !then step with AB2 fixed step
+
+
+            call opcopy(utb,vtb,wtb,uta,vta,wta)
+            call opsub3(uta,vta,wta,vxo,vyo,vzo,qxo,qyo,qzo)!uta=vxo-qxo
+            utmp = uparam(04)*dt*(1.5*uta-0.5*utb)
+            vtmp = uparam(04)*dt*(1.5*vta-0.5*vtb)
+            wtmp = uparam(04)*dt*(1.5*wta-0.5*wtb)
+            call opadd2(qxo,qyo,qzo,utmp,vtmp,wtmp)
+
+          elseif(istep.ge.3 .AND. param(27).gt.2 )then !then step with AB3 variable step
+
+            call setab3(adt,bdt,cdt) !never called in the code, in navier1.f
+            adt=adt*dtlag(1) !dt=dtlag(0)=dtlag(1)
+            bdt=bdt*dtlag(2)
+            cdt=cdt*dtlag(3)
+            call opcopy(utc,vtc,wtc,utb,vtb,wtb)
+            call opcopy(utb,vtb,wtb,uta,vta,wta)
+            call opsub3 (uta,vta,wta,vxo,vyo,vzo,qxo,qyo,qzo)!uta=vxo-qxo
+            utmp = uparam(04)*(adt*uta+bdt*utb+cdt*utc)
+            vtmp = uparam(04)*(adt*vta+bdt*vtb+cdt*vtc)
+            wtmp = uparam(04)*(adt*wta+bdt*wtb+cdt*wtc)
+            call opadd2(qxo,qyo,qzo,utmp,vtmp,wtmp)
+
+          endif
+
+        call opsub3 (do1,do2,do3,vxo,vyo,vzo,qxo,qyo,qzo)!fc=vo-qo
+        call opcmult(do1,do2,do3,-uparam(05))!f=-chi*uo
+        call opadd2 (fcx,fcy,fcz,do1,do2,do3)!f=uo !FORCE HERE DONT COPY! ADD!
+
+        if(istep.ge.1)then
+
+          call opsub2(vxo,vyo,vzo,vx,vy,vz)
+          call normvc(h1,semi,l2,linf,vxo,vyo,vzo)
+          residu = l2/dt; rate = (residu-residu0); residu0 = residu
+          call opcopy(vxo,vyo,vzo,vx,vy,vz)
+
+          if(nid.eq.0)then
+            write(10,"(3E15.7)")time,residu,rate
+            write(6,"(A,2E15.7)")' Rs, rate =',residu,rate
+            write(6,*)' '
+          endif
+
+          if(residu.lt.sfd_tol)then !save to disk and stop
+            call outpost(vx,vy,vz,pr,t,'BF_')
+            lastep = 1
+          endif
+
+        elseif(istep.eq.nsteps)then
+          close(10)
+        endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine mycomment
+      include 'SIZE'
+      include 'TOTAL'
+      real*8,save :: EETIME0,EETIME1,EETIME2
+      DATA           EETIME0,EETIME1,EETIME2 /0.0, 0.0, 0.0/
+      real, save :: deltatime
+      real telapsed,tpernondt,tmiss
+
+      IF (COURNO.GT.2.) THEN
+       IF (NIO.EQ.0)THEN
+        write(6,*)' '
+        write(6,*)'    CFL > 2. STOPPING'
+        write(6,*)' '
+       ENDIF
+       lastep = 1
+      ENDIF
+
+      IF (NIO.NE.0) RETURN
+ 
+      IF (EETIME0.EQ.0.0 .AND. ISTEP.EQ.1)then
+       EETIME0=DNEKCLOCK()
+       deltatime=time
+      ENDIF  
+
+      EETIME1=EETIME2
+      EETIME2=DNEKCLOCK()
+
+      IF (ISTEP.GT.0 .AND. LASTEP.EQ.0 .AND. IFTRAN) THEN
+ 
+         TTIME_STP = EETIME2-EETIME1   ! time per timestep
+         TTIME     = EETIME2-EETIME0   ! sum of all timesteps
+ 
+         IF(ISTEP.EQ.1)THEN
+           TTIME_STP = 0.0D0; TTIME = 0.0D0
+         ENDIF
+         
+         if (mod(ISTEP,5).eq.0) then
+      
+          telapsed = TTIME/3600.0D0
+          tpernondt = (TTIME/(time-deltatime))
+          tmiss = (param(10)-time)*tpernondt/3600.0D0
+
+          write(6,*)' '
+          write(6,103)1.D0/param(2)
+          write(6,102)TTIME/ISTEP,int(((TTIME/ISTEP)-TTIME_STP)*1000)!to ms
+          write(6,104)int(telapsed),int((telapsed-int(telapsed))*60.)
+          write(6,108)int(tmiss),int((tmiss-int(tmiss))*60.)
+           if(tpernondt.gt.60.)then
+             write(6,105)tpernondt
+           else
+             write(6,106)tpernondt/60.0D0
+           endif         
+          write(6,107)time-deltatime, int((time-deltatime)/param(14))+1!,deltatime,param(10)
+          write(6,*)' '
+          write(6,*)' '
+
+        endif
+
+      ENDIF
+
+ 102  FORMAT('Mean time per timestep: ',F8.4,'  dev:',I8,'ms')
+ 103  FORMAT('Re=',F8.2,F8.2)
+ 104  FORMAT('Elapsed time: ',I8,' h ',I2,' min')
+ 105  FORMAT('Time per nondimensional time: ',F8.2,' sec')
+ 106  FORMAT('Time per nondimensional time: ',F8.2,' min ')
+ 107  FORMAT('Local time: ',F8.4,'  File:',I8)!,' StartFrom=',F8.4,'endTime=',F8.4)
+ 108  FORMAT('Remaining time: ',I8,' h ',I2,' min')
+
+
+      RETURN
+      END
+c-----------------------------------------------------------------------
+      subroutine userchk
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      integer, parameter :: lt=lx1*ly1*lz1*lelt
+
+      real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
+      common /ugrad/ wo1,wo2,wo3,vort
+
+      real xmn,xmx,ymn,ymx,zmn,zmx
+      real uek,vek,wek,eek
+      real glsc3,glmin,glmax,glsum,re,viscos,v_now
+      logical ifto_sav
+      integer i,n,ntot
+      save eek,n,re,ntot
+
+      call oprzero(fcx,fcy,fcz) ! never comment this!
+
+      if(uparam(1).ne.3)then
+
+         if(istep.eq.0)then
+
+            if(nid.eq.0)open(unit=11,file='stats.dat')
+            ifbfcv=.false.;ifbfexp=.false.
+
+            n = nx1*ny1*nz1*nelv
+            re = 1.0d0/param(2) !inital value
+            xmn = glmin(xm1,n); xmx = glmax(xm1,n)
+            ymn = glmin(ym1,n); ymx = glmax(ym1,n)
+            zmn = glmin(zm1,n); zmx = glmax(zm1,n)
+            eek = 0.5/volvm1
+
+            if(nid.eq.0)then
+               write(6,*)' x min max =',xmn,xmx
+               write(6,*)' y min max =',ymn,ymx
+               write(6,*)' z min max =',zmn,zmx
+               write(6,*)' eek =',eek
+            endif
+
+         !viscous sponge
+         !do i=1,lx1*ly1*lz1*lelt!*ldimt1
+         !vdiff(i,1,1,1,:)=(1./(0.6+0.4*tanh(0.8*xmx-xm1(i,1,1,1))))*param(2)
+         !enddo
+         !call outpost(vdiff(1,1,1,1,1),vdiff(1,1,1,1,2),vdiff(1,1,1,1,3),pr,t,'VDF')
+
+         endif !istep.eq.0
+
+         if((istep.eq.0).OR.ifoutfld)then
+
+            call oprzero(wo1,wo2,wo3)
+            call oprzero(vort(:,1),vort(:,2),vort(:,3))
+            call comp_vort3(vort,wo1,wo2,vx,vy,vz)
+            ifto = .false.; ifpo = .false.
+            call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'vor')
+            ifto = .true.; ifpo = .true.
+            call lambda2(t(1,1,1,1,1))
+
+         endif
+         if(istep.eq.0)then
+         ifpo=.true.;call outpost(vx,vy,vz,pr,t,'   ')
+         endif
+
+         if (mod(istep,10).eq.0) then
+            uek = glsc3(vx,bm1,vx,n)*eek
+            vek = glsc3(vy,bm1,vy,n)*eek
+            if(if3d)then
+               wek = glsc3(vz,bm1,vz,n)*eek
+               write(11,"(5E15.7)")time,uek,vek,wek,uek+vek+wek
+            else
+               write(11,"(4E15.7)")time,uek,vek,uek+vek
+            endif
+         endif
+
+        ifto_sav=ifto
+        ifpo = .false.; ifto = .false.
+         call hpts
+        ifpo = ifto_sav; ifto = ifto_sav
+
+         if(uparam(01).eq.1)then !compose forcings to fcx,fcy,fcz
+            if(uparam(03).eq.1)call sfd
+            if(uparam(03).eq.1.1)call sfd_ab3
+         endif
+
+         call mycomment
+
+         if( ifbfcv )then
+
+          if(nid.eq.0)write(6,*)' FINISHED BF!'
+          call switch_to_lnse_steady
+          call krylov_schur
+          call exitt
+
+         endif !ifbfcv
+
+      else !uparam(01)==3
+
+         call krylov_schur
+         call exitt
+
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,eg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer e,eg
+      if(uparam(1).eq.1)then    !forcing on
+         e = gllel(eg)
+         ffx = fcx(ix,iy,iz,e)
+         ffy = fcy(ix,iy,iz,e)
+         ffz = fcz(ix,iy,iz,e)
+      else
+         ffx=0.0d0; ffy=0.0d0; ffz=0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,eg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer ix,iy,iz,ieg,e,eg,u_maxl,n
+      real xl(ldim), fcoeff(3), mth_rand
+      n = lx1*ly1*lz1*lelt
+
+      if (JP.eq.0) then
+
+         e  = gllel(eg)
+         ux=1.0d0               !ub(ix,iy,iz,e)
+         uy=0.0d0               !vb(ix,iy,iz,e)
+         uz=0.0d0
+         temp=0.0d0
+
+      else                      ! perturbation; white noise
+
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+
+         if(ifnois)then
+
+            xl(1) = X; xl(2) = Y
+            if(if3D)xl(NDIM) = Z
+
+            fcoeff(1)=  3.0e4;fcoeff(2)= -1.5e3;fcoeff(3)= 0.5e5
+            ux=mth_rand(ix,iy,iz,ieg,xl,fcoeff)
+
+            fcoeff(1)=  2.3e4;fcoeff(2)=  2.3e3;fcoeff(3)= -2.0e5
+            uy=mth_rand(ix,iy,iz,ieg,xl,fcoeff)
+
+            if (IF3D) then
+               fcoeff(1)= 2.e4 ;fcoeff(2)= 1.e3  ;fcoeff(3)= 1.e5
+               uz=mth_rand(il,jl,kl,ieg,xl,fcoeff)
+            endif
+
+         endif
+
+      endif
+      return
+      end
+c-----------------------------------------------------------------------
+      real function mth_rand(ix,iy,iz,ieg,xl,fcoeff)
+      implicit none
+      include 'SIZE'
+      include 'INPUT'       ! IF3D
+      integer ix,iy,iz,ieg
+      real xl(LDIM), fcoeff(3)
+      mth_rand = fcoeff(1)*(ieg+xl(1)*sin(xl(2))) + fcoeff(2)*ix*iy +
+     $     fcoeff(3)*ix
+      if (IF3D) mth_rand = fcoeff(1)*(ieg +xl(NDIM)*sin(mth_rand)) +
+     $     fcoeff(2)*iz*ix + fcoeff(3)*iz
+      mth_rand = 1.e3*sin(mth_rand)
+      mth_rand = 1.e3*sin(mth_rand)
+      mth_rand = cos(mth_rand)
+      return
+      end function mth_rand
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,eg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e,eg
+
+      if (JP.eq.0) then         ! base flow
+         e  = gllel(eg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,eg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,eg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+
+      if(nid.eq.0)then
+         write(6,*)'P21=',param(21),'pressure sol tol'
+         write(6,*)'P22=',param(22),'velocity sol tol'
+         write(6,*)'P24=',param(24),'rel tol Helmholtz sol'
+         write(6,*)'P25=',param(25),'abs tol Helmholtz sol'
+         write(6,*)'P27=',param(27),'temporal integration order'
+         write(6,*)'P31=',param(31),'numberOfPerturbations'
+         write(6,*)'P41=',param(41),'1 for multiplicative SEMG'
+         write(6,*)'P42=',param(42),'lin solv for the pres equation 0:GMRES,1:CG'
+         write(6,*)'P43=',param(43),'0:additive multilevel scheme 1:orig 2lvl sch'
+         write(6,*)'P44=',param(44),'0=E-based addit Schwarz PnPn-2;1=A-based'
+         write(6,*)'P93=',param(93),'n of prev sol to use for res proj'
+         write(6,*)'P94=',param(94),'n steps star res proj for vel and pas.scal'
+         write(6,*)'P95=',param(95),'projection for pressure solve on/off'
+         write(6,*)'uparam1=',uparam(1)
+         write(6,*)'uparam01=',uparam(01)
+         write(6,*)'uparam02=',uparam(02)
+         write(6,*)'uparam03=',uparam(03)
+         write(6,*)'uparam04=',uparam(04)
+         write(6,*)'uparam05=',uparam(05)
+         write(6,*)'uparam06=',uparam(06)
+         write(6,*)'uparam07=',uparam(07)
+         write(6,*)'uparam08=',uparam(08)
+         write(6,*)'uparam09=',uparam(09)
+         write(6,*)'uparam10=',uparam(10)
+      endif
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
