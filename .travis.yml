@@ -13,13 +13,12 @@ addons:
 
 env:
   global:
-    - MAKEFLAGS="-j 2"
+    - MAKEFLAGS="-j 4"
 
 install: true
 
 script:
-  - type makenek
-  - pwd
+  - lscpu
   - echo $ROOT_DIR
   - echo $NEKSTAB_SOURCE_ROOT
   - echo $NEK_SOURCE_ROOT
@@ -29,4 +28,4 @@ script:
   - export CASE_DIR=`pwd`
   - echo $CASE > SESSION.NAME
   - echo $CASE_DIR'/' >> SESSION.NAME
-  - mpiexec -np 2 ./nek5000
+  - mpiexec -np 4 ./nek5000
