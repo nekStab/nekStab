@@ -1,8 +1,8 @@
-language: ruby
 os: linux
 dist: bionic
+language: ruby
 before_install:
-  - export ROOT_DIR='pwd'
+  - export ROOT_DIR=`pwd`
   - export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
   - export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
   - export PATH=$NEK_SOURCE_ROOT/bin:$PATH

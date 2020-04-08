@@ -169,11 +169,11 @@ c-----------------------------------------------------------------------
 
 !     ----- Miscellaneous -----
       real wo1(lt),wo2(lt),wo3(lt)
-      common /ugrad/ wo1,wo2,wo3
+      common /ugrad2/ wo1,wo2,wo3
 
       integer :: mstart, cnt
       real, dimension(k_dim)             :: residual
-      real                               :: alpha, beta, dumm, glsc3
+      real                               :: alpha, beta, dumm, glsc3, bcast_size
       logical                            :: converged
       integer                            :: have_converged, n, n2, i, j
       integer                            :: ifich3 = 30
@@ -202,8 +202,8 @@ c-----------------------------------------------------------------------
 !     ----- Save baseflow to disk (recommended) -----
 
       ifto = .true. ;ifpo = .true.
-      call comp_vort3(t(1,1,1,1,2),wo1,wo2,vx,vy,vz)
-      call lambda2(t(1,1,1,1,3))
+      !call comp_vort3(t(1,1,1,1,2),wo1,wo2,vx,vy,vz)
+      call lambda2(t(1,1,1,1,2))
       call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
 
@@ -237,7 +237,7 @@ c-----------------------------------------------------------------------
          if(ifpo) call copy(qp(:,1), prp(:,1), n2)
          
          call whereyouwant('KRY',1)
-         ifto = .true.; ifpo= .true.; time = 0.0d0
+         ifto = .false.; ifpo= .true.; time = 0.0d0
          call outpost(qx(:,1), qy(:,1), qz(:,1), qp(:,1), t, 'KRY')
 
       elseif(uparam(2).gt.0)then
@@ -250,34 +250,26 @@ c-----------------------------------------------------------------------
             write(filename,'(a,a,i4.4)')'HES',trim(SESSION),mstart
 
             open(67, file=trim(filename), status='unknown', form='formatted')
-
-            if (k_dim.lt.mstart) then !subsampling
-            do i = 1,k_dim
-                  do j = 1,mstart
-                        if (j.le.k_dim) then
-                              read(67,"(1E15.7)") H(i,j)
-                        else
-                              read(67,"(1E15.7)") dumm
-                        endif
-                  enddo
-            enddo
-            else
-            !do i = 1,mstart+1
-            !  do j = 1,mstart
-            !     read(67,*) H(i,j)
-            !  enddo
-            !enddo
-            read(67,*)( ( H(i,j), j = 1,mstart ), i = 1,mstart+1 )
-            endif
-
+             if (k_dim.lt.mstart) then !subsampling
+              do i = 1,k_dim+1
+               do j = 1,mstart
+                if (j.le.k_dim)read(67,"(1E15.7)") H(i,j)
+                enddo
+              enddo
+             else
+              read(67, *)  (( H(i, j), j=1, mstart ), i = 1, mstart+1 )
+             endif
             close(67)
-            call bcast(H,(k_dim+1)*k_dim*8) !broadcast H matrix to all procs
-            write(6,*)'H matrix broadcasted...'
+            write(6,*)'Broadcast H matrix to all procs...'
       endif !nid.eq.0
+      call bcast(H,(k_dim+1)*k_dim*wdsize) !broadcast H matrix to all procs
 
       mstart=mstart+1  !careful here!
-      call load_files(qx(:,:), qy(:,:), qz(:,:), qp(:,:), mstart, k_dim+1, 'KRY')
+      ifpo = .true.; ifto = .false.
+      call load_files(qx, qy, qz, qp, mstart, k_dim+1, 'KRY')
       !k_dim+1 is the dim of V_x
+
+      !mstart = mstart+1
 
       endif !(uparam(02))
 
@@ -955,7 +947,7 @@ c-----------------------------------------------------------------------
 
 !     --> Outpost the latest Krylov vector.
       call whereyouwant("KRY", k+1)
-      ifto = .true.; ifpo = .true.; time = time * k !order in ParaView
+      ifto = .false.; ifpo = .true.; time = time * k !order in ParaView
       call outpost(f_xr, f_yr, f_zr, f_pr, t, "KRY")
 
 !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.
