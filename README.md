@@ -92,6 +92,39 @@ b) load PER or Fourier modes and run 3
 
 
 
+# INSTALLING AND RUNNING
+
+Fist install code dependencies if running with GCC
+
+```bash
+sudo apt-get -y install libmpich-dev mpich libopenblas-dev
+```
+
+Clone the repository and Nek5000 as a submodule:
+
+```bash
+git clone --depth=50 --branch=master https://github.com/ricardofrantz/nekStab.git
+cd nekStab
+git submodule update --init --recursive
+```
+
+Run _*sudo vim $HOME/.bashrc*_ and add the following:
+
+```bash
+export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
+export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
+export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+```
+
+Move to a specific example, for instance: _*cd examples/1cyl*_
+
+```bash
+./cmpile.sh all
+nekbmpi 1cyl 4
+```
+
+
+
 # ADAPTING YOUR EXISTING CASE TO NEKSTAB
 
 we recommend converting old _.rea_ files to __.par__ + __.re2__ and __.ma2__

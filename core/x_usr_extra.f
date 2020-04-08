@@ -184,7 +184,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine estimate_strouhal !oroginal routine from NekExamples
+      subroutine estimate_strouhal !original routine from NekExamples
 
       include 'SIZE'
       include 'TOTAL'
