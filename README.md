@@ -116,6 +116,34 @@ export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 ```
 
+Compile Nek5000 tools:
+
+```bash
+cd ~/nekStab/Nek5000/tools
+./maketools all
+```
+
+<details>
+  <summary>Click to expand Outputs!</summary>
+
+  ```javascript
+building genmap ... done
+building gencon ... done
+building genbox ... done
+building n2to3 ... done
+building reatore2 ... done
+building nekmerge ... done
+building prenek ... done
+building postnek ... done
+building nekamg_setup ... done
+building gmsh2nek ... done
+building exo2nek ... done
+building cgns2nek ... done
+  ```
+</details>
+
+
+
 Move to a specific example, for instance: _*cd examples/1cyl*_
 
 ```bash
