@@ -1,0 +1,58 @@
+[GENERAL]
+startFrom = 0
+
+stopAt = numSteps #endTime #endTime
+#endTime = 10000.
+numSteps = 1000 #T/8
+
+userParam01 = 3  # 0:dns,1:stabilization,3:stability
+userParam02 = 0  # krylov snapshot to load
+userParam03 = 1.1    # stabilization: 1:sfd, 1.1:sfd_ab3
+userParam04 = 0.095  # St mode  -> omega_c = pi St
+userParam05 = 0.022
+
+userParam08 = 200   # nsteps
+userParam10 = 0   # sponge strenght
+
+dt = 1.0E-03
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime #timestep #runTime
+writeInterval = 10.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+equation = incompLINns
+solveBaseflow = no
+numberOfPerturbations = 1
+
+[MESH]
+writeToFieldFile = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = yes
+density = 1.0
+advection = yes
+viscosity = -1950.0
+
+[TEMPERATURE] # vorticity
+solver = none
+writeToFieldFile = yes
+
+[SCALAR01] # scalar 01
+solver = none
+writeToFieldFile = yes
