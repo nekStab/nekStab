@@ -4,7 +4,8 @@ export CASE="cav" #--> case name goes here
 
 #add to .bashrc
 export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
-export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+#export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+export NEK_SOURCE_ROOT="$HOME/nekStab2/Nek5000"
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
 #uncomment the deisred compiler
