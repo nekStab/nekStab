@@ -2,16 +2,17 @@
       ! Shared memory bounded arrays and parameters
 
       logical, parameter :: ifnois = .true.
+
+
       logical, parameter :: ifldbf = .true.
 
       character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
 
-      integer, parameter :: k_dim  = 80
+      integer, parameter :: k_dim  = 85
       integer, parameter :: schur_tgt  = 0 !schur on if >1
 
       real, parameter    :: eigen_tol  = 1.0E-6 !standard value
       real, parameter    :: schur_del  = 0.10D0
-
       logical              ifbfcv
       common /lst_logical/ ifbfcv
 
