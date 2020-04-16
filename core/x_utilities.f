@@ -126,7 +126,26 @@
       endif
       goto 1
       end
-
+c-----------------------------------------------------------------------
+      subroutine force_lnse
+      include 'SIZE'
+      include 'TOTAL'
+      include 'DOMAIN'
+      include 'OPCTR'
+      include 'CTIMER'
+      time = 0.0d0
+      istep = 0
+      param(12) = -1*abs(param(12)) !freeze dt
+      param(31) = 1 !numberOfPerturbations
+      npert = param(31)
+      call bcast(param,200*wdsize) !broadcast all parameters to processors
+      ifpert = .true.
+      call bcast(ifpert, lsize) !start linearized
+      ifbase = .false.
+      call bcast(ifbase, lsize) !stop dns
+      call chkParam !sanity check
+      return
+      end
 c-----------------------------------------------------------------------
       subroutine switch_to_lnse_steady!(steps_in)
       include 'SIZE'
