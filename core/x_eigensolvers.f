@@ -373,6 +373,10 @@ c-----------------------------------------------------------------------
       integer                            :: mstep, mstart
       integer                            :: n, n2
 
+!     ----- Timer -----      
+      real*8 :: eetime0,eetime1
+      real   :: telapsed,tmiss,dnekclock
+
 !     ----- Krylov basis V for the projection MQ = QH -----
       real, dimension(lt,k_dim+1)        :: qx, qy, qz
       real, dimension(lt2,k_dim+1)       :: qp
@@ -393,6 +397,8 @@ c-----------------------------------------------------------------------
 !     --> Arnoldi factorization.
       do mstep = mstart, k_dim
          if (nid.EQ.0) write(6,*) 'Begin iteration :', mstep , '/' , k_dim
+
+         eetime0=dnekclock()
 
 !     --> Matrix-vector product f = M * v (e.g. calling the linearized Navier-Stokes solver).
          call matrix_vector_product(f_xr, f_yr, f_zr, f_pr, qx(:,mstep), qy(:,mstep), qz(:,mstep))
@@ -417,7 +423,19 @@ c-----------------------------------------------------------------------
 !     --> Save checkpoint for restarting/run-time analysis.
          call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, H(1:mstep+1, 1:mstep), mstep)
          
-         if(nid.EQ.0) write(6,*) "End of iteration:", mstep
+!     --> Output timing statistics
+
+         eetime1=dnekclock()
+         telapsed = eetime1-eetime0
+         tmiss = telapsed*(k_dim-mstep)
+
+         if(nid.EQ.0) then
+            write(6,*) "Time per iteration:", telapsed/3600.0d0
+            write(6,*) "Time left:", tmiss/3600.0d0
+            write(6,*) "End of iteration:", mstep
+            write(6,*)
+         endif
+
       enddo
       
       return
@@ -540,6 +558,7 @@ c----------------------------------------------------------------------
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
       real, dimension(lt)                :: fx, fy, fz, qx, qy, qz
       real, dimension(lt2)               :: fp
+      real                               :: umax
       integer n, n2
       n = nx1*ny1*nz1*nelt; n2 = nx2*ny2*nz2*nelt
 
@@ -552,7 +571,7 @@ c----------------------------------------------------------------------
 
 !     ----- Prepare the base flow to vx,vy,vz
 
-        if(ifldbf)then
+        if(ifbfcv)then
 
           if(nid.eq.0)write(6,*)'Copying base flow!'
           call opcopy(vx,vy,vz,ubase,vbase,wbase)
@@ -561,17 +580,19 @@ c----------------------------------------------------------------------
 
           if(nid.eq.0)then
             if(ifbase.eqv..true.)then
-              write(6,*)'Running DNS alongside stability!'
-            else
-             write(6,*)'Base flow prescribed in useric!'
+              write(6,*)'Running DNS alongside stability!' !update vx,vy,vz
             endif
           endif
 
         endif
 
+!      ----- Check CFL of velocity fields
+        call compute_cfl(umax,vx,vy,vz,1.0)
+        if (nid.eq.0) write(6,*) 'CFL=',real(dt*umax,4)
+
 !      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
-         call nek_advance
+        call nek_advance
 
       enddo
 
