@@ -108,8 +108,11 @@ if __name__ == '__main__':
     plt.xticks(xrz,xlabels);plt.xlim(-1.5,1.5);plt.xlabel(r'$\Re (\mu)$')
     plt.yticks(xrz,xlabels);plt.ylim(-1.5,1.5);plt.ylabel(r'$\Im (\mu)$')
 
+    #file = SpectreH('Spectre_Hv.dat')
+    #plot_H(plt, file.vp_real, file.vp_imag, file.residu, 3, 'm', r'Re=50')
+
     file = SpectreH('Spectre_H.dat')
-    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 2, 'm', r'Re=50')
+    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 0, 'b', r'Re=50')
 
     fname='Spectre_H.'+formt
     plt.legend(loc='best',fontsize=6);
@@ -133,8 +136,11 @@ if __name__ == '__main__':
     file = SpectreNS('ref/marquet2008_re100.ref')
     plot_NS(plt, file.vp_real, file.vp_imag, False, -1, 'm', r'Marquet et al. (2008) Re=100')
 
+    #file = SpectreNS('Spectre_NS_convv.dat')
+    #plot_NS(plt, file.vp_real, file.vp_imag, False, 2, 'b', r'Re=50')
+
     file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 1, 'b', r'Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'b', r'Re=50')
 
 
     fname='Spectre_NS.'+formt
@@ -157,7 +163,7 @@ if __name__ == '__main__':
     plot_NS(plt, file.vp_real, file.vp_imag, True, -1, 'm', r'Marquet et al. (2008) Re=100')
 
     file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, True, 1, 'b', r'Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, True, 0, 'b', r'Re=50')
 
     plt.legend(loc='best',fontsize=4);
     fname='Spectre_NSf.'+formt

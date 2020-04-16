@@ -16,7 +16,7 @@ userParam08 = 193   # nsteps
 userParam10 = 0   # sponge strenght
 
 dt = 6.5E-03
-variableDt = yes
+variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5
 
@@ -24,7 +24,7 @@ writeControl = runTime #timestep #runTime
 writeInterval = 1.
 writeDoublePrecision = yes
 
-dealiasing = yes
+dealiasing = no
 #filtering = explicit
 #filterWeight = 0.01
 #filterCutoffRatio = 0.84

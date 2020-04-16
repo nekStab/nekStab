@@ -94,7 +94,7 @@ c-----------------------------------------------------------------------
 
          if( ifbfcv )then
 
-          call switch_to_lnse_steady
+          call switch_to_lnse_steady !in utilities.f
           call krylov_schur
           call exitt
 
@@ -102,7 +102,7 @@ c-----------------------------------------------------------------------
 
       else !uparam(01)==3
 
-         !call switch_to_lnse_steady
+         call force_lnse !in utilities.f
          call krylov_schur
          call exitt
 
@@ -280,6 +280,306 @@ c-----------------------------------------------------------------------
          y = ym1(i,1,1,1)
          ub(i)=0.50d0*(1.0d0-tanh((1.0d0/(4.0d0*theta_0))*(y-(1.0d0/(4.0d0*y)))))
       enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine compute_sb (v_jet)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      real v_jet(1),A_1,x_m,H,f_x
+      integer n
+
+      n = nx1*ny1*nz1*nelv
+      A_1 = uparam(06)
+      x_m = uparam(07)
+
+      do i=1,n
+      x = xm1(i,1,1,1)
+      y = ym1(i,1,1,1)
+      if(y.eq.0.)then
+         H = exp( -((x-x_m)**2)/(3.10d0**2))
+         f_x = 15.18750d0*H**5 -35.43750d0*H**4 +20.250d0*H**3
+         v_jet(i)=A_1*f_x
+      else
+         v_jet(i)=0.0d0
+      endif
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine outpost_blayer_pert
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter   :: lt=lx1*ly1*lz1*lelv
+      real, dimension(lt)  :: do1,do2,do3
+      real ampx, ampy, glamax
+      integer n
+
+      n = nx1*ny1*nz1*nelv
+
+      if((istep.eq.0).OR.ifoutfld)then
+
+         call opsub3 ( do1,do2,do3, vx,vy,vz, ubase,vbase,wbase)
+
+         ifto = .false.; ifpo = .false.      
+         call outpost( do1,do2,do3,pr,t,'per')
+         ifto = .true.; ifpo = .true. 
+
+         ampx = glamax(do1,n)      
+         ampy = glamax(do2,n)
+
+         if(nid.eq.0)then
+            if(istep.eq.0)then
+            open(unit=111,file='ts_amp.dat',status='unknown',form='formatted')
+            write(112,'(A)')'#  t  A  up  vp  up2  vp2'
+            endif
+            write(111,"(6E15.7)")time,uparam(06),ampx,ampy,ampx**2,ampy**2
+            if(istep.eq.nsteps)close(111)
+         endif
+      endif      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine set_blasius(ub,vb) ! Compute the Blasius profile
+         include 'SIZE'
+         include 'TOTAL'
+
+         real ub(1),vb(1),x_m
+         real,save :: xmx,xmn
+         n = nx1*ny1*nz1*nelv
+
+         xmx = glmax(xm1,n)
+         xmn = glmin(xm1,n)
+         x_m = uparam(07)
+
+         visc = param(2)/param(1) !density / dynamic viscosity
+         delta99_0 = 5.0d0/1.72080d0 !2.9
+         delta_star= 1.0d0
+         u_0   = 1.0d0
+         x_0 = (delta_star/1.7208d0)**2 / visc * u_0  ! Reference x
+
+         x_inflow = (605.0d0/740.0d0)**2 * x_0 !original blasius
+         x_inflow = x_0
+
+         if(nid.eq.0)then
+         write(6,*)'visc=',visc
+         write(6,*)'delta99_0=',delta99_0
+         write(6,*)'delta_star=',delta_star
+         write(6,*)'u_0=',u_0
+         write(6,*)'x_0=',x_0 
+         write(6,*)'x_inflow=',x_inflow
+         write(6,*)'x_m=',x_m
+         endif
+
+         do i=1,n
+            x = xm1(i,1,1,1)
+            y = ym1(i,1,1,1)
+
+            x_t = x_inflow + x
+            rex = u_0 * x_t / visc
+
+            if(x.eq.xmn)write(6,*)'if x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
+            if(x.eq.x_m)write(6,*)'sb x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
+            if(x.eq.xmx)write(6,*)'of x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
+                     
+            eta = y*sqrt(rex)/x_t
+            call blasius(ub(i),vb(i),eta,rex)
+
+         enddo
+
+         return
+         end
+c-----------------------------------------------------------------------
+      subroutine blasius(u,v,eta,rex)
+
+         integer icalld
+         save    icalld
+         data    icalld /0/
+
+         parameter (lb=100)
+         real blasius_soln(0:4,0:lb)
+         save blasius_soln
+c
+c     Algorithm found in Lighthills monograph on mathematical fluid mech.
+c     (c. of M. Choudhari)
+c
+         real  w(4)
+
+         twok2 =  1.6551903602308323382003140460740
+         rk2   =  0.5*twok2
+         rk    =  sqrt(rk2)
+
+         if (icalld.eq.0) then
+            icalld = 1
+
+            call set_ics (blasius_soln(0,0))
+
+            dt=.05
+            rr=1.0725
+            do i=1,lb
+               blasius_soln(0,i) = blasius_soln(0,i-1) + dt
+               dt = dt*rr
+            enddo
+
+            do i=1,lb
+               eta0 = blasius_soln(0,i-1)
+               eta1 = blasius_soln(0,i  )
+               t0 = 0.5*eta0/rk
+               t1 = 0.5*eta1/rk
+               dt = .0005    !  Note, this is good to about 12 digits
+               m=3
+               call copy(blasius_soln(1,i),blasius_soln(1,i-1),m)
+               call rk4_integrate(blasius_soln(1,i),3,t1,t0,dt)
+            enddo
+         endif
+
+         if (eta.gt.blasius_soln(0,lb)) then
+
+            call copy(w,blasius_soln(1,lb),2)
+
+         else
+
+            i = interval_find(eta,blasius_soln,5,lb)
+
+            eta0 = blasius_soln(0,i)
+            t0   = 0.5*eta0/rk
+            t1   = 0.5*eta/rk
+            dt   = .0005    !  Note, this is good to about 12 digits
+            m    = 3
+            call copy(w,blasius_soln(1,i),m)
+            call rk4_integrate(w,3,t1,t0,dt)
+
+         endif
+
+         g  = w(1)
+         gp = w(2)
+
+         f  = g  / rk
+         fp = gp / twok2
+
+         u  = fp
+         v  = 0.5*(eta*fp-f)/sqrt(rex)
+
+c     write(6,1) eta,u,v,f,fp,rex
+c  1  format(1p6e14.6,' eta')
+
+         return
+         end
+c-----------------------------------------------------------------------
+      subroutine rk4_integrate(w,n,tfinal,tstart,dti) !Program to integrate dW/dt = F(W,t)
+!     Input:   w() is initial condition at t=tstart
+!     Output:  w() is solution at t = tfinal
+!     n = length of vector
+      real  w(n)
+      if (tfinal.gt.tstart .and. dti.gt.0.) then
+
+         tdelta = tfinal-tstart
+         dt     = dti
+         nsteps = tdelta/dt
+         nsteps = max(nsteps,1)
+         dt     = tdelta/nsteps
+
+         t = tstart
+         do k=1,nsteps !  TIME STEPPING
+
+            call rk4 (w,t,dt,n) ! Single RK4 step (nmax=4)
+            t = t+dt
+
+         enddo
+
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine set_ics (w)!Initial conditions for modified Blasius equation g''' + g g'' = 0
+      real  w(0:3)
+      w(0) = 0.0d0    ! eta = 0
+      w(1) = 0.0d0    ! g
+      w(2) = 0.0d0    ! g'
+      w(3) = 1.0d0    ! g"
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine compute_f(f,w,t) !Compute RHS of ODE:
+      real  f(4),w(4)
+      f(1) = w(2)
+      f(2) = w(3)
+      f(3) = -w(1)*w(3)
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine add3s2nd(x,y,z,c,n)
+      real  x(1),y(1),z(1),c
+      do i=1,n
+         x(i) = y(i) + c*z(i)
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine rk4(w,t,dt,n)
+      real  w(1),t,dt
+      real  wh(4),f1(4),f2(4),f3(4),f4(4)
+
+      dt2 = dt/2.0d0
+      dt3 = dt/3.0d0
+      dt6 = dt/6.0d0
+
+      t2 = t+dt2
+      tt = t+dt
+
+      call compute_f (f1,w ,t )
+      call add3s2nd  (wh,w,f1,dt2,n)
+
+      call compute_f (f2,wh,t2)
+      call add3s2nd  (wh,w,f2,dt2,n)
+
+      call compute_f (f3,wh,t2)
+      call add3s2nd  (wh,w,f3,dt ,n)
+
+      call compute_f (f4,wh,tt)
+
+      do i=1,n
+         w(i) = w(i) + dt6*(f1(i)+f4(i)) + dt3*(f2(i)+f3(i))
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      function interval_find(x,xa,m,n) !Find interval. p. 88-89, numerical recipes
+      real xa(m,0:n)
+
+      if (x.ge.xa(1,n)) then
+         interval_find = n
+      elseif (x.le.xa(1,0)) then
+         interval_find = 0
+      else
+
+         klo=0
+         khi=n
+   1    if ((khi-klo).gt.1) then
+         k=(khi+klo)/2
+         if (xa(1,k).gt.x) then
+            khi=k
+         else
+            klo=k
+         endif
+         goto 1
+         endif
+
+         h=xa(1,khi)-xa(1,klo)
+         if (h.eq.0) then
+            write(6,*) xa(1,klo),xa(1,khi),klo,khi,'ERROR: Zero jump in interval_find.'
+            return
+         endif
+         interval_find = klo
+      endif
+
       return
       end
 c-----------------------------------------------------------------------
