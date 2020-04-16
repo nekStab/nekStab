@@ -112,7 +112,7 @@ if __name__ == '__main__':
     #plot_H(plt, file.vp_real, file.vp_imag, file.residu, 3, 'm', r'Re=50')
 
     file = SpectreH('Spectre_H.dat')
-    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 0, 'b', r'Re=50')
+    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 0, 'b', r'Re=1950')
 
     fname='Spectre_H.'+formt
     plt.legend(loc='best',fontsize=6);
@@ -123,16 +123,19 @@ if __name__ == '__main__':
     plt.xlabel(r'$\Re (\lambda)$');#plt.xlim(-1,1)
     plt.ylabel(r'$\Im (\lambda)$');#plt.ylim(-0.2,0.2)
 
-    # plt.axvline(x=0, lw=0.4, color='g', ls='dashdot',label='S1')
-    plt.axhline(y=0.1266, lw=0.4, color='m', ls='dashed',label='Mantic-Lugo et al. (2015) Re=100')
-    plt.axvline(x=0.74,   lw=0.4, color='m', ls='dashed')#,label='Mantic-Lugo et al. (2015) Re=100')
-    plt.axvline(x=0.753,   lw=0.4, color='g', ls='dashed',label='Mantic-Lugo et al. (2015) Re=50')
+    #plt.axvline(x=0, lw=0.4, color='g', ls='dashdot',label='S1')
+    #plt.axhline(y=0.1266, lw=0.4, color='m', ls='dashed',label='Mantic-Lugo et al. (2015) Re=100')
+    #plt.axvline(x=0.74,   lw=0.4, color='m', ls='dashed')#,label='Mantic-Lugo et al. (2015) Re=100')
+    #plt.axvline(x=0.753,   lw=0.4, color='g', ls='dashed',label='Mantic-Lugo et al. (2015) Re=50')
 
-    #file = SpectreNS('Spectre_NS_convv.dat')
-    #plot_NS(plt, file.vp_real, file.vp_imag, False, 2, 'b', r'Re=50')
+    file = SpectreNS('ref/1cav_1950_JC_2014.ref')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 6, 'r', r'Loiseau (2014)')
+
+    file = SpectreNS('ref/Spectre_NS_conv_old.dat')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 4, 'm', r'old run')
 
     file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'b', r'Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'b', r'Re=1950')
 
 
     fname='Spectre_NS.'+formt
@@ -149,7 +152,7 @@ if __name__ == '__main__':
     # plt.axvline(x=0.12, lw=0.4, color='m', ls='dashed',label='T1')
 
     file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, True, 0, 'b', r'Re=50')
+    plot_NS(plt, file.vp_real, file.vp_imag, True, 0, 'b', r'Re=1950')
 
     plt.legend(loc='best',fontsize=4);
     fname='Spectre_NSf.'+formt

@@ -3,7 +3,7 @@ startFrom = 0
 
 stopAt = numSteps #endTime #endTime
 #endTime = 10000.
-numSteps = 1000 #T/8
+numSteps = 667 #T/8
 
 userParam01 = 3  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
@@ -14,7 +14,7 @@ userParam05 = 0.022
 userParam08 = 200   # nsteps
 userParam10 = 0   # sponge strenght
 
-dt = 1.0E-03
+dt = 1.50E-03
 variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5

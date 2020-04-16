@@ -108,7 +108,7 @@ cd nekStab
 git submodule update --init --recursive
 ```
 
-Run _*sudo vim $HOME/.bashrc*_ and add the following:
+Run _*(sudo) vim $HOME/.bashrc*_ and add the following:
 
 ```bash
 export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
@@ -124,7 +124,7 @@ cd ~/nekStab/Nek5000/tools
 ```
 
 <details>
-  <summary>Click to expand Outputs!</summary>
+  <summary>Outputs</summary>
 
   ```javascript
 building genmap ... done
