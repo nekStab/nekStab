@@ -15,7 +15,6 @@ makefile
 nek5000
 vor*
 KRY*
-# text editors stuff
 *.swp
 *~
 SPG*
@@ -23,8 +22,14 @@ SPG*
 1cyl.f
 cav.f
 1cav0.f*
-BF_1cyl0.f00002
+square0*
+blayer0*
+cav0*
+BF_*0.f00002
+BF_blayer0.f00001
+makefile_usr.inc
 # python stuff
 *.pyc
 .cache
 __pycache__
+slurm*

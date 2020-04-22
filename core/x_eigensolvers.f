@@ -426,13 +426,13 @@ c-----------------------------------------------------------------------
 !     --> Output timing statistics
 
          eetime1=dnekclock()
-         telapsed = eetime1-eetime0
+         telapsed = (eetime1-eetime0)/3600.0d0
          tmiss = telapsed*(k_dim-mstep)
-
+         
          if(nid.EQ.0) then
-            write(6,*) "Time per iteration:", telapsed/3600.0d0
-            write(6,*) "Time left:", tmiss/3600.0d0
-            write(6,*) "End of iteration:", mstep
+            write(6,"('Time per iteration/remaining:',I3,'h ',I2,'min /',I3,'h ',I2,'min')"),
+     $                int(telapsed),int((telapsed-int(telapsed))*60.),
+     $                int(tmiss),int((tmiss-int(tmiss))*60.)
             write(6,*)
          endif
 
@@ -588,7 +588,7 @@ c----------------------------------------------------------------------
 
 !      ----- Check CFL of velocity fields
         call compute_cfl(umax,vx,vy,vz,1.0)
-        if (nid.eq.0) write(6,*) 'CFL=',real(dt*umax,4)
+        if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,ctarg/umax
 
 !      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
