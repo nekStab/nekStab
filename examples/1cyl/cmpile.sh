@@ -8,9 +8,9 @@ export CASE="1cyl" #--> case name goes here
 #export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
 #uncomment the deisred compiler
-#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc.sh
-source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel.sh
-
+source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc.sh
+#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel.sh
+#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_pgi.sh
 
 args=("$@")
 argsnr=$#
