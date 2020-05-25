@@ -7,11 +7,11 @@
 
 - uparam(3) = forcing mode (1:SFD, 2:boosconv, 3:TDF)
 
-- uparam(4) = frequency input
+- uparam(4) = frequency cuttor of forcing frequency
 
 - uparam(5) = gain input or forcing amplitude 
 
-- uparam(6) = tripping position 
+- uparam(6) = suction-blowing center position (x_m) 
 
 - uparam(7) = 
 
@@ -19,7 +19,7 @@
 
 - uparam(9) = 
 
-- uparam(10): sponge intensity (>0 to activate)
+- uparam(10): sponge strenght (>0 to activate)
 
   
 
@@ -97,7 +97,7 @@ b) load PER or Fourier modes and run 3
 Fist install code dependencies if running with GCC
 
 ```bash
-sudo apt-get -y install libmpich-dev mpich libopenblas-dev
+sudo apt-get -y install libmpich-dev mpich libopenblas-dev build-essential cmake m4
 ```
 
 Clone the repository and Nek5000 as a submodule:
