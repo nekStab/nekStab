@@ -1,0 +1,152 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      !if(istep.eq.0) call gfldr("1cyl0.f00091_jcmesh")
+
+      call nekStab
+
+      !call stat_avg
+      !call stats_3d_full
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+
+         if(x.lt.-10)then
+          temp=0.0d0
+         else
+          temp=1.0d0
+         endif
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      common /USRBC/ bcflag(lx1,ly1,lz1,lelt)
+      integer iel,ifc,id_face
+      !integer isideset1
+      ntot = nx1*ny1*nz1*nelv
+      !call rzero(bcflag,ntot)
+      
+      cbc(:,:,2)=cbc(:,:,1)
+      !mark faces for object definition¬
+      nface = 2*ndim
+      !write(6,*)cbc(:,:,1)
+
+      do iel=1,nelt
+       do iface = 1, nface
+        if(cbc(iface,iel,1).eq.'W  ')cbc(iface,iel,2)='t  '
+        if(cbc(iface,iel,1).eq.'v  ')cbc(iface,iel,2)='t  '
+      enddo
+      enddo
+
+      !if(nid.eq.0)write(6,*) 'NEW BCS'
+      !if(nid.eq.0)write(6,*) boundaryID
+
+      !do iel=1,nelv
+      ! do ifc=1,2*ndim
+      !  id_face = bc(5,ifc,iel,1)
+      !  write(6,*) id_face
+      !  if (id_face.eq.1) then                   ! surface 1 for inlet¬
+      !     cbc(ifc,iel,1) = 'v  '
+      !     cbc(ifc,iel,2) = 't  '
+      !  elseif (id_face.eq.2) then               ! surface 2 for outlet¬
+      !     cbc(ifc,iel,1) = 'W  '
+      !     cbc(ifc,iel,2) = 'I  '
+      !  elseif (id_face.eq.3) then               ! surface 3 for upper¬
+      !     cbc(ifc,iel,1) = 'O  '
+      !     cbc(ifc,iel,2) = 'O  '
+      !  elseif (id_face.eq.4) then               ! surface 4 for lower¬
+      !     cbc(ifc,iel,1) = 'SYM'
+      !     cbc(ifc,iel,2) = 'SYM'
+      !  elseif (id_face.eq.5) then               ! surface 5 for wall¬
+      !     cbc(ifc,iel,1) = 'SYM'
+      !     cbc(ifc,iel,2) = 'SYM'
+      !  endif
+      ! enddo
+      !enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
