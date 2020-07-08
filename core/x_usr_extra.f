@@ -62,7 +62,7 @@ c-----------------------------------------------------------------------
             ifto = .false.; ifpo = .false.
             call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'vor')
             ifto = .true.; ifpo = .true.
-            call lambda2(t(1,1,1,1,1))
+            !call lambda2(t(1,1,1,1,1))
 
          endif
          if(istep.eq.0)then
@@ -80,10 +80,8 @@ c-----------------------------------------------------------------------
             endif
          endif
 
-        ifto_sav=ifto
-        ifpo = .false.; ifto = .false.
-         call hpts
-        ifpo = ifto_sav; ifto = ifto_sav
+        ifpo = .true.; ifto = .true.
+        call hpts
 
          if(uparam(01).eq.1)then !compose forcings to fcx,fcy,fcz
             if(uparam(03).eq.1)call sfd
