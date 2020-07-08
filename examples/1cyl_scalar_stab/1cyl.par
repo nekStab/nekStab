@@ -1,0 +1,61 @@
+[GENERAL]
+startFrom = 0
+
+stopAt = numSteps #endTime
+#endTime = 4000.
+numSteps = 193 #T/8
+
+userParam01 = 3  # 0:dns,1:stabilization,3:stability
+userParam02 = 0  # krylov snapshot to load
+userParam03 = 1.1  # stabilization: 1:sfd, 1.1:sfd_ab3
+userParam04 = 0.063  # St mode  -> omega_c = pi St
+userParam05 = 0.125  # gain = 2 sigma mode
+userParam06 = 0   # 
+userParam08 = 0   # nsteps
+userParam10 = 0   # sponge strenght
+
+dt = 8.5E-03
+variableDt = no #yes
+timeStepper = bdf3
+targetCFL = 1.0
+
+writeControl = runTime #timestep #runTime
+writeInterval = 5.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+equation = incompns
+solveBaseflow = no
+numberOfPerturbations = 1
+
+[MESH]
+writeToFieldFile = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -50.0
+
+[TEMPERATURE] # temperature with Hmholtz
+solver = helm
+residualTol = 1.0E-6
+residualProj = yes
+writeToFieldFile = yes
+conductivity = -40.0 # re*0.71
+rhoCp = 1.0
+
+[SCALAR01] # scalar 01
+solver = none
+writeToFieldFile = yes
