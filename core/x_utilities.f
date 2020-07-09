@@ -181,8 +181,17 @@ c-----------------------------------------------------------------------
       param(11) = steps !numSteps to overwrite final time
       param(14) = 999. !write interval runtime
       param(12) = -1*abs(param(12)) !freeze dt
+
+      param(21) = 1e-8 ! pressure tolerance
+      param(22) = 1e-10 ! velocity tolerance
+      restol(0) = param(22)
+      restol(1) = param(22)
+      do i=1,ldimt
+        restol(1+i) = param(22)
+      enddo
+
       param(31) = 1 !numberOfPerturbations
-      param(63) = 1 ! Enforce 64-bit output
+      param(63) = 0 ! Enforce 32-bit output
       npert = param(31)
 
       call bcast(param,200*wdsize) !broadcast all parameters to processors
@@ -192,8 +201,6 @@ c-----------------------------------------------------------------------
 
       ifbase = .false.
       call bcast(ifbase, lsize) !stop dns
-
-      call chkParam !sanity check
 
       return
       end

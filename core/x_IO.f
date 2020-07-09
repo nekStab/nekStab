@@ -12,7 +12,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine load_files(V_x,V_y,V_z,P_r,mstart,kd,fname)
+      subroutine load_files(V_x,V_y,V_z,P_r,V_t,mstart,kd,fname)
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -23,7 +23,7 @@ c-----------------------------------------------------------------------
 
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
-      real, dimension(lt,kd+1)        :: V_x, V_y, V_z
+      real, dimension(lt,kd+1)        :: V_x, V_y, V_z, V_t
       real, dimension(lt2,kd+1)       :: P_r
       character*3  fname
       character*60  filename
@@ -58,7 +58,8 @@ c     ----- Upload the snapshots -----
 
          call load_fld(filename)
          call opcopy(V_x(:,i),V_y(:,i),V_z(:,i),vx,vy,vz)
-         call copy(P_r(:,i),pr,n2)
+         if(ifpo)call copy(P_r(:,i),pr,n2)
+         if(ifto)call copy(V_t(:,i),t(1,1,1,1,1),n)
 
       enddo
       return
