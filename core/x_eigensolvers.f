@@ -202,7 +202,7 @@ c-----------------------------------------------------------------------
       endif
 
 !     ----- Save baseflow to disk (recommended) -----
-      call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
+      !call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
       if(ifto) call copy(tbase,t(1,1,1,1,1),n)
 
@@ -216,9 +216,10 @@ c-----------------------------------------------------------------------
 
         if(ifnois)then
 
+         if(nid.eq.0)write(6,*)'Filling fields with noise...'
          call add_noise(vxp,vyp,vzp)
          call normalize(vxp,vyp,vzp,prp,tp,alpha)
-         call matrix_vector_product(vxp,vyp,vzp,prp, vxp,vyp,vzp)
+         call matrix_vector_product(vxp,vyp,vzp,prp,tp, vxp,vyp,vzp,prp,tp)
 
          else !ifnois.eq..false.
 
@@ -266,9 +267,8 @@ c-----------------------------------------------------------------------
       call bcast(H,(k_dim+1)*k_dim*wdsize) !broadcast H matrix to all procs
 
       mstart=mstart+1  !careful here!
-         call load_files(qx, qy, qz, qp, qt, mstart, k_dim+1, 'KRY')
+      call load_files(qx, qy, qz, qp, qt, mstart, k_dim+1, 'KRY')
       !k_dim+1 is the dim of V_x
-
       !mstart = mstart+1
 
       endif !(uparam(02))
@@ -316,8 +316,8 @@ c-----------------------------------------------------------------------
       if(nid.eq.0)write(6,*)'Exporting modes...'
       call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
       
-      if(nid.eq.0)write(6,*)'Stopping code...'
-      call exitt
+      if(nid.eq.0)write(6,*)'Converged eigenmodes:',cnt
+      if(nid.eq.0)write(6,*)'Stability solver finished.'
 
       return
       end
@@ -388,7 +388,8 @@ c-----------------------------------------------------------------------
 !     ----- Upper Hessenberg matrix -----
       real, dimension(k_dim+1, k_dim)       :: H
 
-      n  = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
+      n  = nx1*ny1*nz1*nelt
+      n2 = nx2*ny2*nz2*nelt
 
 !     --> Initialize arrays.
       call oprzero(f_xr, f_yr, f_zr)
@@ -402,7 +403,7 @@ c-----------------------------------------------------------------------
          eetime0=dnekclock()
 
 !     --> Matrix-vector product f = M * v (e.g. calling the linearized Navier-Stokes solver).
-         call matrix_vector_product(f_xr, f_yr, f_zr, f_pr, f_tr, qx(:,mstep), qy(:,mstep), qz(:,mstep))
+         call matrix_vector_product(f_xr, f_yr, f_zr, f_pr, f_tr, qx(:,mstep), qy(:,mstep), qz(:,mstep), qp(:,mstep), qt(:,mstep))
          
 !     --> Update Hessenberg matrix and compute the orthogonal residual f.
          call update_hessenberg_matrix(
@@ -497,7 +498,8 @@ c     ----- Schur and Hessenberg decomposition -----
 
       real, dimension(k_dim,k_dim)       :: vecs
 
-      n  = nx1*ny1*nz1*nelt; n2 = nx2*ny2*nz2*nelt
+      n  = nx1*ny1*nz1*nelt
+      n2 = nx2*ny2*nz2*nelt
 
 !     --> Initialize arrays.
       b_vec = 0.0D0 ; b_vec(k_dim) = H(k_dim+1, k_dim)
@@ -547,20 +549,25 @@ c----------------------------------------------------------------------
 
 
       
-      subroutine matrix_vector_product(fx, fy, fz, fp, ft, qx, qy, qz, qt)
+      subroutine matrix_vector_product(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+!     This function implements the k-step Arnoldi factorization of the linearized
+!
+!     INPUT
+!     -----
+!
+!     RETURNS
+!     -------
+!
+!     Last edit : April 3rd 2020 by JC Loiseau.
+
       implicit none
       include 'SIZE'
-      include 'TSTEP'
-      include 'INPUT'
-      include 'CTIMER'
-      include 'GEOM'
-      include 'SOLN'
-      include 'MASS'
-      include 'ADJOINT'
+      include 'TOTAL'
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
       real, dimension(lt)                :: fx, fy, fz, ft, qx, qy, qz, qt
-      real, dimension(lt2)               :: fp
+      real, dimension(lt2)               :: fp, qp
       real                               :: umax
       !real, dimension(lx1,ly1,lz1,lelt) :: qt_tmp
       integer n, n2
@@ -569,12 +576,8 @@ c----------------------------------------------------------------------
 
 !     ----- Initial condition -----
       call opcopy(vxp, vyp, vzp, qx, qy, qz)
-      !call opcopy(tp(:,1,1), vyp, vzp, qt, qy, qz)
-      !if(ifto) then
-      ! call copy(qt_tmp, qt, n)
-      ! call copy(tp(1,1,1), qt_tmp, n)
-       !tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
-      !endif
+      if(ifpo) call copy(prp, qp, n2)
+      if(ifto) call copy(tp, qt, n)
       
 !     ----- Time-stepper matrix-vector product -----
       time = 0.0d0
@@ -660,10 +663,12 @@ c     ----- Miscellaneous -----
       real, dimension(k_dim)             :: residual
       real                               :: alpha, alpha_r, alpha_i
       complex :: log_transform
-
+      logical ifto_sav, ifpo_sav
+      
       sampling_period = dt*nsteps
 
-      n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
+      n = nx1*ny1*nz1*nelt 
+      n2 = nx2*ny2*nz2*nelt
 
 c     ----- Output all the spectrums and converged eigenmodes -----
 
@@ -735,9 +740,10 @@ c     ----- Output the real part -----
 c     ----- Output vorticity from real part -----
             call oprzero(wo1, wo2, wo3)
             call comp_vort3(vort, wo1, wo2, vx, vy, vz)
-            ifto = .false. ; ifpo = .false.
+            
+            ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
             call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, 'Rev')
-            ifto = .true. ; ifpo = .true.
+            ifto = ifto_sav ; ifpo = ifpo_sav
             
          endif
          

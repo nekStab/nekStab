@@ -1,25 +1,27 @@
 [GENERAL]
-startFrom = 0
+startFrom = BF_1cyl0.f00002
 
 stopAt = numSteps #endTime
 #endTime = 4000.
-numSteps = 193 #T/8
+numSteps = 193000
 
-userParam01 = 3  # 0:dns,1:stabilization,3:stability
+userParam01 = 1  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
 userParam03 = 1.1  # stabilization: 1:sfd, 1.1:sfd_ab3
 userParam04 = 0.063  # St mode  -> omega_c = pi St
 userParam05 = 0.125  # gain = 2 sigma mode
 userParam06 = 0   # 
-userParam08 = 0   # nsteps
+userParam07 = 0   # 
+userParam08 = 193   # nsteps T/8
+userParam09 = 0   # 
 userParam10 = 0   # sponge strenght
 
-dt = 8.5E-03
-variableDt = no #yes
+dt = 0
+variableDt = yes
 timeStepper = bdf3
-targetCFL = 1.0
+targetCFL = 0.5
 
-writeControl = runTime #timestep #runTime
+writeControl = runTime #timestep
 writeInterval = 5.
 writeDoublePrecision = no
 
@@ -31,31 +33,23 @@ dealiasing = yes
 [PROBLEMTYPE]
 equation = incompns
 solveBaseflow = no
-numberOfPerturbations = 1
 
-[MESH]
-writeToFieldFile = yes
+[VELOCITY]
+viscosity = -50.0
+residualTol = 1.0E-12
+residualProj = no
+density = 1.0
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-6
-residualProj = yes
+residualTol = 1.0E-12
+residualProj = no
 writeToFieldFile = yes
 
-[VELOCITY]
-residualTol = 1.0E-8
-residualProj = yes
-density = 1.0
-viscosity = -50.0
-
-[TEMPERATURE] # temperature with Hmholtz
+[TEMPERATURE]
 solver = helm
-residualTol = 1.0E-6
-residualProj = yes
+residualTol = 1.0E-12
+residualProj = no
 writeToFieldFile = yes
 conductivity = -40.0 # re*0.71
 rhoCp = 1.0
-
-[SCALAR01] # scalar 01
-solver = none
-writeToFieldFile = yes

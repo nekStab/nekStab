@@ -48,7 +48,11 @@ c-----------------------------------------------------------------------
           if( residu .lt. 1.0e-09 )then !save to disk and change flag
             if(nid.eq.0)write(6,*)' Converged base flow to 1.0E-09...'
             ifbfcv = .true.
+            param(63) = 1 ! Enforce 64-bit output
+            call bcast(param,200*wdsize)
             call outpost(vx,vy,vz,pr,t,'BF_')
+            param(63) = 0 ! Enforce 32-bit output
+            call bcast(param,200*wdsize)
           endif
 
       endif
@@ -136,7 +140,11 @@ c-----------------------------------------------------------------------
           if( istep.gt.100 .and. residu .lt. 1.0e-09 )then !save to disk and change flag
             if(nid.eq.0)write(6,*)' Converged base flow to 1.0E-09...'
             ifbfcv = .true.
+            param(63) = 1 ! Enforce 64-bit output
+            call bcast(param,200*wdsize)
             call outpost(vx,vy,vz,pr,t,'BF_')
+            param(63) = 0 ! Enforce 32-bit output
+            call bcast(param,200*wdsize)
           endif
 
         elseif(istep.eq.nsteps)then

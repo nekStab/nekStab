@@ -11,7 +11,7 @@ c-----------------------------------------------------------------------
       real xmn,xmx,ymn,ymx,zmn,zmx,period
       real uek,vek,wek,eek
       real glsc3,glmin,glmax,glsum,re,viscos,v_now
-      logical ifto_sav
+      logical ifto_sav, ifpo_sav
       integer i,n,ntot,steps
       save eek,n,re,ntot
 
@@ -59,15 +59,13 @@ c-----------------------------------------------------------------------
             call oprzero(wo1,wo2,wo3)
             call oprzero(vort(:,1),vort(:,2),vort(:,3))
             call comp_vort3(vort,wo1,wo2,vx,vy,vz)
-            ifto = .false.; ifpo = .false.
+            ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
             call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'vor')
-            ifto = .true.; ifpo = .true.
-            !call lambda2(t(1,1,1,1,1))
+            ifto = ifto_sav ; ifpo = ifpo_sav
 
          endif
-         if(istep.eq.0)then
-         ifpo=.true.;call outpost(vx,vy,vz,pr,t,'   ')
-         endif
+         if(istep.eq.0)call outpost(vx,vy,vz,pr,t,'   ')
+
 
          if (mod(istep,10).eq.0) then
             uek = glsc3(vx,bm1,vx,n)*eek
@@ -80,7 +78,6 @@ c-----------------------------------------------------------------------
             endif
          endif
 
-        ifpo = .true.; ifto = .true.
         call hpts
 
          if(uparam(01).eq.1)then !compose forcings to fcx,fcy,fcz
@@ -90,19 +87,21 @@ c-----------------------------------------------------------------------
 
          call mycomment
 
-         if( ifbfcv )then
+         if( ifbfcv )then ! after converging base fow...
 
-          call switch_to_lnse_steady !in utilities.f
-          call krylov_schur
-          call exitt
+         call switch_to_lnse_steady !in utilities.f
+         call krylov_schur ! in eigensolvers.f
+         if(nid.eq.0)write(6,*)'Stopping code...'
+         call nek_end
 
          endif !ifbfcv
 
       else !uparam(01)==3
 
          call force_lnse !in utilities.f
-         call krylov_schur
-         call exitt
+         call krylov_schur ! in eigensolvers.f
+         if(nid.eq.0)write(6,*)'Stopping code...'
+         call nek_end
 
       endif
 
@@ -317,16 +316,17 @@ c-----------------------------------------------------------------------
       real, dimension(lt)  :: do1,do2,do3
       real ampx, ampy, glamax
       integer n
-
+      logical ifto_sav, ifpo_sav
+      
       n = nx1*ny1*nz1*nelv
 
       if((istep.eq.0).OR.ifoutfld)then
 
          call opsub3 ( do1,do2,do3, vx,vy,vz, ubase,vbase,wbase)
 
-         ifto = .false.; ifpo = .false.      
+         ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
          call outpost( do1,do2,do3,pr,t,'per')
-         ifto = .true.; ifpo = .true. 
+         ifto = ifto_sav ; ifpo = ifpo_sav
 
          ampx = glamax(do1,n)      
          ampy = glamax(do2,n)
