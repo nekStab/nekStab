@@ -77,6 +77,7 @@ c-----------------------------------------------------------------------
                write(11,"(4E15.7)")time,uek,vek,uek+vek
             endif
          endif
+        if(istep.eq.lastep)close(11)
 
         call hpts
 
