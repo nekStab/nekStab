@@ -1,11 +1,11 @@
 [GENERAL]
-startFrom = BF_1cyl0.f00002
+startFrom = BF_1cyl0.f00001
 
 stopAt = numSteps #endTime
 #endTime = 4000.
-numSteps = 193000
+numSteps = 193 #000
 
-userParam01 = 1  # 0:dns,1:stabilization,3:stability
+userParam01 = 5  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
 userParam03 = 1.1  # stabilization: 1:sfd, 1.1:sfd_ab3
 userParam04 = 0.063  # St mode  -> omega_c = pi St
@@ -36,20 +36,20 @@ solveBaseflow = no
 
 [VELOCITY]
 viscosity = -50.0
-residualTol = 1.0E-12
+residualTol = 1.0E-10
 residualProj = no
 density = 1.0
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-12
+residualTol = 1.0E-8
 residualProj = no
 writeToFieldFile = yes
 
 [TEMPERATURE]
 solver = helm
-residualTol = 1.0E-12
+residualTol = 1.0E-10
 residualProj = no
 writeToFieldFile = yes
-conductivity = -40.0 # re*0.71
+conductivity = -35.5 # re*0.71
 rhoCp = 1.0

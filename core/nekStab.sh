@@ -6,15 +6,16 @@
 #export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
 export USR="x_eigensolvers.o \
-	    x_linalg.o \
-	    x_fixed_point.o \
-	    x_usr_extra.o \
-	    x_utilities.o \
-	    x_IO.o \
-	    x_postprocessing.o"
+    x_linalg.o \
+    x_fixed_point.o \
+    x_usr_extra.o \
+    x_utilities.o \
+    x_IO.o \
+    x_postprocessing.o"
 
 echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab.inc" > makefile_usr.inc
 export SOURCE_ROOT=$NEK_SOURCE_ROOT
+export FFLAGS+=" -I$NEKSTAB_SOURCE_ROOT/core"
 
 function error_quit {
     echo -e "$@"
