@@ -40,5 +40,4 @@ c
 
       ! INTERNALS
       include 'SIZE.inc'
-
       include 'NEKSTAB.inc'

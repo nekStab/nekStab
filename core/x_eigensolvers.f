@@ -51,6 +51,7 @@
 
       alpha = glsc3(px, bm1, qx, n) + glsc3(py, bm1, qy, n)
       if (if3d) alpha = alpha + glsc3(pz, bm1, qz, n)
+      if (ifto) alpha = alpha + glsc3(pt, bm1, qt, n)
       
       return
       end
@@ -433,7 +434,7 @@ c-----------------------------------------------------------------------
          tmiss = telapsed*(k_dim-mstep)
          
          if(nid.EQ.0) then
-            write(6,"('Time per iteration/remaining:',I3,'h ',I2,'min /',I3,'h ',I2,'min')"),
+            write(6,"(' Time per iteration/remaining:',I3,'h ',I2,'min /',I3,'h ',I2,'min')"),
      $                int(telapsed),int((telapsed-int(telapsed))*60.),
      $                int(tmiss),int((tmiss-int(tmiss))*60.)
             write(6,*)
@@ -569,7 +570,8 @@ c----------------------------------------------------------------------
       real, dimension(lt)                :: fx, fy, fz, ft, qx, qy, qz, qt
       real, dimension(lt2)               :: fp, qp
       real                               :: umax
-      !real, dimension(lx1,ly1,lz1,lelt) :: qt_tmp
+      logical                            :: ifadj
+      integer imode,smode,nmode,incr
       integer n, n2
       n = nx1*ny1*nz1*nelt
       n2 = nx2*ny2*nz2*nelt
@@ -580,8 +582,29 @@ c----------------------------------------------------------------------
       if(ifto) call copy(tp, qt, n)
       
 !     ----- Time-stepper matrix-vector product -----
+
+      if    (uparam(1).eq.3)then !direct
+       smode = 1; nmode = 1; incr = 1
+      elseif(uparam(1).eq.4)then !adjoint
+       smode = 2; nmode = 2; incr = 1
+      elseif(uparam(1).eq.5)then !direct-adjoint !optimal perturbation
+       smode = 1; nmode = 2; incr = 1
+      elseif(uparam(1).eq.6)then !adjoint-direct !optimal response
+       smode = 2; nmode = 1; incr = -1
+      endif
+   
       time = 0.0d0
-      do istep = 1, nsteps
+      do imode = smode, nmode, incr
+
+       if    (imode.eq.1)then
+       ifpert=.true.;ifadj=.false.!;if(nid.eq.0)write(6,*)' DIRECT'
+       elseif(imode.eq.2)then
+       ifpert=.false.;ifadj=.true.!;if(nid.eq.0)write(6,*)' ADJOINT'
+       endif
+       call bcast(ifpert, lsize)
+       call bcast(ifadj, lsize)
+
+       do istep = 1, nsteps
 
 !     ----- Prepare the base flow to vx,vy,vz
 
@@ -602,13 +625,18 @@ c----------------------------------------------------------------------
         endif
 
 !      ----- Check CFL of velocity fields
-        call compute_cfl(umax,vx,vy,vz,1.0)
-        if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,ctarg/umax
+        if(istep.eq.1.OR.istep.eq.nsteps)then
+         call compute_cfl(umax,vx,vy,vz,1.0)
+         if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,ctarg/umax
+        endif
 
 !      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
+        if(ifpert.and.nid.eq.0)write(6,*)' DIRECT'
+        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT'
         call nek_advance
 
+       enddo
       enddo
 
       call opcopy(fx, fy, fz, vxp, vyp, vzp)
@@ -621,7 +649,7 @@ c----------------------------------------------------------------------
 
 
 
-      
+
 c----------------------------------------------------------------------
 
 
@@ -1007,7 +1035,7 @@ c-----------------------------------------------------------------------
       if (nid.EQ.0) then
 !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.      
          write(filename, '(a, i4.4)') "H", k
-         write(6, *) 'Outposting the eigenspectrum of the Hessenberg matrix to : ', filename
+         write(6, *) 'Outposting Hessenberg matrix eigenspectrum to', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
          write(67, '(3E15.7)') (real(vals(i)), aimag(vals(i)), residual(i), i=1, k)
@@ -1015,7 +1043,7 @@ c-----------------------------------------------------------------------
 
 !     --> Outpost the Hessenberg matrix for restarting purposes (if needed).
          write(filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
-         write(6, *) 'Outposting the current Hessenberg matrix to :', filename
+         write(6, *) 'Outposting Hessenberg matrix to', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
          write(67, *) ((H(i, j), j=1, k), i=1, k+1)

@@ -3,7 +3,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      !if(istep.eq.0) call gfldr("1cyl0.f00091_jcmesh")
+      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
 
       call nekStab
 
@@ -20,6 +20,7 @@ c-----------------------------------------------------------------------
 
       ffx = 0.0d0
       ffy = 0.0d0
+      !if(ifto)ffy = temp*0.15d0 !coupling the scalar field
       ffz = 0.0d0
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
@@ -60,12 +61,9 @@ c-----------------------------------------------------------------------
          ux = 1.0d0
          uy = 0.0d0
          uz = 0.0d0
+         temp=0.0d0
 
-         if(x.lt.-10)then
-          temp=0.0d0
-         else
-          temp=1.0d0
-         endif
+         if(x.gt.-10)temp=1.0d0 !cylinder with T
 
       else                      ! perturbation
          ux = 0.0d0

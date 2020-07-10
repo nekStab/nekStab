@@ -6,8 +6,8 @@
 
       character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
 
-      integer, parameter :: k_dim  = 80
-      integer, parameter :: schur_tgt  = 2 !schur on if >1
+      integer, parameter :: k_dim  = 100
+      integer, parameter :: schur_tgt  = 1 !schur on if >1
 
       real, parameter    :: eigen_tol  = 1.0E-6 !standard value
       real, parameter    :: schur_del  = 0.10D0
@@ -18,7 +18,8 @@
       real ubase(lx1,ly1,lz1,lelt)
      $    ,vbase(lx1,ly1,lz1,lelt)
      $    ,wbase(lx1,ly1,lz1,lelt)
-      common /baseflow/ ubase,vbase,wbase
+     $    ,tbase(lx1,ly1,lz1,lelt)
+      common /baseflow/ ubase,vbase,wbase,tbase
 
       real fcx(lx1,ly1,lz1,lelt)
      $    ,fcy(lx1,ly1,lz1,lelt)
@@ -35,3 +36,19 @@
       real spng_dl(LDIM) !var sponge drop/rise width (left section)
       real spng_dr(LDIM) !var sponge drop/rise width (right section)
       common /SPONGER/ spng_str, spng_wl, spng_wr, spng_dl, spng_dr
+
+      integer, parameter :: stat_lvar = 0 ! total number of statistical fields
+      real stat(lx1*ly1*lz1*lelt,stat_lvar)
+     $    ,stat_temp(lx1*ly1*lz1*lelt)
+     $    ,stat_uu(lx1*ly1*lz1*lelt)
+     $    ,stat_vv(lx1*ly1*lz1*lelt)
+     $    ,stat_ww(lx1*ly1*lz1*lelt)
+     $    ,stat_pp(lx1*ly1*lz1*lelt)
+     $    ,stat_uuu(lx1*ly1*lz1*lelt)
+     $    ,stat_vvv(lx1*ly1*lz1*lelt)
+     $    ,stat_www(lx1*ly1*lz1*lelt)
+     $    ,stat_ppp(lx1*ly1*lz1*lelt)
+     $    ,stat_atime,stat_tstart,stat_comp
+
+      common /statsr/ stat,stat_temp,stat_uu,stat_vv,stat_ww,stat_pp
+     $  ,stat_uuu,stat_vvv,stat_www,stat_ppp,stat_atime,stat_tstart,stat_comp
