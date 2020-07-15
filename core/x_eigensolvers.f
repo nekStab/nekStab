@@ -203,9 +203,9 @@ c-----------------------------------------------------------------------
       endif
 
 !     ----- Save baseflow to disk (recommended) -----
-      !call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
       if(ifto) call copy(tbase,t(1,1,1,1,1),n)
+      call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
 
 !     ----- First vector (new from noise or restart) -----
 
@@ -219,6 +219,7 @@ c-----------------------------------------------------------------------
 
          if(nid.eq.0)write(6,*)'Filling fields with noise...'
          call add_noise(vxp,vyp,vzp)
+         if(ifto) call add_noise(tp,vyp,vzp)
          call normalize(vxp,vyp,vzp,prp,tp,alpha)
          call matrix_vector_product(vxp,vyp,vzp,prp,tp, vxp,vyp,vzp,prp,tp)
 
@@ -597,9 +598,9 @@ c----------------------------------------------------------------------
       do imode = smode, nmode, incr
 
        if    (imode.eq.1)then
-       ifpert=.true.;ifadj=.false.!;if(nid.eq.0)write(6,*)' DIRECT'
+       ifpert=.true.;ifadj=.false.
        elseif(imode.eq.2)then
-       ifpert=.false.;ifadj=.true.!;if(nid.eq.0)write(6,*)' ADJOINT'
+       ifpert=.false.;ifadj=.true.
        endif
        call bcast(ifpert, lsize)
        call bcast(ifadj, lsize)
@@ -632,8 +633,8 @@ c----------------------------------------------------------------------
 
 !      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
-        if(ifpert.and.nid.eq.0)write(6,*)' DIRECT'
-        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT'
+        if(ifpert.and.nid.eq.0)write(6,*)' DIRECT in mode',uparam(1)
+        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT in mode',uparam(1)
         call nek_advance
 
        enddo

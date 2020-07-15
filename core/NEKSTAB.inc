@@ -1,17 +1,6 @@
       ! LINEAR STABILITY FRAMEWORK
       ! Shared memory bounded arrays and parameters
 
-      logical, parameter :: ifnois = .true.
-      logical, parameter :: ifldbf = .true.
-
-      character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
-
-      integer, parameter :: k_dim  = 100
-      integer, parameter :: schur_tgt  = 1 !schur on if >1
-
-      real, parameter    :: eigen_tol  = 1.0E-6 !standard value
-      real, parameter    :: schur_del  = 0.10D0
-
       logical              ifbfcv
       common /lst_logical/ ifbfcv
 
@@ -37,7 +26,6 @@
       real spng_dr(LDIM) !var sponge drop/rise width (right section)
       common /SPONGER/ spng_str, spng_wl, spng_wr, spng_dl, spng_dr
 
-      integer, parameter :: stat_lvar = 0 ! total number of statistical fields
       real stat(lx1*ly1*lz1*lelt,stat_lvar)
      $    ,stat_temp(lx1*ly1*lz1*lelt)
      $    ,stat_uu(lx1*ly1*lz1*lelt)
