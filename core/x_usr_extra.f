@@ -97,22 +97,12 @@ c-----------------------------------------------------------------------
 
          endif !ifbfcv
 
-      elseif(uparam(01).ge.3)then
+      elseif(uparam(01).ge.3)then !3:direct,4:adj,5:dir-adj,6:adj-dir
 
-         !if(uparam(01).eq.3.and.nid.eq.0)write(6,*)'Direct modes computation:'
-         !if(uparam(01).eq.4.and.nid.eq.0)write(6,*)'Direct-adjoint modes computation:'
          call force_INCOMPLINNS !in utilities.f
          call krylov_schur ! in eigensolvers.f
          if(nid.eq.0)write(6,*)'Stopping code...'
          call nek_end
-
-      !elseif(uparam(01).eq.5)then
-
-         !if(nid.eq.0)write(6,*)'Adjoint modes computation:'
-         !call force_INCOMPLINADJNS !in utilities.f
-         !call krylov_schur ! in eigensolvers.f
-         !if(nid.eq.0)write(6,*)'Stopping code...'
-         !call nek_end
 
       endif
 
