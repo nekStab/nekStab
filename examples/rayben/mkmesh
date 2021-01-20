@@ -1,8 +1,0 @@
-genbox << EOF
-ray.box
-EOF
-mv box.re2 ray.re2
-genmap << EOF
-ray
-.1
-EOF

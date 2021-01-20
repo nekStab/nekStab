@@ -1,59 +1,50 @@
 [GENERAL]
-startFrom = 0 #BF_1cyl0.f00001
+startFrom = 1cyl0.f00012 #BF_1cyl0.f00001
 
-stopAt = numSteps #endTime
-#endTime = 10000.
-numSteps = 193 #T/8
+stopAt = numSteps
+numSteps = 193000
 
-userParam01 = 3  # 0:dns,1:stabilization,3:stability
+userParam01 = 1  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
-
-userParam03 = 1.1    # stabilization: 1:sfd, 1.1:sfd_ab3
-userParam04 = 0.063  # St mode  -> omega_c = pi St
-userParam05 = 0.125  # gain = 2 sigma mode
-
-userParam08 = 193   # nsteps
+userParam03 = 1  # stabilization technique: 1:sfd
+userParam04 = 0.1200 # freq (Strouhal leading mode)
+userParam05 = 0.0312 # gain (twice growth rate leading mode)
+userParam06 = 0   #
+userParam07 = 0   #
+userParam08 = 0   #
+userParam09 = 0   #
 userParam10 = 0   # sponge strenght
 
-dt = 6.5E-03
-variableDt = no
+dt = 0
+variableDt = yes
 timeStepper = bdf3
 targetCFL = 0.5
 
-writeControl = runTime #timestep #runTime
-writeInterval = 1.
-writeDoublePrecision = yes
+writeControl = runTime
+writeInterval = 10.
+writeDoublePrecision = no
 
-dealiasing = no
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
-
-[PROBLEMTYPE]
-equation = incomplinns
-solveBaseflow = no
-numberOfPerturbations = 1
-
-[MESH]
-writeToFieldFile = yes
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-7
-residualProj = yes
+residualTol = 1.0E-9
+residualProj = no
 writeToFieldFile = yes
 
 [VELOCITY]
 residualTol = 1.0E-9
-residualProj = yes
+residualProj = no
 density = 1.0
-advection = yes
 viscosity = -50.0
 
-[TEMPERATURE] # vorticity
-solver = none
+[TEMPERATURE]
+solver = helm
+residualTol = 1.0E-9
+residualProj = yes
 writeToFieldFile = yes
-
-[SCALAR01] # scalar 01
-solver = none
-writeToFieldFile = yes
+conductivity = -35.5 # re*0.71
+rhoCp = 1.0

@@ -1,15 +1,71 @@
       ! LINEAR STABILITY FRAMEWORK
       ! Shared memory bounded arrays and parameters
 
-      logical, parameter :: ifnois = .true.
-      logical, parameter :: ifldbf = .true.
+      logical        ifbfcv
+      common /lstab/ ifbfcv
 
-      character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
+      real ubase(lx1,ly1,lz1,lelt)
+     $    ,vbase(lx1,ly1,lz1,lelt)
+     $    ,wbase(lx1,ly1,lz1,lelt)
+     $    ,tbase(lx1,ly1,lz1,lelt)
+      common /baseflow/ ubase,vbase,wbase,tbase
+      
+      real ubb(lx1,ly1,lz1,lelt)
+     $    ,vbb(lx1,ly1,lz1,lelt)
+     $    ,vjb(lx1,ly1,lz1,lelt)
+      common /myblas/ ubb,vbb,vjb
 
-      integer, parameter :: k_dim  = 100
-      integer, parameter :: schur_tgt  = 1 !schur on if >1
+      real fcx(lx1,ly1,lz1,lelt)
+     $    ,fcy(lx1,ly1,lz1,lelt)
+     $    ,fcz(lx1,ly1,lz1,lelt)
+      common /force/ fcx, fcy, fcz !general forcing array
 
-      real, parameter    :: eigen_tol  = 1.0E-6 !standard value
-      real, parameter    :: schur_del  = 0.10D0
+      real spng_fun(LX1*LY1*LZ1*LELV)     ! sponge function
+     $    ,spng_vr(LX1*LY1*LZ1*LELV,LDIM) ! reference velocity field
+      common /SPONGEV/ spng_fun, spng_vr
+      
+      real spng_str      !var sponge strength
+      real spng_wl(LDIM) !var sponge width (left section; every dmension separately)
+      real spng_wr(LDIM) !var sponge width (right section)
+      real spng_dl(LDIM) !var sponge drop/rise width (left section)
+      real spng_dr(LDIM) !var sponge drop/rise width (right section)
+      real bm1s(lx1,ly1,lz1,lelt) !weight matrix without sponge 
+      common /SPONGER/ spng_str, spng_wl, spng_wr, spng_dl, spng_dr, bm1s
 
-      integer, parameter :: stat_lvar = 0 ! total number of statistical fields
+      real uor(lx1*ly1*lz1*lelt,mxorbit)
+     $    ,vor(lx1*ly1*lz1*lelt,mxorbit)
+     $    ,wor(lx1*ly1*lz1*lelt,mxorbit)
+     $    ,tor(lx1*ly1*lz1*lelt,mxorbit)
+     $   ,pror(lx2*ly2*lz2*lelt,mxorbit)
+     $                  ,torbit(mxorbit)
+     $                  ,porbit
+      integer norbit
+      common /orbit/ uor,vor,wor,tor,pror,torbit,porbit,norbit
+
+      real ufil  (lx1,ly1,lz1,lelt)
+     $    ,vfil  (lx1,ly1,lz1,lelt)
+     $    ,wfil  (lx1,ly1,lz1,lelt)
+     $    ,f_save(plor),bdw(4),bdw2(4),abw(3)
+      common /filt/ ufil,vfil,wfil,f_save,bdw,bdw2,abw
+
+      ! Fourier reconstrction 
+      real ubr(lx1*ly1*lz1*lelt,mxfourier)
+     $    ,vbr(lx1*ly1*lz1*lelt,mxfourier)
+     $    ,wbr(lx1*ly1*lz1*lelt,mxfourier)
+c     $    ,tbr(lx1*ly1*lz1*lelt,mxfourier)  !temp not working
+     $    ,pbr(lx2*ly2*lz2*lelt,mxfourier)
+     $    ,ubi(lx1*ly1*lz1*lelt,mxfourier)
+     $    ,vbi(lx1*ly1*lz1*lelt,mxfourier)
+     $    ,wbi(lx1*ly1*lz1*lelt,mxfourier)
+c     $    ,tbi(lx1*ly1*lz1*lelt,mxfourier) !temp not working
+     $    ,pbi(lx2*ly2*lz2*lelt,mxfourier)
+     $    ,ampr(                mxfourier)
+     $    ,ampi(                mxfourier)
+     $    ,om(                  mxfourier)
+      integer f_modes
+      common /orbit_f/ ubr,vbr,wbr,pbr,ubi,vbi,wbi,pbi,ampr,ampi,om,f_modes!,tbr,tbi
+
+      real glmax_qc, dtmaxx
+      common /vortexx/ glmax_qc,dtmaxx
+
+      character(len=1),parameter :: nxtl=char(10) !new line character

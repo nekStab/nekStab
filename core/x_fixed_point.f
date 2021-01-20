@@ -22,7 +22,7 @@ c-----------------------------------------------------------------------
 
       else
 
-        cutoff = uparam(04)*4*atan(1.0D0)*dt
+        cutoff = uparam(04)*4*atan(1.0D0)*dt*0.5 !!!half factor here!!!
         gain = -uparam(05)
 
         call opsub3 (do1,do2,do3, vxo,vyo,vzo, qxo,qyo,qzo)
@@ -82,7 +82,7 @@ c-----------------------------------------------------------------------
       integer n,i
       save n,residu0
 
-      cutoff = uparam(04)*(4*atan(1.0D0))*dt
+      cutoff = uparam(04)*(4*atan(1.0D0))*dt*0.5 !!half factor here !!
       gain = -uparam(05)
 
           if(istep.eq.0)then
