@@ -17,7 +17,7 @@ c
       parameter (lelg=2520)            ! max number of global elements
       parameter (lpmin=  1)            ! min number of MPI ranks
       parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
-      parameter (ldimt=3)              ! max auxiliary fields (temperature + scalars)
+      parameter (ldimt=1)              ! max auxiliary fields (temperature + scalars)
 
       ! OPTIONAL
       parameter (ldimt_proj=1)         ! max auxiliary fields residual projection
@@ -40,5 +40,23 @@ c
 
       ! INTERNALS
       include 'SIZE.inc'
+
+
+      ! LINEAR STABILITY FRAMEWORK
+      ! Shared memory bounded arrays and parameters
+
+      logical, parameter :: ifres = .false. !outpost restart files for eig
+      logical, parameter :: ifnois = .true.
+      logical, parameter :: ifldbf = .true.
+
+      character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
+
+      integer, parameter :: k_dim  = 90
+      integer, parameter :: schur_tgt  = 0 !schur on if >1
+
+      real, parameter    :: eigen_tol  = 1.0E-6 !standard value
+      real, parameter    :: schur_del  = 0.10D0
+
+      integer, parameter :: stat_lvar = 0 ! total number of statistical fields
 
       include 'NEKSTAB.inc'

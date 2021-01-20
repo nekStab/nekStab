@@ -1,9 +1,0 @@
--3                  spatial dimension
-2                   number of fields
-Box
--9 -1 -9    nelx,nely,nelz for Box
-0.0 10.078898471574569 1      x0 x1 ratio
-0.0 1.007 1      y0 y1 ratio
-0.0 10.078898471574569 1      z0 x1 ratio
-P  ,P  ,W  ,W  ,P  ,P                           bc's  (3 chars each!)¬
-P  ,P  ,t  ,t  ,P  ,P                           bc's  (3 chars each!)¬

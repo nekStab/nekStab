@@ -426,7 +426,7 @@ c-----------------------------------------------------------------------
          if(ifto) call copy(qt(:,mstep+1), f_tr, n)
          
 !     --> Save checkpoint for restarting/run-time analysis.
-         call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
+         if(ifres)call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
          
 !     --> Output timing statistics
 
@@ -566,12 +566,13 @@ c----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      include 'ADJOINT'
+
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
       real, dimension(lt)                :: fx, fy, fz, ft, qx, qy, qz, qt
       real, dimension(lt2)               :: fp, qp
       real                               :: umax
-      logical                            :: ifadj
       integer imode,smode,nmode,incr
       integer n, n2
       n = nx1*ny1*nz1*nelt
@@ -610,19 +611,17 @@ c----------------------------------------------------------------------
 !     ----- Prepare the base flow to vx,vy,vz
 
         if(ifbfcv)then
-
+          
+          ifbase=.false.
           if(nid.eq.0)write(6,*)'Copying base flow!'
           call opcopy(vx,vy,vz,ubase,vbase,wbase)
           if(ifto) call copy(t(1,1,1,1,1), tbase, n)
 
         else
 
-          if(nid.eq.0)then
-            if(ifbase.eqv..true.)then
-              write(6,*)'Running DNS alongside stability!' !update vx,vy,vz
-            endif
-          endif
-
+          ifbase=.true.
+          if(nid.eq.0)write(6,*)'Running DNS alongside stability!' !update vx,vy,vz
+            
         endif
 
 !      ----- Check CFL of velocity fields

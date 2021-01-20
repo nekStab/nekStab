@@ -133,15 +133,17 @@ if __name__ == '__main__':
     file = SpectreNS('ref/marquet2019_re50.ref')
     plot_NS(plt, file.vp_real, file.vp_imag, False, -1, 'g', r'Marquet et al. (2019) Re=50')
 
-    file = SpectreNS('ref/marquet2008_re100.ref')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, -1, 'm', r'Marquet et al. (2008) Re=100')
+    #file = SpectreNS('ref/marquet2008_re100.ref')
+    #plot_NS(plt, file.vp_real, file.vp_imag, False, -1, 'm', r'Marquet et al. (2008) Re=100')
 
     #file = SpectreNS('Spectre_NS_convv.dat')
     #plot_NS(plt, file.vp_real, file.vp_imag, False, 2, 'b', r'Re=50')
 
+    file = SpectreNS('Spectre_NS_conv.dat_d')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 8, 'b', r'Re=50 D')
+    
     file = SpectreNS('Spectre_NS_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'b', r'Re=50')
-
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'r', r'Re=50 A')
 
     fname='Spectre_NS.'+formt
     plt.legend(loc='best',fontsize=4);

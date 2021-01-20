@@ -1,7 +1,0 @@
--2
-1
-Box
--130 -50              #-100 -16 #nelx,nely,nelz for Box
-0. 500. 1.            #0. 500. 1.0 #x0,x1,gain  (rescaled in usrdat)
-0. 50. 1.1           #0. 50. 1.2 #y0,y1,gain  (rescaled in usrdat)
-v  ,O  ,v  ,ON   

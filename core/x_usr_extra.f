@@ -82,16 +82,16 @@ c-----------------------------------------------------------------------
         call hpts
 
          if(uparam(01).eq.1)then !compose forcings to fcx,fcy,fcz
-            if(uparam(03).eq.1)call sfd
-            if(uparam(03).eq.1.1)call sfd_ab3
+            !if(uparam(03).eq.1)call sfd
+            if(uparam(03).eq.1)call sfd_ab3
          endif
 
          call mycomment
 
          if( ifbfcv )then ! after converging base fow...
 
-         call switch_to_lnse_steady !in utilities.f
-         call krylov_schur ! in eigensolvers.f
+         !call switch_to_lnse_steady !in utilities.f
+         !call krylov_schur ! in eigensolvers.f
          if(nid.eq.0)write(6,*)'Stopping code...'
          call nek_end
 
