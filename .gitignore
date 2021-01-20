@@ -16,6 +16,7 @@ nek5000
 vor*
 KRY*
 *.swp
+NEKSTAB.inc
 *~
 SPG*
 1cyl0.f*
@@ -26,8 +27,8 @@ square0*
 blayer0*
 cav0*
 BF_*0.f00002
-BF_blayer0.f00001
 makefile_usr.inc
+*makefile_usr.inc
 # python stuff
 *.pyc
 .cache

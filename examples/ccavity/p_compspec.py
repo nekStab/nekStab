@@ -11,20 +11,15 @@ import pickle
 params = {'text.usetex': False,
           'font.size': 8,
           'legend.fontsize': 8,
-          'legend.handlelength': 1.,
-          'font.family' : 'lmodern'}
-plt.rcParams['text.latex.preamble']=[r'\usepackage{lmodern}']
+          'legend.handlelength': 1.}
 plt.rcParams.update(params)
 plt.style.use('seaborn-white')
 
-#':' dotted,'-.' dashdot, '--' dashed, '-' solid
-#b: blue, g: green, r: red,c: cyan,m: magenta,y: yellow,k: black
-
 formt = 'png'
 ajust = 'tight'
-qual = 900
-fig_width = 3.5 #5.33
-fig_height = 2.45 #5.33/3
+qual = 500
+fig_width = 3.5
+fig_height = 2.45
 
 class SpectreH(object):
     def __init__(self, filename):
@@ -108,9 +103,6 @@ if __name__ == '__main__':
     plt.xticks(xrz,xlabels);plt.xlim(-1.5,1.5);plt.xlabel(r'$\Re (\mu)$')
     plt.yticks(xrz,xlabels);plt.ylim(-1.5,1.5);plt.ylabel(r'$\Im (\mu)$')
 
-    #file = SpectreH('Spectre_Hv.dat')
-    #plot_H(plt, file.vp_real, file.vp_imag, file.residu, 3, 'm', r'Re=50')
-
     file = SpectreH('Spectre_H.dat')
     plot_H(plt, file.vp_real, file.vp_imag, file.residu, 0, 'b', r'Re=1950')
 
@@ -122,11 +114,6 @@ if __name__ == '__main__':
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
     plt.xlabel(r'$\Re (\lambda)$');#plt.xlim(-1,1)
     plt.ylabel(r'$\Im (\lambda)$');#plt.ylim(-0.2,0.2)
-
-    #plt.axvline(x=0, lw=0.4, color='g', ls='dashdot',label='S1')
-    #plt.axhline(y=0.1266, lw=0.4, color='m', ls='dashed',label='Mantic-Lugo et al. (2015) Re=100')
-    #plt.axvline(x=0.74,   lw=0.4, color='m', ls='dashed')#,label='Mantic-Lugo et al. (2015) Re=100')
-    #plt.axvline(x=0.753,   lw=0.4, color='g', ls='dashed',label='Mantic-Lugo et al. (2015) Re=50')
 
     file = SpectreNS('ref/1cav_1950_JC_2014.ref')
     plot_NS(plt, file.vp_real, file.vp_imag, False, 6, 'r', r'Loiseau (2014)')
@@ -147,9 +134,6 @@ if __name__ == '__main__':
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
     plt.ylabel(r'$\sigma$');#plt.ylim(-0.1,0.005)
     plt.xlabel(r'$f$');#plt.xlim(-0.2,0.2)
-
-    # plt.axvline(x=0, lw=0.4, color='g', ls='dashdot',label='S1')
-    # plt.axvline(x=0.12, lw=0.4, color='m', ls='dashed',label='T1')
 
     file = SpectreNS('Spectre_NS_conv.dat')
     plot_NS(plt, file.vp_real, file.vp_imag, True, 0, 'b', r'Re=1950')
