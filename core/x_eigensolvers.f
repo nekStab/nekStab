@@ -197,7 +197,7 @@ c-----------------------------------------------------------------------
 
 !     ----- Loading baseflow from disk (optional) -----
 
-      if(.not. ifbfcv)then !skip loading if single run
+      if(.not. ifbfcv .and. ifldbf)then !skip loading if single run
        if(nid.eq.0)write(6,*)'Loading base flow: ',bf_handle
        call load_fld(bf_handle)
       endif
@@ -246,7 +246,7 @@ c-----------------------------------------------------------------------
 
       elseif(uparam(2).gt.0)then
 
-      mstart = uparam(2)
+      mstart = int(uparam(2))
 
       if(nid.eq.0)then
             write(6,*)'Restarting from:',mstart
@@ -271,7 +271,6 @@ c-----------------------------------------------------------------------
       mstart=mstart+1  !careful here!
       call load_files(qx, qy, qz, qp, qt, mstart, k_dim+1, 'KRY')
       !k_dim+1 is the dim of V_x
-      !mstart = mstart+1
 
       endif !(uparam(02))
 
@@ -318,7 +317,7 @@ c-----------------------------------------------------------------------
       if(nid.eq.0)write(6,*)'Exporting modes...'
       call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
       
-      if(nid.eq.0)write(6,*)'Converged eigenmodes:',cnt
+      if(nid.eq.0)write(6,*)'converged eigenmodes:',cnt
       if(nid.eq.0)write(6,*)'Stability solver finished.'
 
       return
@@ -587,11 +586,11 @@ c----------------------------------------------------------------------
 
       if    (uparam(1).eq.3)then !direct
        smode = 1; nmode = 1; incr = 1
-      elseif(uparam(1).eq.4)then !adjoint
+      elseif(uparam(1).eq.3.2)then !adjoint
        smode = 2; nmode = 2; incr = 1
-      elseif(uparam(1).eq.5)then !direct-adjoint !optimal perturbation
+      elseif(uparam(1).eq.3.3)then !direct-adjoint !optimal perturbation
        smode = 1; nmode = 2; incr = 1
-      elseif(uparam(1).eq.6)then !adjoint-direct !optimal response
+      elseif(uparam(1).eq.3.4)then !adjoint-direct !optimal response
        smode = 2; nmode = 1; incr = -1
       endif
    
@@ -610,7 +609,7 @@ c----------------------------------------------------------------------
 
 !     ----- Prepare the base flow to vx,vy,vz
 
-        if(ifbfcv)then
+        if(ifldbf)then
           
           ifbase=.false.
           if(nid.eq.0)write(6,*)'Copying base flow!'
@@ -632,8 +631,8 @@ c----------------------------------------------------------------------
 
 !      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
-        if(ifpert.and.nid.eq.0)write(6,*)' DIRECT in mode',uparam(1)
-        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT in mode',uparam(1)
+        if(ifpert.and.nid.eq.0)write(6,*)' DIRECT SOLVER in mode',uparam(1)
+        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT SOLVER in mode',uparam(1)
         call nek_advance
 
        enddo
