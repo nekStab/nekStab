@@ -6,9 +6,9 @@ endTime = 100.
 
 userParam01 = 0  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
-userParam03 = 0  # stabilization: 1:sfd, 1.1:sfd_ab3
-userParam04 = 0  # St mode  -> omega_c = pi St
-userParam05 = 0  # gain = 2 sigma mode
+userParam03 = 1  # stabilization technique: 1:sfd
+userParam04 = 0  # freq (Strouhal leading mode)
+userParam05 = 0  # gain (twice growth rate leading mode)
 userParam06 = 0  # 
 userParam07 = 0  # 
 userParam08 = 0  #
