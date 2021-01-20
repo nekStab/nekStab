@@ -1,0 +1,148 @@
+#define BETAM 2.4
+#define PI (4.*atan(1.))
+#define XLEN (2.*PI)
+#define ZLEN PI
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+      
+      !loading external customized initial condition to vx,vy,vz
+      !if(istep.eq.0)call load_fld('INCchannel0.f00001')
+
+      call nekStab
+
+      !add custom statistics here
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (JP.eq.0) then         ! velocity
+      eps = 1e-2
+      kx  = 23
+      kz  = 13
+      alpha = kx * 2*PI/XLEN
+      beta  = kz * 2*PI/ZLEN
+
+      ! add perturbation to trigger turbulence
+      ux  = (1.0d0 - y**2) + eps*beta  * sin(alpha*x)*cos(beta*z)
+      uy  =  0.0           + eps       * sin(alpha*x)*sin(beta*z)
+      uz  =  0.0           - eps*alpha * cos(alpha*x)*sin(beta*z)
+      temp = 0.0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      if (JP.eq.0) then         ! velocity
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+       if (y.lt.0) temp = 1.0
+       if (y.gt.0) temp = 0.0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat   ! This routine to modify element vertices
+      include 'SIZE'      ! _before_ mesh is generated, which
+      include 'TOTAL'     ! guarantees GLL mapping of mesh.
+       
+      n = nelv * 2**ldim
+      xmin = glmin(xc,n)
+      xmax = glmax(xc,n)
+      ymin = glmin(yc,n)
+      ymax = glmax(yc,n)
+      zmin = glmin(zc,n)
+      zmax = glmax(zc,n)
+
+      xscale = XLEN/(xmax-xmin)
+      yscale = 1./(ymax-ymin)
+      zscale = ZLEN/(zmax-zmin)
+
+      do i=1,n
+        xc(i,1) = xscale*xc(i,1)
+        yc(i,1) = yscale*yc(i,1)
+        yc(i,1) = tanh(BETAM*(2*yc(i,1)-1))/tanh(BETAM)
+        zc(i,1) = zscale*zc(i,1)
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      do iel=1,nelt
+      do ifc=1,2*ndim
+         if (cbc(ifc,iel,1) .eq. 'W  ') boundaryID(ifc,iel) = 1
+         cbc(ifc,iel,2) = cbc(ifc,iel,1)
+         if (cbc(ifc,iel,1) .eq. 'W  ') cbc(ifc,iel,2) = 't  '
+      enddo
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      include 'SIZE'
+      include 'TOTAL'
+
+      param(54) = -1  ! use >0 for const flowrate or <0 bulk vel
+                      ! flow direction is given by (1=x, 2=y, 3=z)
+      param(55) = 1.0 ! flowrate/bulk-velocity
+
+      return
+      end
