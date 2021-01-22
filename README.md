@@ -1,17 +1,17 @@
 # nekStab
 [![Build Status](https://travis-ci.com/ricardofrantz/nekStab.svg?token=DpocmcBgXShNTZ9nAQ5y&branch=master)](https://travis-ci.com/ricardofrantz/nekStab) Global stability framework for Nek5000
 
-- uparam(1) = mode (0: DNS, 1:SD, 2:SA, 3:D-A, 4:Res)
+- uparam(1) = mode (0: DNS, 1:stabilization, 3:stability)
 
-- uparam(2) = stability restart starting vector 
+- uparam(2) = optional restart vector for stability
 
-- uparam(3) = forcing mode (1:SFD, 2:boosconv, 3:TDF)
+- uparam(3) = stabilzation technique (1:SFD)
 
 - uparam(4) = frequency cuttor of forcing frequency
 
-- uparam(5) = gain input or forcing amplitude 
+- uparam(5) = gain or forcing amplitude 
 
-- uparam(6) = suction-blowing center position (x_m) 
+- uparam(6) = 
 
 - uparam(7) = 
 
@@ -30,66 +30,13 @@
 ## OUR STABILITY FRAMEWORK
 
 
-
 uparam(1) = 0 - > Direct numerical simulation
 
-uparam(1) = 1 - > Direct mode computation
+uparam(1) = 3.- > Direct mode computation
 
-uparam(1) = 2 - > Adjoint mode computation
+uparam(1) = 3.2 - > Adjoint mode computation
 
-uparam(1) = 3 - > Direct-adjoint mode computation for transient growth analysis
-
-uparam(1) = 4 - > Resolvent analysis for optimal perturbation
-
-
-
-
-
-0.1 turbulent statistics (full 3d (jet-cross-flow), 2 averaged (cylinder and boundary layer), 3: channel flow
-0.2 DMT (space-time Fourier) - not sure how can be useful
-
-1. when steady state we can dynamically extract: which norm to ensure steady-state?
-   0.1 POD proper orthogonal decomposition (space-only)
-   0.2 SPOD spectral proper orthogonal decomposition (space-time, single frequency modes)
-   0.3 DMD dynamic mode decomposition  (https://arxiv.org/pdf/1406.7187.pdf)
-
-   
-
-### Forcing 
-
-1.1 SFD 
-1.2 BOOSTCONV
-1.3 TDF
-
-stratification: which parameter to activate coupling between T
-
-
-
-### Stability
-
-
-#### STEADY FLOWS: MEAN OR BASE
-
-a) prescribed in useric (e.g. Blasius solution)
-b) load steady state as:  BF_ + casename + 0.f00001
-c) compute with 1.1 or 1.2, dumpt to disk and switch to 3 -> requires the frequency of the mode to T
-
- ####  LIMIT CYCLES WITH FORCED SYMMETRY
-
- ####   (1 cylinder and boundary layer) force vz=0 in userchk
-
-a) run DNS alongside 3,  
-b) run DNS, export PER and Fourier, reload and 3
-
-####  LIMIT CYCLES OPTIONS FOR FORCED CASES
-
-####   -> uparam(4) is the forced frequency
-
-a) computed with TDF, export sequence and Fourier decomposition, switch to 3
-b) load PER or Fourier modes and run 3
-
-####  LIMIT CYCLES FOR UNFORCED CASES (2 cyl and Jet-in-Crossflow)
-
+uparam(1) = 3.3 - > Direct-adjoint mode computation for transient growth analysis
 
 
 # INSTALLING AND RUNNING
@@ -204,4 +151,3 @@ c     Solution data
 ```
 
 12. Limit line length increased to 132 to avoid excessive use of continuation tabs, in most cases we are slightly over the 72 characters standard
-13. 
