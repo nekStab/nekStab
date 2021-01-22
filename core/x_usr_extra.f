@@ -29,7 +29,7 @@ c-----------------------------------------------------------------------
 
          if(istep.eq.0)then
 
-            if(nid.eq.0)open(unit=11,file='stats.dat')
+            !if(nid.eq.0)open(unit=11,file='stats.dat')
             ifbfcv=.false.
 
             n = nx1*ny1*nz1*nelv
@@ -46,12 +46,6 @@ c-----------------------------------------------------------------------
                write(6,*)' eek =',eek
             endif
 
-         !viscous sponge
-         !do i=1,lx1*ly1*lz1*lelt!*ldimt1
-         !vdiff(i,1,1,1,:)=(1./(0.6+0.4*tanh(0.8*xmx-xm1(i,1,1,1))))*param(2)
-         !enddo
-         !call outpost(vdiff(1,1,1,1,1),vdiff(1,1,1,1,2),vdiff(1,1,1,1,3),pr,t,'VDF')
-
          endif !istep.eq.0
 
          if((istep.eq.0).OR.ifoutfld)then
@@ -67,17 +61,17 @@ c-----------------------------------------------------------------------
          if(istep.eq.0)call outpost(vx,vy,vz,pr,t,'   ')
 
 
-         if (mod(istep,10).eq.0) then
-            uek = glsc3(vx,bm1,vx,n)*eek
-            vek = glsc3(vy,bm1,vy,n)*eek
-            if(if3d)then
-               wek = glsc3(vz,bm1,vz,n)*eek
-               write(11,"(5E15.7)")time,uek,vek,wek,uek+vek+wek
-            else
-               write(11,"(4E15.7)")time,uek,vek,uek+vek
-            endif
-         endif
-        if(istep.eq.lastep)close(11)
+        ! if (mod(istep,10).eq.0) then
+        !    uek = glsc3(vx,bm1,vx,n)*eek
+        !    vek = glsc3(vy,bm1,vy,n)*eek
+        !    if(if3d)then
+        !       wek = glsc3(vz,bm1,vz,n)*eek
+        !       write(11,"(5E15.7)")time,uek,vek,wek,uek+vek+wek
+        !    else
+        !       write(11,"(4E15.7)")time,uek,vek,uek+vek
+        !    endif
+        ! endif
+        !if(istep.eq.lastep)close(11)
 
         call hpts
 

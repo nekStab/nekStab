@@ -118,9 +118,6 @@ if __name__ == '__main__':
     file = SpectreNS('ref/1cav_1950_JC_2014.ref')
     plot_NS(plt, file.vp_real, file.vp_imag, False, 6, 'r', r'Loiseau (2014)')
 
-    file = SpectreNS('ref/Spectre_NS_conv_old.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 4, 'm', r'old run')
-
     file = SpectreNS('Spectre_NS_conv.dat')
     plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'b', r'Re=1950')
 

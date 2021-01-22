@@ -2,9 +2,10 @@
 startFrom = 0 #BF_1cyl0.f00001
 
 stopAt = numSteps
-numSteps = 193000
+#numSteps = 40000 # for BF computation 
+numSteps = 126 
 
-userParam01 = 1  # 0:dns,1:stabilization,3:stability
+userParam01 = 3  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
 userParam03 = 1  # stabilization technique: 1:sfd
 userParam04 = 0.1200 # freq (Strouhal leading mode)
@@ -15,8 +16,8 @@ userParam08 = 0   #
 userParam09 = 0   #
 userParam10 = 0   # sponge strenght
 
-dt = 0
-variableDt = yes
+dt = 8.6E-03 # for 126 steps 
+#variableDt = yes
 timeStepper = bdf3
 targetCFL = 0.5
 
@@ -31,7 +32,7 @@ filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-9
+residualTol = 1.0E-6
 residualProj = no
 writeToFieldFile = yes
 
@@ -43,7 +44,7 @@ viscosity = -50.0
 
 [TEMPERATURE]
 solver = helm
-residualTol = 1.0E-9
+residualTol = 1.0E-6
 residualProj = yes
 writeToFieldFile = yes
 conductivity = -35.5 # re*0.71

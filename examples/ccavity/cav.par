@@ -2,7 +2,9 @@
 startFrom = 0
 
 stopAt = numSteps
-numSteps = 1000
+#numSteps = 700000 # for BF computation 
+numSteps = 699 # for stability with dt = 1.43E-03
+
 
 userParam01 = 3  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
@@ -15,8 +17,8 @@ userParam08 = 0   #
 userParam09 = 0   # 
 userParam10 = 0   # sponge strenght
 
-dt = 1E-03
-variableDt = no
+dt = 1.43E-03
+variableDt = yes
 timeStepper = bdf3
 targetCFL = 0.5
 
@@ -31,19 +33,19 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-6
+residualTol = 1.0E-10
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-7
+residualTol = 1.0E-10
 residualProj = no
 density = 1.0
 viscosity = -1950.0
 
 #[TEMPERATURE]
 #solver = helm
-#residualTol = 1.0E-9
+#residualTol = 1.0E-7
 #residualProj = yes
 #writeToFieldFile = yes
 #conductivity = -1384.5 # re*0.71

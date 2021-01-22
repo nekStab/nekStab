@@ -15,7 +15,7 @@ c
       parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
 
       parameter (lelg=2520)            ! max number of global elements
-      parameter (lpmin=  1)            ! min number of MPI ranks
+      parameter (lpmin=  40)            ! min number of MPI ranks
       parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
       parameter (ldimt=1)              ! max auxiliary fields (temperature + scalars)
 
@@ -45,13 +45,13 @@ c
       ! LINEAR STABILITY FRAMEWORK
       ! Shared memory bounded arrays and parameters
 
-      logical, parameter :: ifres = .false. !outpost restart files for eig
+      logical, parameter :: ifres =  .false. !outpost restart files for eig
       logical, parameter :: ifnois = .true.
       logical, parameter :: ifldbf = .true.
 
       character(len=80), parameter :: bf_handle = 'BF_1cyl0.f00001'
 
-      integer, parameter :: k_dim  = 90
+      integer, parameter :: k_dim  = 80
       integer, parameter :: schur_tgt  = 0 !schur on if >1
 
       real, parameter    :: eigen_tol  = 1.0E-6 !standard value
