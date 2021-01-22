@@ -197,7 +197,7 @@ c-----------------------------------------------------------------------
 
 !     ----- Loading baseflow from disk (optional) -----
 
-      if(.not. ifbfcv .and. ifldbf)then !skip loading if single run
+      if(ifldbf)then !skip loading if single run
        if(nid.eq.0)write(6,*)'Loading base flow: ',bf_handle
        call load_fld(bf_handle)
       endif
