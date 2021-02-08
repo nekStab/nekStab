@@ -592,6 +592,9 @@ c----------------------------------------------------------------------
        smode = 1; nmode = 2; incr = 1
       elseif(uparam(1).eq.3.4)then !adjoint-direct !optimal response
        smode = 2; nmode = 1; incr = -1
+      else
+       if(nid.eq.0)write(6,*)'Specify uparam(1) to 3 3.2 3.3 or 3.4'
+       call nek_end
       endif
    
       time = 0.0d0
@@ -600,7 +603,7 @@ c----------------------------------------------------------------------
        if    (imode.eq.1)then
        ifpert=.true.;ifadj=.false.
        elseif(imode.eq.2)then
-       ifpert=.false.;ifadj=.true.
+       ifpert=.true.;ifadj=.true.
        endif
        call bcast(ifpert, lsize)
        call bcast(ifadj, lsize)
@@ -631,8 +634,8 @@ c----------------------------------------------------------------------
 
 !      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
-        if(ifpert.and.nid.eq.0)write(6,*)' DIRECT SOLVER in mode',uparam(1)
-        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT SOLVER in mode',uparam(1)
+        if(.not.ifadj.and.nid.eq.0)write(6,*)' DIRECT'
+        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT'
         call nek_advance
 
        enddo

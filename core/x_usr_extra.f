@@ -93,15 +93,15 @@ c-----------------------------------------------------------------------
 
       elseif(uparam(01).ge.3)then !3:direct,4:adj,5:dir-adj,6:adj-dir
 
-         call force_INCOMPLINNS !in utilities.f
+         param(12) = -abs(param(12)) !freeze dt
+         param(31) = 1 ; npert = param(31)
+         call bcast(param,200*wdsize) !broadcast all parameters to processors
          call krylov_schur ! in eigensolvers.f
          if(nid.eq.0)write(6,*)'Stopping code...'
          call nek_end
 
       endif
-
-
-
+      
       return
       end
 c-----------------------------------------------------------------------
