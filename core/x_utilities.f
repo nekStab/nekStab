@@ -272,8 +272,8 @@ c-----------------------------------------------------------------------
       xmn = glmin(xm1,n); xmx = glmax(xm1,n)
       deltax = xmx - xmn
 
-      left_sponge = 0.1*deltax
-      right_sponge = 0.15*deltax
+      left_sponge = real(uparam(08)) !0.1*deltax
+      right_sponge = real(uparam(09)) !0.15*deltax
 
                   spng_wl(1)=(2./3.)*left_sponge ! Sponge left section width; dimension X
                   spng_wl(2)=0.0
