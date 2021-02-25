@@ -13,6 +13,12 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
+      subroutine nekstab_chk
+      include 'SIZE'
+      include 'TOTAL'
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'

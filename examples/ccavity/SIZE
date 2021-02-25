@@ -47,6 +47,7 @@ c
       logical, parameter :: ifres = .false. !outpost restart files for eig
       logical, parameter :: ifnois = .true.
       logical, parameter :: ifldbf = .true.
+      logical, parameter :: ifbf2D = .false. ! force 2D solution
 
       character(len=80), parameter :: bf_handle = 'BF_cav0.f00001'
 
