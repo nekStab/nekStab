@@ -15,14 +15,23 @@ c-----------------------------------------------------------------------
       integer i,n,ntot,steps
       save eek,n,re,ntot
 
-      call oprzero(fcx,fcy,fcz) ! never comment this!
       if(istep.eq.0) then
+         n = nx1*ny1*nz1*nelv
          call print_parameters
          if(uparam(10).gt.0)then
+            if(nid.eq.0)write(6,*)''
             if(nid.eq.0)write(6,*)' Initializing sponge...'
-            spng_str = 1.0d0
+            if(nid.eq.0)write(6,*)''
+            spng_str = uparam(10)
             call spng_init
          endif
+      endif
+      call oprzero(fcx,fcy,fcz) ! never comment this!
+      call rzero(fct,n)
+
+      if(if3d.AND.ifbf2d)then
+       if(nid.eq.0)write(6,*)' Forcing 2D flow -> vz=0'
+       call rzero(vz,nx1*ny1*nz1*nelv)
       endif
 
       if(uparam(1).le.2)then
@@ -32,7 +41,6 @@ c-----------------------------------------------------------------------
             !if(nid.eq.0)open(unit=11,file='stats.dat')
             ifbfcv=.false.
 
-            n = nx1*ny1*nz1*nelv
             re = 1.0d0/param(2) !inital value
             xmn = glmin(xm1,n); xmx = glmax(xm1,n)
             ymn = glmin(ym1,n); ymx = glmax(ym1,n)
@@ -113,13 +121,15 @@ c-----------------------------------------------------------------------
       real, save :: deltatime
       real telapsed,tpernondt,tmiss
 
-      if (courno.gt.4.0d0) then
+      !if extrapolation is not OIFS -> ifchar = false
+      !if OIFS active -> ifchar = .true. and CFL 2-5
+      if (.not. ifchar .and. courno.gt.1.0d0) then
         if (nio.eq.0)then
           write(6,*)
-          write(6,*)'    cfl > 4. stopping'
+          write(6,*)'    CFL > 1 stopping'
           write(6,*)
          endif
-        call exitt
+        call nek_end
       endif
 
       if (nio.ne.0) return
@@ -233,6 +243,10 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       if(nid.eq.0)then
+         write(6,*)'P01=',param(1),'density'
+         write(6,*)'P02=',param(2),'viscosity or Re'
+         write(6,*)'P07=',param(7),'rhoCp'
+         write(6,*)'P08=',param(8),'conductivity Pe=ReSc=RePr'
          write(6,*)'P10=',param(10),''
          write(6,*)'P11=',param(11),''
          write(6,*)'P12=',param(12),''

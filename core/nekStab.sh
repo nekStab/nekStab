@@ -14,8 +14,8 @@ export USR="x_eigensolvers.o \
     x_postprocessing.o"
 
 echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab.inc" > makefile_usr.inc
+cp --verbose ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB.template NEKSTAB.inc
 export SOURCE_ROOT=$NEK_SOURCE_ROOT
-export FFLAGS+=" -I$NEKSTAB_SOURCE_ROOT/core"
 
 function error_quit {
     echo -e "$@"

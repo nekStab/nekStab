@@ -41,7 +41,7 @@
 
       real, dimension(lt), intent(in) :: px, py, pz, pt
       real, dimension(lt), intent(in) :: qx, qy, qz, qt
-      real, dimension(lt2), intent(in) :: pp, qp
+      real, dimension(lt2), intent(in) :: pp, qp !not used
 
       real, intent(out) :: alpha
       real :: glsc3
@@ -49,9 +49,9 @@
 
       n = nx1 * ny1 * nz1 * nelt
 
-      alpha = glsc3(px, bm1, qx, n) + glsc3(py, bm1, qy, n)
-      if (if3d) alpha = alpha + glsc3(pz, bm1, qz, n)
-      if (ifto) alpha = alpha + glsc3(pt, bm1, qt, n)
+      alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
+      if (if3d) alpha = alpha + glsc3(pz, bm1s, qz, n)
+      if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, n)
       
       return
       end
@@ -134,7 +134,7 @@
 !     --> Normalize the vector.
       call opcmult(qx, qy, qz, beta)
       if(ifpo) call cmult(qp, beta, n2)
-      if(ifto) call cmult(qt, beta, n)
+      if(ifheat) call cmult(qt, beta, n)
 
       return
       end
@@ -171,28 +171,34 @@ c-----------------------------------------------------------------------
 
 !     ----- Miscellaneous -----
       real wo1(lt),wo2(lt),wo3(lt)
-      common /ugrad2/ wo1,wo2,wo3
+      common /ugrad/ wo1,wo2,wo3
 
       integer :: mstart, cnt
       real, dimension(k_dim)             :: residual
-      real                               :: alpha, beta, dumm, glsc3, bcast_size
+      real                               :: alpha, beta, glsc3
       logical                            :: converged
-      integer                            :: have_converged, n, n2, i, j
-      integer                            :: ifich3 = 30
+      integer                            :: n, n2, i, j
       character(len=30)                  :: filename
       
       n      = nx1*ny1*nz1*nelt
       n2     = nx2*ny2*nz2*nelt
       time   = 0.0d0
-      H  = 0.0d0
+      H(:,:)  = 0.0d0
       b_vec  = 0.0d0
       residual = 0.0d0
+      call copy(bm1s, bm1, n)
+      if(uparam(10).gt.0)then !sponge on
+       do i=1,n
+        if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
+       enddo
+      endif
+      call outpost(bm1,bm1s,wo3,pr,t,'BM1')
 
       call oprzero(wo1, wo2, wo3)
       do i = 1, k_dim+1
          call oprzero(qx(:, i), qy(:, i), qz(:, i))
          if (ifpo) call rzero(qp(:, i), n2)
-         if (ifto) call rzero(qt(:, i), n)
+         if (ifheat) call rzero(qt(:, i), n)
       enddo
 
 !     ----- Loading baseflow from disk (optional) -----
@@ -218,27 +224,28 @@ c-----------------------------------------------------------------------
         if(ifnois)then
 
          if(nid.eq.0)write(6,*)'Filling fields with noise...'
-         call add_noise(vxp,vyp,vzp)
-         if(ifto) call add_noise(tp,vyp,vzp)
-         call normalize(vxp,vyp,vzp,prp,tp,alpha)
-         call matrix_vector_product(vxp,vyp,vzp,prp,tp, vxp,vyp,vzp,prp,tp)
+         call add_noise(vxp(:,1),vyp(:,1),vzp(:,1))
+         if(ifheat) call add_noise(tp(:,1,1),wo2,wo3)
+         call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
+         !call outpost(vxp,vyp,vzp,pr,tp,'SS_') !outpost for sanity check
+         call matrix_vector_product(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
 
          else !ifnois.eq..false.
 
-          call opcopy(vxp,vyp,vzp,ubase,vbase,wbase)
-          if(ifto) call copy(tp,tbase,n)
+          call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),ubase,vbase,wbase)
+          if(ifheat) call copy(tp(:,1,1),tbase,n)
 
         endif
 
 !     ----- Normalized to unit-norm -----
 
-         call normalize(vxp,vyp,vzp,prp,tp,alpha)
+         call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
 
-         call opcopy(qx(:,1), qy(:,1), qz(:,1), vxp, vyp, vzp)
-         if(ifpo) call copy(qp(:,1), prp, n2)
-         if(ifto) call copy(qt(:,1), tp, n)
+         call opcopy(qx(:,1), qy(:,1), qz(:,1), vxp(:,1), vyp(:,1), vzp(:,1))
+         if(ifpo) call copy(qp(:,1), prp(:,1), n2)
+         if(ifheat) call copy(qt(:,1), tp(:,1,1), n)
          
          call whereyouwant('KRY',1)
          time = 0.0d0
@@ -268,9 +275,22 @@ c-----------------------------------------------------------------------
       endif !nid.eq.0
       call bcast(H,(k_dim+1)*k_dim*wdsize) !broadcast H matrix to all procs
 
+         !if(nid.eq.2)then !-> debug only
+         ! write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
+         ! write(6,*) ''
+         ! open(67,file=trim(filename),status='unknown',form='formatted')
+         ! write(67,*) beta
+         ! do i = 1,mstart+1
+         !   do j = 1,mstart
+         !      write(67,*) H(i,j)
+         !   enddo
+         ! enddo
+         !close(67)
+         !endif
       mstart=mstart+1  !careful here!
       call load_files(qx, qy, qz, qp, qt, mstart, k_dim+1, 'KRY')
       !k_dim+1 is the dim of V_x
+      if(nid.eq.0) write(6,*)'Restart fields loaded to memory!'
 
       endif !(uparam(02))
 
@@ -291,6 +311,7 @@ c-----------------------------------------------------------------------
 !     --> Check the residual of the eigenvalues.
          residual = abs(H(k_dim+1, k_dim) * vecs(k_dim, :))
          cnt = count(residual .lt. eigen_tol)
+         if (nid .eq. 0) write(6, *) 'converged eigenvalues:',cnt
          
 !     --> Select whether to stop or apply Schur condensation depending on schur_tgt.
          select case (schur_tgt)
@@ -305,6 +326,7 @@ c-----------------------------------------------------------------------
             if (cnt .ge. schur_tgt) then ! Krylov-Schur factorization completed.
                converged = .true.
             else                ! Apply Schur condensation before restarting the factorization.
+               call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
                if (nid .eq. 0) write(6, *) 'Starting Schur condensation phase.'
                call schur_condensation(mstart, H, qx, qy, qz, qp, qt)
             endif
@@ -315,6 +337,7 @@ c-----------------------------------------------------------------------
       
 !     ----- Output all the spectrums and converged eigenmodes -----
       if(nid.eq.0)write(6,*)'Exporting modes...'
+      if(nid.eq.0)write(6,*)
       call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
       
       if(nid.eq.0)write(6,*)'converged eigenmodes:',cnt
@@ -370,7 +393,7 @@ c-----------------------------------------------------------------------
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
 !     ----- Miscellaneous -----
-      real                               :: beta
+      real                               :: alpha
       integer                            :: mstep, mstart
       integer                            :: n, n2
 
@@ -395,11 +418,12 @@ c-----------------------------------------------------------------------
 !     --> Initialize arrays.
       call oprzero(f_xr, f_yr, f_zr)
       if (ifpo) call rzero(f_pr, n2)
-      if (ifto) call rzero(f_tr, n)
+      if (ifheat) call rzero(f_tr, n)
+      alpha = 0.0d0
 
 !     --> Arnoldi factorization.
       do mstep = mstart, k_dim
-         if (nid.EQ.0) write(6,*) 'Begin iteration :', mstep , '/' , k_dim
+         if (nid.EQ.0) write(6,*) 'iteration current and total:', mstep , '/' , k_dim
 
          eetime0=dnekclock()
 
@@ -414,15 +438,15 @@ c-----------------------------------------------------------------------
      $        mstep)
          
 !     --> Normalise the residual vector.
-         call normalize(f_xr, f_yr, f_zr, f_pr, f_tr, beta)
+         call normalize(f_xr, f_yr, f_zr, f_pr, f_tr, alpha)
          
 !     --> Update the Hessenberg matrix.
-         H(mstep+1, mstep) = beta
+         H(mstep+1, mstep) = alpha
          
 !     --> Add the residual vector as the new Krylov vector.
          call opcopy(qx(:,mstep+1), qy(:,mstep+1), qz(:,mstep+1), f_xr, f_yr, f_zr)
          if(ifpo) call copy(qp(:,mstep+1), f_pr, n2)
-         if(ifto) call copy(qt(:,mstep+1), f_tr, n)
+         if(ifheat) call copy(qt(:,mstep+1), f_tr, n)
          
 !     --> Save checkpoint for restarting/run-time analysis.
          if(ifres)call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
@@ -491,8 +515,7 @@ c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix ----
 
 c     ----- Miscellaneous -----
 
-      integer :: mstart,n,n2,i,j
-      real beta
+      integer :: mstart,n,n2
       logical, dimension(k_dim)          :: selected
 
 c     ----- Schur and Hessenberg decomposition -----
@@ -525,7 +548,7 @@ c     ----- Schur and Hessenberg decomposition -----
       qy(:, 1:k_dim) = matmul(qy(:, 1:k_dim), vecs)
       if (if3d) qz(:, 1:k_dim) = matmul(qz(:, 1:k_dim), vecs)
       if (ifpo) qp(:, 1:k_dim) = matmul(qp(:, 1:k_dim), vecs)
-      if (ifto) qt(:, 1:k_dim) = matmul(qt(:, 1:k_dim), vecs)
+      if (ifheat) qt(:, 1:k_dim) = matmul(qt(:, 1:k_dim), vecs)
       
 !     --> Update the Schur matrix with b.T @ Q corresponding to
 !     the residual beta in the new basis.
@@ -578,9 +601,9 @@ c----------------------------------------------------------------------
       n2 = nx2*ny2*nz2*nelt
 
 !     ----- Initial condition -----
-      call opcopy(vxp, vyp, vzp, qx, qy, qz)
-      if(ifpo) call copy(prp, qp, n2)
-      if(ifto) call copy(tp, qt, n)
+      call opcopy(vxp(:,1), vyp(:,1), vzp(:,1), qx, qy, qz)
+      if(ifpo) call copy(prp(:,1), qp, n2)
+      if(ifheat) call copy(tp(:,1,1), qt, n)
       
 !     ----- Time-stepper matrix-vector product -----
 
@@ -600,6 +623,7 @@ c----------------------------------------------------------------------
       time = 0.0d0
       do imode = smode, nmode, incr
 
+       !ifpert always true even if adjoint!
        if    (imode.eq.1)then
        ifpert=.true.;ifadj=.false.
        elseif(imode.eq.2)then
@@ -614,10 +638,10 @@ c----------------------------------------------------------------------
 
         if(ifldbf)then
           
-          ifbase=.false.
           if(nid.eq.0)write(6,*)'Copying base flow!'
           call opcopy(vx,vy,vz,ubase,vbase,wbase)
-          if(ifto) call copy(t(1,1,1,1,1), tbase, n)
+        if(ifheat) call copy(t(1,1,1,1,1), tbase, n)
+        ifbase=.false.
 
         else
 
@@ -629,21 +653,34 @@ c----------------------------------------------------------------------
 !      ----- Check CFL of velocity fields
         if(istep.eq.1.OR.istep.eq.nsteps)then
          call compute_cfl(umax,vx,vy,vz,1.0)
-         if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,ctarg/umax
+         dtmaxx = ctarg/umax !used for sitting 
+         if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,dtmaxx
         endif
 
 !      ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
-        if(.not.ifadj.and.nid.eq.0)write(6,*)' DIRECT'
-        if(ifadj.and.nid.eq.0)write(6,*)' ADJOINT'
+        if(.not.ifadj.and.nid.eq.0)write(6,*)'DIR'! in mode',uparam(1)
+        if(ifadj .and.nid.eq.0)write(6,*)'ADJ'! in mode',uparam(1)
+
+        call nekStab_chk
         call nek_advance
 
+        !for reference: core of nek_advance in drive1.f
+        !if (ifpert) then
+        !   if (ifbase.and.ifheat) call heat       
+        !   if (ifbase.and.ifflow) call fluid -> forces in makef     
+        !   if (ifflow)            call fluidp -> forces in makefp
+        !   if (ifheat)            call heatp
+        !else  ! std. nek case
+        !   if (ifheat)            call heat
+        !   if (ifflow)            call fluid
+        !endif
        enddo
       enddo
 
-      call opcopy(fx, fy, fz, vxp, vyp, vzp)
-      if(ifpo) call copy(fp, prp, n2)
-      if(ifto) call copy(ft, tp, n)
+      call opcopy(fx, fy, fz, vxp(:,1), vyp(:,1), vzp(:,1))
+      if(ifpo) call copy(fp, prp(:,1), n2)
+      if(ifheat) call copy(ft, tp(:,1,1), n)
 
       return
       end
@@ -687,11 +724,11 @@ c     ----- Arrays for the storage/output of a given eigenmode of the NS operato
 c     ----- Miscellaneous -----
 
       integer :: ifich1 = 10, ifich2 = 20, ifich3 = 30
-      integer :: n, n2, i, j
+      integer :: n, n2, i
 
       real                               :: sampling_period
       real, dimension(k_dim)             :: residual
-      real                               :: alpha, alpha_r, alpha_i
+      real                               :: alpha, alpha_r, alpha_i, beta
       complex :: log_transform
       logical ifto_sav, ifpo_sav
       
@@ -738,23 +775,23 @@ c     ----- Computation of the corresponding eigenmode -----
             fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
             if (if3d) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
             if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
-            if (ifto) fp_ct = matmul(qt(:, 1:k_dim), vecs(:, i))
+            if (ifheat) fp_ct = matmul(qt(:, 1:k_dim), vecs(:, i))
             
 c     ----- Normalization to be unit-norm -----
 c     Note: volume integral of FP*conj(FP) = 1.
             call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
             call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), alpha_i)
             alpha = alpha_r**2 + alpha_i**2
-            alpha = 1.0d0/sqrt(alpha)
+            beta = 1.0d0/sqrt(alpha)
             
 c     ----- Output the imaginary part -----
             call opcopy(vx, vy, vz, aimag(fp_cx), aimag(fp_cy), aimag(fp_cz))
             if(ifpo) call copy(pr, aimag(fp_cp), n2)
             if(ifto) call copy(t(1,1,1,1,1), aimag(fp_ct), n)
             
-            call opcmult(vx, vy, vz, alpha)
-            if(ifpo) call cmult(pr, alpha, n2)
-            if(ifto) call cmult(t(1,1,1,1,1), alpha, n)
+            call opcmult(vx, vy, vz, beta)
+            if(ifpo) call cmult(pr, beta, n2)
+            if(ifto) call cmult(t(1,1,1,1,1), beta, n)
             call outpost(vx, vy, vz, pr, t(1,1,1,1,1), 'Im_')
             
 c     ----- Output the real part -----
@@ -762,9 +799,9 @@ c     ----- Output the real part -----
             if (ifpo) call copy(pr, real(fp_cp), n2)
             if (ifto) call copy(t(1,1,1,1,1), real(fp_ct), n)
             
-            call opcmult(vx, vy, vz, alpha)
-            if (ifpo) call cmult(pr, alpha, n2)
-            if (ifto) call cmult(t(1,1,1,1,1), alpha, n)
+            call opcmult(vx, vy, vz, beta)
+            if (ifpo) call cmult(pr, beta, n2)
+            if (ifto) call cmult(t(1,1,1,1,1), beta, n)
             call outpost(vx, vy, vz, pr, t(1,1,1,1,1), 'Re_')
             
 c     ----- Output vorticity from real part -----
@@ -924,7 +961,7 @@ c-----------------------------------------------------------------------
       real, dimension(lt), intent(inout) :: f_xr, f_yr, f_zr, f_tr
       real, dimension(lt2), intent(inout) :: f_pr
 
-      integer i, j, n, n2
+      integer i, n, n2
       real alpha
 
       real, dimension(lt) :: work1, work2, work3, workt
@@ -943,18 +980,18 @@ c-----------------------------------------------------------------------
 !     --> Copy the i-th Krylov vector to the working arrays.
          call opcopy(work1, work2, work3, qx(:, i), qy(:, i), qz(:, i))
          if (ifpo) call copy(workp, qp(:, i), n2)
-         if (ifto) call copy(workt, qt(:, i), n)
+         if (ifheat) call copy(workt, qt(:, i), n)
 
 !     --> Orthogonalize f w.r.t. to q_i.
          call inner_product(alpha, f_xr, f_yr, f_zr, f_pr, f_tr, work1, work2, work3, workp, workt)
 
          call opcmult(work1, work2, work3, alpha)
          if (ifpo) call cmult(workp, alpha, n2)
-         if (ifto) call cmult(workt, alpha, n)
+         if (ifheat) call cmult(workt, alpha, n)
 
          call opsub2(f_xr, f_yr, f_zr, work1, work2, work3)
          if (ifpo) call sub2(f_pr, workp, n2)
-         if (ifto) call sub2(f_tr, workt, n)
+         if (ifheat) call sub2(f_tr, workt, n)
 
 !     --> Update the corresponding entry in the Hessenberg matrix.
          H(i, k) = alpha
@@ -1015,11 +1052,12 @@ c-----------------------------------------------------------------------
       complex*16, dimension(k,k) :: vecs
       real, dimension(k) :: residual
       character(len=80) filename
+      complex :: log_transform
 
 !     -->
       if(nid .eq. 0) then
          write(6, *)
-         write(6, *) 'Outposting Krylov subspace to'
+         write(6, *) 'Outposting Krylov vector to'
       endif
 
 !     --> Outpost the latest Krylov vector.
@@ -1036,36 +1074,46 @@ c-----------------------------------------------------------------------
 
       if (nid.EQ.0) then
 !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.      
-         write(filename, '(a, i4.4)') "H", k
-         write(6, *) 'Outposting Hessenberg matrix eigenspectrum to', filename
+         !write(filename, '(a, i4.4)') "H", k
+         write(filename, '(a)') "Spectre_H.dat"
+         write(6, *) 'Outposting eigenspectrum of current Hessenberg matrix to : ', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
          write(67, '(3E15.7)') (real(vals(i)), aimag(vals(i)), residual(i), i=1, k)
          close(67)
+             
+!      --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
+         !write(filename, '(a, i4.4)') "S", k
+         write(filename, '(a)') "Spectre_NS.dat"
+         write(6, *) 'Outposting eigenspectrum of current log-transform spectrum matrix to : ', filename
+
+         open(67, file=trim(filename), status='unknown', form='formatted')
+         write(67, '(3E15.7)') (real(log_transform(vals(i))) / (dt*nsteps),
+     $           aimag(log_transform(vals(i))) / (dt*nsteps),
+     $           residual(i), i=1, k)
+         close(67)
 
 !     --> Outpost the Hessenberg matrix for restarting purposes (if needed).
          write(filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
-         write(6, *) 'Outposting Hessenberg matrix to', filename
+         write(6, *) 'Outposting current Hessenberg matrix to :', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
          write(67, *) ((H(i, j), j=1, k), i=1, k+1)
          close(67)
 
 !     --> Write to logfile the current number of converged eigenvalues.
-         write(6, *) 'So far', cnt, ' eigenvalues have converged.'
+                      !keep small caps to ease grep
+         write(6, *) 'iteration converged and target :',cnt,'/',schur_tgt
       endif
 
       return
       end
 
+!     ------------------------------------------------------------------------------------
       function log_transform(x)
       implicit none
 
-!     -->
-      complex :: x, y
-      complex :: log_transform
-
-!     -->
+      complex :: log_transform,x
       log_transform = log(x)
       if (aimag(x) .eq. 0) log_transform = real(log_transform)
       
