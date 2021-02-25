@@ -224,6 +224,7 @@ c-----------------------------------------------------------------------
       ifbase = .false.
       call bcast(ifbase, lsize) !stop dns
 
+      call chkParam !sanity check
       return
       end
 c-----------------------------------------------------------------------
@@ -243,18 +244,41 @@ c-----------------------------------------------------------------------
          if (if3d) ffz = ffz + fcz(ix,iy,iz,iel)
       endif
 
-      if (spng_str.gt.0.0) then
+      if (spng_str.gt.0) then
       ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
          if (jp.eq.0) then
             ! dns
-            ffx = ffx + spng_fun(ip)*(spng_vr(ip,1) - vx(ix,iy,iz,iel))
-            ffy = ffy + spng_fun(ip)*(spng_vr(ip,2) - vy(ix,iy,iz,iel))
-            if (if3d) ffz = ffz + spng_fun(ip)*(spng_vr(ip,ndim) - vz(ix,iy,iz,iel))
+            ffx = ffx + spng_fun(ip)*(spng_vr(ip,1) - vx(ix,iy,iz,iel))*spng_str
+            ffy = ffy + spng_fun(ip)*(spng_vr(ip,2) - vy(ix,iy,iz,iel))*spng_str
+            if (if3d) ffz = ffz + spng_fun(ip)*(spng_vr(ip,ndim) - vz(ix,iy,iz,iel))*spng_str
          else
             ! perturbation
             ffx = ffx - spng_fun(ip)*vxp(ip,jp)
             ffy = ffy - spng_fun(ip)*vyp(ip,jp)
             if(if3d) ffz = ffz - spng_fun(ip)*vzp(ip,jp)
+         endif
+      endif
+      return
+      end subroutine
+c-----------------------------------------------------------------------
+      subroutine nekStab_forcing_temp(temp,ix,iy,iz,ieg)
+      implicit none
+      include 'SIZE'            !
+      include 'INPUT'           ! IF3D
+      include 'PARALLEL'        ! GLLEL
+      include 'SOLN'            ! JP
+      real temp
+      integer ix,iy,iz,ieg,iel,ip
+
+      iel=gllel(ieg) !SUM HERE NEKSTAB CUSTOM TEMP FORCING
+      if (jp.eq.0) temp  = temp + fct(ix,iy,iz,iel)
+     
+      if (spng_str.gt.0) then !!!HERE SPONGE STRENGHT ALWAYS UNITY!
+      ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+         if (jp.eq.0) then ! dns ! t(1,1,1,1,ifield-1)
+            temp = temp + spng_fun(ip)*(spng_vt(ip) - t(ix,iy,iz,iel,1))
+         else ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
+            temp = temp - spng_fun(ip)*tp(ip,1,jp)
          endif
       endif
       return
@@ -302,6 +326,7 @@ c-----------------------------------------------------------------------
 
       ! save reference field -> sponge value reference
       call opcopy(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),vx,vy,vz) !only DNS
+      if(ifheat)call copy(spng_vt,t(1,1,1,1,1),n) !only DNS - temperature
       call spng_set ! -> compute spng_fun
 
       return
@@ -362,7 +387,7 @@ c-----------------------------------------------------------------------
                 do jl=1,ntot
                    rtmp = lcoord(jl)
                    if(rtmp.le.xxmin_c) then ! constant; xmin
-                      rtmp=spng_str
+                      rtmp=1.0d0 !spng_str
                    elseif(rtmp.lt.xxmin) then ! fall; xmin
                       arg = (xxmin-rtmp)/spng_wl(il)
                       rtmp = mth_stepf(arg)
@@ -372,7 +397,7 @@ c-----------------------------------------------------------------------
                       arg = (rtmp-xxmax)/spng_wr(il)
                       rtmp = mth_stepf(arg)
                    else    ! constant
-                      rtmp = spng_str
+                      rtmp = 1.0d0 !spng_str
                    endif
                    spng_fun(jl)=max(spng_fun(jl),rtmp)
                 enddo
