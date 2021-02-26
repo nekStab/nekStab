@@ -1,0 +1,50 @@
+[GENERAL]
+startfrom = 0 #BF_mfm0.f00001
+
+#stopat = endTime
+#endTime = 500
+
+stopat = numSteps
+numSteps = 10000000
+
+userparam01 = 1   # 0:DNS;1:Baseflow;3:Stabilidade 
+userparam02 = 0   # krylov snapshot to load -> restart point for stab
+userparam03 = 1   # SFD # do not change
+userparam04 = 0   # St mode  # if zero -> continuation
+userparam05 = 0   # Growth rate mode 
+userparam06 = 0
+#userparam07 = 0.3394 #re=1000
+userparam07 = 0.219 #re=400
+userparam08 = 0 # sponge left lenght
+userparam09 = 0 # sponge right lenght
+userparam10 = 0 # sponge strenght
+
+dt = 0
+variabledt = yes
+timestepper = bdf3
+targetcfl = 0.5
+
+writecontrol = runTime #runTime #timestep
+writeinterval = 1
+writedoubleprecision = no
+dealiasing = yes
+
+[VELOCITY]
+viscosity = -400.0 # enter -Re
+residualtol = 1.0E-09
+residualproj = no
+density = 1.0
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualtol = 1.0E-09
+residualproj = no
+writetofieldfile = yes
+
+[TEMPERATURE]
+solver = helm
+residualtol = 1.0E-09
+residualproj = no
+writetofieldfile = yes
+conductivity = -400.0 # enter -Re*Sc product (Sc=1)
+rhocp = 1.0
