@@ -1,0 +1,7 @@
+-2                 spatial dimension
+1                  number of fields
+Box
+-100 -10        nelx,nely,nelz for Box
+0.0 10.0 1.        x0 x1 ratio 
+0.0 1.0 1.         y0 y1 ratio 
+v  ,SYM,W  ,SYM,   
