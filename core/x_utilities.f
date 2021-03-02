@@ -505,3 +505,15 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
+      subroutine opaddcol3 (a1,a2,a3,b1,b2,b3,c1,c2,c3)
+      implicit none
+      include 'SIZE'
+      integer ntot1
+      real a1(1),a2(1),a3(1),b1(1),b2(1),b3(1),c1(1),c2(1),c3(1)
+      ntot1=nx1*ny1*nz1*nelv
+      call addcol3(a1,b1,c1,ntot1)
+      call addcol3(a2,b2,c2,ntot1)
+      if (ndim.eq.3) call addcol3(a3,b3,c3,ntot1)
+      return
+      end
+c-----------------------------------------------------------------------

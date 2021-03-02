@@ -1,4 +1,130 @@
 c-----------------------------------------------------------------------
+      subroutine bf_sensitivity
+
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         integer, parameter :: lt  = lx1*ly1*lz1*lelt
+
+         real, dimension(lt) :: vx_dRe,vy_dRe,vz_dRe
+         real, dimension(lt) :: vx_dIm,vy_dIm,vz_dIm
+         real, dimension(lt) :: vx_aRe,vy_aRe,vz_aRe
+         real, dimension(lt) :: vx_aIm,vy_aIm,vz_aIm
+
+         real, dimension(lt) :: dudx_dRe, dudy_dRe, dudz_dRe
+         real, dimension(lt) :: dvdx_dRe, dvdy_dRe, dvdz_dRe
+         real, dimension(lt) :: dwdx_dRe, dwdy_dRe, dwdz_dRe
+
+         real, dimension(lt) :: dudx_dIm, dudy_dIm, dudz_dIm
+         real, dimension(lt) :: dvdx_dIm, dvdy_dIm, dvdz_dIm
+         real, dimension(lt) :: dwdx_dIm, dwdy_dIm, dwdz_dIm
+
+         real, dimension(lt) :: dudx_aRe, dudy_aRe, dudz_aRe
+         real, dimension(lt) :: dvdx_aRe, dvdy_aRe, dvdz_aRe
+         real, dimension(lt) :: dwdx_aRe, dwdy_aRe, dwdz_aRe
+         
+         real, dimension(lt) :: dudx_aIm, dudy_aIm, dudz_aIm
+         real, dimension(lt) :: dvdx_aIm, dvdy_aIm, dvdz_aIm
+         real, dimension(lt) :: dwdx_aIm, dwdy_aIm, dwdz_aIm
+
+         real, dimension(lt) :: vx_tr,vy_tr,vz_tr
+         real, dimension(lt) :: vx_ti,vy_ti,vz_ti
+         !real, dimension(lt) :: vx_tr,vy_tr,vz_tr
+         !real, dimension(lt) :: vx_tr,vy_tr,vz_tr
+
+         ifto=.false.;ifpo=.false.
+
+         call load_fld('dRe_1cyl0.f00001')
+         call opcopy(vx_dRe,vy_dRe,vz_dRe,vx,vy,vz)
+         call gradm1(dudx_dRe, dudy_dRe, dudz_dRe, vx_dRe ,nelv)
+         call gradm1(dvdx_dRe, dvdy_dRe, dvdz_dRe, vy_dRe ,nelv)
+         call gradm1(dwdx_dRe, dwdy_dRe, dwdz_dRe, vz_dRe ,nelv)
+         call dsavg(dudx_dRe);call dsavg(dudy_dRe); call dsavg(dudz_dRe)
+         call dsavg(dvdx_dRe);call dsavg(dvdy_dRe); call dsavg(dvdz_dRe)
+         call dsavg(dwdx_dRe);call dsavg(dwdy_dRe); call dsavg(dwdz_dRe)
+
+         call load_fld('dIm_1cyl0.f00001')
+         call opcopy(vx_dIm,vy_dIm,vz_dIm,vx,vy,vz)
+         call gradm1(dudx_dIm, dudy_dIm, dudz_dIm, vx_dIm ,nelv)
+         call gradm1(dvdx_dIm, dvdy_dIm, dvdz_dIm, vy_dIm ,nelv)
+         call gradm1(dwdx_dIm, dwdy_dIm, dwdz_dIm, vz_dIm ,nelv)
+         call dsavg(dudx_dIm);call dsavg(dudy_dIm); call dsavg(dudz_dIm)
+         call dsavg(dvdx_dIm);call dsavg(dvdy_dIm); call dsavg(dvdz_dIm)
+         call dsavg(dwdx_dIm);call dsavg(dwdy_dIm); call dsavg(dwdz_dIm)
+
+         call load_fld('aRe_1cyl0.f00001')
+         call opcopy(vx_aRe,vy_aRe,vz_aRe,vx,vy,vz)
+         call gradm1(dudx_aRe, dudy_aRe, dudz_aRe, vx_aRe ,nelv)
+         call gradm1(dvdx_aRe, dvdy_aRe, dvdz_aRe, vy_aRe ,nelv)
+         call gradm1(dwdx_aRe, dwdy_aRe, dwdz_aRe, vz_aRe ,nelv)
+         call dsavg(dudx_aRe);call dsavg(dudy_aRe); call dsavg(dudz_aRe)
+         call dsavg(dvdx_aRe);call dsavg(dvdy_aRe); call dsavg(dvdz_aRe)
+         call dsavg(dwdx_aRe);call dsavg(dwdy_aRe); call dsavg(dwdz_aRe)
+
+         call load_fld('aIm_1cyl0.f00001') 
+         call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
+         call gradm1(dudx_aIm, dudy_aIm, dudz_aIm, vx_aIm ,nelv)
+         call gradm1(dvdx_aIm, dvdy_aIm, dvdz_aIm, vy_aIm ,nelv)
+         call gradm1(dwdx_aIm, dwdy_aIm, dwdz_aIm, vz_aIm ,nelv)
+
+         call dsavg(dudx_aIm);call dsavg(dudy_aIm); call dsavg(dudz_aIm)
+         call dsavg(dvdx_aIm);call dsavg(dvdy_aIm); call dsavg(dvdz_aIm)
+         call dsavg(dwdx_aIm);call dsavg(dwdy_aIm); call dsavg(dwdz_aIm)
+
+         call oprzero  (vx_tr,vy_tr,vz_tr)
+         call opaddcol3(vx_tr,vy_tr,vz_tr,-vx_aRe,-vx_aRe,-vx_aRe,dudx_dRe,dvdx_dRe,dwdx_dRe)
+         call opaddcol3(vx_tr,vy_tr,vz_tr,-vy_aRe,-vy_aRe,-vy_aRe,dudx_dRe,dvdx_dRe,dwdx_dRe)
+         call opaddcol3(vx_tr,vy_tr,vz_tr,-vz_aRe,-vz_aRe,-vz_aRe,dudx_dRe,dvdx_dRe,dwdx_dRe)
+         call opaddcol3(vx_tr,vy_tr,vz_tr,-vx_aIm,-vx_aIm,-vx_aIm,dudx_dIm,dvdx_dIm,dwdx_dIm)
+         call opaddcol3(vx_tr,vy_tr,vz_tr,-vy_aIm,-vy_aIm,-vy_aIm,dudx_dIm,dvdx_dIm,dwdx_dIm)
+         call opaddcol3(vx_tr,vy_tr,vz_tr,-vz_aIm,-vz_aIm,-vz_aIm,dudx_dIm,dvdx_dIm,dwdx_dIm)
+
+      !vx_tr = -vx_aRe*dudx_dRe  -vy_aRe*dudy_dRe  -vz_aRe*dudz_dRe  -vx_aIm*dudx_dIm  -vy_aIm*dudy_dIm   -vz_aIm*dudz_dIm
+      !vy_tr = -vx_aRe*dvdx_dRe  -vy_aRe*dvdy_dRe  -vz_aRe*dvdz_dRe  -vx_aIm*dvdx_dIm  -vy_aIm*dvdy_dIm   -vz_aIm*dvdz_dIm
+      !vz_tr = -vx_aRe*dwdx_dRe  -vy_aRe*dwdy_dRe  -vz_aRe*dwdz_dRe  -vx_aIm*dwdx_dIm  -vy_aIm*dwdy_dIm   -vz_aIm*dwdz_dIm
+
+      ! vx_pr =  vx_aRe*dudx_dIm+vy_aRe*dudy_dIm+vz_aRe*dudz_dIm-vx_aIm*dudx_dRe-vy_aIm*dudy_dRe-vz_aIm*dudz_dRe
+      ! vy_pr =  vx_aRe*dvdx_dIm+vy_aRe*dvdy_dIm+vz_aRe*dvdz_dIm-vx_aIm*dvdx_dRe-vy_aIm*dvdy_dRe-vz_aIm*dvdz_dRe
+      ! vz_pr =  vx_aRe*dwdx_dIm+vy_aRe*dwdy_dIm+vz_aRe*dwdz_dIm-vx_aIm*dwdx_dRe-vy_aIm*dwdy_dRe-vz_aIm*dwdz_dRe
+! 
+      ! vx_ti =  vx_dRe*dudx_dIm+v_r*dvdx_aRe+w_r*dwdx_aRe+u_i*dudx_aIm+v_i*dvdx_aIm+w_i*dwdx_aIm
+      ! vy_ti =  vx_dRe*dudy_dIm+v_r*dvdy_aRe+w_r*dwdy_aRe+u_i*dudy_aIm+v_i*dvdy_aIm+w_i*dwdy_aIm
+      ! vz_ti =  vx_dRe*dudz_dIm+v_r*dvdz_aRe+w_r*dwdz_aRe+u_i*dudz_aIm+v_i*dvdz_aIm+w_i*dwdz_aIm
+! 
+      ! vx_pi =  vx_dRe*dudx_aIm+v_r*dvdx_aIm+w_r*dwdx_aIm-u_i*dudx_aRe-v_i*dvdx_aRe-w_i*dwdx_aRe
+      ! vy_pi =  vx_dRe*dudy_aIm+v_r*dvdy_aIm+w_r*dwdy_aIm-u_i*dudy_aRe-v_i*dvdy_aRe-w_i*dwdy_aRe
+      ! vz_pi =  vx_dRe*dudz_aIm+v_r*dvdz_aIm+w_r*dwdz_aIm-u_i*dudz_aRe-v_i*dvdz_aRe-w_i*dwdz_aRe
+
+         call filter_s0(vx_tr,0.5,1,'vortx') 
+         call filter_s0(vy_tr,0.5,1,'vortx') 
+         call filter_s0(vz_tr,0.5,1,'vortx') 
+         call outpost(vx_tr, vy_tr, vz_tr, pr,t, 'tr_')
+
+         call filter_s0(vx_ti,0.5,1,'vortx') 
+         call filter_s0(vy_ti,0.5,1,'vortx') 
+         call filter_s0(vz_ti,0.5,1,'vortx') 
+         call outpost(vx_ti, vy_ti, vz_ti, pr,t, 'pr_')
+
+         call oprzero(vx,vy,vz)
+         call opaddcol3(vx,vy,vz, vx_tr,vy_tr,vz_tr, vx_tr,vy_tr,vz_tr)
+         call opaddcol3(vx,vy,vz, vx_ti,vy_ti,vz_ti, vx_ti,vy_ti,vz_ti)
+         call vsqrt(vx); call vsqrt(vy); call vsqrt(vz)
+         call outpost(vx,vy,vz,pr,t,'st_')
+
+         ! call filter_s0(vx_tr,0.5,1,'vortx') 
+         ! call filter_s0(vy_tr,0.5,1,'vortx') 
+         ! call filter_s0(vz_tr,0.5,1,'vortx') 
+         ! call outpost(vx_ti, vy_ti, vz_ti, pr,t, 'ti_')
+
+         ! call filter_s0(vx_tr,0.5,1,'vortx')
+         ! call filter_s0(vy_tr,0.5,1,'vortx')
+         ! call filter_s0(vz_tr,0.5,1,'vortx')
+         ! call outpost(vx_pi, vy_pi, vz_pi, pr,t, 'pi_')
+
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine vortex_core(l2, vortex) 
       include 'SIZE'
       include 'TOTAL'
