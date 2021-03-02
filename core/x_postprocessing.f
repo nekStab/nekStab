@@ -32,8 +32,8 @@ c-----------------------------------------------------------------------
 
          real, dimension(lt) :: vx_tr,vy_tr,vz_tr
          real, dimension(lt) :: vx_ti,vy_ti,vz_ti
-         !real, dimension(lt) :: vx_tr,vy_tr,vz_tr
-         !real, dimension(lt) :: vx_tr,vy_tr,vz_tr
+         real, dimension(lt) :: vx_pr,vy_pr,vz_pr
+         real, dimension(lt) :: vx_pi,vy_pi,vz_pi
 
          alpha = 0.0d0
          ifto=.false.;ifpo=.false.
@@ -42,7 +42,6 @@ c-----------------------------------------------------------------------
          call normalize(vx,vy,vz,pr,t(1,1,1,1,1),alpha)
          if(nid.eq.0)write(6,*)'alpha=',alpha
          call outpost(vx,vy,vz, pr,t, 'dRn')
-
 
          call opcopy(vx_dRe,vy_dRe,vz_dRe,vx,vy,vz)
          call gradm1(dudx_dRe, dudy_dRe, dudz_dRe, vx_dRe ,nelv)
