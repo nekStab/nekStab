@@ -101,6 +101,11 @@ c-----------------------------------------------------------------------
 
       elseif(uparam(01).ge.3)then !3:direct,4:adj,5:dir-adj,6:adj-dir
 
+         if(uparam(01).eq.3.5)then
+            call bf_sensitivity
+            call nek_end
+         endif
+
          param(12) = -abs(param(12)) !freeze dt
          param(31) = 1 ; npert = param(31)
          call bcast(param,200*wdsize) !broadcast all parameters to processors
