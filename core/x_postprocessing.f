@@ -7,6 +7,8 @@ c-----------------------------------------------------------------------
 
          integer, parameter :: lt  = lx1*ly1*lz1*lelt
 
+         real :: alpha
+
          real, dimension(lt) :: vx_dRe,vy_dRe,vz_dRe
          real, dimension(lt) :: vx_dIm,vy_dIm,vz_dIm
          real, dimension(lt) :: vx_aRe,vy_aRe,vz_aRe
@@ -33,9 +35,15 @@ c-----------------------------------------------------------------------
          !real, dimension(lt) :: vx_tr,vy_tr,vz_tr
          !real, dimension(lt) :: vx_tr,vy_tr,vz_tr
 
+         alpha = 0.0d0
          ifto=.false.;ifpo=.false.
 
          call load_fld('dRe_1cyl0.f00001')
+         call normalize(vx,vy,vz,pr,t(1,1,1,1,1),alpha)
+         if(nid.eq.0)write(6,*)'alpha=',alpha
+         call outpost(vx,vy,vz, pr,t, 'dRn')
+
+
          call opcopy(vx_dRe,vy_dRe,vz_dRe,vx,vy,vz)
          call gradm1(dudx_dRe, dudy_dRe, dudz_dRe, vx_dRe ,nelv)
          call gradm1(dvdx_dRe, dvdy_dRe, dvdz_dRe, vy_dRe ,nelv)

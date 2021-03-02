@@ -10,10 +10,10 @@ userParam03 = 1  # stabilization technique: 1:sfd
 userParam04 = 0.1250 # freq (Strouhal leading mode)
 userParam05 = 0.0500 # gain (twice growth rate leading mode)
 userParam06 = 0   # 
-userParam07 = 0   # 
-userParam08 = 0   # 
-userParam09 = 0   # 
-userParam10 = 1   # sponge strenght
+userParam07 = 0   #
+userParam08 = 1   # sponge lenght left
+userParam09 = 5   # sponge lenght right
+userParam10 = 1.7 # sponge strenght
 
 dt = 0
 variableDt = yes
