@@ -186,13 +186,13 @@ c-----------------------------------------------------------------------
       H(:,:)  = 0.0d0
       b_vec  = 0.0d0
       residual = 0.0d0
-      call copy(bm1s, bm1, n)
-      if(uparam(10).gt.0)then !sponge on
-       do i=1,n
-        if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
-       enddo
-      endif
-      call outpost(bm1,bm1s,wo3,pr,t,'BM1')
+      !call copy(bm1s, bm1, n)
+      !if(uparam(10).gt.0)then !sponge on
+      ! do i=1,n
+      !  if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
+      ! enddo
+      !endif
+      !call outpost(bm1,bm1s,wo3,pr,t,'BM1')
 
       call oprzero(wo1, wo2, wo3)
       do i = 1, k_dim+1
