@@ -25,6 +25,16 @@ c-----------------------------------------------------------------------
             spng_str = uparam(10)
             call spng_init
          endif
+
+       !applying sponge to the BM1 matrix to remove the sponge zone from the eigensolver
+       call copy(bm1s, bm1, n)
+       if(uparam(10).gt.0)then !sponge on
+        do i=1,n
+         if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
+        enddo
+        endif
+       !call outpost(bm1,bm1s,wo3,pr,t,'BM1')
+
       endif
       call oprzero(fcx,fcy,fcz) ! never comment this!
       call rzero(fct,n)

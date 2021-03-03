@@ -15,7 +15,7 @@ c
       parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
 
       parameter (lelg=32661)            ! max number of global elements
-      parameter (lpmin=  20)            ! min number of MPI ranks
+      parameter (lpmin=  4)            ! min number of MPI ranks
       parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
       parameter (ldimt=1)              ! max auxiliary fields (temperature + scalars)
 
@@ -60,3 +60,15 @@ c
       integer, parameter :: stat_lvar = 0 ! total number of statistical fields
 
       include 'NEKSTAB.inc'
+
+      ! duplicating sponge arrays to define penalization sponge !
+      real spng_fun2(LX1*LY1*LZ1*LELV)     ! sponge function
+     $    ,spng_vr2(LX1*LY1*LZ1*LELV,LDIM) ! reference velocity field
+      common /SPONGEV2/ spng_fun2, spng_vr2
+
+      real spng_str2      !var sponge strength
+      real spng_wl2(LDIM) !var sponge width (left section; every dmension separately)
+      real spng_wr2(LDIM) !var sponge width (right section)
+      real spng_dl2(LDIM) !var sponge drop/rise width (left section)
+      real spng_dr2(LDIM) !var sponge drop/rise width (right section)
+      common /SPONGER/ spng_str2, spng_wl2, spng_wr2, spng_dl2, spng_dr2
