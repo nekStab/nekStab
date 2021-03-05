@@ -138,10 +138,11 @@ c-----------------------------------------------------------------------
 
       !if extrapolation is not OIFS -> ifchar = false
       !if OIFS active -> ifchar = .true. and CFL 2-5
-      if (.not. ifchar .and. courno.gt.1.0d0) then
+      !some cases can have CFL>1 in initial time steps
+      if (courno.gt.10.0d0) then
         if (nio.eq.0)then
           write(6,*)
-          write(6,*)'    CFL > 1 stopping'
+          write(6,*)'    CFL > 10 stopping'
           write(6,*)
          endif
         call nek_end
