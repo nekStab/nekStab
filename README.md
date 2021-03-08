@@ -1,3 +1,5 @@
+# Documentation moved to https://ricardofrantz.github.io/nekStabDoc
+
 # nekStab
 [![Build Status](https://travis-ci.com/ricardofrantz/nekStab.svg?token=DpocmcBgXShNTZ9nAQ5y&branch=master)](https://travis-ci.com/ricardofrantz/nekStab) Global stability framework for Nek5000
 
