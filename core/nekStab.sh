@@ -5,16 +5,16 @@
 #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 #export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
-export USR="x_eigensolvers.o \
-    x_linalg.o \
-    x_fixed_point.o \
-    x_usr_extra.o \
-    x_utilities.o \
-    x_IO.o \
-    x_postprocessing.o"
+export USR="eigensolvers.o \
+    linalg.o \
+    fixedp.o \
+    usr_extra.o \
+    utils.o \
+    IO.o \
+    postproc.o"
 
-echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab.inc" > makefile_usr.inc
-cp --verbose ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB.template NEKSTAB.inc
+echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab" > makefile_usr.inc
+cp --verbose ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB NEKSTAB.inc
 export SOURCE_ROOT=$NEK_SOURCE_ROOT
 
 function error_quit {
