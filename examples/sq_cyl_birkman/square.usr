@@ -1,0 +1,312 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      real d_cube,d_sponge
+      common /PENALZ/ d_cube,d_sponge
+      real x0(3)
+      save x0
+      data x0 /3*0/
+      integer bIDs(1), iobj_wall(1)
+      
+      call nekStab
+      
+      !define objects for surface integrals
+      if (istep.eq.0) then
+         bIDs(1) = 1
+         call create_obj(iobj_wall(1),bIDs,1)
+      endif 
+   
+      !computing CL/CD -> printed in logfile -> use grep 
+      scale = 2.  ! Cd = F/(.5 rho U^2 ) = 2*F
+      if (mod(istep,10).eq.0) call torque_calc(scale,x0,.true.,.false.)
+      
+      spng_str2 = uparam(08) !penalization forcing strenght
+      d_cube = 0.4 !hakf cube diamter ! must match the mesh
+      d_sponge = 0.1 !sponge thickness 
+      !D_TOTAL = D_CUBE + 2*D_SPONGE = 1.0 !
+
+      if(istep.eq.0.AND.spng_str2.gt.0) then
+        if(nid.eq.0)write(6,*)' Initializing penazaliton sponge...'
+        if(nid.eq.0)write(6,*)' Solid cube diameter:',d_cube*2
+        if(nid.eq.0)write(6,*)' Sponge layer tickness:',d_sponge
+        if(nid.eq.0)write(6,*)' Sponge layer strenght:',spng_str2
+        call spng_init2
+      endif
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine nekstab_chk
+      include 'SIZE'
+      include 'TOTAL'
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+      call penalization_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+
+         if(x.gt.-2)temp=1.0d0 !cylinder with T
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+
+      include 'SIZE'
+      include 'TOTAL'
+      common /USRBC/ bcflag(lx1,ly1,lz1,lelt)
+      integer iel,ifc,id_face
+      integer isideset1
+      ntot = nx1*ny1*nz1*nelv	  
+      call rzero(bcflag,ntot)
+
+      do iel=1,nelv
+      do ifc=1,2*ndim
+        id_face = bc(5,ifc,iel,1)
+        if (id_face.eq.1) then                   ! surface 1 for inlet
+           cbc(ifc,iel,1) = 'v  '
+        elseif (id_face.eq.2) then               ! surface 2 for outlet
+           cbc(ifc,iel,1) = 'O  '
+        elseif (id_face.eq.3) then               ! surface 3 for upper
+           cbc(ifc,iel,1) = 'SYM'
+        elseif (id_face.eq.4) then               ! surface 4 for lower
+           cbc(ifc,iel,1) = 'SYM'
+        elseif (id_face.eq.5) then               ! surface 5 for wall
+           cbc(ifc,iel,1) = 'W  '
+
+        endif
+      enddo
+      enddo
+
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
+c-----------------------------------------------------------------------
+c PENALIZATION LAYER AROUND THE SQUARE CYLINDER      
+c-----------------------------------------------------------------------
+      subroutine penalization_forcing (ffx,ffy,ffz,ix,iy,iz,ieg)
+      implicit none
+      include 'SIZE'            !
+      include 'INPUT'           ! IF3D
+      include 'PARALLEL'        ! GLLEL
+      include 'SOLN'            ! JP
+      real ffx, ffy, ffz
+      integer ix,iy,iz,ieg,iel,ip
+      
+      if(spng_str2.eq.0)return
+      iel=gllel(ieg)
+      ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp.eq.0) then
+        ffx = ffx + spng_fun2(ip)*(spng_vr2(ip,1) - vx(ix,iy,iz,iel))
+        ffy = ffy + spng_fun2(ip)*(spng_vr2(ip,2) - vy(ix,iy,iz,iel))
+        if (if3d) ffz = ffz + spng_fun2(ip)*(spng_vr2(ip,ndim) - vz(ix,iy,iz,iel))
+      else
+        ffx = ffx - spng_fun2(ip)*vxp(ip,jp)
+        ffy = ffy - spng_fun2(ip)*vyp(ip,jp)
+        if(if3d) ffz = ffz - spng_fun2(ip)*vzp(ip,jp)
+      endif
+      
+      return
+      end subroutine
+c-----------------------------------------------------------------------
+      subroutine spng_init2
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      real d_cube,d_sponge
+      common /PENALZ/ d_cube,d_sponge
+      integer n
+      n = nx1*ny1*nz1*nelv
+
+                  spng_wl2(1)=d_sponge ! Sponge left section width
+                  spng_wl2(2)=d_sponge
+          if(IF3D)spng_wl2(3)=d_sponge
+
+                  spng_wr2(1)=d_sponge! Sponge right section width
+                  spng_wr2(2)=d_sponge
+          if(IF3D)spng_wr2(3)=d_sponge
+
+                 spng_dl2(1)=(4./4.)*d_sponge ! Sponge left drop/rise section width
+                 spng_dl2(2)=(4./4.)*d_sponge
+         if(IF3D)spng_dl2(3)=(4./4.)*d_sponge
+
+                spng_dr2(1)=(4./4.)*d_sponge ! Sponge right drop/rise section width
+                spng_dr2(2)=(4./4.)*d_sponge
+        if(IF3D)spng_dr2(3)=(4./4.)*d_sponge
+
+         if(nid.eq.0)then
+            write(6,*)' Penalization width: ',d_sponge
+         endif
+
+      ! save reference field -> sponge value reference
+      !call opcopy(spng_vr2(1,1),spng_vr2(1,2),spng_vr2(1,NDIM),vx,vy,vz) !only DNS
+      call oprzero(spng_vr2(1,1),spng_vr2(1,2),spng_vr2(1,NDIM))
+      call spng_set2 ! -> compute spng_fun
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine spng_set2 !set sponge function and refernece fields
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      real lcoord(LX1*LY1*LZ1*LELV)
+      common /SCRUZ/ lcoord
+      real d_cube,d_sponge
+      common /PENALZ/ d_cube,d_sponge
+
+      integer ierr, nhour, nmin, itmp, ntot, il, jl
+      real rtmp, ltim, bmin(LDIM), bmax(LDIM)
+      real xxmax, xxmax_c, xxmin, xxmin_c, arg
+      real mth_stepf, glmax, spg_max
+      logical ltmp, ltmp2
+
+      ntot = NX1*NY1*NZ1*NELV
+
+         call rzero(spng_fun2,ntot)
+         ! for every dimension
+         do il=1,NDIM
+
+          if (spng_wl2(il).gt.0.0.or.spng_wr2(il).gt.0.0) then
+
+             xxmax   = d_cube  !+ spng_wr2(il)! sponge beginning (rise at xmax; right)
+             xxmin   = -d_cube !- spng_wl2(il)! end (drop at xmin; left)
+             xxmax_c = xxmax   + spng_dr2(il)! beginnign of constant part (right)
+             xxmin_c = xxmin   - spng_dl2(il)! beginnign of constant part (left)
+
+             ! get SPNG_FUN
+             if (xxmax.le.xxmin) then
+                write(6,*)'Sponge too wide'
+             else
+                ! this should be done by pointers, but for now I avoid it
+                if (il.eq.1) then
+                   call copy(lcoord,XM1, ntot)
+                elseif (il.eq.2) then
+                   call copy(lcoord,YM1, ntot)
+                elseif (il.eq.3) then
+                   call copy(lcoord,ZM1, ntot)
+                endif
+
+                do jl=1,ntot
+                   rtmp = lcoord(jl)
+                   !if(rtmp.le.xxmin_c) then ! constant; xmin
+                   !   rtmp=1.0d0
+                   !elseif(rtmp.lt.xxmin) then ! fall; xmin
+                   !   arg = (xxmin-rtmp)/spng_wl2(il)
+                   !   rtmp = 0.0d0 !mth_stepf(arg)
+                   !elseif (rtmp.le.xxmax) then ! zero
+                   !   rtmp = 0.0d0
+                   !else
+                   if ( rtmp.ge.xxmin_c .and. rtmp.le.xxmax_c) then ! rise
+                      !arg = (rtmp-xxmax)/spng_wr2(il)
+                      rtmp = 0.0d0!mth_stepf(arg)
+                   else    ! constant
+                      rtmp = 1.0d0
+                   endif
+                   spng_fun2(jl)=max(spng_fun2(jl),rtmp)
+                enddo
+
+             endif  ! xxmax.le.xxmin
+          endif  ! spng_w(il).gt.0.0
+       enddo
+
+      spg_max = glmax(spng_fun2,ntot)
+      do jl=1,LX1*LY1*LZ1*LELV
+        spng_fun2(jl)=(spg_max-spng_fun2(jl))*spng_str2
+      enddo
+
+      ltmp = ifto; ltmp2 = ifpo
+      ifto = .true.; ifpo= .false.
+      call outpost2(spng_vr2(1,1),spng_vr2(1,2),spng_vr2(1,NDIM),pr,spng_fun2,1,'PNL')
+      ifto = ltmp; ifpo = ltmp2
+
+      return
+      end
