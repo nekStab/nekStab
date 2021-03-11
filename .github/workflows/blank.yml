@@ -1,0 +1,68 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Checkout repository nekStab
+        uses: actions/checkout@v2
+      - name: Checkout submodules Nek5000
+        run: git submodule update --init --recursive
+      
+      - name: Install dependecies for Nek500 and NekStab
+        run: sudo apt-get install libmpich-dev mpich libopenblas-dev
+        
+      - name: Set-up local enviroment paths
+        run: |
+          export ROOT_DIR=`pwd`
+          export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
+          export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
+          export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+          MAKEFLAGS="-j 4"
+          echo $ROOT_DIR
+          echo $NEKSTAB_SOURCE_ROOT
+          echo $NEK_SOURCE_ROOT
+          
+      - name: Get cpu-information
+        run: lscpu
+      
+      - name: Compile cylinder case
+        run: |       
+         cd examples/1cyl
+         ./cmpile.sh all
+         
+      - name: Running cylinder case
+        run: |
+         export CASE='1cyl'
+         export CASE_DIR=`pwd`
+         echo $CASE > SESSION.NAME
+         echo $CASE_DIR'/' >> SESSION.NAME
+         mpiexec -np 2 ./nek5000
+         
+      - name: Running cylinder case
+        run: |
+         export CASE='1cyl'
+         export CASE_DIR=`pwd`
+         echo $CASE > SESSION.NAME
+         echo $CASE_DIR'/' >> SESSION.NAME
+         mpiexec -np 2 ./nek5000
+
