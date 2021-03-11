@@ -32,11 +32,11 @@ jobs:
         run: sudo apt-get install libmpich-dev mpich libopenblas-dev
         
       - name: Set-up local enviroment paths
-        run: |
-          export ROOT_DIR=`pwd`
-          export NEKSTAB_SOURCE_ROOT=$ROOT_DIR
-          export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
-          export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+        env: |
+          ROOT_DIR=`pwd`
+          NEKSTAB_SOURCE_ROOT=$ROOT_DIR
+          NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
+          PATH=$NEK_SOURCE_ROOT/bin:$PATH
           MAKEFLAGS="-j 4"
           echo $ROOT_DIR
           echo $NEKSTAB_SOURCE_ROOT
@@ -48,6 +48,9 @@ jobs:
       - name: Compile cylinder case
         run: |       
          cd examples/1cyl
+         echo $ROOT_DIR
+         echo $NEKSTAB_SOURCE_ROOT
+         echo $NEK_SOURCE_ROOT
          ./cmpile.sh all
          
       - name: Running cylinder case
