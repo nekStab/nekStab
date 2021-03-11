@@ -481,52 +481,60 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine add_symmetric_seed(qx, qy, qz) !generate symmetric seed to fields
       implicit none
-      include 'SIZE'            ! NX1, NY1, NZ1, NELV, NID
-      include 'TSTEP'           ! TIME, DT
-      include 'PARALLEL'        ! LGLEL
-      include 'INPUT'           ! IF3D
-      include 'SOLN'            ! VX, VY, VZ, VMULT
-      include 'GEOM'            ! XM1, YM1, ZM1
+      include "SIZE"
+      include "TOTAL"
+      !include 'TSTEP'           ! TIME, DT
+      !include 'PARALLEL'        ! LGLEL
+      !include 'INPUT'           ! IF3D
+      !include 'SOLN'            ! VX, VY, VZ, VMULT
+      !include 'GEOM'            ! XM1, YM1, ZM1
 
       real, dimension(lx1,ly1,lz1,lelv) :: qx, qy, qz
-      integer iel,ieg,il,jl,kl,nl
-      real xl(LDIM),mth_rand,fcoeff(3) !< coefficients for random distribution
+      integer iel,ieg,il,jl,kl,nl,ntot
+      real xmn,xmx,xlx,ymn,ymx,yly,zmn,zmx,zlz,alpha,x,y,z
+      real glmin,glmax,glsc3,amp
 
+      ntot = NX1*NY1*NZ1*NELV
+      ! --> Get the dimensions of the computational box
+      xmn = glmin(xm1, ntot)
+      xmx = glmax(xm1, ntot)
+      xlx = xmx - xmn
+ 
+      ymn = glmin(ym1, ntot)
+      ymx = glmax(ym1, ntot)
+      yly = ymx - ymn
+ 
+      zmn = glmin(zm1, ntot)
+      zmx = glmax(zm1, ntot)
+      zlz = zmx - zmn
+ 
+      alpha = 2*pi/zlz
+ 
+      ! --> Create the initial velocity perturbation.
+      
       do iel=1,NELV
        do kl=1,NZ1
         do jl=1,NY1
          do il=1,NX1
 
          ieg = LGLEL(iel)
-         xl(1) = XM1(il,jl,kl,iel)
-         xl(2) = YM1(il,jl,kl,iel)
-         if (if3D) xl(NDIM) = ZM1(il,jl,kl,iel)
-
-         fcoeff(1)=  3.0e4;fcoeff(2)= -1.5e3;fcoeff(3)=  0.5e5
-         qx(il,jl,kl,iel)=qx(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-
-         fcoeff(1)=  2.3e4;fcoeff(2)=  2.3e3;fcoeff(3)= -2.0e5
-         qy(il,jl,kl,iel)=qy(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-
-         if (IF3D) then
-           fcoeff(1)= 2.e4;fcoeff(2)= 1.e3;fcoeff(3)= 1.e5
-           qz(il,jl,kl,iel)=qz(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-         endif
-
-          enddo
-         enddo
-        enddo
-       enddo
-
-      ! face averaging
-      call opdssum(qx, qy, qz)
-      call opcolv (qx, qy, qz, VMULT)
-
-      call dsavg(qx)
-      call dsavg(qy)
-      if(if3D) call dsavg(qz)
-
-      call bcdirvc(qx, qy, qz,v1mask,v2mask,v3mask)
+         x = XM1(il,jl,kl,iel)
+         y = YM1(il,jl,kl,iel)
+         if (if3D) z = ZM1(il,jl,kl,iel)
+ 
+      ! -> Construct the perturbation. ! Note: Spanwise invariant.
+       qx(il,jl,kl,iel) = cos(alpha*z)*sin(2.*pi*y)
+       qz(il,jl,kl,iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
+  
+      enddo
+      enddo
+      enddo
+      enddo
+ 
+      amp = glsc3(qx, bm1, qx, ntot)+ glsc3(qy, bm1, qy, ntot)
+      if(if3d) amp = amp + glsc3(qz, bm1, qz, ntot)
+      amp = 1e-6/(0.50d0*amp)
+      call opcmult(qx, qy, qz, amp)
 
       return
       end

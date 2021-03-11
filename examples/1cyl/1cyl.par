@@ -5,7 +5,7 @@ stopAt = numSteps
 #numSteps = 40000 # for BF computation 
 numSteps = 100
 
-userParam01 = 3.5  # 0:dns,1:stabilization,3:stability
+userParam01 = 0  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
 userParam03 = 1  # stabilization technique: 1:sfd
 userParam04 = 0.1200 # freq (Strouhal leading mode)
@@ -17,7 +17,7 @@ userParam09 = 5   # sponge lenght right
 userParam10 = 1.7 # sponge strenght
 
 dt = 0
-variableDt = no
+variableDt = yes
 timeStepper = bdf3
 targetCFL = 0.5
 
