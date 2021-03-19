@@ -8,28 +8,28 @@
 
 !     This function provides the user-defined inner product to be used throughout
 !     the computation.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     px, py, pz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays containing the velocity fields of the first vector.
-!     
+!
 !     pp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the first vector.
-!     
+!
 !     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays containing the velocity fields of the second vector.
-!     
+!
 !     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the second vector.
-!     
+!
 !     RETURN
 !     ------
-!     
+!
 !     alpha : real
 !     Value of the inner-product alpha = <p, q>.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -98,19 +98,19 @@
 !     This function normalizes the state vector [qx, qy, qz, qp]^T where
 !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
 !     components while qp is the corresponding pressure field.
-!     
+!
 !     INPUTS / OUTPUTS
 !     ----------------
-!     
+!
 !     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays storing the velocity components.
-!     
+!
 !     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array storing the corresponding pressure field.
-!     
+!
 !     alpha : real
 !     Norm of the vector.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -146,9 +146,9 @@ c-----------------------------------------------------------------------
 
       subroutine krylov_schur()
 
-!     
-!     
-!     
+!
+!
+!
 
       implicit none
       include 'SIZE'
@@ -303,7 +303,7 @@ c-----------------------------------------------------------------------
       converged = .false.
       do while ( .not. converged )
 !     --> Arnoldi factorization.
-         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart)
+         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, k_dim)
 
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
@@ -355,33 +355,37 @@ c-----------------------------------------------------------------------
 
 
 
-      subroutine arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart)
+      subroutine arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, mend)
 
 !     This function implements the k-step Arnoldi factorization of the linearized
 !     Navier-Stokes operator. The rank k of the Arnoldi factorization is set as a user
 !     parameter in x_SIZE.f (see parameter k_dim).
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     mstart : integer
 !     Index at which to start the Arnoldi factorization. By default, it should be set to 1.
 !     Note that it changes when the Arnoldi factorization is used as part of the Krylov-Schur
 !     algorithm.
-!     
+!
+!     mend : integer
+!     Index at which to stop the Arnoldi factorization. By default, it should be set to kdim.
+!     Note that it changes when the Arnoldi factorization is used as part of the GMRES solver
+!
 !     RETURNS
 !     -------
-!     
+!
 !     qx, qy, qz : nek arrays of size (lx1*ly1*lz1*lelt, k_dim).
 !     Arrays containing the various Krylov vectors associated to each velocity component.
-!     
+!
 !     qp : nek arrays of size (lx2*ly2*lz2*lelt, k_dim)
 !     Arrays containing the various Krylov vectors associated to the pressure field.
-!     
+!
 !     H : k x k real matrix.
 !     Upper Hessenberg matrix resulting from the Arnoldi factorization of the linearized
 !     Navier-Stokes operator.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       implicit none
@@ -393,7 +397,7 @@ c-----------------------------------------------------------------------
 
 !     ----- Miscellaneous -----
       real                               :: alpha
-      integer                            :: mstep, mstart
+      integer                            :: mstep, mstart, mend
       integer                            :: n, n2
 
 !     ----- Timer -----
@@ -421,7 +425,7 @@ c-----------------------------------------------------------------------
       alpha = 0.0d0
 
 !     --> Arnoldi factorization.
-      do mstep = mstart, k_dim
+      do mstep = mstart, mend
          if (nid.EQ.0) write(6,*) 'iteration current and total:', mstep , '/' , k_dim
 
          eetime0=dnekclock()
@@ -575,13 +579,13 @@ c----------------------------------------------------------------------
       subroutine matrix_vector_product(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
 
 !     This function implements the k-step Arnoldi factorization of the linearized
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       implicit none
@@ -836,32 +840,32 @@ c-----------------------------------------------------------------------
 
 !     This function selects the eigenvalues to be placed in the upper left corner
 !     during the Schur condensation phase.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
 
 !     delta : real
 !     All eigenvalues outside the circle of radius 1-delta will be selected.
-!     
+!
 !     nev : integer
 !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
 !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-!     
+!
 !     n : integer
 !     Total number of eigenvalues.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     selected : n-dimensional logical array.
 !     Array indicating which eigenvalue has been selected (.true.).
-!     
+!
 !     cnt : integer
 !     Number of selected eigenvalues. cnt >= nev + 4.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -918,30 +922,30 @@ c-----------------------------------------------------------------------
 
 !     This function orthonormalizes the latest Krylov vector f w.r.t. all of the
 !     previous ones and updates the entries of the Hessenberg matrix accordingly.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     k : int
 !     Current step of the Arnoldi factorization.
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Velocity components of the latest Krylov vector.
 !     When returned, it has been orthonormalized w.r.t. to all previous
 !     Krylov vectors.
-!     
+!
 !     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt.
 !     Pressure component of the latest Krylov vector.
-!     
+!
 !     qx, qy, qz : nek arrays of size (lt, k)
 !     Velocity components of the Krylov basis.
-!     
+!
 !     qp : nek array of size (lt2, k).
 !     Pressure component of the Krylov basis.
-!     
+!
 !     H : k x k real matrix.
 !     Upper Hessenberg matrix.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       implicit none
@@ -1014,22 +1018,22 @@ c-----------------------------------------------------------------------
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt
 !     Velocity components of the latest Krylov vector.
-!     
+!
 !     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
-!     
+!
 !     H : k+1 x k real matrix.
 !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-!     
+!
 !     k : int
 !     Current iteration of the Arnoldi factorization.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       implicit none
