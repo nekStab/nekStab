@@ -69,7 +69,7 @@ c-----------------------------------------------------------------------
          uz = 0.0d0
          temp=0.0d0
 
-         if(x.gt.-2)temp=1.0d0 !cylinder with T
+         if(x.gt.-1.and.x.lt.1)temp=1.0d0 !cylinder with T
 
       else                      ! perturbation
          ux = 0.0d0

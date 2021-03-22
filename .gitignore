@@ -1,6 +1,7 @@
 \obj
 *.o
 *.png
+*core*
 fort*
 BFL*
 *.nek5000
@@ -21,6 +22,7 @@ NEKSTAB.inc
 *~
 SPG*
 1cyl0.f*
+bfs.f
 1cyl.f
 cav.f
 cav0.f*
