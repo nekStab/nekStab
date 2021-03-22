@@ -688,7 +688,7 @@ c----------------------------------------------------------------------
       if ( (uparam(1).eq.1) .and. (uparam(3).eq.3) ) then
         call opsub2(fx, fy, fz, qx, qy, qz)
         call sub2(fp, qp, n2)
-        call sub(ft, qt, n)
+        call sub2(ft, qt, n)
 
         call chsign(fx, n)
         call chsign(fy, n)
