@@ -106,20 +106,6 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
-     
-      !this mesh was generatd with genbox
-      !with only BCs for velicity
-      !here we chenge outflow to dirichlet if adjoint
-      !and initilize BCs for scalar field
-
-      if(uparam(1)==3.2)then !if adjoint, change BCs
-      do iel=1,nelt
-      do ifc = 1, 2*ndim
-        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
-      enddo
-      enddo
-      endif
-      
       cbc(:,:,2)=cbc(:,:,1)
       do iel=1,nelt
        do ifc = 1, 2*ndim
