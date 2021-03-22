@@ -37,3 +37,4 @@ makefile_usr.inc
 .cache
 __pycache__
 slurm*
+Nek5000
