@@ -186,6 +186,15 @@
         call opsub2(qx, qy, qz, rhs_x, rhs_y, rhs_z)
         call sub2(qp, rhs_p, n2)
         call sub2(qt, rhs_t, n)
+
+        ! --> Change the sign to r = b - Ax.
+        call chsign(qx, n)
+        call chsign(qy, n)
+        call chsign(qz, n)
+        call chsign(qt, n)
+        call chsign(qp, n2)
+
+        ! --> Normalize the starting vector.
         call normalize(qx, qy, qz, qp, qt, alpha)
 
         return
