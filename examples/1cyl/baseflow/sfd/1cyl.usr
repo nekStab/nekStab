@@ -1,0 +1,121 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
+
+      call nekStab
+
+      !call stat_avg
+      !call stats_3d_full
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine nekstab_chk
+      include 'SIZE'
+      include 'TOTAL'
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      !if(ifto)ffy = temp*0.15d0 !coupling the scalar field
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+         if(x.gt.-2)temp=1.0d0 !cylinder with T
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
