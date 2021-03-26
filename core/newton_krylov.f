@@ -365,6 +365,7 @@
       call bcast(param,200*wdsize) 
 
 ! --> Run the simulation forward.
+      time = 0.0d0
       do istep = 1, nsteps
          call nekStab_usrchk()
          call nek_advance()
