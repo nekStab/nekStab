@@ -99,6 +99,10 @@ c-----------------------------------------------------------------------
             if(uparam(03).eq.1) then
                call sfd_ab3
             elseif(uparam(03).eq.3) then
+               param(12) = -abs(param(12)) !freeze dt
+               param(31) = 1 ; npert = param(31)
+               call bcast(param,200*wdsize) !broadcast all parameters to processors
+
                call newton_krylov
                call nek_end
             endif
@@ -435,10 +439,10 @@ c-----------------------------------------------------------------------
       parameter (lb=100)
       real blasius_soln(0:4,0:lb)
       save blasius_soln
-c     
+c
 c     Algorithm found in Lighthills monograph on mathematical fluid mech.
 c     (c. of M. Choudhari)
-c     
+c
       real  w(4)
 
       twok2 =  1.6551903602308323382003140460740
