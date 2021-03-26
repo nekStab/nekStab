@@ -1,7 +1,6 @@
 #!/bin/bash
 
 ## INTEL COMPILER
-source ${NEKSTAB_SOURCE_ROOT}/core/nekStab.sh
 export FC="mpiifort"
 export CC="mpiicc"
 export FFLAGS="-mcmodel=medium -shared-intel -xHost -extend-source -mkl -g -traceback"
