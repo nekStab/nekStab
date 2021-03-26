@@ -1,5 +1,6 @@
 c-----------------------------------------------------------------------
-      subroutine sfd !selective frequency damping with Euler
+      subroutine sfd 
+      !selective frequency damping with Euler
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -53,18 +54,19 @@ c-----------------------------------------------------------------------
 
           if(nid.eq.0)then
             write(10,"(3E15.7)")time,residu,residu/dt
-            write(6,"(A,2E15.7)")' Rs, rate =',residu,rate
+            write(6,"(A,2E15.7)")' SFD Euler residu =',residu,rate
             write(6,*)
           endif
 
           if( istep.gt.100 .and. residu .lt. max(param(21),param(22)) )then !save to disk and change flag
             if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21),param(22))
-            ifbfcv = .true.
 
             call compute_cfl(umax,vx,vy,vz,1.0)
             if (nid.eq.0) write(6,*) 'CFL=0.5 dt max=',0.50d0/umax
             if (nid.eq.0) write(6,*) 'CFL=5 dt max=',5.0d0/umax
 
+            ifbfcv = .true.
+            call bcast(ifbfcv  , lsize)
             param(63) = 1 ! Enforce 64-bit output
             call bcast(param,200*wdsize)
             call outpost(vx,vy,vz,pr,t,'BF_')
@@ -77,7 +79,8 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine sfd_ab3 !SFD with higher-order temporal scheme and variable time-step
+      subroutine sfd_ab3
+      !SFD with higher-order temporal scheme and variable time-step
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -168,18 +171,19 @@ c-----------------------------------------------------------------------
 
           if(nid.eq.0)then
             write(10,"(3E15.7)")time,residu,rate
-            write(6,"(A,2E15.7)")' Rs, rate =',residu,rate
+            write(6,"(A,2E15.7)")' SFD AB3 residu =',residu,rate
             write(6,*)
           endif
 
           if( istep.gt.100 .and. residu .lt. max(param(21),param(22)) )then !save to disk and change flag
             if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21),param(22))
-            ifbfcv = .true.
 
             call compute_cfl(umax,vx,vy,vz,1.0)
             if (nid.eq.0) write(6,*) 'CFL=0.5 dt max=',0.50d0/umax
             if (nid.eq.0) write(6,*) 'CFL=5 dt max=',5.0d0/umax
 
+            ifbfcv = .true.
+            call bcast(ifbfcv  , lsize)
             param(63) = 1 ! Enforce 64-bit output
             call bcast(param,200*wdsize)
             call outpost(vx,vy,vz,pr,t,'BF_')
@@ -192,3 +196,202 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
+
+
+
+c-----------------------------------------------------------------------c
+      subroutine  boostconv
+      !boostconv core subroutine
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter  :: lt=lx1*ly1*lz1*lelt
+      integer i
+
+      logical, save :: initialized
+      data             initialized /.FALSE./
+      
+      real, dimension(lt)       ::  dvx,dvy,dvz
+      real, dimension(lt), save ::  vxo,vyo,vzo
+      real                      ::  residu,h1,l2,semi,linf,rate
+      real, save                ::  residu0
+     
+      if(mod(istep,bst_skp).eq.0)then
+
+        if(.not.initialized)then
+          call oprzero(vxo,vyo,vzo)
+          residu = 0.0d0; l2 = 0.0d0
+          rate = 0.0d0; residu0 = 0.0d0
+          initialized=.true.
+          open(unit=10,file='residu.dat')
+        endif
+
+        call opsub3(dvx,dvy,dvz,vx,vy,vz,vxo,vyo,vzo)!dv=v-vold
+        call normvc(h1,semi,l2,linf,dvx,dvy,dvz)
+        residu = l2; rate = (residu-residu0); residu0 = residu
+        call boostconv_core(dvx,dvy,dvz)
+        call opadd3(vx,vy,vz,vxo,vyo,vzo,dvx,dvy,dvz)!v=vold+dv
+        call opcopy(vxo,vyo,vzo,vx,vy,vz)
+
+          if(nid.eq.0)then
+            write(10,"(3E15.7)")time,residu,rate
+            write(6,"(' BoostConv residu=',1pE11.4,' delta= ',1pE11.4)")residu,rate
+            write(6,*)' '
+          endif
+
+          if(residu.lt.max(param(21),param(22)))then
+            if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21),param(22))
+            ifbfcv = .true.
+            call bcast(ifbfcv  , lsize)
+            param(63) = 1 ! Enforce 64-bit output
+            call bcast(param,200*wdsize)
+            call outpost(vx,vy,vz,pr,t,'BF_')
+            param(63) = 0 ! Enforce 32-bit output
+            call bcast(param,200*wdsize)
+          endif
+
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine boostconv_core (rbx, rby, rbz)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter   :: lt  = lx1*ly1*lz1*lelt
+      integer, save        :: rot, n
+      integer              :: j
+
+      logical, save :: initialized
+      data             initialized /.FALSE./
+
+      real, dimension(bst_snp, bst_snp) :: dd
+      real, dimension(bst_snp) :: cc, ccb
+      real, dimension(lt) :: rbx,rby,rbz,dumx,dumy,dumz
+
+      real, dimension(lt,bst_snp) :: q_x, q_y, q_z
+      real, dimension(lt,bst_snp) :: x_x, x_y, x_z, y_x, y_y, y_z
+      common /inout/  x_x, x_y, x_z, y_x, y_y, y_z
+
+      real :: glsc3
+      n      = nx1*ny1*nz1*nelt
+
+      if (.not. initialized) then
+
+        call oprzero(x_x(:,:), x_y(:,:), x_z(:,:))
+        call oprzero(y_x(:,:), y_y(:,:), y_z(:,:))
+        call oprzero(q_x(:,:), q_y(:,:), q_z(:,:))
+        dd(:,:) = 1.0d0
+        rot = 1
+
+        call opcopy(y_x(:,1),y_y(:,1),y_z(:,1),rbx,rby,rbz)
+        call opcopy(x_x(:,1),x_y(:,1),x_z(:,1),rbx,rby,rbz)
+        initialized = .true.
+
+      else
+
+        call opsub2(y_x(:,rot),y_y(:,rot),y_z(:,rot),rbx,rby,rbz)
+        call opsub2(x_x(:,rot),x_y(:,rot),x_z(:,rot),y_x(:,rot),y_y(:,rot),y_z(:,rot))
+        cc = 0.0d0
+        call qr_dec(dd,q_x,q_y,q_z,y_x,y_y,y_z)
+
+        do j = 1, bst_snp
+          cc(j) = glsc3(rbx,bm1,q_x(:,j),n) + glsc3(rby,bm1,q_y(:,j),n)
+          if(if3d) cc(j) = cc(j) + glsc3(rbz,bm1,q_z(:,j),n)
+        end do
+
+        call linear_system(ccb,cc,dd,bst_snp)
+        rot = mod(rot,bst_snp)+1
+
+        call opcopy(y_x(:,rot),y_y(:,rot),y_z(:,rot),rbx,rby,rbz)
+
+        do j = 1, bst_snp
+          call opcopy(dumx,dumy,dumz,x_x(:,j),x_y(:,j),x_z(:,j))
+          call opcmult(dumx,dumy,dumz,ccb(j))
+          call opadd2(rbx,rby,rbz,dumx,dumy,dumz)
+        end do
+
+        call opcopy(x_x(:,rot),x_y(:,rot),x_z(:,rot),rbx,rby,rbz)
+
+      endif
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine qr_dec (rr,q_x,q_y,q_z,x_x,x_y,x_z)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      integer,parameter :: lt=lx1*ly1*lz1*lelt
+      integer i, j, n
+      real, dimension(lt,bst_snp) :: x_x,x_y,x_z,q_x,q_y,q_z !res subspaces
+      real, dimension(lt)             :: dum_x1,dum_y1,dum_z1,dum_x,dum_y,dum_z
+      real, dimension(bst_snp,bst_snp) ::  rr
+      real norma,glsc3
+
+      n = nx1*ny1*nz1*nelt
+      rr = 0.0d0; norma = 0.0d0
+      call oprzero(Q_x(:,:), Q_y(:,:), Q_z(:,:))
+
+      call opcopy(dum_x,dum_y,dum_z,x_x(:,1),x_y(:,1),x_z(:,1))
+
+      norma = glsc3(dum_x,bm1,dum_x,n) + glsc3(dum_y,bm1,dum_y,n)
+      if(if3d) norma = norma + glsc3(dum_z,bm1,dum_z,n)
+      norma = sqrt(norma)
+
+      call opcmult(dum_x,dum_y,dum_z,1./norma)
+      call opcopy(q_x(:,1),q_y(:,1),q_z(:,1),dum_x,dum_y,dum_z)
+      rr(1,1) = norma
+
+      do j = 2,bst_snp
+        call opcopy(dum_x,dum_y,dum_z,x_x(:,j),x_y(:,j),x_z(:,j))
+        do i = 1,j-1
+
+          rr(i,j)=glsc3(dum_x,bm1,q_x(:,i),n)+glsc3(dum_y,bm1,q_y(:,i),n)
+          if(if3d)rr(i,j)=rr(i,j)+ glsc3(dum_z,bm1,q_z(:,i),n)
+
+          call opcopy(dum_x1,dum_y1,dum_z1,q_x(:,i),q_y(:,i),q_z(:,i))
+          call opcmult(dum_x1,dum_y1,dum_z1,rr(i,j))
+          call opsub2(dum_x,dum_y,dum_z,dum_x1,dum_y1,dum_z1)
+
+        end do
+
+        norma = glsc3(dum_x,bm1,dum_x,n)+glsc3(dum_y,bm1,dum_y,n)
+        if(if3d) norma = norma + glsc3(dum_z,bm1,dum_z,n)
+
+        if (norma.lt.1e-60) then
+          norma = 1.0d0
+          q_x(:,j) = 0.0d0; q_y(:,j) = 0.0d0
+          if(if3d)q_z(:,j) = 0.0d0
+        else
+          call opcmult(dum_x,dum_y,dum_z,1.0d0/sqrt(norma))
+          call opcopy(q_x(:,j),q_y(:,j),q_z(:,j),dum_x,dum_y,dum_z)
+        endif
+
+        rr(j,j) = sqrt(norma)
+
+      enddo
+      return
+      end
+c----------------------------------------------------------------------
+      subroutine linear_system (outp,inp,m,size_m)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      integer size_m,j,k
+      real m(size_m,size_m)
+      real inp(size_m)
+      real outp(size_m)
+      outp = 0.0d0
+      do j = size_m,1,-1
+        outp(j) = inp(j)
+        do k = j+1,size_m
+          outp(j) = outp(j) - m(j,k)*outp(k)
+        enddo
+        outp(j) = outp(j)/m(j,j)
+      enddo
+      return
+      end
+c----------------------------------------------------------------------
