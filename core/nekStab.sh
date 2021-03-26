@@ -11,7 +11,8 @@ export USR="eigensolvers.o \
     usr_extra.o \
     utils.o \
     IO.o \
-    postproc.o"
+    postproc.o\
+    newton_krylov.o"
 
 echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab" > makefile_usr.inc
 cp --verbose ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB NEKSTAB.inc

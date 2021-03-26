@@ -1,9 +1,9 @@
 !-----------------------------------------------------------------------
-      
-      
-      
-      
-      
+
+
+
+
+
       subroutine schur(A, vecs, vals, n)
 
 !     This function computes the Schur decomposition of a general matrix A.
@@ -31,9 +31,9 @@
 !     vals : n-dimensional complex array.
 !     Unsorted eigenvalues of matrix A.
 !
-!     
-!     Last edit : April 1st 2020 by JC Loiseau.     
-       
+!
+!     Last edit : April 1st 2020 by JC Loiseau.
+
       implicit none
       character*1 :: jobvs = "V", sort = "S"
       integer  :: n, lda, sdim, ldvs, lwork, info
@@ -42,34 +42,34 @@
       real, dimension(3*n) :: work
       logical, dimension(n) :: bwork
       complex*16, dimension(n) :: vals
-      
+
       external select_eigvals
-      
+
 !     --> Perform the Schur decomposition.
       lda = max(1, n)
       ldvs = max(1, n)
       lwork = max(1, 3*n)
-      
+
       call dgees(jobvs, sort, select_eigvals, n, A, lda
      $     , sdim, wr, wi, vecs, ldvs, work, lwork, bwork, info)
-      
+
 !     --> Eigenvalues.
       vals = wr*(1.0D0, 0.0D0) + wi*(0.0D0, 1.0D0)
-      
+
       return
       end
-      
-      
-      
-      
-      
+
+
+
+
+
 !-----------------------------------------------------------------------
-      
-      
-      
-      
+
+
+
+
       subroutine ordschur(T, Q, selected, n)
-      
+
 !     Given a matrix T in canonical Schur form and the corresponding Schur basis Q,
 !     this function reorder the Schur factorization and returns the reorder Schur
 !     matrix and corresponding Schur vectors such that the selected eigenvalues are
@@ -81,7 +81,7 @@
 !
 !     T : n x n real matrix
 !     Matrix in canonical Schur form to be reordered.
-!     
+!
 !     Q : n x n real matrix
 !     Matrix of Schur vectors to be reordered.
 !
@@ -101,29 +101,29 @@
 !     Reordered Schur vectors.
 !
 !     Last edit : April 1st 2020 by JC Loiseau.
-      
+
       implicit none
       character*1 :: job = "N", compq = "V"
       integer :: info, ldq, ldt, liwork, lwork, m, n
-      double precision :: s, sep      
+      double precision :: s, sep
       logical, dimension(n) :: selected
       real, dimension(n, n) :: T, Q
       real, dimension(n) :: work, wr, wi
       integer, dimension(1) :: iwork
-      
+
 !     --> Order the Schur decomposition.
       ldt = max(1, n)
       ldq = n
       lwork = max(1, n)
       liwork = 1
-      
+
       call dtrsen(job, compq, selected, n, T, ldt, Q, ldq, wr, wi,
      $     m, s, sep, work, lwork, iwork, liwork, info)
-      
+
       return
       end
-      
-      
+
+
 
 
 
@@ -198,7 +198,7 @@ c-----------------------------------------------------------------------
 
 
 
-      
+
       subroutine matrix_matrix(A,B,nra,nc,ncb)
       implicit none
       integer :: nra, nc, ncb
@@ -222,7 +222,7 @@ c     ----- Matrix-matrix multiplication -----
 
 
 
-      
+
 c-----------------------------------------------------------------------
 
 
@@ -236,7 +236,7 @@ c-----------------------------------------------------------------------
 !
 !     INPUTS/OUTPUTS
 !     --------------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues to be sorted as input.
 !     It is overwritten with the ordered eigenvalues as output.
@@ -246,7 +246,7 @@ c-----------------------------------------------------------------------
 !     the reordered eigenvectors as output.
 !
 !     Last edit : April 2nd by JC Loiseau
-      
+
       implicit none
       integer                    :: n
       complex*16, dimension(n)   :: vals
@@ -277,7 +277,7 @@ c-----------------------------------------------------------------------
       enddo
       return
       end
-      
+
 !     -------------------------------------------------------------------
 
 
@@ -285,19 +285,79 @@ c-----------------------------------------------------------------------
 
       function select_eigvals(wr, wi)
       implicit none
-      
+
 !     ----- Miscellaneous declarations     -----
       logical :: select_eigvals
       real :: wr, wi
-      
+
 !     --> Select eigenvalues based on its magnitude.
       select_eigvals = .false.
       if(sqrt(wr**2 + wi**2) .GT. 0.9) select_eigvals=.true.
 
       return
       end
-      
-      
-      
-      
-      
+
+
+
+
+
+
+
+
+
+
+!     -------------------------------------------------------------------
+
+
+
+
+
+      subroutine lstsq(A, b, x, m, n)
+
+!     Wrapper for the LAPACK linear least-squares solver. Given the matrix A
+!     and right-hand side vector b, it solves for x that minimizes
+!
+!     min || Ax - b ||_2
+!
+!     INPUTS
+!     ------
+!
+!     A : m x n real matrix.
+!
+!     b : m x 1 real vector.
+!
+!     m, n : integers.
+!
+!
+!     RETURNS
+!     -------
+!
+!     x : n x 1 real vector.
+!
+!     Last edit : March 22nd 2021 by JC Loiseau.
+
+      implicit none
+      character*1 :: trans = "N"
+      integer :: m, n, nrhs, lda, ldb, lwork, info
+      real, dimension(m, n) :: A, A_tilde
+      real, dimension(m) :: b, b_tilde
+      real, dimension(n) :: x
+      real, dimension(2*m*n) :: work
+
+!     --> Solve the least-squares problem min || Ax - b ||_2.
+      nrhs = 1
+      lda = m
+      ldb = m
+      lwork = 2*m*n
+      A_tilde = A
+      b_tilde = b
+
+      call dgels(trans, m, n, nrhs, A_tilde, lda, b_tilde, ldb, work, lwork, info)
+
+      write(*, *) "Least-Squares solver :", info
+
+!     --> Return solution.
+      x = b_tilde(1:n)
+
+      return
+      end subroutine lstsq

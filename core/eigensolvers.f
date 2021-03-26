@@ -247,7 +247,7 @@ c-----------------------------------------------------------------------
          if(ifpo) call copy(qp(:,1), prp(:,1), n2)
          if(ifheat) call copy(qt(:,1), tp(:,1,1), n)
 
-         call whereyouwant('KRY',1)
+         call whereyouwant('KRY', 1)
          time = 0.0d0
          call outpost(qx(:,1), qy(:,1), qz(:,1), qp(:,1), qt(:,1), 'KRY')
 
@@ -303,7 +303,7 @@ c-----------------------------------------------------------------------
       converged = .false.
       do while ( .not. converged )
 !     --> Arnoldi factorization.
-         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart)
+         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, k_dim)
 
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
@@ -355,7 +355,7 @@ c-----------------------------------------------------------------------
 
 
 
-      subroutine arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart)
+      subroutine arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, mend)
 
 !     This function implements the k-step Arnoldi factorization of the linearized
 !     Navier-Stokes operator. The rank k of the Arnoldi factorization is set as a user
@@ -368,6 +368,10 @@ c-----------------------------------------------------------------------
 !     Index at which to start the Arnoldi factorization. By default, it should be set to 1.
 !     Note that it changes when the Arnoldi factorization is used as part of the Krylov-Schur
 !     algorithm.
+!     
+!     mend : integer
+!     Index at which to stop the Arnoldi factorization. By default, it should be set to kdim.
+!     Note that it changes when the Arnoldi factorization is used as part of the GMRES solver
 !     
 !     RETURNS
 !     -------
@@ -393,7 +397,7 @@ c-----------------------------------------------------------------------
 
 !     ----- Miscellaneous -----
       real                               :: alpha
-      integer                            :: mstep, mstart
+      integer                            :: mstep, mstart, mend
       integer                            :: n, n2
 
 !     ----- Timer -----
@@ -421,7 +425,7 @@ c-----------------------------------------------------------------------
       alpha = 0.0d0
 
 !     --> Arnoldi factorization.
-      do mstep = mstart, k_dim
+      do mstep = mstart, mend
          if (nid.EQ.0) write(6,*) 'iteration current and total:', mstep , '/' , k_dim
 
          eetime0=dnekclock()
@@ -621,7 +625,6 @@ c----------------------------------------------------------------------
 
       time = 0.0d0
       do imode = smode, nmode, incr
-
 !     ifpert always true even if adjoint!
          if    (imode.eq.1)then
             ifpert=.true.;ifadj=.false.
@@ -680,6 +683,18 @@ c----------------------------------------------------------------------
       call opcopy(fx, fy, fz, vxp(:,1), vyp(:,1), vzp(:,1))
       if(ifpo) call copy(fp, prp(:,1), n2)
       if(ifheat) call copy(ft, tp(:,1,1), n)
+
+      if (uparam(3).eq.3)  then
+         call opsub2(fx, fy, fz, qx, qy, qz)
+         call sub2(fp, qp, n2)
+         call sub2(ft, qt, n)
+
+         call chsign(fx, n)
+         call chsign(fy, n)
+         call chsign(fz, n)
+         call chsign(ft, n)
+         call chsign(fp, n2)
+      endif
 
       return
       end
