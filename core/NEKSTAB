@@ -1,40 +1,48 @@
       ! LINEAR STABILITY FRAMEWORK
       ! Shared memory bounded arrays and parameters
 
-      logical        ifbfcv
-      common /lstab/ ifbfcv
+      character(len=1),parameter :: nxtl=char(10) !new line character
+
+      character(len=1) :: evop = '_'
+      common /nStab_char/ evop
+
+      logical ifbfcv,ifres,ifldbf,ifbf2D,ifseed_noise,ifseed_symm,ifseed_load,ifvor,ifvox
+      common /nStab_logical/ ifbfcv,ifres,ifldbf,ifbf2D,ifseed_noise,ifseed_symm,ifseed_load,ifvor,ifvox
+
+      real eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
+      common /nStab_real/ eigen_tol,schur_del,glmax_qc,
+     $                    dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
+
+      integer bst_skp 
+      common /nStab_boostconv/ bst_skp
+
+      integer mstep,schur_tgt,maxmodes,schur_cnt
+      common /nStab_int/ mstep,schur_tgt,maxmodes,schur_cnt
 
       real ubase(lx1,ly1,lz1,lelt)
      $    ,vbase(lx1,ly1,lz1,lelt)
      $    ,wbase(lx1,ly1,lz1,lelt)
      $    ,tbase(lx1,ly1,lz1,lelt)
-      common /baseflow/ ubase,vbase,wbase,tbase
+      common /nStab_bflows/ ubase,vbase,wbase,tbase
       
       real ubb(lx1,ly1,lz1,lelt)
      $    ,vbb(lx1,ly1,lz1,lelt)
      $    ,vjb(lx1,ly1,lz1,lelt)
-      common /myblas/ ubb,vbb,vjb
+      common /nStab_bcs/ ubb,vbb,vjb
 
       real fcx(lx1,ly1,lz1,lelt)
      $    ,fcy(lx1,ly1,lz1,lelt)
      $    ,fcz(lx1,ly1,lz1,lelt)
      $    ,fct(lx1,ly1,lz1,lelt)
-      common /force/ fcx, fcy, fcz, fct !general forcing array
+      common /nStab_forces/ fcx, fcy, fcz, fct !general forcing array
 
-      real spng_fun(LX1*LY1*LZ1*LELV)     ! sponge function
-     $    ,spng_vr(LX1*LY1*LZ1*LELV,LDIM) ! reference velocity field
-     $    ,spng_vt(LX1*LY1*LZ1*LELV)      ! reference temperature field
-      common /SPONGEV/ spng_fun, spng_vr, spng_vt
-      
+      real spng_fun(lx1*ly1*lz1*lelt)     ! sponge function
+     $    ,spng_vr(LX1*LY1*LZ1*lelt,ldim) ! reference velocity field
+     $    ,spng_vt(LX1*LY1*LZ1*lelt)      ! reference temperature field
       real spng_str      !var sponge strength
-      real spng_wl(LDIM) !var sponge width (left section; every dmension separately)
-      real spng_wr(LDIM) !var sponge width (right section)
-      real spng_dl(LDIM) !var sponge drop/rise width (left section)
-      real spng_dr(LDIM) !var sponge drop/rise width (right section)
+      real spng_wl(ldim) !var sponge width (left section; every dmension separately)
+      real spng_wr(ldim) !var sponge width (right section)
+      real spng_dl(ldim) !var sponge drop/rise width (left section)
+      real spng_dr(ldim) !var sponge drop/rise width (right section)
       real bm1s(lx1,ly1,lz1,lelt) !weight matrix without sponge 
-      common /SPONGER/ spng_str, spng_wl, spng_wr, spng_dl, spng_dr, bm1s
-
-      real glmax_qc, dtmaxx
-      common /vortexx/ glmax_qc,dtmaxx
-
-      character(len=1),parameter :: nxtl=char(10) !new line character
+      common /nStab_forces/  spng_fun, spng_vr, spng_vt, spng_str, spng_wl, spng_wr, spng_dl, spng_dr, bm1s
