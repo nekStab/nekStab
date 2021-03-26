@@ -7,6 +7,7 @@
 !
 ! add_noise
 ! mth_rand
+! diverse math functions
 
       subroutine quicksort2(n, arr, idx)
 
@@ -288,13 +289,11 @@ c-----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      real glmin,glmax,deltax,xmn,xmx
+      real glmin,glmax,deltax
       real left_sponge,right_sponge
       integer n
 
       n = nx1*ny1*nz1*nelv
-      xmn = glmin(xm1,n); xmx = glmax(xm1,n)
-      deltax = xmx - xmn
 
       left_sponge = real(uparam(08)) !0.1*deltax
       right_sponge = real(uparam(09)) !0.15*deltax
@@ -332,7 +331,8 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine spng_set !set sponge function and refernece fields
+      subroutine spng_set
+      !set sponge function and refernece fields
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -347,13 +347,13 @@ c-----------------------------------------------------------------------
       logical ltmp, ltmp2
 
       ntot = NX1*NY1*NZ1*NELV
-      bmin(1) = glmin(XM1,ntot)
-      bmax(1) = glmax(XM1,ntot)
-      bmin(2) = glmin(YM1,ntot)
-      bmax(2) = glmax(YM1,ntot)
+      bmin(1) = xmn !glmin(XM1,ntot)
+      bmax(1) = zmx !glmax(XM1,ntot)
+      bmin(2) = ymn !glmin(YM1,ntot)
+      bmax(2) = ymx !glmax(YM1,ntot)
       if(IF3D) then
-        bmin(NDIM) = glmin(ZM1,ntot)
-        bmax(NDIM) = glmax(ZM1,ntot)
+        bmin(NDIM) = zmn !glmin(ZM1,ntot)
+        bmax(NDIM) = zmx !glmax(ZM1,ntot)
       endif
 
          call rzero(spng_fun,ntot)
@@ -414,7 +414,8 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      real function mth_stepf(x) !compute sponge function
+      real function mth_stepf(x)
+      !compute sponge function
       implicit none
       real x, xdmin, xdmax
       parameter (xdmin = 0.0010d0, xdmax = 0.9990d0)
@@ -427,7 +428,8 @@ c-----------------------------------------------------------------------
       end if
       end
 c-----------------------------------------------------------------------
-      subroutine add_noise(qx, qy, qz) !input random number to fields
+      subroutine add_noise(qx, qy, qz, qp)
+      !input random number to fields
       implicit none
       include 'SIZE'            ! NX1, NY1, NZ1, NELV, NID
       include 'TSTEP'           ! TIME, DT
@@ -436,30 +438,36 @@ c-----------------------------------------------------------------------
       include 'SOLN'            ! VX, VY, VZ, VMULT
       include 'GEOM'            ! XM1, YM1, ZM1
 
-      real, dimension(lx1,ly1,lz1,lelv) :: qx, qy, qz
-      integer iel,ieg,il,jl,kl,nl
+      real, dimension(lx1,ly1,lz1,lelv) :: qx, qy, qz, qp
+      integer iel,ieg,il,jl,kl,nl,n
       real xl(LDIM),mth_rand,fcoeff(3) !< coefficients for random distribution
+      n = nx1*ny1*nz1*nelv
 
       do iel=1,NELV
        do kl=1,NZ1
         do jl=1,NY1
          do il=1,NX1
 
-         ieg = LGLEL(iel)
-         xl(1) = XM1(il,jl,kl,iel)
-         xl(2) = YM1(il,jl,kl,iel)
-         if (if3D) xl(NDIM) = ZM1(il,jl,kl,iel)
+            ieg = LGLEL(iel)
+            xl(1) = XM1(il,jl,kl,iel)
+            xl(2) = YM1(il,jl,kl,iel)
+            if (if3D) xl(NDIM) = ZM1(il,jl,kl,iel)
 
-         fcoeff(1)=  3.0e4;fcoeff(2)= -1.5e3;fcoeff(3)=  0.5e5
-         qx(il,jl,kl,iel)=qx(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+            fcoeff(1)=  3.0e4;fcoeff(2)= -1.5e3;fcoeff(3)=  0.5e5
+            qx(il,jl,kl,iel)=qx(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
 
-         fcoeff(1)=  2.3e4;fcoeff(2)=  2.3e3;fcoeff(3)= -2.0e5
-         qy(il,jl,kl,iel)=qy(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+            fcoeff(1)=  2.3e4;fcoeff(2)=  2.3e3;fcoeff(3)= -2.0e5
+            qy(il,jl,kl,iel)=qy(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
 
-         if (IF3D) then
-           fcoeff(1)= 2.e4;fcoeff(2)= 1.e3;fcoeff(3)= 1.e5
-           qz(il,jl,kl,iel)=qz(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-         endif
+            if (if3d) then
+               fcoeff(1)= 2.e4;fcoeff(2)= 1.e3;fcoeff(3)= 1.e5
+               qz(il,jl,kl,iel)=qz(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+            endif
+
+            if (ifheat) then
+               fcoeff(1)= 9.e4;fcoeff(2)= 3.e3;fcoeff(3)= 4.e5
+               qp(il,jl,kl,iel)=qp(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+            endif
 
           enddo
          enddo
@@ -473,39 +481,31 @@ c-----------------------------------------------------------------------
       call dsavg(qx)
       call dsavg(qy)
       if(if3D) call dsavg(qz)
+      call bcdirVC(qx, qy, qz,v1mask,v2mask,v3mask)
 
-      call bcdirvc(qx, qy, qz,v1mask,v2mask,v3mask)
+      if(ifheat)then
+      call dssum(qp,lx1,ly1,lz1)
+      call col2(qp, VMULT, n)
+      call dsavg(qp)
+      call bcdirSC(qp)
+      endif
+
 
       return
       end
 c-----------------------------------------------------------------------
-      subroutine add_symmetric_seed(qx, qy, qz) !generate symmetric seed to fields
+      subroutine add_symmetric_seed(qx, qy, qz, qp) !generate symmetric seed to fields
       implicit none
       include "SIZE"
       include "TOTAL"
-      !include 'TSTEP'           ! TIME, DT
-      !include 'PARALLEL'        ! LGLEL
-      !include 'INPUT'           ! IF3D
-      !include 'SOLN'            ! VX, VY, VZ, VMULT
-      !include 'GEOM'            ! XM1, YM1, ZM1
-
-      real, dimension(lx1,ly1,lz1,lelv) :: qx, qy, qz
+      real, dimension(lx1,ly1,lz1,lelv) :: qx, qy, qz, qp
       integer iel,ieg,il,jl,kl,nl,ntot
-      real xmn,xmx,xlx,ymn,ymx,yly,zmn,zmx,zlz,alpha,x,y,z
+      real xlx,yly,zlz,alpha,x,y,z
       real glmin,glmax,glsc3,amp
 
       ntot = NX1*NY1*NZ1*NELV
-      ! --> Get the dimensions of the computational box
-      xmn = glmin(xm1, ntot)
-      xmx = glmax(xm1, ntot)
       xlx = xmx - xmn
- 
-      ymn = glmin(ym1, ntot)
-      ymx = glmax(ym1, ntot)
       yly = ymx - ymn
- 
-      zmn = glmin(zm1, ntot)
-      zmx = glmax(zm1, ntot)
       zlz = zmx - zmn
  
       alpha = 2*pi/zlz
@@ -525,7 +525,8 @@ c-----------------------------------------------------------------------
       ! -> Construct the perturbation. ! Note: Spanwise invariant.
        qx(il,jl,kl,iel) = cos(alpha*z)*sin(2.*pi*y)
        qz(il,jl,kl,iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
-  
+       qp(il,jl,kl,iel) = cos(alpha*z)*cos(2.*pi*y)
+
       enddo
       enddo
       enddo
@@ -535,6 +536,7 @@ c-----------------------------------------------------------------------
       if(if3d) amp = amp + glsc3(qz, bm1, qz, ntot)
       amp = 1e-6/(0.50d0*amp)
       call opcmult(qx, qy, qz, amp)
+      call cmult(qp, amp, ntot)
 
       return
       end
@@ -550,6 +552,18 @@ c-----------------------------------------------------------------------
       mth_rand = 1.e3*sin(mth_rand)
       mth_rand = 1.e3*sin(mth_rand)
       mth_rand = cos(mth_rand)
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine opadd2 (a1,a2,a3,b1,b2,b3)
+      implicit none
+      include 'SIZE'
+      integer ntot1
+      real a1(1),a2(1),a3(1),b1(1),b2(1),b3(1)
+      ntot1=nx1*ny1*nz1*nelv
+      call add2(a1,b1,ntot1)
+      call add2(a2,b2,ntot1)
+      if (ndim.eq.3) call add2(a3,b3,ntot1)
       return
       end
 c-----------------------------------------------------------------------
@@ -577,3 +591,335 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
+      subroutine add4(a,b,c,d,n)
+      implicit none
+      include 'SIZE'
+      integer i,n
+      real a(1),b(1),c(1),d(1)
+      do i=1,n
+         a(i)=b(i)+c(i)+d(i)
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine addcol3(a,b,c,n)
+      implicit none
+      include 'SIZE'
+      integer i,n
+      real a(1),b(1),c(1)
+      do i=1,n
+         a(i)=a(i)+b(i)*c(i)
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine set_rjet(ub)   !round jet profile for axissymetric jet
+      include 'SIZE'
+      include 'TOTAL'
+      real ub(1),theta_0
+      theta_0=0.0250d0
+      do i=1,nx1*ny1*nz1*nelv
+         x = xm1(i,1,1,1)
+         y = ym1(i,1,1,1)
+         ub(i)=0.50d0*(1.0d0-tanh((1.0d0/(4.0d0*theta_0))*(y-(1.0d0/(4.0d0*y)))))
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine compute_sb (v_jet)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      real v_jet(1),A_1,x_m,H,f_x
+      integer n
+
+      n = nx1*ny1*nz1*nelv
+      A_1 = uparam(06)
+      x_m = uparam(07)
+
+      do i=1,n
+         x = xm1(i,1,1,1)
+         y = ym1(i,1,1,1)
+         if(y.eq.0.)then
+            H = exp( -((x-x_m)**2)/(3.10d0**2))
+            f_x = 15.18750d0*H**5 -35.43750d0*H**4 +20.250d0*H**3
+            v_jet(i)=A_1*f_x
+         else
+            v_jet(i)=0.0d0
+         endif
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine outpost_blayer_pert
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter   :: lt=lx1*ly1*lz1*lelv
+      real, dimension(lt)  :: do1,do2,do3
+      real ampx, ampy, glamax
+      integer n
+      logical ifto_sav, ifpo_sav
+      
+      n = nx1*ny1*nz1*nelv
+
+      if((istep.eq.0).OR.ifoutfld)then
+
+         call opsub3 ( do1,do2,do3, vx,vy,vz, ubase,vbase,wbase)
+
+         ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
+         call outpost( do1,do2,do3,pr,t,'per')
+         ifto = ifto_sav ; ifpo = ifpo_sav
+
+         ampx = glamax(do1,n)      
+         ampy = glamax(do2,n)
+
+         if(nid.eq.0)then
+            if(istep.eq.0)then
+               open(unit=111,file='ts_amp.dat',status='unknown',form='formatted')
+               write(112,'(A)')'#  t  A  up  vp  up2  vp2'
+            endif
+            write(111,"(6E15.7)")time,uparam(06),ampx,ampy,ampx**2,ampy**2
+            if(istep.eq.nsteps)close(111)
+         endif
+      endif      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine set_blasius(ub,vb) ! Compute the Blasius profile
+      include 'SIZE'
+      include 'TOTAL'
+
+      real ub(1),vb(1),x_m
+      n = nx1*ny1*nz1*nelv
+
+      x_m = uparam(07)
+
+      visc = param(2)/param(1)  !density / dynamic viscosity
+      delta99_0 = 5.0d0/1.72080d0 !2.9
+      delta_star= 1.0d0
+      u_0   = 1.0d0
+      x_0 = (delta_star/1.7208d0)**2 / visc * u_0 ! Reference x
+
+      x_inflow = (605.0d0/740.0d0)**2 * x_0 !original blasius
+      x_inflow = x_0
+
+      if(nid.eq.0)then
+         write(6,*)'visc=',visc
+         write(6,*)'delta99_0=',delta99_0
+         write(6,*)'delta_star=',delta_star
+         write(6,*)'u_0=',u_0
+         write(6,*)'x_0=',x_0 
+         write(6,*)'x_inflow=',x_inflow
+         write(6,*)'x_m=',x_m
+      endif
+
+      do i=1,n
+         x = xm1(i,1,1,1)
+         y = ym1(i,1,1,1)
+
+         x_t = x_inflow + x
+         rex = u_0 * x_t / visc
+
+         if(x.eq.xmn)write(6,*)'if x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
+         if(x.eq.x_m)write(6,*)'sb x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
+         if(x.eq.xmx)write(6,*)'of x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
+         
+         eta = y*sqrt(rex)/x_t
+         call blasius(ub(i),vb(i),eta,rex)
+
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine blasius(u,v,eta,rex)
+
+      integer icalld
+      save    icalld
+      data    icalld /0/
+
+      parameter (lb=100)
+      real blasius_soln(0:4,0:lb)
+      save blasius_soln
+c     
+c     Algorithm found in Lighthills monograph on mathematical fluid mech.
+c     (c. of M. Choudhari)
+c     
+      real  w(4)
+
+      twok2 =  1.6551903602308323382003140460740
+      rk2   =  0.5*twok2
+      rk    =  sqrt(rk2)
+
+      if (icalld.eq.0) then
+         icalld = 1
+
+         call set_ics (blasius_soln(0,0))
+
+         dt=.05
+         rr=1.0725
+         do i=1,lb
+            blasius_soln(0,i) = blasius_soln(0,i-1) + dt
+            dt = dt*rr
+         enddo
+
+         do i=1,lb
+            eta0 = blasius_soln(0,i-1)
+            eta1 = blasius_soln(0,i  )
+            t0 = 0.5*eta0/rk
+            t1 = 0.5*eta1/rk
+            dt = .0005          !  Note, this is good to about 12 digits
+            m=3
+            call copy(blasius_soln(1,i),blasius_soln(1,i-1),m)
+            call rk4_integrate(blasius_soln(1,i),3,t1,t0,dt)
+         enddo
+      endif
+
+      if (eta.gt.blasius_soln(0,lb)) then
+
+         call copy(w,blasius_soln(1,lb),2)
+
+      else
+
+         i = interval_find(eta,blasius_soln,5,lb)
+
+         eta0 = blasius_soln(0,i)
+         t0   = 0.5*eta0/rk
+         t1   = 0.5*eta/rk
+         dt   = .0005           !  Note, this is good to about 12 digits
+         m    = 3
+         call copy(w,blasius_soln(1,i),m)
+         call rk4_integrate(w,3,t1,t0,dt)
+
+      endif
+
+      g  = w(1)
+      gp = w(2)
+
+      f  = g  / rk
+      fp = gp / twok2
+
+      u  = fp
+      v  = 0.5*(eta*fp-f)/sqrt(rex)
+
+c     write(6,1) eta,u,v,f,fp,rex
+c     1  format(1p6e14.6,' eta')
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine rk4_integrate(w,n,tfinal,tstart,dti) !Program to integrate dW/dt = F(W,t)
+!     Input:   w() is initial condition at t=tstart
+!     Output:  w() is solution at t = tfinal
+!     n = length of vector
+      real  w(n)
+      if (tfinal.gt.tstart .and. dti.gt.0.) then
+
+         tdelta = tfinal-tstart
+         dt     = dti
+         nsteps = tdelta/dt
+         nsteps = max(nsteps,1)
+         dt     = tdelta/nsteps
+
+         t = tstart
+         do k=1,nsteps          !  TIME STEPPING
+
+            call rk4 (w,t,dt,n) ! Single RK4 step (nmax=4)
+            t = t+dt
+
+         enddo
+
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine set_ics (w)    !Initial conditions for modified Blasius equation g''' + g g'' = 0
+      real  w(0:3)
+      w(0) = 0.0d0              ! eta = 0
+      w(1) = 0.0d0              ! g
+      w(2) = 0.0d0              ! g'
+      w(3) = 1.0d0              ! g"
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine compute_f(f,w,t) !Compute RHS of ODE:
+      real  f(4),w(4)
+      f(1) = w(2)
+      f(2) = w(3)
+      f(3) = -w(1)*w(3)
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine add3s2nd(x,y,z,c,n)
+      real  x(1),y(1),z(1),c
+      do i=1,n
+         x(i) = y(i) + c*z(i)
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine rk4(w,t,dt,n)
+      real  w(1),t,dt
+      real  wh(4),f1(4),f2(4),f3(4),f4(4)
+
+      dt2 = dt/2.0d0
+      dt3 = dt/3.0d0
+      dt6 = dt/6.0d0
+
+      t2 = t+dt2
+      tt = t+dt
+
+      call compute_f (f1,w ,t )
+      call add3s2nd  (wh,w,f1,dt2,n)
+
+      call compute_f (f2,wh,t2)
+      call add3s2nd  (wh,w,f2,dt2,n)
+
+      call compute_f (f3,wh,t2)
+      call add3s2nd  (wh,w,f3,dt ,n)
+
+      call compute_f (f4,wh,tt)
+
+      do i=1,n
+         w(i) = w(i) + dt6*(f1(i)+f4(i)) + dt3*(f2(i)+f3(i))
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      function interval_find(x,xa,m,n) !Find interval. p. 88-89, numerical recipes
+      real xa(m,0:n)
+
+      if (x.ge.xa(1,n)) then
+         interval_find = n
+      elseif (x.le.xa(1,0)) then
+         interval_find = 0
+      else
+
+         klo=0
+         khi=n
+ 1       if ((khi-klo).gt.1) then
+            k=(khi+klo)/2
+            if (xa(1,k).gt.x) then
+               khi=k
+            else
+               klo=k
+            endif
+            goto 1
+         endif
+
+         h=xa(1,khi)-xa(1,klo)
+         if (h.eq.0) then
+            write(6,*) xa(1,klo),xa(1,khi),klo,khi,'ERROR: Zero jump in interval_find.'
+            return
+         endif
+         interval_find = klo
+      endif
+
+      return
+      end
