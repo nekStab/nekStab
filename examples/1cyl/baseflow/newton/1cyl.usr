@@ -69,7 +69,7 @@ c-----------------------------------------------------------------------
          uz = 0.0d0
          temp=0.0d0
 
-         if(x.gt.-2)temp=1.0d0 !cylinder with T
+         if(x.gt.-1.and.x.lt.1)temp=1.0d0 !cylinder with T
 
       else                      ! perturbation
          ux = 0.0d0
@@ -106,6 +106,21 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
       cbc(:,:,2)=cbc(:,:,1)
       do iel=1,nelt
        do ifc = 1, 2*ndim
@@ -113,6 +128,8 @@ c-----------------------------------------------------------------------
         if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
       enddo
       enddo
+      endif
+
       return
       end
 c-----------------------------------------------------------------------
