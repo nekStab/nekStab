@@ -120,22 +120,12 @@ c-----------------------------------------------------------------------
          call rzero(vz,nx1*ny1*nz1*nelv)
       endif
 
-
       select case (floor(uparam(1)))
       
       case(0) ! DNS
          
          call nekStab_outpost   ! outpost vorticity 
          call nekStab_comment   ! print comments
-
-         ! optional extraction of base flow          
-         ! call opcopy(vx_p, vy_p, vz_p, vx, vy, vz)
-         ! call opsub2(vx_p, vy_p, vz_p, ubase, vbase, wbase)
-         ! if(ifheat)then
-         !    call copy(tem_p,t(1,1,1,1,1),n)
-         !    call sub2(tem_p,tbase, n)
-         ! endif
-
          call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',10)
 
       case(1) ! fixed points computation
@@ -145,12 +135,12 @@ c-----------------------------------------------------------------------
 
          if(uparam(01).ge.1)then   !compose forcings to fcx,fcy,fcz
 
-            if(uparam(01).eq.1)call sfd_ab3
-            if(uparam(01).eq.1.1)call sfd !SFD with Euler
-            if(uparam(01).eq.1.2)call boostconv
-            if(uparam(01).eq.1.3) then
-               call newton_krylov_prepare
-               call newton_krylov
+            if(uparam(01).eq.1  )call sfd_AB3
+            if(uparam(01).eq.1.1)call sfd !Euler
+            if(uparam(01).eq.1.2)call BoostConv
+            if(uparam(01).eq.1.3)then
+               call Newton_Krylov_prepare
+               call Newton_Krylov
                call nek_end
             endif
 
@@ -163,14 +153,14 @@ c-----------------------------------------------------------------------
 
       case(3) ! eigenvalue problem
 
-         call krylov_schur
+         call Krylov_Schur
          call nek_end
 
       case(4) ! in postprocessing.f
 
          if(uparam(01).eq.4.1)call wave_maker
-         if(uparam(01).eq.4.2)call bf_sensitivity
-         !if(uparam(01).eq.4.3)call f_sensitivity
+         if(uparam(01).eq.4.2)call BF_sensitivity
+         !if(uparam(01).eq.4.3)call F_sensitivity
            
          call nek_end
 
