@@ -90,6 +90,67 @@
       end subroutine newton_krylov
 
 
+!-----------------------------------------------------------------------
+
+
+
+      subroutine newton_krylov_prepare
+
+!     This  
+!     
+!     INPUT
+!     -----
+!     
+!     RETURNS
+!     -------
+!     
+!     Last edit : March 26th 2021 by RAS Frantz.
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'ADJOINT'
+
+!     forcing npert to unity 
+      if(param(31).gt.1)then
+         write(6,*)'nekStab not ready for npert>1 -- jp loops NOT implemented! STOPPING!'
+         call nek_end
+      endif
+      param(31) = 1 ; npert = param(31)
+
+!     force OIFS deactivation
+      if(ifchar.and.nid.eq.0)write(6,*)'OIFS not working with linearized and adjoint -> turning OFF!'
+      ifchar = .false.
+      call bcast(ifchar, lsize)
+
+!     enforce CFL target for EXTk
+      if( param(26).gt.0.5 )then
+         if(nid.eq.0)write(6,*)'reducing target CFL to 0.5!'
+         param(26)=0.50d0 ; ctarg = param(26)
+      endif
+
+      if(param(10).gt.0)then 
+      ! if param(10)=endTime=0 -> param(11) = numSteps
+        call compute_cfl(dt,vx,vy,vz,1.0) ! dt=1
+        dt = ctarg/dt
+        nsteps = ceiling(param(10)/dt)
+        dt = param(10)/nsteps
+                  if(nid.eq.0)write(6,*)'endTime specified! computing CFL from initial condition!'
+        if(nid.eq.0)write(6,*)' computing timeStep dt=',dt
+        if(nid.eq.0)write(6,*)' computing numSteps=',nsteps
+        if(nid.eq.0)write(6,*)' sampling period =',nsteps*dt
+        param(12) = dt
+      endif
+
+      ! deactivate variable time step! !freeze dt
+      param(12) = -abs(param(12))
+
+      ! broadcast all parameters to processors
+      call bcast(param,200*wdsize) 
+
+      return 
+      end
+
 
 
 !-----------------------------------------------------------------------
@@ -297,9 +358,15 @@
 ! --> Turn-off the linearized solver.
       ifpert = .false. ; call bcast(ifpert, lsize)
 
+! --> Ensuring sampling-period consistency.
+      call compute_cfl(dt,vx,vy,vz,1.0); dt = ctarg/dt
+      nsteps = ceiling(param(10)/dt); dt = param(10)/nsteps
+      param(12) = -abs(dt)
+      call bcast(param,200*wdsize) 
+
 ! --> Run the simulation forward.
       do istep = 1, nsteps
-         call nekStab_chk()
+         call nekStab_usrchk()
          call nek_advance()
       enddo
 
