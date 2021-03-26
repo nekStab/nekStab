@@ -354,7 +354,7 @@ c-----------------------------------------------------------------------
 
       call dgels(trans, m, n, nrhs, A_tilde, lda, b_tilde, ldb, work, lwork, info)
 
-      write(*, *) "Least-Squares solver :", info
+      if(nid.eq.0)write(6,*) "Least-Squares solver :", info
 
 !     --> Return solution.
       x = b_tilde(1:n)
