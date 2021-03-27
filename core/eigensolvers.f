@@ -123,25 +123,26 @@
       real, dimension(lt2), intent(inout) :: qp
       real, intent(out)                   :: alpha
       real                                :: beta
-      integer n,n2
-      n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
+      !integer n,n2
+      !n = nx1*ny1*nz1*nelt
+      !n2 = nx2*ny2*nz2*nelt
 
 !     --> Compute the user-defined norm.
       call norm(qx, qy, qz, qp, qt, alpha)
       beta = 1.0d0/alpha
 
 !     --> Normalize the vector.
-      call opcmult(qx, qy, qz, beta)
-      if(ifpo) call cmult(qp, beta, n2)
-      if(ifheat) call cmult(qt, beta, n)
+      call nopcmult(qx, qy, qz, qp, qt, beta)
+      ! call opcmult(qx, qy, qz, beta)
+      ! if(ifpo) call cmult(qp, beta, n2)
+      ! if(ifheat) call cmult(qt, beta, n)
 
       return
       end
+
+
+
 c-----------------------------------------------------------------------
-
-
-
 
 
       subroutine krylov_schur()
@@ -189,9 +190,10 @@ c-----------------------------------------------------------------------
 
       call oprzero(wo1, wo2, wo3)
       do i = 1, k_dim+1
-         call oprzero(qx(:, i), qy(:, i), qz(:, i))
-         if (ifpo) call rzero(qp(:, i), n2)
-         if (ifheat) call rzero(qt(:, i), n)
+         call noprzero(qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, i))
+      !    call oprzero(qx(:, i), qy(:, i), qz(:, i))
+      !    if (ifpo) call rzero(qp(:, i), n2)
+      !    if (ifheat) call rzero(qt(:, i), n)
       enddo
 
 !     ----- Loading baseflow from disk (optional) -----
@@ -220,7 +222,7 @@ c-----------------------------------------------------------------------
 
 !     ----- Creates seed vector for the Krylov subspace -----
 
-            if(ifseed_noise)then ! noise as initial seed 
+            if(ifseed_nois)then ! noise as initial seed 
 
                   if(nid.eq.0)write(6,*)'Filling fields with noise...'
                   call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
@@ -240,9 +242,10 @@ c-----------------------------------------------------------------------
                   write(filename,'(a,a,a)')'Re_',trim(SESSION),'0.f00001'
                   if(nid.eq.0)write(*,*)'Load real part of leading mode as seed: ',filename
                   call load_fld(filename)
-                  call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),vx,vy,vz)
-                  if(ifpo) call copy(prp(:,1),pr,n2)
-                  if(ifheat) call copy(tp(:,1,1),t(1,1,1,1,1),n)
+                  call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
+                  ! call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),vx,vy,vz)
+                  ! if(ifpo) call copy(prp(:,1),pr,n2)
+                  ! if(ifheat) call copy(tp(:,1,1),t(1,1,1,1,1),n)
 
             else
 
@@ -257,9 +260,10 @@ c-----------------------------------------------------------------------
 
          mstart = 1; istep = 1; time = 0.0d0
 
-         call opcopy(qx(:,1), qy(:,1), qz(:,1), vxp(:,1), vyp(:,1), vzp(:,1))
-         if(ifpo) call copy(qp(:,1), prp(:,1), n2)
-         if(ifheat) call copy(qt(:,1), tp(:,1,1), n)
+         call nopcopy(qx(:,1),qy(:,1),qz(:,1),qp(:,1),qt(:,1), vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
+      !    call opcopy(qx(:,1), qy(:,1), qz(:,1), vxp(:,1), vyp(:,1), vzp(:,1))
+      !    if(ifpo) call copy(qp(:,1), prp(:,1), n2)
+      !    if(ifheat) call copy(qt(:,1), tp(:,1,1), n)
 
          call whereyouwant('KRY',1)
          time = 0.0d0
@@ -436,15 +440,16 @@ c-----------------------------------------------------------------------
       n2 = nx2*ny2*nz2*nelt
 
 !     --> Initialize arrays.
-      call oprzero(f_xr, f_yr, f_zr)
-      if (ifpo) call rzero(f_pr, n2)
-      if (ifheat) call rzero(f_tr, n)
+      call noprzero(f_xr, f_yr, f_zr, f_pr, f_tr)
+      ! call oprzero(f_xr, f_yr, f_zr)
+      ! if (ifpo) call rzero(f_pr, n2)
+      ! if (ifheat) call rzero(f_tr, n)
       alpha = 0.0d0
 
 !     --> Arnoldi factorization.
       do mstep = mstart, mend
 
-         if (nid.eq.0) write(6,*) 'iteration current and total:', mstep , '/' , mend
+         if (nid.eq.0) write(6,*) 'iteration current and total:', mstep , '/' , k_dim
 
          eetime0=dnekclock()
 
@@ -465,9 +470,11 @@ c-----------------------------------------------------------------------
          H(mstep+1, mstep) = alpha
 
 !     --> Add the residual vector as the new Krylov vector.
-         call opcopy(qx(:,mstep+1), qy(:,mstep+1), qz(:,mstep+1), f_xr, f_yr, f_zr)
-         if(ifpo) call copy(qp(:,mstep+1), f_pr, n2)
-         if(ifheat) call copy(qt(:,mstep+1), f_tr, n)
+
+         call nopcopy(qx(:,mstep+1),qy(:,mstep+1),qz(:,mstep+1),qp(:,mstep+1),qt(:,mstep+1),  f_xr,f_yr,f_zr,f_pr,f_tr)
+      !    call opcopy(qx(:,mstep+1), qy(:,mstep+1), qz(:,mstep+1), f_xr, f_yr, f_zr)
+      !    if(ifpo) call copy(qp(:,mstep+1), f_pr, n2)
+      !    if(ifheat) call copy(qt(:,mstep+1), f_tr, n)
 
 !     --> Save checkpoint for restarting/run-time analysis.
          if(ifres)call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
@@ -555,7 +562,7 @@ c     ----- Schur and Hessenberg decomposition -----
 
 !     --> Partition the eigenvalues in wanted / unwanted.
       call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, k_dim)
-      if ( nid.eq.0 ) write(*,*) mstart, 'Ritz eigenpairs have been selected.'
+      if ( nid.eq.0 ) write(6,*) mstart, 'Ritz eigenpairs have been selected.'
 
 !     --> Re-order the Schur decomposition based on the partition.
       call ordschur(H(1:k_dim, 1:k_dim), vecs, selected, k_dim)
@@ -578,8 +585,16 @@ c     ----- Schur and Hessenberg decomposition -----
 
 !     --> Add the last generated Krylov vector as the new starting one.
       mstart = mstart + 1
-      call opcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),
-     $     qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1))
+
+      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart),
+     $             qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1), qp(:,k_dim+1), qt(:,k_dim+1))
+
+!       call opcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),
+!      $     qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1))
+
+!       !JC CHECK HERE!
+!       if(ifpo) copy(qp(:,mstart),qp(:,k_dim+1),n2)
+!       if(ifheat) copy(qt(:,mstart),qt(:,k_dim+1),n)
 
       return
       end
@@ -702,9 +717,10 @@ c----------------------------------------------------------------------
 
       if(param(10).gt.0)then 
       ! if param(10)=endTime=0 -> param(11) = numSteps
-        call compute_cfl(dt,ubase,vbase,wbase,1.0) ! dt=1
+        call compute_cfl(dt,vx,vy,vz,1.0) ! dt=1 ! vx at this point is base flow 
         dt = ctarg/dt
         nsteps = ceiling(param(10)/dt)
+        dt = param(10)/nsteps
         if(nid.eq.0)write(6,*)'endTime specified! computing CFL from BASE FLOW!'
         if(nid.eq.0)write(6,*)' computing timeStep dt=',dt
         if(nid.eq.0)write(6,*)' computing numSteps=',nsteps
@@ -750,9 +766,10 @@ c----------------------------------------------------------------------
       n2 = nx2*ny2*nz2*nelt
 
 !     ----- Initial condition -----
-      call opcopy(vxp(:,1), vyp(:,1), vzp(:,1), qx, qy, qz)
-      if(ifpo) call copy(prp(:,1), qp, n2)
-      if(ifheat) call copy(tp(:,1,1), qt, n)
+      call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), qx,qy,qz,qp,qt)
+      ! call opcopy(vxp(:,1), vyp(:,1), vzp(:,1), qx, qy, qz)
+      ! if(ifpo) call copy(prp(:,1), qp, n2)
+      ! if(ifheat) call copy(tp(:,1,1), qt, n)
 
 !     ----- Time-stepper matrix-vector product -----
       if    (uparam(1).lt.3.2)then !direct
@@ -760,7 +777,7 @@ c----------------------------------------------------------------------
       elseif(uparam(1).eq.3.2)then !adjoint
          smode = 2; nmode = 2; incr = 1; evop = 'a'
       elseif(uparam(1).eq.3.3)then !direct-adjoint !optimal perturbation
-         smode = 1; nmode = 2; incr = 1; evop = 'o'
+         smode = 1; nmode = 2; incr = 1; evop = 'p'
       elseif(uparam(1).eq.3.4)then !adjoint-direct !optimal response
          smode = 2; nmode = 1; incr = -1; evop = 'r'
       else
@@ -771,7 +788,7 @@ c----------------------------------------------------------------------
       time = 0.0d0
       do imode = smode, nmode, incr
 
-!     ifpert always true even if adjoint!
+         ! ifpert always true even if adjoint!
          if    (imode.eq.1)then
             ifpert=.true.;ifadj=.false.
          elseif(imode.eq.2)then
@@ -800,6 +817,14 @@ c----------------------------------------------------------------------
 
 !     ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
 
+!     ----- Check CFL of velocity fields
+
+            ! think better about the position o this check! ubase doesnt change ...
+            if(istep.eq.1)then !.OR.istep.eq.nsteps)then
+               call compute_cfl(umax,vx,vy,vz,1.0);  dtmaxx = ctarg/umax
+               if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,dtmaxx
+            endif
+
             if(.not.ifadj.and.nid.eq.0)write(6,"(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')")
      $      istep,nsteps,mstep,k_dim,schur_cnt
             if(ifadj .and.nid.eq.0)write(6,"(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')")
@@ -808,11 +833,7 @@ c----------------------------------------------------------------------
             call nekStab_usrchk !custom forcings in the linear solver
             call nek_advance
 
-!     ----- Check CFL of velocity fields
-            if(istep.eq.1.OR.istep.eq.nsteps)then
-               call compute_cfl(umax,vx,vy,vz,1.0);  dtmaxx = ctarg/umax
-               if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,dtmaxx
-            endif
+
 
             !     for reference: core of nek_advance in drive1.f
             !     if (ifpert) then
@@ -828,20 +849,26 @@ c----------------------------------------------------------------------
          enddo
       enddo
 
-      call opcopy(fx, fy, fz, vxp(:,1), vyp(:,1), vzp(:,1))
-      if(ifpo) call copy(fp, prp(:,1), n2)
-      if(ifheat) call copy(ft, tp(:,1,1), n)
+      call nopcopy(fx,fy,fz,fp,ft, vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
+      ! call opcopy(fx, fy, fz, vxp(:,1), vyp(:,1), vzp(:,1))
+      ! if(ifpo) call copy(fp, prp(:,1), n2)
+      ! if(ifheat) call copy(ft, tp(:,1,1), n)
 
-      if (uparam(1).eq.1.3) then ! newton-krylov extra
-         call opsub2(fx, fy, fz, qx, qy, qz)
-         call sub2(fp, qp, n2)
-         call sub2(ft, qt, n)
 
-         call chsign(fx, n)
-         call chsign(fy, n)
-         call chsign(fz, n)
-         call chsign(ft, n)
-         call chsign(fp, n2)
+
+      if (uparam(3).eq.3) then ! newton-krylov extra
+
+         call nopsub2(fx,fy,fz,fp,ft, qx,qy,qz,qp,qt)
+      !    call opsub2(fx, fy, fz, qx, qy, qz)
+      !    call sub2(fp, qp, n2)
+      !    call sub2(ft, qt, n)
+
+         call nopchsign(fx,fy,fz,fp,ft)
+      !    call chsign(fx, n)
+      !    call chsign(fy, n)
+      !    call chsign(fz, n)
+      !    call chsign(ft, n)
+      !    call chsign(fp, n2)
       endif
 
       return
@@ -892,7 +919,6 @@ c     ----- Miscellaneous -----
       complex :: log_transform
       logical ifto_sav, ifpo_sav
 
-      character (len=:), allocatable :: astring
       character(len=80) :: filename
       character(len=20) :: fich1,fich2,fich3,fmt2,fmt3,fmt4,fmt5,fmt6
       character(len=3)  :: nre,nim,nrv
@@ -959,23 +985,29 @@ c     Note: volume integral of FP*conj(FP) = 1.
             beta = 1.0d0/sqrt(alpha)
 
 c     ----- Output the real part -----
-            call opcopy(vx, vy, vz, real(fp_cx), real(fp_cy), real(fp_cz))
-            if (ifpo) call copy(pr, real(fp_cp), n2)
-            if (ifto) call copy(t(1,1,1,1,1), real(fp_ct), n)
+            call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
+            ! call opcopy(vx, vy, vz, real(fp_cx), real(fp_cy), real(fp_cz))
+            ! if (ifpo) call copy(pr, real(fp_cp), n2)
+            ! if (ifto) call copy(t(1,1,1,1,1), real(fp_ct), n)
 
-            call opcmult(vx, vy, vz, beta)
-            if (ifpo) call cmult(pr, beta, n2)
-            if (ifto) call cmult(t(1,1,1,1,1), beta, n)
+            call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
+            ! call opcmult(vx, vy, vz, beta)
+            ! if (ifpo) call cmult(pr, beta, n2)
+            ! if (ifto) call cmult(t(1,1,1,1,1), beta, n)
+
             call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nRe)
 
 c     ----- Output the imaginary part -----
-            call opcopy(vx, vy, vz, aimag(fp_cx), aimag(fp_cy), aimag(fp_cz))
-            if(ifpo) call copy(pr, aimag(fp_cp), n2)
-            if(ifto) call copy(t(1,1,1,1,1), aimag(fp_ct), n)
+            call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
+            ! call opcopy(vx, vy, vz, aimag(fp_cx), aimag(fp_cy), aimag(fp_cz))
+            ! if(ifpo) call copy(pr, aimag(fp_cp), n2)
+            ! if(ifto) call copy(t(1,1,1,1,1), aimag(fp_ct), n)
 
-            call opcmult(vx, vy, vz, beta)
-            if(ifpo) call cmult(pr, beta, n2)
-            if(ifto) call cmult(t(1,1,1,1,1), beta, n)
+            call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
+            ! call opcmult(vx, vy, vz, beta)
+            ! if(ifpo) call cmult(pr, beta, n2)
+            ! if(ifto) call cmult(t(1,1,1,1,1), beta, n)
+
             call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
 
             if(ifvor)then
@@ -1009,10 +1041,12 @@ c     ----- Output vorticity from real part -----
       write(844,'(A)')'[Nek5000]'
       write(844,'(A,A)')' Nek5000 version        : ', NVERSION
       write(844,'(A,A)')' nekStab version        : ', NSVERSION
-      write(844,fmt2) 'polyOrder =',lx1
-      write(844,fmt2) '         N=',lx1-1
+      write(844,fmt2) 'lx1        =',lx1
+      write(844,fmt2) 'polyOrder N=',lx1-1
       write(844,fmt2) 'tot elemts=',nelgv
       write(844,fmt2) 'tot points=',nelgv*(lx1)**ldim
+      write(844,fmt2) 'MPI ranks =',np
+      write(844,fmt2) 'e/MPI rank=',nelgv/np
       write(844,'(A)')'[userParams]'
       write(844,fmt4) 'uparam01=',uparam(01)
       write(844,fmt4) 'uparam02=',uparam(02)
@@ -1190,8 +1224,8 @@ c-----------------------------------------------------------------------
       integer i, n, n2
       real alpha
 
-      real, dimension(lt) :: work1, work2, work3, workt
-      real, dimension(lt2) :: workp
+      real, dimension(lt) :: wk1, wk2, wk3, wkt
+      real, dimension(lt2) :: wkp
       real, dimension(k) :: h_vec
 
       n = nx1*ny1*nz1*nelt
@@ -1204,20 +1238,25 @@ c-----------------------------------------------------------------------
       do i = 1, k
 
 !     --> Copy the i-th Krylov vector to the working arrays.
-         call opcopy(work1, work2, work3, qx(:, i), qy(:, i), qz(:, i))
-         if (ifpo) call copy(workp, qp(:, i), n2)
-         if (ifheat) call copy(workt, qt(:, i), n)
+        call nopcopy(wk1,wk2,wk3,wkp,wkt, qx(:,i),qy(:,i),qz(:,i),qp(:,i),qt(:,i))
+
+      !    call opcopy(wk1, wk2, wk3, qx(:, i), qy(:, i), qz(:, i))
+      !    if (ifpo) call copy(wkp, qp(:, i), n2)
+      !    if (ifheat) call copy(wkt, qt(:, i), n)
 
 !     --> Orthogonalize f w.r.t. to q_i.
-         call inner_product(alpha, f_xr, f_yr, f_zr, f_pr, f_tr, work1, work2, work3, workp, workt)
+         call inner_product(alpha, f_xr, f_yr, f_zr, f_pr, f_tr, wk1, wk2, wk3, wkp, wkt)
 
-         call opcmult(work1, work2, work3, alpha)
-         if (ifpo) call cmult(workp, alpha, n2)
-         if (ifheat) call cmult(workt, alpha, n)
+         call nopcmult(wk1, wk2, wk3, wkp, wkt, alpha)
+      !    call opcmult(wk1, wk2, wk3, alpha)
+      !    if (ifpo) call cmult(wkp, alpha, n2)
+      !    if (ifheat) call cmult(wkt, alpha, n)
 
-         call opsub2(f_xr, f_yr, f_zr, work1, work2, work3)
-         if (ifpo) call sub2(f_pr, workp, n2)
-         if (ifheat) call sub2(f_tr, workt, n)
+         call nopsub2(f_xr,f_yr,f_zr,f_pr,f_tr, wk1,wk2,wk3,wkp,wkt)
+
+      !    call opsub2(f_xr, f_yr, f_zr, wk1, wk2, wk3)
+      !    if (ifpo) call sub2(f_pr, wkp, n2)
+      !    if (ifheat) call sub2(f_tr, wkt, n)
 
 !     --> Update the corresponding entry in the Hessenberg matrix.
          H(i, k) = alpha

@@ -13,9 +13,19 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine nekstab_chk
+      subroutine nekStab_usrchk
       include 'SIZE'
       include 'TOTAL'
+
+      if(istep.eq.0)then !change defaults
+      schur_tgt = 2
+      maxmodes = 1
+      ires = .false.
+      ifvox = .false.
+      call bcast(schur_tgt, isize) ! isize for integer   
+      call bcast(ifres   , lsize) !lsize for boolean
+      endif
+
       return
       end
 c-----------------------------------------------------------------------

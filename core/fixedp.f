@@ -1,85 +1,5 @@
 c-----------------------------------------------------------------------
-      subroutine sfd 
-      !selective frequency damping with Euler
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
-      real, save, dimension(lt)   :: qxo,qyo,qzo
-      real, save, dimension(lt)   :: vxo,vyo,vzo
-      real, dimension(lt)         :: do1,do2,do3
-
-      real residu,h1,l2,semi,linf,rate,residu0,cutoff,gain,frq,sig,umax
-      save residu0
-
-      if(istep.eq.0) then
-
-        call opcopy (qxo,qyo,qzo, vx,vy,vz)
-        call opcopy (vxo,vyo,vzo, vx,vy,vz)
-
-        residu0=0.0D0
-        if(nid.eq.0)open(unit=10,file='residu.dat')
-
-      else
-
-        !cutoff = uparam(04)
-        !gain = -uparam(05)
-   
-        frq = uparam(04)*8*atan(1.0D0) ! transform St to omega
-        sig = uparam(05)
-
-        !Akervik 2006
-        !cutoff = 0.5*frq
-        !gain = -2*sig
-
-        !Casacuberta 2018 JCP 375:481-497
-        cutoff = 0.5*(sqrt(frq**2+sig**2)-sig)
-        gain = -0.5*(sqrt(frq**2+sig**2)+sig)
-
-        call opsub3 (do1,do2,do3, vxo,vyo,vzo, qxo,qyo,qzo)
-        call opcmult(do1,do2,do3, cutoff*dt)
-        call opadd2 (qxo,qyo,qzo, do1,do2,do3)
-
-        call opsub3 (do1,do2,do3, vxo,vyo,vzo, qxo,qyo,qzo)
-        call opcmult(do1,do2,do3, gain)
-        call opadd2 (fcx,fcy,fcz, do1,do2,do3)
-
-        call opsub2 (vxo,vyo,vzo,vx,vy,vz)
-        call normvc (h1,semi,l2,linf,vxo,vyo,vzo)
-        residu = l2!/dt; 
-        rate = (residu-residu0); residu0 = residu
-
-        call opcopy (vxo,vyo,vzo, vx,vy,vz)
-
-          if(nid.eq.0)then
-            write(10,"(3E15.7)")time,residu,residu/dt
-            write(6,"(A,2E15.7)")' SFD Euler residu =',residu,rate
-            write(6,*)
-          endif
-
-          if( istep.gt.100 .and. residu .lt. max(param(21),param(22)) )then !save to disk and change flag
-            if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21),param(22))
-
-            call compute_cfl(umax,vx,vy,vz,1.0)
-            if (nid.eq.0) write(6,*) 'CFL=0.5 dt max=',0.50d0/umax
-            if (nid.eq.0) write(6,*) 'CFL=5 dt max=',5.0d0/umax
-
-            ifbfcv = .true.
-            call bcast(ifbfcv  , lsize)
-            param(63) = 1 ! Enforce 64-bit output
-            call bcast(param,200*wdsize)
-            call outpost(vx,vy,vz,pr,t,'BF_')
-            param(63) = 0 ! Enforce 32-bit output
-            call bcast(param,200*wdsize)
-          endif
-
-          if(istep.eq.nsteps)close(10)
-        endif
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine sfd_ab3
+      subroutine SFD
       !SFD with higher-order temporal scheme and variable time-step
       implicit none
       include 'SIZE'
@@ -98,9 +18,9 @@ c-----------------------------------------------------------------------
 
       real adt,bdt,cdt
       real residu,h1,l2,semi,linf,rate,residu0,cutoff,gain,frq,sig,umax
-      real glmin,glmax,glsum,glsc3
+      real glmin,glmax,glsum,glsc3,tol
       integer n,i
-      save n,residu0
+      save n,residu0,tol
 
       if(uparam(4).gt.0. OR. uparam(5).gt.0) then
 
@@ -119,6 +39,7 @@ c-----------------------------------------------------------------------
         gain = -0.5*(sqrt(frq**2+sig**2)+sig)
 
           if(istep.eq.0)then
+
             n = nx1*ny1*nz1*nelt
             call oprzero(utmp,vtmp,wtmp)
             call oprzero(uta,vta,wta)
@@ -128,9 +49,10 @@ c-----------------------------------------------------------------------
             if(nid.eq.0)open(unit=10,file='residu.dat')
             call opcopy(qxo,qyo,qzo,vx,vy,vz)
             call opcopy(vxo,vyo,vzo,vx,vy,vz)
+            tol = max(param(21), param(22))
 
          else
-
+    
             call setab3(adt,bdt,cdt)
             call opcopy(utc,vtc,wtc, utb,vtb,wtb)
             call opcopy(utb,vtb,wtb, uta,vta,wta)
@@ -147,6 +69,8 @@ c-----------------------------------------------------------------------
             call opcopy (do1,do2,do3, utc,vtc,wtc)
             call opcmult(do1,do2,do3, cdt)
             call opadd2 (utmp,vtmp,wtmp, do1,do2,do3)
+
+            ! call opsub3 (do1,do2,do3, vxo,vyo,vzo, qxo,qyo,qzo) ! Euler for reference 
 
             call opcmult(utmp,vtmp,wtmp, cutoff*dt)
             call opadd2(qxo,qyo,qzo, utmp,vtmp,wtmp)
@@ -165,8 +89,7 @@ c-----------------------------------------------------------------------
 
           call opsub2(vxo,vyo,vzo,vx,vy,vz)
           call normvc(h1,semi,l2,linf,vxo,vyo,vzo)
-          residu = l2!/dt; 
-          rate = (residu-residu0); residu0 = residu
+          residu = l2; rate = (residu-residu0); residu0 = residu
           call opcopy(vxo,vyo,vzo,vx,vy,vz)
 
           if(nid.eq.0)then
@@ -175,12 +98,12 @@ c-----------------------------------------------------------------------
             write(6,*)
           endif
 
-          if( istep.gt.100 .and. residu .lt. max(param(21),param(22)) )then !save to disk and change flag
-            if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21),param(22))
+          if( istep.gt.100 .and. residu .lt. tol )then !save to disk and change flag
+            if(nid.eq.0)write(6,*)' Converged base flow to:',tol
 
-            call compute_cfl(umax,vx,vy,vz,1.0)
-            if (nid.eq.0) write(6,*) 'CFL=0.5 dt max=',0.50d0/umax
-            if (nid.eq.0) write(6,*) 'CFL=5 dt max=',5.0d0/umax
+            ! call compute_cfl(umax,vx,vy,vz,1.0)
+            ! if (nid.eq.0) write(6,*) 'CFL=0.5 dt max=',0.50d0/umax
+            ! if (nid.eq.0) write(6,*) 'CFL=5 dt max=',5.0d0/umax
 
             ifbfcv = .true.
             call bcast(ifbfcv  , lsize)
@@ -194,13 +117,9 @@ c-----------------------------------------------------------------------
         if(istep.eq.nsteps)close(10)
         endif
       return
-      end
-c-----------------------------------------------------------------------
-
-
-
+      end subroutine SFD
 c-----------------------------------------------------------------------c
-      subroutine  boostconv
+      subroutine BoostConv
       !boostconv core subroutine
       implicit none
       include 'SIZE'
@@ -215,7 +134,7 @@ c-----------------------------------------------------------------------c
       real, dimension(lt)       ::  dvx,dvy,dvz
       real, dimension(lt), save ::  vxo,vyo,vzo
       real                      ::  residu,h1,l2,semi,linf,rate
-      real, save                ::  residu0
+      real, save                ::  residu0, tol
      
       if(mod(istep,bst_skp).eq.0)then
 
@@ -225,6 +144,8 @@ c-----------------------------------------------------------------------c
           rate = 0.0d0; residu0 = 0.0d0
           initialized=.true.
           open(unit=10,file='residu.dat')
+          tol = max(param(21), param(22))
+
         endif
 
         call opsub3(dvx,dvy,dvz,vx,vy,vz,vxo,vyo,vzo)!dv=v-vold
@@ -240,8 +161,8 @@ c-----------------------------------------------------------------------c
             write(6,*)' '
           endif
 
-          if(residu.lt.max(param(21),param(22)))then
-            if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21),param(22))
+          if(residu.lt.tol)then
+            if(nid.eq.0)write(6,*)' Converged base flow to:',tol
             ifbfcv = .true.
             call bcast(ifbfcv  , lsize)
             param(63) = 1 ! Enforce 64-bit output
@@ -254,7 +175,7 @@ c-----------------------------------------------------------------------c
       endif
 
       return
-      end
+      end subroutine BoostConv
 c-----------------------------------------------------------------------
       subroutine boostconv_core (rbx, rby, rbz)
       implicit none

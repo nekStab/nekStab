@@ -42,19 +42,21 @@
 ! ----- Miscellaneous
       real :: tol, residual
       integer :: maxiter_newton, maxiter_gmres
-      integer :: i, j, k, n, n2
+      integer :: i, j, k, n!, n2
 
-      n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
+      n = nx1*ny1*nz1*nelt !; n2 = nx2*ny2*nz2*nelt
       maxiter_newton = 10 ; maxiter_gmres = 10
       tol = max(param(21), param(22))
 
 ! --> Initialize arrays.
-      call oprzero(f_x, f_y, f_z)
-      call rzero(f_p, n2) ; call rzero(f_t, n)
+      call noprzero(f_x, f_y, f_z, f_p, f_t)
+      ! call oprzero(f_x, f_y, f_z)
+      ! call rzero(f_p, n2) ; call rzero(f_t, n)
 
 ! --> Copy initial guess for the Newton solver.
-      call opcopy(qx, qy, qz, vx, vy, vz)
-      call copy(qt, t, n) ; call copy(qp, pr, n2)
+      call nopcopy(qx, qy, qz, qp, qt, vx, vy, vz, pr, t(1,1,1,1,1))
+      ! call opcopy(qx, qy, qz, vx, vy, vz)
+      ! call copy(qt, t, n) ; call copy(qp, pr, n2)
 
 ! --> Newton iteration.
       newton : do i = 1, maxiter_newton
@@ -79,7 +81,8 @@
          call time_stepper_gmres(f_x, f_y, f_z, f_p, f_t, dqx, dqy, dqz, dqp, dqt, maxiter_gmres)
 
          ! --> Update Newton solution.
-         call opsub2(qx, qy, qz, dqx, dqy, dqz) ; call sub2(qp, dqp, n2) ; call sub2(qt, dqt, n)
+         call nopsub2(qx, qy, qz, qp, qt, dqx, dqy, dqz, dqp, dqt)
+         !call opsub2(qx, qy, qz, dqx, dqy, dqz) ; call sub2(qp, dqp, n2) ; call sub2(qt, dqt, n)
 
        enddo newton
 
@@ -91,70 +94,6 @@
 
 
 !-----------------------------------------------------------------------
-
-
-
-      subroutine newton_krylov_prepare
-
-!     This  
-!     
-!     INPUT
-!     -----
-!     
-!     RETURNS
-!     -------
-!     
-!     Last edit : March 26th 2021 by RAS Frantz.
-
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-      include 'ADJOINT'
-
-!     forcing npert to unity 
-      if(param(31).gt.1)then
-         write(6,*)'nekStab not ready for npert>1 -- jp loops NOT implemented! STOPPING!'
-         call nek_end
-      endif
-      param(31) = 1 ; npert = param(31)
-
-!     force OIFS deactivation
-      if(ifchar.and.nid.eq.0)write(6,*)'OIFS not working with linearized and adjoint -> turning OFF!'
-      ifchar = .false.
-      call bcast(ifchar, lsize)
-
-!     enforce CFL target for EXTk
-      if( param(26).gt.0.5 )then
-         if(nid.eq.0)write(6,*)'reducing target CFL to 0.5!'
-         param(26)=0.50d0 ; ctarg = param(26)
-      endif
-
-      if(param(10).gt.0)then 
-      ! if param(10)=endTime=0 -> param(11) = numSteps
-        call compute_cfl(dt,vx,vy,vz,1.0) ! dt=1
-        dt = ctarg/dt
-        nsteps = ceiling(param(10)/dt)
-        dt = param(10)/nsteps
-                  if(nid.eq.0)write(6,*)'endTime specified! computing CFL from initial condition!'
-        if(nid.eq.0)write(6,*)' computing timeStep dt=',dt
-        if(nid.eq.0)write(6,*)' computing numSteps=',nsteps
-        if(nid.eq.0)write(6,*)' sampling period =',nsteps*dt
-        param(12) = dt
-      endif
-
-      ! deactivate variable time step! !freeze dt
-      param(12) = -abs(param(12))
-
-      ! broadcast all parameters to processors
-      call bcast(param,200*wdsize) 
-
-      return 
-      end
-
-
-
-!-----------------------------------------------------------------------
-
 
 
 
@@ -216,10 +155,10 @@
         real, dimension(k_dim+1) :: evec
 
         !     ----- Miscellaneous.
-        integer :: i, j, k, maxiter, n, n2
+        integer :: i, j, k, maxiter!, n, n2
         real :: beta, tol
 
-        n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
+        !n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
         uparam(01) = 3 ; ifpert = .true. ; call bcast(ifpert, lsize)
 
         ! Initialize arrays.
@@ -229,8 +168,10 @@
         sol_x = 0.0D+00 ; sol_y = 0.0D+00 ; sol_z = 0.0D+00 ; sol_p = 0.0D+00 ; sol_t = 0.0D+00
         H = 0.0D+00 ; yvec = 0.0D+00 ; evec = 0.0D+00
 
-        call opcopy(qx(:, 1), qy(:, 1), qz(:, 1), rhs_x, rhs_y, rhs_z)
-        call copy(qp(:, 1), rhs_p, n2) ; call copy(qt(:, 1), rhs_t, n)
+        call nopcopy(qx(:, 1),qy(:, 1),qz(:, 1),qp(:, 1),qt(:, 1), rhs_x,rhs_y,rhs_z,rhs_p,rhs_t)
+      !   call opcopy(qx(:, 1), qy(:, 1), qz(:, 1), rhs_x, rhs_y, rhs_z)
+      !   call copy(qp(:, 1), rhs_p, n2) ; call copy(qt(:, 1), rhs_t, n)
+
         call normalize(qx(:, 1), qy(:, 1), qz(:, 1), qp(:, 1), qt(:, 1), beta)
 
         gmres : do i = 1, maxiter
@@ -251,7 +192,7 @@
 
             ! --> Compute residual.
             beta = norm2(evec(1:k+1) - matmul(H(1:k+1, 1:k), yvec(1:k)))
-            if (nid.eq.0) write(*, *) "Inner iteration residual : ", beta**2
+            if (nid.eq.0) write(6, *) "Inner iteration residual : ", beta**2
             if (beta**2 .lt. tol) exit arnoldi
 
           enddo arnoldi
@@ -264,11 +205,14 @@
           sol_t = sol_t + matmul(qt(:, 1:k), yvec(1:k))
 
           ! --> Recompute residual for sanity check and initialize new Krylov seed if needed.
-          call opcopy(qx(:, 1), qy(:, 1), qz(:, 1), sol_x, sol_y, sol_z)
-          call copy(qp(:, 1), sol_p, n2) ; call copy(qt(:, 1), sol_t, n)
+
+          call nopcopy(qx(:, 1),qy(:, 1),qz(:, 1),qp(:, 1),qt(:, 1), sol_x,sol_y,sol_z,sol_p,sol_t)
+      !     call opcopy(qx(:, 1), qy(:, 1), qz(:, 1), sol_x, sol_y, sol_z)
+      !     call copy(qp(:, 1), sol_p, n2) ; call copy(qt(:, 1), sol_t, n)
+
           call initialize_gmres_vector(beta, qx(:, 1), qy(:, 1), qz(:, 1), qp(:, 1), qt(:, 1), rhs_x, rhs_y, rhs_z, rhs_p, rhs_t)
 
-          if (nid.EQ.0) write(*, *) "GMRES --- Iteration : ", i, " residual : ", beta**2
+          if (nid.EQ.0) write(6, *) "GMRES --- Iteration : ", i, " residual : ", beta**2
           if (beta**2 .lt. tol) exit gmres
 
         enddo gmres
@@ -304,19 +248,21 @@
       real, dimension(lt) :: qx, qy, qz, qt, f_x, f_y, f_z, f_t
       real, dimension(lt2) :: qp, f_p
       real :: beta
-      integer :: n, n2
-
-      n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
+      ! integer :: n, n2
+      ! n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
 
 ! --> Initial Krylov vector.
       call matrix_vector_product(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
-      f_x = rhs_x - f_x ; f_y = rhs_y - f_y ; f_z = rhs_z - f_z
-      f_p = rhs_p - f_p ; f_t = rhs_t - f_t
+      call nopsub2(f_x,f_y,f_z,f_p,f_t, rhs_x,rhs_y,rhs_z,rhs_p,rhs_t)
+      ! f_x = rhs_x - f_x ; f_y = rhs_y - f_y ; f_z = rhs_z - f_z
+      ! f_p = rhs_p - f_p ; f_t = rhs_t - f_t
 
 ! --> Normalize the starting vector.
       call normalize(f_x, f_y, f_z, f_p, f_t, beta)
-      call opcopy(qx, qy, qz, f_x, f_y, f_z)
-      call copy(qp, f_p, n2) ; call copy(qt, f_t, n)
+
+      call nopcopy(qx,qy,qz,qp,qt, f_x,f_y,f_z,f_p,f_t)
+      ! call opcopy(qx, qy, qz, f_x, f_y, f_z)
+      ! call copy(qp, f_p, n2) ; call copy(qt, f_t, n)
 
       return
       end subroutine initialize_gmres_vector
@@ -347,22 +293,22 @@
       real, dimension(lt) :: f_x, f_y, f_z, f_t
       real, dimension(lt2) :: f_p
 
-      integer :: n, n2
-
-      n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
+      ! integer :: n, n2
+      ! n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
 
 ! --> Copy the initial condition to Nek.
-      call opcopy(vx, vy, vz, qx, qy, qz)
-      call copy(t, qt, n) ; call copy(pr, qp, n2)
+      call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), qx,qy,qz,qp,qt)
+      ! call opcopy(vx, vy, vz, qx, qy, qz)
+      ! call copy(t, qt, n) ; call copy(pr, qp, n2)
 
 ! --> Turn-off the linearized solver.
       ifpert = .false. ; call bcast(ifpert, lsize)
 
 ! --> Ensuring sampling-period consistency.
-      call compute_cfl(dt,vx,vy,vz,1.0); dt = ctarg/dt
-      nsteps = ceiling(param(10)/dt); dt = param(10)/nsteps
-      param(12) = -abs(dt)
-      call bcast(param,200*wdsize) 
+       call compute_cfl(dt,vx,vy,vz,1.0); dt = ctarg/dt
+       nsteps = ceiling(param(10)/dt); dt = param(10)/nsteps
+       param(12) = -abs(dt)
+       call bcast(param,200*wdsize) 
 
 ! --> Run the simulation forward.
       time = 0.0d0
@@ -372,14 +318,19 @@
       enddo
 
 ! --> Compute the right hand side of the time-stepper Newton.
-      call opcopy(f_x, f_y, f_z, vx, vy, vz)
-      call copy(f_p, pr, n2) ; call copy(f_t, t, n)
+      call nopcopy(f_x,f_y,f_z,f_p,f_t, vx,vy,vz,pr,t(1,1,1,1,1))
+      !call opcopy(f_x, f_y, f_z, vx, vy, vz)
+      !call copy(f_p, pr, n2) ; call copy(f_t, t, n)
 
-      call opsub2(f_x, f_y, f_z, qx, qy, qz)
-      call sub2(f_p, qp, n2) ;  call sub2(f_t, qt, n)
+      call nopsub2(f_x,f_y,f_z,f_p,f_t, qx,qy,qz,qp,qt)
+      !call opsub2(f_x, f_y, f_z, qx, qy, qz)
+      !call sub2(f_p, qp, n2) ;  call sub2(f_t, qt, n)
 
-      call chsign(f_x, n) ; call chsign(f_y, n) ; call chsign(f_z, n)
-      call chsign(f_p, n2) ; call chsign(f_t, n)
+      call nopchsign(f_x,f_y,f_z,f_p,f_t)
+      !call chsign(f_x, n) ; call chsign(f_y, n) ; call chsign(f_z, n)
+      !call chsign(f_p, n2) ; call chsign(f_t, n)
+
+
 
       return
       end subroutine forward_map

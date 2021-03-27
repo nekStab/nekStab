@@ -4,42 +4,58 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-
-
       schur_tgt = 0             ! schur target 
       eigen_tol = 1.0e-6        ! 
       schur_del = 0.10d0        ! 
       maxmodes = k_dim          ! max modes to outpost
+      bst_skp = 1 ! boostconv skip
 
-      ifres  = .true.          ! outpost restart files for eig
+
+      ifres  = .false.          ! outpost restart files for eig
       ifvor  = .false.          ! outpost vorticity
       ifvox  = .false.          ! outpost vortex
       ifldbf = .true.           ! load base flow for stability
       ifbf2D = .false.          ! force 2D solution
      
-      ifseed_noise = .true.  ! noise as initial seed 
+      ! ifnwt = .false. ! newton-iteration flag
+      ! ifsfd = .false.
+      ! ifbcv = .false.
+      ! iftdf = .false.
+
+      ifseed_nois = .true.  ! noise as initial seed 
       ifseed_symm = .false.  ! symmetry initial seed
       ifseed_load = .false.  ! loading initial seed (e.g. Re_ )
       !else all fase -> prescribed by usric
 
-      bst_skp = 1 ! boostconv skip
+      ! arnD_ = .false.
+      ! arnA_ = .false.
+      ! arnDA = .false.
+      ! arnAD = .false.
 
-      !Broadcast all defaults !
+      xLspg   = 0.0d0; call bcast(xLspg , wdsize)
+      xRspg   = 0.0d0; call bcast(xRspg , wdsize)
+      yLspg   = 0.0d0; call bcast(yLspg , wdsize)
+      yRspg   = 0.0d0; call bcast(yRspg , wdsize)
+      zLspg   = 0.0d0; call bcast(zLspg, wdsize)
+      zRspg   = 0.0d0; call bcast(zRspg, wdsize)
+      acc_spg = 0.0d0; call bcast(acc_spg, wdsize) 
+
+      ! !Broadcast all defaults !
+      call bcast(schur_tgt, isize) ! isize for integer
       call bcast(eigen_tol, wdsize) ! wdsize for real
       call bcast(schur_del, wdsize)
-
-      call bcast(schur_tgt, isize) ! isize for integer
-      call bcast(bst_skp, isize)
       call bcast(maxmodes, isize)
+      call bcast(bst_skp, isize)
 
       call bcast(ifres   , lsize) !lsize for boolean
       call bcast(ifvor   , lsize)
       call bcast(ifvox   , lsize)
-      call bcast(ifseed_noise  , lsize)
+      call bcast(ifseed_nois  , lsize)
       call bcast(ifseed_symm  , lsize)
       call bcast(ifseed_load  , lsize)
       call bcast(ifldbf  , lsize)
       call bcast(ifbf2D  , lsize)
+      !call bcast(ifnewton  , lsize)
 
       return
       end
@@ -48,6 +64,7 @@ c-----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      logical ifto_sav, ifpo_sav
       real glmin,glmax
       integer n,i
       n = nx1*ny1*nz1*nelv
@@ -55,14 +72,14 @@ c-----------------------------------------------------------------------
       if (nid==0) then
          print *,'==================================================='
          print *,'== nekStab ========================================'
-         print *,'== Copyright (c) 2021 DynFLuid Laboratoire ========'
+         print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
          print *,'==================================================='
          write(6,'(A,A)')' Nek5000 version        : ', NVERSION
-         write(6,'(A,A)')' nekStab version        : ', NSVERSION
+         write(6,'(A,A)')' NekStab version        : ', NSVERSION
       endif
 
       call nekStab_setDefault
-      call nekStab_usrchk ! user can change defaults 
+      call nekStab_usrchk ! where user change defaults 
       call nekStab_printNEKParams 
       
       xmn = glmin(xm1,n); xmx = glmax(xm1,n)
@@ -78,9 +95,9 @@ c-----------------------------------------------------------------------
          write(6,*)' z   total =',zmx-zmn
       endif
 
-      call copy(bm1s, bm1, n)   ! never comment this ! 
+      call copy(bm1s, bm1, n) ! never comment this ! 
 
-      if(uparam(10).gt.0)then   !sponge on
+      if(uparam(10).gt.0)then !sponge on
 
          if(nid.eq.0)write(6,*)
          if(nid.eq.0)write(6,*)' Initializing sponge...'
@@ -93,9 +110,15 @@ c-----------------------------------------------------------------------
          do i=1,n
             if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
          enddo
+
+         ! outposting BM1s to disk for check
+         !ifto_sav = ifto; ifpo_sav = ifpo
+         !ifvo=.false.; ifpo = .false.; ifto = .true.
+         !call outpost(vx,vy,vz,pr,bm1s,'BMS')
+         !ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
+
       endif
-      !call outpost(bm1,bm1s,wo3,pr,t,'BM1')
-      
+            
       ifbfcv = .false.          ! 
 
       return
@@ -126,20 +149,24 @@ c-----------------------------------------------------------------------
          
          call nekStab_outpost   ! outpost vorticity 
          call nekStab_comment   ! print comments
-         call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',10)
+         call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',20)
 
       case(1) ! fixed points computation
 
          call nekStab_outpost   ! outpost vorticity 
          call nekStab_comment   ! print comments
 
-         if(uparam(01).ge.1)then   !compose forcings to fcx,fcy,fcz
+         if(uparam(1).ge.1)then   !compose forcings to fcx,fcy,fcz
 
-            if(uparam(01).eq.1  )call sfd_AB3
-            if(uparam(01).eq.1.1)call sfd !Euler
-            if(uparam(01).eq.1.2)call BoostConv
-            if(uparam(01).eq.1.3)then
-               call Newton_Krylov_prepare
+            if(uparam(3).eq.1)then
+                call SFD !ifSFD=.true.
+            elseif(uparam(3).eq.2)then
+                call BoostConv !ifbst=.true.
+            elseif(uparam(3).eq.3)then
+               !ifnwt = .true.
+               param(12) = -abs(param(12)) !freeze dt
+               param(31) = 1 ; npert = param(31)
+               call bcast(param,200*wdsize) !broadcast all parameters to processors
                call Newton_Krylov
                call nek_end
             endif
@@ -205,7 +232,7 @@ c-----------------------------------------------------------------------
             if(.not.if3d)then
             ifvo=.false.; ifto = .true. ! just outposting one field ... v's and p ignored 
             call outpost(vx,vy,vz,pr,vort(:,3),'omg')
-            ifvo=.true.; ifto = .false.
+            ifvo=.true.; ifto = ifto_sav
             endif
 
          endif
@@ -233,7 +260,7 @@ c-----------------------------------------------------------------------
       !if extrapolation is not OIFS -> ifchar = false
       !if OIFS active -> ifchar = .true. and CFL 2-5
       !some cases can have CFL>1 in initial time steps
-      if (courno.gt.10.0d0) then
+      if (courno.gt.10) then
         if (nio.eq.0)then
           write(6,*)
             write(6,*)'    CFL > 10 stopping code'
@@ -290,38 +317,28 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       if(nid.eq.0)then
          write(6,*)'P01=',param(1),'density'
-         write(6,*)'P02=',param(2),'viscosity or Re'
-         write(6,*)'P03=',param(3),''
-         write(6,*)'P04=',param(4),''
-         write(6,*)'P05=',param(5),''
-         write(6,*)'P06=',param(6),''
+         write(6,*)'P02=',param(2),'viscosity (1/Re)'
          write(6,*)'P07=',param(7),'rhoCp'
-         write(6,*)'P08=',param(8),'conductivity Pe = Re*Sc or Re*Pr'
-         write(6,*)'P09=',param(9),''
-         write(6,*)'P10=',param(10),''
-         write(6,*)'P11=',param(11),''
-         write(6,*)'P12=',param(12),''
-         write(6,*)'P13=',param(13),''
-         write(6,*)'P14=',param(14),''
-         write(6,*)'P15=',param(15),''
-         write(6,*)'P16=',param(16),''
-         write(6,*)'P17=',param(17),''
-         write(6,*)'P18=',param(18),''
-         write(6,*)'P19=',param(19),''
-         write(6,*)'P20=',param(20),''
+         write(6,*)'P08=',param(8),'conductivity (1/(Re*Pr))'
+         write(6,*)'P10=',param(10),'stop at endTime'
+         write(6,*)'P10=',param(11),'stop at numSteps'
+         write(6,*)'P14=',param(14),'io step'
+         write(6,*)'P15=',param(15),'io time'
          write(6,*)'P21=',param(21),'pressure sol tol'
          write(6,*)'P22=',param(22),'velocity sol tol'
-         write(6,*)'P24=',param(24),'rel tol Helmholtz sol'
-         write(6,*)'P25=',param(25),'abs tol Helmholtz sol'
-         write(6,*)'P27=',param(27),'temporal integration order'
+         write(6,*)'P26=',param(26),'target CFL number'
+         write(6,*)'P27=',param(27),'order in time'
+         write(6,*)'P28=',param(28),'use same torder for mesh solver'
          write(6,*)'P31=',param(31),'numberOfPerturbations'
          write(6,*)'P41=',param(41),'1 for multiplicative SEMG'
          write(6,*)'P42=',param(42),'lin solv for the pres equation 0:GMRES,1:CG'
          write(6,*)'P43=',param(43),'0:additive multilevel scheme 1:orig 2lvl sch'
          write(6,*)'P44=',param(44),'0=E-based addit Schwarz PnPn-2;1=A-based'
-         write(6,*)'P93=',param(93),'n of prev sol to use for res proj'
-         write(6,*)'P94=',param(94),'n steps star res proj for vel and pas.scal'
-         write(6,*)'P95=',param(95),'projection for pressure solve on/off'
+         write(6,*)'P93=',param(93),'num vectors for projection'
+         write(6,*)'P94=',param(94),'num projection for helmholz solves (controled by ifprojfld)'
+         write(6,*)'P95=',param(95),'projection for pressure solver on/off'
+         write(6,*)'P101=',param(101),'no additional modes'
+         write(6,*)'P103=',param(103),'filter weight'
          write(6,*)'uparam1=',uparam(1)
          write(6,*)'uparam01=',uparam(01)
          write(6,*)'uparam02=',uparam(02)

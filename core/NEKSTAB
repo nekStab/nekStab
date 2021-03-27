@@ -6,17 +6,16 @@
       character(len=1) :: evop = '_'
       common /nStab_char/ evop
 
-      logical ifbfcv,ifres,ifldbf,ifbf2D,ifseed_noise,ifseed_symm,ifseed_load,ifvor,ifvox
-      common /nStab_logical/ ifbfcv,ifres,ifldbf,ifbf2D,ifseed_noise,ifseed_symm,ifseed_load,ifvor,ifvox
+      logical                ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,ifseed_load,ifvor,ifvox,ifnewton
+      common /nStab_logical/ ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,ifseed_load,ifvor,ifvox,ifnewton
 
-      real eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
-      common /nStab_real/ eigen_tol,schur_del,glmax_qc,
-     $                    dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
+      real                eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
+      common /nStab_real/ eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
 
-      integer bst_skp 
+      integer                  bst_skp 
       common /nStab_boostconv/ bst_skp
 
-      integer mstep,schur_tgt,maxmodes,schur_cnt
+      integer            mstep,schur_tgt,maxmodes,schur_cnt
       common /nStab_int/ mstep,schur_tgt,maxmodes,schur_cnt
 
       real ubase(lx1,ly1,lz1,lelt)
@@ -45,4 +44,7 @@
       real spng_dl(ldim) !var sponge drop/rise width (left section)
       real spng_dr(ldim) !var sponge drop/rise width (right section)
       real bm1s(lx1,ly1,lz1,lelt) !weight matrix without sponge 
-      common /nStab_forces/  spng_fun, spng_vr, spng_vt, spng_str, spng_wl, spng_wr, spng_dl, spng_dr, bm1s
+      real xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
+
+      common /nStab_sponge/  spng_fun, spng_vr, spng_vt, spng_str, spng_wl, spng_wr, spng_dl, spng_dr, bm1s, 
+     $                       xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg

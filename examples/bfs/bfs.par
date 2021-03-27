@@ -1,11 +1,10 @@
 [GENERAL]
 startFrom = 0 #BF_bfs0.f00001
 
-stopAt = numSteps
-#numSteps = 40000 # for BF computation 
-numSteps = 1250000
+stopAt = endTime #  numSteps
+endTime = 1
 
-userParam01 = 1  # 0:dns,1:stabilization,3:stability
+userParam01 = 3  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
 userParam03 = 1  # stabilization technique: 1:sfd
 userParam04 = 0  # freq (Strouhal leading mode)
@@ -19,11 +18,11 @@ userParam10 = 0 # sponge strenght
 dt = 0
 variableDt = yes
 timeStepper = bdf3
-extrapolation = OIFS
+#extrapolation = OIFS
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 2.
+writeInterval = 10.
 writeDoublePrecision = no
 
 dealiasing = yes
@@ -33,7 +32,7 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-6
+residualTol = 1.0E-7
 residualProj = yes
 writeToFieldFile = yes
 

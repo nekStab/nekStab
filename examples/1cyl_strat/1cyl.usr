@@ -26,7 +26,7 @@ c-----------------------------------------------------------------------
 
       ffx = 0.0d0
       ffy = 0.0d0
-      if(ifto)ffy = temp*0.5d0 !coupling the scalar field
+      if(ifheat)ffy = temp*0.5d0 !coupling the scalar field
       ffz = 0.0d0
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
