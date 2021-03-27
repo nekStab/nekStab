@@ -1,0 +1,57 @@
+[GENERAL]
+startFrom = tsyphon0.f00006 # BF_tsyphon0.f00001
+stopAt = numSteps
+numSteps = 2000000
+
+#stopAt = endTime
+#endTime = 0.016 
+
+userParam01 = 1  # 0.0:DNS;0.1:DNS+Stats
+                 # 1.1:SFD;1.2:BOOST;1.3:TDF;1.4:DMT
+                 # 2.1:DIR;2.2:ADJ;2.3:DIR-ADJ;2.4:ADJ-DIR;
+
+userParam02 = 0   # krylov snapshot to load
+
+userParam03 = 1
+userParam04 = 7.66  # 
+userParam05 = 100   # 
+userParam06 = 40050.0   #  Rayleigh number 
+userParam07 = 0   #
+userParam08 = 0   # 
+userParam09 = 0   #
+userParam10 = 0   #
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+#extrapolation = OIFS
+targetCFL = 5
+
+writeControl = runTime #timestep
+writeInterval = 10
+writeDoublePrecision = no
+
+dealiasing = no #yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[VELOCITY]  #PR is positive here!!! 
+viscosity = 5.0 # Prandtl number directily # param(2)
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = no
+writeToFieldFile = yes
+
+[TEMPERATURE]
+solver = helm
+residualTol = 1.0E-9
+residualProj = no
+writeToFieldFile = yes
+conductivity = 1.0
+rhoCp = 1.0

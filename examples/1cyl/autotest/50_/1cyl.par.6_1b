@@ -1,0 +1,44 @@
+[GENERAL]
+startfrom = dns50_1cyl0.f00001
+stopat = endTime
+endtime = 1.0
+userparam01 = 1
+userparam02 = 0   # krylov snapshot to load
+userparam03 = 3
+userparam04 = 0   # freq (Strouhal leading mode)
+userparam05 = 0   # gain (twice growth rate leading mode)
+userparam06 = 0   #
+userparam07 = 0   #
+userparam08 = 0   # sponge lenght left
+userparam09 = 0   # sponge lenght right
+userparam10 = 0   # sponge strenght
+dt = 0
+variabledt = no
+timestepper = bdf3
+targetcfl = 0.5
+extrapolation = standard
+writecontrol = runTime
+writeinterval = 100.
+writedoubleprecision = no
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualtol = 1.E-9
+residualproj = no
+writetofieldfile = yes
+
+[VELOCITY]
+residualtol = 1.E-9
+residualproj = no
+density = 1.0
+viscosity = -50.0
+
+[TEMPERATURE]
+solver = helm
+residualtol = 1.E-9
+residualproj = yes
+writetofieldfile = yes
+conductivity = -35.5
+rhocp = 1.0
+

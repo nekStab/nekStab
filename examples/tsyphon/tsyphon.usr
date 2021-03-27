@@ -1,0 +1,213 @@
+#define INTP_NMAX 40000
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+      real flow_rate
+
+      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
+      !if(istep.eq.0) time = 0.0d0
+      call nekStab
+      !call nekStab_avg(.false.) !  Compute mean flow.
+      call compute_flow_rate(flow_rate)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine nekstab_chk
+      include 'SIZE'
+      include 'TOTAL'
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0         ! Pr          !  Ra
+      if(ifheat)ffy = temp*abs(param(2))*abs(uparam(6))
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (JP.eq.0) then         ! velocity
+         ux= 0.0d0
+         uy= 0.0d0
+         uz= 0.0d0
+         temp= 0.50d0*(1.0d0 + tanh(-20.0d0*y))
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (JP.eq.0) then         ! velocity
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp= 0.50d0*(1.0d0 + tanh(-20.0d0*y))
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine compute_flow_rate(flow_rate)
+      include 'SIZE'
+      include 'TOTAL'
+
+      parameter (npts = 101)
+
+!     --> Array to store the data points.
+      real xyz(ldim, npts)
+      save xyz
+
+!     --> Array to store the interpolated velocities.
+      real uvw(ldim, npts)
+
+!     --> Flow rate.
+      real flow_rate
+
+      if (istep.EQ.0) then
+!     -- > Open file to store the flow rate.
+         if (nid.EQ.0) open(unit=1234, file="flow_rate.dat")
+
+!     -- > Location of points.
+         xyz(1, :) = 0.0D+00
+         xyz(2, :) = 0.0D+00
+         if (if3D) xyz(3, :) = 0.0D+00
+
+         do i = 1,npts
+            xyz(2, i) = 1.0D+00 + (i-1)*0.01
+         enddo
+         
+      endif
+
+!     --> Get the velocities at the points locations.
+      call interp_v(uvw, xyz, npts)
+
+!     --> Use simple integration.
+      flow_rate = sum(uvw(1, :)) * 0.01
+
+      if ((nid.EQ.0) .and. (mod(istep, 10).EQ.0)) then
+         write(1234, *) time, flow_rate
+      endif
+
+      if (istep.EQ.nsteps) then
+         if (nid.EQ.0) close(1234)
+      endif
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine interp_v(uvw, xyz, n)
+      include 'SIZE'
+      include 'TOTAL'
+      
+      real uvw(ldim,n),xyz(ldim,n)
+      
+      real    rwk(INTP_NMAX,ldim+1) ! r, s, t, dist2
+      integer iwk(INTP_NMAX,3)  ! code, proc, el
+      save    rwk, iwk
+      
+      integer intp_h
+      save    intp_h
+      
+      common /rwk_intp/ 
+     $     fwrk(lx1*ly1*lz1*lelt,ldim),
+     $     fpts(ldim*INTP_NMAX),
+     $     pts(ldim*INTP_NMAX)
+      
+      integer icalld,e
+      save    icalld
+      data    icalld /0/
+      
+      nxyz  = nx1*ny1*nz1
+      ntot  = nxyz*nelt
+      
+      if (n.gt.INTP_NMAX) call exitti ('n > INTP_NMAX in interp_v!$',n)
+      
+      if (nelgt.ne.nelgv) call exitti
+     $     ('nelgt.ne.nelgv not yet supported in interp_v!$',nelgv)
+      
+      do i=1,n                  ! ? not moving -> save?
+         pts(i)     = xyz(1,i)
+         pts(i + n) = xyz(2,i)
+ !        if (if3d) pts(i + n*2) = xyz(3,i)
+      enddo
+      
+      if (icalld.eq.0) then
+         icalld = 1
+         call interp_setup(intp_h,0.0,0,nelt)
+      endif
+      
+! pack working array
+      call opcopy(fwrk(1,1),fwrk(1,2),fwrk(1,3),vx,vy,vz)
+      
+! interpolate
+      call interp_nfld(fpts,fwrk,ndim,pts(1),pts(1+n),pts(2*n+1),
+     $     n,iwk,rwk,INTP_NMAX,.true.,intp_h)
+      
+      do i=1,n
+         uvw(1,i) = fpts(i)
+         uvw(2,i) = fpts(i + n)
+!         if(if3d) uvw(3,i) = fpts(i + n*2)
+      enddo
+      
+      return
+      end
+c-----------------------------------------------------------------------

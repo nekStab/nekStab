@@ -41,7 +41,7 @@ c-----------------------------------------------------------------------
 
       if (JP.eq.0) then         ! velocity
          e  = gllel(ieg)
-         ux=ubb(ix,iy,iz,e)
+         ux=1.0d0
          uy=0.0d0
          uz=0.0d0
          temp=0.0d0
@@ -135,9 +135,8 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
       real ubb1(1)
-      integer n,i
-      n = nx1*ny1*nz1*nelv
-      do i=1,n
+      integer i
+      do i=1,nx1*ny1*nz1*nelv
        ubb1(i)=4.0d0*ym1(i,1,1,1)*(1.0d0-ym1(i,1,1,1))
       enddo
       return

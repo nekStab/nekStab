@@ -1,16 +1,6 @@
-!!!!! sponge region and noise generation routines
-!!!!! adapted from KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox
-! spng_init ->
-! spng_set ->
-! mth_stepf ->
-! spng_forcing ->
-!
-! add_noise
-! mth_rand
-! diverse math functions
 
       subroutine quicksort2(n, arr, idx)
-
+      implicit none
       integer n, m, nstack
       real arr(n)
       integer idx(n)
@@ -126,108 +116,7 @@
          endif
       endif
       goto 1
-      end
-c-----------------------------------------------------------------------
-      subroutine force_INCOMPLINNS
-      include 'SIZE'
-      include 'TOTAL'
-      include 'DOMAIN'
-      include 'OPCTR'
-      include 'CTIMER'
-      time = 0.0d0
-      istep = 0
-      param(12) = -1*abs(param(12)) !freeze dt
-      param(31) = 1 !numberOfPerturbations
-      npert = param(31)
-      call bcast(param,200*wdsize) !broadcast all parameters to processors
-      ifpert = .true.
-      call bcast(ifpert, lsize) !start linearized
-      ifbase = .false.
-      call bcast(ifbase, lsize) !stop dns
-      call chkParam !sanity check
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine force_INCOMPLINADJNS
-      include 'SIZE'
-      include 'TOTAL'
-      include 'DOMAIN'
-      include 'OPCTR'
-      include 'CTIMER'
-      time = 0.0d0
-      istep = 0
-      param(12) = -1*abs(param(12)) !freeze dt
-      param(31) = 1 !numberOfPerturbations
-      npert = param(31)
-      call bcast(param,200*wdsize) !broadcast all parameters to processors
-      ifpert = .true.
-      call bcast(ifpert, lsize) !start linearized
-      ifadj = .true.
-      call bcast(ifadj, lsize) !start linearized
-      ifbase = .false.
-      call bcast(ifbase, lsize) !stop dns
-      call chkParam !sanity check
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine switch_to_lnse_steady!(steps_in)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'DOMAIN'
-      include 'OPCTR'
-      include 'CTIMER'
-
-      !integer, intent(in), optional :: steps_in
-      integer steps
-      real sampling_period
-
-      !if(.not.present(steps_in))then
-      !  steps = steps_in
-      !else
-      !  if(nid.eq.0)write(6,*)' nsteps not specified: computing with uparam(04)'
-      !  sampling_period = real(1.0d0/uparam(04))
-      !  steps = int(sampling_period/dt)
-      !endif
-
-      steps = int(uparam(08))
-
-      if(nid.eq.0)then
-       write(6,*)' Switching to linearized solver...'
-       write(6,*)' Base flow stability: nsteps=',steps
-       write(6,*)
-      endif
-
-      time = 0
-      istep = 0
-      nsteps = steps
-      param(10) = 0     !endTime
-      param(11) = steps !numSteps to overwrite final time
-      param(14) = 999. !write interval runtime
-      param(12) = -1*abs(param(12)) !freeze dt
-
-      param(21) = 1e-8 ! pressure tolerance
-      param(22) = 1e-10 ! velocity tolerance
-      restol(0) = param(22)
-      restol(1) = param(22)
-      do i=1,ldimt
-        restol(1+i) = param(22)
-      enddo
-
-      param(31) = 1 !numberOfPerturbations
-      param(63) = 0 ! Enforce 32-bit output
-      npert = param(31)
-
-      call bcast(param,200*wdsize) !broadcast all parameters to processors
-
-      ifpert = .true.
-      call bcast(ifpert, lsize) !start linearized
-
-      ifbase = .false.
-      call bcast(ifbase, lsize) !stop dns
-
-      call chkParam !sanity check
-      return
-      end
+      end subroutine quicksort2
 c-----------------------------------------------------------------------
       subroutine nekStab_forcing (ffx,ffy,ffz,ix,iy,iz,ieg)
       implicit none
@@ -260,7 +149,7 @@ c-----------------------------------------------------------------------
          endif
       endif
       return
-      end subroutine
+      end subroutine nekStab_forcing
 c-----------------------------------------------------------------------
       subroutine nekStab_forcing_temp(temp,ix,iy,iz,ieg)
       implicit none
@@ -283,7 +172,7 @@ c-----------------------------------------------------------------------
          endif
       endif
       return
-      end subroutine
+      end subroutine nekStab_forcing_temp
 c-----------------------------------------------------------------------
       subroutine spng_init
       implicit none
@@ -294,25 +183,23 @@ c-----------------------------------------------------------------------
       integer n
 
       n = nx1*ny1*nz1*nelv
+      acc_spg = ABS(acc_spg)
 
-      left_sponge = real(uparam(08)) !0.1*deltax
-      right_sponge = real(uparam(09)) !0.15*deltax
+                  spng_wl(1)=(1.0d0-acc_spg)*xLspg ! Sponge left section width; dimension X
+                  spng_wl(2)=(1.0d0-acc_spg)*yLspg
+          if(IF3D)spng_wl(3)=(1.0d0-acc_spg)*zLspg
 
-                  spng_wl(1)=(2./3.)*left_sponge ! Sponge left section width; dimension X
-                  spng_wl(2)=0.0
-          if(IF3D)spng_wl(3)=0.0
+                  spng_wr(1)=(1.0d0-acc_spg)*xRspg! Sponge right section width; dimension X
+                  spng_wr(2)=(1.0d0-acc_spg)*yRspg
+          if(IF3D)spng_wr(3)=(1.0d0-acc_spg)*zRspg
 
-                  spng_wr(1)=(2./3.)*right_sponge! Sponge right section width; dimension X
-                  spng_wr(2)=0.0
-          if(IF3D)spng_wr(3)=0.0
+                 spng_dl(1)=(acc_spg)*xLspg ! Sponge left drop/rise section width; dimension X
+                 spng_dl(2)=(acc_spg)*yLspg
+         if(IF3D)spng_dl(3)=(acc_spg)*zLspg
 
-                 spng_dl(1)=(1./3.)*left_sponge ! Sponge left drop/rise section width; dimension X
-                 spng_dl(2)=0.0
-         if(IF3D)spng_dl(3)=0.0
-
-                spng_dr(1)=(1./3.)*right_sponge ! Sponge right drop/rise section width; dimension X
-                spng_dr(2)=0.0
-        if(IF3D)spng_dr(3)=0.0
+                spng_dr(1)=(acc_spg)*xRspg !Sponge right drop/rise section width; dimension X
+                spng_dr(2)=(acc_spg)*yRspg
+        if(IF3D)spng_dr(3)=(acc_spg)*zRspg
 
          if(nid.eq.0)then
             write(6,*)' Left sponge width: ',left_sponge
@@ -329,7 +216,7 @@ c-----------------------------------------------------------------------
       call spng_set ! -> compute spng_fun
 
       return
-      end
+      end subroutine spng_init
 c-----------------------------------------------------------------------
       subroutine spng_set
       !set sponge function and refernece fields
@@ -348,7 +235,7 @@ c-----------------------------------------------------------------------
 
       ntot = NX1*NY1*NZ1*NELV
       bmin(1) = xmn !glmin(XM1,ntot)
-      bmax(1) = zmx !glmax(XM1,ntot)
+      bmax(1) = xmx !glmax(XM1,ntot)
       bmin(2) = ymn !glmin(YM1,ntot)
       bmax(2) = ymx !glmax(YM1,ntot)
       if(IF3D) then
@@ -412,21 +299,21 @@ c-----------------------------------------------------------------------
       ifto = ltmp; ifpo = ltmp2
 
       return
-      end
+      end subroutine spng_set
 c-----------------------------------------------------------------------
       real function mth_stepf(x)
       !compute sponge function
       implicit none
       real x, xdmin, xdmax
       parameter (xdmin = 0.0010d0, xdmax = 0.9990d0)
-      if (x.le.xdmin) then
+      if(x.le.xdmin) then
          mth_stepf = 0.0d0
-      else if (x.le.xdmax) then
+      elseif (x.le.xdmax) then
          mth_stepf = 1.0d0/( 1.0d0 + exp(1.0d0/(x - 1.0d0) + 1.0d0/x) )
       else
          mth_stepf = 1.0d0
-      end if
-      end
+      endif
+      end function mth_stepf
 c-----------------------------------------------------------------------
       subroutine add_noise(qx, qy, qz, qp)
       !input random number to fields
@@ -490,9 +377,8 @@ c-----------------------------------------------------------------------
       call bcdirSC(qp)
       endif
 
-
       return
-      end
+      end subroutine add_noise
 c-----------------------------------------------------------------------
       subroutine add_symmetric_seed(qx, qy, qz, qp) !generate symmetric seed to fields
       implicit none
@@ -539,7 +425,7 @@ c-----------------------------------------------------------------------
       call cmult(qp, amp, ntot)
 
       return
-      end
+      end subroutine add_symmetric_seed
 c-----------------------------------------------------------------------
       real function mth_rand(ix,iy,iz,ieg,xl,fcoeff) !generate random number
       implicit none
@@ -553,7 +439,88 @@ c-----------------------------------------------------------------------
       mth_rand = 1.e3*sin(mth_rand)
       mth_rand = cos(mth_rand)
       return
-      end
+      end function mth_rand
+c-----------------------------------------------------------------------
+      subroutine nopcopy(a1,a2,a3,a4,a5, b1,b2,b3,b4,b5)
+      implicit none
+      include 'SIZE'
+      include 'INPUT' 
+      integer n,n2
+      real a1(1),a2(1),a3(1),a4(1),a5(1),b1(1),b2(1),b3(1),b4(1),b5(1)
+      n=nx1*ny1*nz1*nelv
+      n2=nx2*ny2*nz2*nelv
+      call copy(a1,b1,n)
+      call copy(a2,b2,n)
+      if (ndim.eq.3)call copy(a3,b3,n)
+      if (ifpo)call copy(a4,b4,n2)
+      if (ifheat)call copy(a5,b5,n)
+      return
+      end subroutine nopcopy
+c-----------------------------------------------------------------------
+      subroutine nopsub2(a1,a2,a3,a4,a5, b1,b2,b3,b4,b5)
+      implicit none
+      include 'SIZE'
+      include 'INPUT'
+      integer n,n2
+      real a1(1),a2(1),a3(1),a4(1),a5(1),b1(1),b2(1),b3(1),b4(1),b5(1)
+      n=nx1*ny1*nz1*nelv
+      n2=nx2*ny2*nz2*nelv
+      call sub2(a1,b1,n)
+      call sub2(a2,b2,n)
+      if (ndim.eq.3)call sub2(a3,b3,n)
+      if (ifpo)call sub2(a4,b4,n2)
+      if (ifheat)call sub2(a5,b5,n)
+
+      return
+      end subroutine nopsub2
+c-----------------------------------------------------------------------
+      subroutine nopcmult(a1,a2,a3,a4,a5,c)
+      implicit none
+      include 'SIZE'
+      include 'INPUT'
+      integer n,n2
+      real a1(1),a2(1),a3(1),a4(1),a5(1),c
+      n=nx1*ny1*nz1*nelv
+      n2=nx2*ny2*nz2*nelv
+      call cmult(a1,c,n)
+      call cmult(a2,c,n)
+      if (ndim.eq.3)call cmult(a3,c,n)
+      if (ifpo)call cmult(a4,c,n2)
+      if (ifheat)call cmult(a5,c,n)
+      return
+      end subroutine nopcmult
+c-----------------------------------------------------------------------
+      subroutine nopchsign(a1,a2,a3,a4,a5)
+      implicit none
+      include 'SIZE'
+      include 'INPUT'
+      integer n,n2
+      real a1(1),a2(1),a3(1),a4(1),a5(1)
+      n=nx1*ny1*nz1*nelv
+      n2=nx2*ny2*nz2*nelv
+      call chsign(a1,n)
+      call chsign(a2,n)
+      if (ndim.eq.3)call chsign(a3,n)
+      if (ifpo)call chsign(a4,n2)
+      if (ifheat)call chsign(a5,n)
+      return
+      end subroutine nopchsign
+c-----------------------------------------------------------------------
+      subroutine noprzero(a1,a2,a3,a4,a5)
+      implicit none
+      include 'SIZE'
+      include 'INPUT'
+      integer n,n2
+      real a1(1),a2(1),a3(1),a4(1),a5(1)
+      n=nx1*ny1*nz1*nelv
+      n2=nx2*ny2*nz2*nelv
+      call rzero(a1,n)
+      call rzero(a2,n)
+      if (ndim.eq.3)call rzero(a3,n)
+      if (ifpo)call rzero(a4,n2)
+      if (ifheat)call rzero(a5,n)
+      return
+      end subroutine noprzero
 c-----------------------------------------------------------------------
       subroutine opadd2 (a1,a2,a3,b1,b2,b3)
       implicit none
@@ -565,7 +532,7 @@ c-----------------------------------------------------------------------
       call add2(a2,b2,ntot1)
       if (ndim.eq.3) call add2(a3,b3,ntot1)
       return
-      end
+      end subroutine opadd2
 c-----------------------------------------------------------------------
       subroutine opadd3 (a1,a2,a3,b1,b2,b3,c1,c2,c3)
       implicit none
@@ -577,7 +544,7 @@ c-----------------------------------------------------------------------
       call add3(a2,b2,c2,ntot1)
       if (ndim.eq.3) call add3(a3,b3,c3,ntot1)
       return
-      end
+      end subroutine opadd3
 c-----------------------------------------------------------------------
       subroutine opaddcol3 (a1,a2,a3,b1,b2,b3,c1,c2,c3)
       implicit none
@@ -589,7 +556,7 @@ c-----------------------------------------------------------------------
       call addcol3(a2,b2,c2,ntot1)
       if (ndim.eq.3) call addcol3(a3,b3,c3,ntot1)
       return
-      end
+      end subroutine opaddcol3
 c-----------------------------------------------------------------------
       subroutine add4(a,b,c,d,n)
       implicit none
@@ -600,7 +567,7 @@ c-----------------------------------------------------------------------
          a(i)=b(i)+c(i)+d(i)
       enddo
       return
-      end
+      end subroutine add4
 c-----------------------------------------------------------------------
       subroutine addcol3(a,b,c,n)
       implicit none
@@ -611,7 +578,7 @@ c-----------------------------------------------------------------------
          a(i)=a(i)+b(i)*c(i)
       enddo
       return
-      end
+      end subroutine addcol3
 c-----------------------------------------------------------------------
       subroutine set_rjet(ub)   !round jet profile for axissymetric jet
       include 'SIZE'
@@ -624,7 +591,7 @@ c-----------------------------------------------------------------------
          ub(i)=0.50d0*(1.0d0-tanh((1.0d0/(4.0d0*theta_0))*(y-(1.0d0/(4.0d0*y)))))
       enddo
       return
-      end
+      end subroutine set_rjet
 c-----------------------------------------------------------------------
       subroutine compute_sb (v_jet)
       include 'SIZE'
@@ -651,7 +618,7 @@ c-----------------------------------------------------------------------
       enddo
 
       return
-      end
+      end subroutine compute_sb 
 c-----------------------------------------------------------------------
       subroutine outpost_blayer_pert
       implicit none
