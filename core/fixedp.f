@@ -124,36 +124,26 @@ c-----------------------------------------------------------------------c
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      integer, parameter  :: lt=lx1*ly1*lz1*lelt
-      integer i
-
-      logical, save :: initialized
-      data             initialized /.FALSE./
       
-      real, dimension(lt)       ::  dvx,dvy,dvz
-      real, dimension(lt), save ::  vxo,vyo,vzo
-      real                      ::  residu,h1,l2,semi,linf,rate
-      real, save                ::  residu0, tol
-     
+      real, dimension(lx1*ly1*lz1*lelt) ::  dvx,dvy,dvz
+      real                              ::  residu,h1,semi,linf,rate
+      real, save                        ::  residu0,tol
+      logical, save :: init
+      data             init /.false./
+
       if(mod(istep,bst_skp).eq.0)then
 
-        if(.not.initialized)then
-          call oprzero(vxo,vyo,vzo)
-          residu = 0.0d0; l2 = 0.0d0
-          rate = 0.0d0; residu0 = 0.0d0
-          initialized=.true.
+        if(.not.init)then
+          residu = 0.0d0; rate = 0.0d0; residu0 = 0.0d0
           open(unit=10,file='residu.dat')
           tol = max(param(21), param(22))
-
+          init=.true.
         endif
 
-        call opsub3(dvx,dvy,dvz,vx,vy,vz,vxo,vyo,vzo)!dv=v-vold
-        call normvc(h1,semi,l2,linf,dvx,dvy,dvz)
-        residu = l2; rate = (residu-residu0); residu0 = residu
+        call opsub3(dvx,dvy,dvz,vx,vy,vz,vxlag(1,1,1,1,1),vylag(1,1,1,1,1),vzlag(1,1,1,1,1))!dv=v-vold
+        call normvc(h1,semi,residu,linf,dvx,dvy,dvz); rate = (residu-residu0); residu0 = residu
         call boostconv_core(dvx,dvy,dvz)
-        call opadd3(vx,vy,vz,vxo,vyo,vzo,dvx,dvy,dvz)!v=vold+dv
-        call opcopy(vxo,vyo,vzo,vx,vy,vz)
+        call opadd3(vx,vy,vz,vxlag(1,1,1,1,1),vylag(1,1,1,1,1),vzlag(1,1,1,1,1),dvx,dvy,dvz)!v=vold+dv
 
           if(nid.eq.0)then
             write(10,"(3E15.7)")time,residu,rate
@@ -186,8 +176,8 @@ c-----------------------------------------------------------------------
       integer, save        :: rot, n
       integer              :: j
 
-      logical, save :: initialized
-      data             initialized /.FALSE./
+      logical, save :: init
+      data             init /.FALSE./
 
       real, dimension(bst_snp, bst_snp) :: dd
       real, dimension(bst_snp) :: cc, ccb
@@ -195,46 +185,38 @@ c-----------------------------------------------------------------------
 
       real, dimension(lt,bst_snp) :: q_x, q_y, q_z
       real, dimension(lt,bst_snp) :: x_x, x_y, x_z, y_x, y_y, y_z
-      common /inout/  x_x, x_y, x_z, y_x, y_y, y_z
 
       real :: glsc3
-      n      = nx1*ny1*nz1*nelt
+      n = nx1*ny1*nz1*nelt
 
-      if (.not. initialized) then
+      if (.not.init) then
 
         call oprzero(x_x(:,:), x_y(:,:), x_z(:,:))
         call oprzero(y_x(:,:), y_y(:,:), y_z(:,:))
         call oprzero(q_x(:,:), q_y(:,:), q_z(:,:))
-        dd(:,:) = 1.0d0
-        rot = 1
-
         call opcopy(y_x(:,1),y_y(:,1),y_z(:,1),rbx,rby,rbz)
         call opcopy(x_x(:,1),x_y(:,1),x_z(:,1),rbx,rby,rbz)
-        initialized = .true.
+        dd(:,:) = 1.0d0; rot = 1; init = .true.
 
       else
 
         call opsub2(y_x(:,rot),y_y(:,rot),y_z(:,rot),rbx,rby,rbz)
         call opsub2(x_x(:,rot),x_y(:,rot),x_z(:,rot),y_x(:,rot),y_y(:,rot),y_z(:,rot))
-        cc = 0.0d0
         call qr_dec(dd,q_x,q_y,q_z,y_x,y_y,y_z)
 
         do j = 1, bst_snp
           cc(j) = glsc3(rbx,bm1,q_x(:,j),n) + glsc3(rby,bm1,q_y(:,j),n)
           if(if3d) cc(j) = cc(j) + glsc3(rbz,bm1,q_z(:,j),n)
-        end do
+        enddo
 
-        call linear_system(ccb,cc,dd,bst_snp)
-        rot = mod(rot,bst_snp)+1
-
+        call linear_system(ccb,cc,dd,bst_snp); rot = mod(rot,bst_snp)+1
         call opcopy(y_x(:,rot),y_y(:,rot),y_z(:,rot),rbx,rby,rbz)
 
         do j = 1, bst_snp
           call opcopy(dumx,dumy,dumz,x_x(:,j),x_y(:,j),x_z(:,j))
           call opcmult(dumx,dumy,dumz,ccb(j))
           call opadd2(rbx,rby,rbz,dumx,dumy,dumz)
-        end do
-
+        enddo
         call opcopy(x_x(:,rot),x_y(:,rot),x_z(:,rot),rbx,rby,rbz)
 
       endif
@@ -248,7 +230,7 @@ c-----------------------------------------------------------------------
       integer,parameter :: lt=lx1*ly1*lz1*lelt
       integer i, j, n
       real, dimension(lt,bst_snp) :: x_x,x_y,x_z,q_x,q_y,q_z !res subspaces
-      real, dimension(lt)             :: dum_x1,dum_y1,dum_z1,dum_x,dum_y,dum_z
+      real, dimension(lt)         :: dum_x1,dum_y1,dum_z1,dum_x,dum_y,dum_z
       real, dimension(bst_snp,bst_snp) ::  rr
       real norma,glsc3
 
