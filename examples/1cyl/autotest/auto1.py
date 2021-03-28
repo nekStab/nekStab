@@ -210,6 +210,27 @@ if __name__ == "__main__":
             print('Re=',Re,' Pe=',Pe,' St=',St,' Tau=',Tau)
 
             # BASE FLOW
+            tole = '1.E-7'; tolep = '1e-5'
+            c_pf(pf,pf,{'GENERAL':{'endTime':300*str(Tau)}})
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'0'}})
+            c_pf(pf,pf,{'GENERAL':{'userParam03':'0'}})
+            #c_pf(pf,pf,{'GENERAL':{'userParam04':str(St)}})
+            #c_pf(pf,pf,{'GENERAL':{'userParam05':'0.1'}})
+            c_pf(pf,pf,{'GENERAL':{'variableDt':'yes'}})
+            c_pf(pf,pf,{'GENERAL':{'targetCFL':'0.5'}})
+            c_pf(pf,pf,{'GENERAL':{'extrapolation':'standard'}})
+            c_pf(pf,pf,{'VELOCITY':{'viscosity':'-'+str(Re)}})
+            c_pf(pf,pf,{'VELOCITY':{'residualtol':tole}})
+            c_pf(pf,pf,{'VELOCITY':{'residualproj':'no'}})
+            c_pf(pf,pf,{'PRESSURE':{'residualtol':tolep}})
+            c_pf(pf,pf,{'PRESSURE':{'residualproj':'no'}})
+            c_pf(pf,pf,{'TEMPERATURE':{'conductivity':'-'+str(Pe)}})
+            c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
+            c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'no'}})
+            rnek(folder,cn,True,log_suffix="_1b",n_procs=nps)
+            ccall(('visnek '+cn).split(), cwd=folder)
+
+            # BASE FLOW
             tole = '1.E-9'
             cSZ(SZ,SZ,{"k_dim": "64"})
             c_pf(pf,pf,{'GENERAL':{'endTime':str(Tau)}})

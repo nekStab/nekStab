@@ -4,7 +4,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
-
+      if(uparam(1).eq.0.and.istep.eq.0)t=0.0d0
       call nekStab
       call hpts
 
@@ -24,11 +24,15 @@ c-----------------------------------------------------------------------
         xLspg = uparam(8); call bcast(xLspg , wdsize)
         xRspg = uparam(9); call bcast(xRspg , wdsize)
 
-        schur_tgt = 4 ; call bcast(schur_tgt,isize)
+        k_dim = 32 ; call bcast(k_dim,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         !ifvor = .true. ; call bcast(ifvor,lsize)
         !ifvox = .true. ; call bcast(ifvox,lsize)
+
+        bst_skp = 0; call bcast(bst_skp,isize)
+        bst_snp = 0; call bcast(bst_snp,isize)
 
       endif
 
@@ -42,7 +46,7 @@ c-----------------------------------------------------------------------
 
       ffx = 0.0d0
       ffy = 0.0d0
-      if(ifheat)ffy = temp*0.15d0 !coupling the scalar field
+      !if(ifheat)ffy = temp*0.15d0 !coupling the scalar field
       ffz = 0.0d0
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)

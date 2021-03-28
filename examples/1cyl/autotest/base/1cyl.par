@@ -1,11 +1,11 @@
 [GENERAL]
-startFrom = dns50_1cyl0.f00001
+startFrom = BFRe40_1cyl0.f00001 #dns50_1cyl0.f00001
 stopAt = endTime
-endTime = 200
+endTime = 1
 
-userParam01 = 0   # 0:dns,1:stabilization,3:stability
+userParam01 = 1   # 0:dns,1:stabilization,3:stability
 userParam02 = 0   # krylov snapshot to load
-userParam03 = 0   # stabilization technique: 1:sfd
+userParam03 = 3   # stabilization technique: 1:sfd
 userParam04 = 0   # freq (Strouhal leading mode)
 userParam05 = 0   # gain (twice growth rate leading mode)
 userParam06 = 0   #
@@ -15,13 +15,13 @@ userParam09 = 0   # sponge lenght right
 userParam10 = 0   # sponge strenght
 
 dt = 0
-variableDt = yes
+variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5
 extrapolation = standard
 
 writeControl = runTime
-writeInterval = 100.
+writeInterval = 500.
 writeDoublePrecision = no
 
 dealiasing = yes
@@ -31,20 +31,20 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-5
-residualProj = yes
+residualTol = 1.0E-13
+residualProj = no
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-7
-residualProj = yes
+residualTol = 1.0E-13
+residualProj = no
 density = 1.0
 viscosity = -50.0
 
 [TEMPERATURE]
 solver = helm
-residualTol = 1.0E-7
-residualProj = yes
+residualTol = 1.0E-13
+residualProj = no
 writeToFieldFile = yes
 conductivity = -35.5
 rhoCp = 1.0
