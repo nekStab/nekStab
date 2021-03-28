@@ -38,17 +38,17 @@ c-----------------------------------------------------------------------
       integer bIDs(1), iobj_wall(1)
       
       call nekStab
-      call hpts
+      !call hpts
       
       !define objects for surface integrals
-      if (istep.eq.0) then
-         bIDs(1) = 1
-         call create_obj(iobj_wall(1),bIDs,1)
-      endif 
+      ! if (istep.eq.0) then
+      !    bIDs(1) = 1
+      !    call create_obj(iobj_wall(1),bIDs,1)
+      ! endif 
    
       !computing CL/CD -> printed in logfile -> use grep 
-      scale = 2.  ! Cd = F/(.5 rho U^2 ) = 2*F
-      if (mod(istep,10).eq.0) call torque_calc(scale,x0,.true.,.false.)
+      !scale = 2.  ! Cd = F/(.5 rho U^2 ) = 2*F
+      !if (mod(istep,10).eq.0) call torque_calc(scale,x0,.true.,.false.)
       
       spng_str2 = uparam(08) !penalization forcing strenght
       d_cube = 0.4 !hakf cube diamter ! must match the mesh
@@ -165,18 +165,25 @@ c-----------------------------------------------------------------------
       ntot = nx1*ny1*nz1*nelv	  
       call rzero(bcflag,ntot)
 
+
+! W           2
+! lower           3
+! O           4
+! upper           5
+! v           6
+
       do iel=1,nelv
       do ifc=1,2*ndim
         id_face = bc(5,ifc,iel,1)
-        if (id_face.eq.1) then                   ! surface 1 for inlet
+        if     (id_face.eq.6) then                   ! surface 1 for inlet
            cbc(ifc,iel,1) = 'v  '
-        elseif (id_face.eq.2) then               ! surface 2 for outlet
+        elseif (id_face.eq.4) then               ! surface 2 for outlet
            cbc(ifc,iel,1) = 'O  '
         elseif (id_face.eq.3) then               ! surface 3 for upper
            cbc(ifc,iel,1) = 'SYM'
-        elseif (id_face.eq.4) then               ! surface 4 for lower
+        elseif (id_face.eq.5) then               ! surface 4 for lower
            cbc(ifc,iel,1) = 'SYM'
-        elseif (id_face.eq.5) then               ! surface 5 for wall
+        elseif (id_face.eq.2) then               ! surface 5 for wall
            cbc(ifc,iel,1) = 'W  '
 
         endif
@@ -339,93 +346,96 @@ c-----------------------------------------------------------------------
 
       return
       end
-
-
+c-----------------------------------------------------------------------
       subroutine vansforcing
       ! Volume-Averaged-NS based on ...
       implicit none
       include 'SIZE'
       include 'TOTAL'
       
-      real, dimension(lx1,ly1,lz1,lelt) :: dummy_e, vxy, vyy, vzy
+      real, dimension(lx1,ly1,lz1,lelt) :: dum, vxy, vyy, vzy, oym1
       real, dimension(lx1,ly1,lz1,lelt) :: eps,dyeps,ddyeps,coeff,kappa,Dar,Fo
       real, dimension(lx1,ly1,lz1,lelt) :: absu
-      real Reb,dph,deltab,epsc
+      real Reb,dph,deltab,epsc,glmax,gmax 
       integer e,k,j,i,lt,n
+      logical ifto_sav, ifpo_sav
 
-      !n = nx1*ny1*nz1*nelt
-      lt = lx1*ly1*lz1*lelt
+      n = nx1*ny1*nz1*nelt
       Reb    =    1.0d0/abs(param(2))
       dph    =    0.01d0
       deltab =    0.02d0
-      epsc   =    0.60d0 ! porosity?
-      
-      call gradm1(dummy_e,vxy,dummy_e,vx)
-      call col2(vxy,bm1,lt)
+      epsc   =    0.6   ! porosity?
+
+      if(nid.eq.0)write(6,*)' Computing VANS forcing...'
+
+      call copy(oym1,spng_fun2,n) ! 1 porous 0 fluid
+      call copy(coeff,oym1,n) ! 1 porous 0 fluid
+
+      call gradm1(dum,vxy,dum,vx)
+      call col2(vxy,bm1,n)
       call dssum(vxy,nx1,ny1,nz1)
-      call col2(vxy,binvm1,lt)
+      call col2(vxy,binvm1,n)
       
-      call gradm1(dummy_e,vyy,dummy_e,vy)
-      call col2(vyy,bm1,lt)
+      call gradm1(dum,vyy,dum,vy)
+      call col2(vyy,bm1,n)
       call dssum(vyy,nx1,ny1,nz1)
-      call col2(vyy,binvm1,lt)
+      call col2(vyy,binvm1,n)
       
-      call gradm1(dummy_e,vzy,dummy_e,vz)
-      call col2(vzy,bm1,lt)
+      call gradm1(dum,vzy,dum,vz)
+      call col2(vzy,bm1,n)
       call dssum(vzy,nx1,ny1,nz1)
-      call col2(vzy,binvm1,lt)
+      call col2(vzy,binvm1,n)
       
       do e=1,nelv
          DO K=1,NZ1
             DO J=1,NY1
                DO I=1,NX1
-                  
-C     if (istep.eq.0) then
-                  if (ym1(i,j,k,e).ge.0.0) then
-                     eps(i,j,k,e)  = 1
-                     dyeps(i,j,k,e)  = 0
-                     ddyeps(i,j,k,e) = 0
-                     coeff(i,j,k,e)  = 0
-                     Dar(i,j,k,e) = 1
-                     Fo(i,j,k,e)  = 1
-             elseif (ym1(i,j,k,e).lt.0.0.and.ym1(i,j,k,e).ge.-0.02) then
-                     eps(i,j,k,e) =-6 *(epsc-1)*(ym1(i,j,k,e)/deltab)**5
-     $                    -15 *(epsc-1)*(ym1(i,j,k,e)/deltab)**4
-     $                    -10 *(epsc-1)*(ym1(i,j,k,e)/deltab)**3
-     $                    +1
+                  !oym1(i,j,k,e)=(spng_str2-oym1(i,j,k,e))
 
-                  dyeps(i,j,k,e) =
-     $               -30 *(epsc-1)*(ym1(i,j,k,e)/deltab)**4*(1/deltab)
-     $               -60 *(epsc-1)*(ym1(i,j,k,e)/deltab)**3*(1/deltab)
-     $               -30 *(epsc-1)*(ym1(i,j,k,e)/deltab)**2*(1/deltab)
+         if (oym1(i,j,k,e).eq.0.0) then ! fluid zone
+         
+            eps(i,j,k,e)    = 1.0d0
+            dyeps(i,j,k,e)  = 0.0d0
+            ddyeps(i,j,k,e) = 0.0d0
+            coeff(i,j,k,e)  = 0.0d0
+            Dar(i,j,k,e)    = 1.0d0
+            Fo(i,j,k,e)     = 1.0d0
+         
+         elseif (oym1(i,j,k,e).gt.0.0 .and. oym1(i,j,k,e).le.deltab) then ! intermediary soze
 
-                  ddyeps(i,j,k,e) =
-     $             -120 *(epsc-1)*(ym1(i,j,k,e)/deltab)**3*(1/deltab)**2
-     $             -180 *(epsc-1)*(ym1(i,j,k,e)/deltab)**2*(1/deltab)**2
-     $              -60 *(epsc-1)*(ym1(i,j,k,e)/deltab)**1*(1/deltab)**2
+            eps(i,j,k,e) = 0 !-6 *(epsc-1)*(oym1(i,j,k,e)/deltab)**5
+      !   $                  -15 *(epsc-1)*(oym1(i,j,k,e)/deltab)**4
+      !   $                   -10 *(epsc-1)*(oym1(i,j,k,e)/deltab)**3 +1
 
-                  coeff(i,j,k,e) = 1
-                  kappa(i,j,k,e) = (dph**2 * eps(i,j,k,e)**3)/(180*(1-eps(i,j,k,e))**2)
-                  Dar(i,j,k,e) = kappa(i,j,k,e)
-                  Fo(i,j,k,e) = eps(i,j,k,e) * dph * Reb/(100*(1-eps(i,j,k,e)))
-                  usrdiv(i,j,k,e) = -(1/eps(i,j,k,e))*dyeps(i,j,k,e)*vy(i,j,k,e)
+            dyeps(i,j,k,e) = 0 !-30 *(epsc-1)*(oym1(i,j,k,e)/deltab)**4*(1/deltab)
+      !   $                     -60 *(epsc-1)*(oym1(i,j,k,e)/deltab)**3*(1/deltab)
+      !   $                     -30 *(epsc-1)*(oym1(i,j,k,e)/deltab)**2*(1/deltab)
+
+            ddyeps(i,j,k,e) = 0 !-120 *(epsc-1)*(oym1(i,j,k,e)/deltab)**3*(1/deltab)**2
+      !   $                     -180 *(epsc-1)*(oym1(i,j,k,e)/deltab)**2*(1/deltab)**2
+      !   $                     -60 *(epsc-1)*(oym1(i,j,k,e)/deltab)**1*(1/deltab)**2
+
+            coeff(i,j,k,e) = 1
+            kappa(i,j,k,e) = (dph**2 * eps(i,j,k,e)**3)/(180*(1-eps(i,j,k,e))**2)
+            Dar(i,j,k,e) = kappa(i,j,k,e)
+            Fo(i,j,k,e) = eps(i,j,k,e) * dph * Reb/(100*(1-eps(i,j,k,e)))
+            usrdiv(i,j,k,e) = -(1/eps(i,j,k,e))*dyeps(i,j,k,e)*vy(i,j,k,e)
                      
-C     usrdiv(i,j,k,e) = 0
-C     write(*,*)'usrdiv(2,3,4,20)==============', usrdiv(2,3,4,20)
-C     write(*,*)'ddmax==============', ddmax
+            ! usrdiv(i,j,k,e) = 0
+            ! write(*,*)'usrdiv(2,3,4,20)==============', usrdiv(2,3,4,20)
+            ! write(*,*)'ddmax==============', ddmax
                      
-                  else
+         else ! vans zone
 
-                     eps(i,j,k,e) = epsc
-                     dyeps(i,j,k,e)  = 0
-                     ddyeps(i,j,k,e) = 0
-                     coeff(i,j,k,e) = 1
-                     kappa(i,j,k,e) = (dph**2 * eps(i,j,k,e)**3) / (180*(1-eps(i,j,k,e))**2)
-                     Dar(i,j,k,e)    = kappa(i,j,k,e)
-                     Fo(i,j,k,e)    = eps(i,j,k,e) * dph * Reb / (100*(1-eps(i,j,k,e)))
+            eps(i,j,k,e)    = epsc
+            dyeps(i,j,k,e)  = 0.0d0
+            ddyeps(i,j,k,e) = 0.0d0
+            coeff(i,j,k,e)  = 1.0d0
+            kappa(i,j,k,e)  = (dph**2 * eps(i,j,k,e)**3) / (180*(1-eps(i,j,k,e))**2)
+            Dar(i,j,k,e)    = kappa(i,j,k,e)
+            Fo(i,j,k,e)     = eps(i,j,k,e) * dph * Reb / (100*(1-eps(i,j,k,e)))
                      
-                  endif
-C     endif
+         endif
                   
                absu(i,j,k,e) = sqrt ( vx(i,j,k,e)**2  + vy(i,j,k,e)**2 + vz(i,j,k,e)**2)
                   
@@ -471,15 +481,32 @@ C     endif
          end do
       end do
       
-c$$$  write(*,*)'ym1(2,3,4,20)==============', ym1(2,3,4,20)
-c$$$  write(*,*)'eps(2,3,4,20)==============', eps(2,3,4,20)
-c$$$  write(*,*)'dyeps(2,3,4,20)==============', dyeps(2,3,4,20)
-c$$$  write(*,*)'ddyeps(2,3,4,20)==============', ddyeps(2,3,4,20)
-c$$$  write(*,*)'Dar(2,3,4,20)==============', Dar(2,3,4,20)
-c$$$  
-C$$$  write(*,*)'Fx(2,3,4,20)==============', vansforce_x(2,3,4,20)
-c$$$  write(*,*)'Fy(2,3,4,20)==============', vansforce_y(2,3,4,20)
-c$$$  write(*,*)'Fz(2,3,4,20)==============', vansforce_z(2,3,4,20)
+         !write(*,*)'ym1(2,3,4,20)==============', ym1(2,3,4,20)
+         !write(*,*)'eps(2,3,4,20)==============', eps(2,3,4,20)
+         !write(*,*)'dyeps(2,3,4,20)==============', dyeps(2,3,4,20)
+         !write(*,*)'ddyeps(2,3,4,20)==============', ddyeps(2,3,4,20)
+         !write(*,*)'Dar(2,3,4,20)==============', Dar(2,3,4,20)
+         !
+         !write(*,*)'Fx(2,3,4,20)==============', vansforce_x(2,3,4,20)
+         !write(*,*)'Fy(2,3,4,20)==============', vansforce_y(2,3,4,20)
+         !write(*,*)'Fz(2,3,4,20)==============', vansforce_z(2,3,4,20)
       
+
+      if ((istep.eq.0).OR.ifoutfld)then
+         ifto_sav = ifto; ifpo_sav = ifpo
+         ifvo=.false.; ifpo = .false.; ifto = .true. ! just outposting one field ... v's and p ignored 
+         call outpost(vx,vy,vz,pr,oym1  ,'vs1')
+         call outpost(vx,vy,vz,pr,eps   ,'vs2')
+         call outpost(vx,vy,vz,pr,dyeps ,'vs3')
+         call outpost(vx,vy,vz,pr,ddyeps,'vs4')
+         call outpost(vx,vy,vz,pr,coeff ,'vs5')
+         call outpost(vx,vy,vz,pr,Dar   ,'vs6')
+         call outpost(vx,vy,vz,pr,Fo    ,'vs7')
+         ifvo=.true.; ifto = .false.
+         call outpost(vansforce_x,vansforce_y,vansforce_z,pr,t ,'vof')
+         ifpo = ifpo_sav; ifto = ifto_sav
+      endif
+
+
       return
       end
