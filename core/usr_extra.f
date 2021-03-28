@@ -63,9 +63,10 @@ c-----------------------------------------------------------------------
       !call bcast(ifnewton  , lsize)
 
       return
-      end
+      end subroutine nekStab_setDefault
 c-----------------------------------------------------------------------
-      subroutine nekStab_init   ! initialize arrays and variables defaults
+      subroutine nekStab_init
+      ! initialize arrays and variables defaults
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -127,7 +128,7 @@ c-----------------------------------------------------------------------
       ifbfcv = .false.          ! 
 
       return
-      end
+      end subroutine nekStab_init
 c-----------------------------------------------------------------------
       subroutine nekStab
       ! nekStab main driver
@@ -185,6 +186,11 @@ c-----------------------------------------------------------------------
 
       case(3) ! eigenvalue problem
 
+         if(uparam(3).eq.3)then
+            if(nid.eq.0)write(6,*) 'forcing uparam(3) to ZERO!!!!! OTHERWISE CRASH'
+            uparam(3)=0; call bcast(uparam, 1*wdsize)
+
+         endif 
          call Krylov_Schur
          call nek_end
 
@@ -200,7 +206,7 @@ c-----------------------------------------------------------------------
       end select         
 
       return
-      end
+      end subroutine nekStab
 c-----------------------------------------------------------------------
       subroutine nekStab_outpost
       ! nekStab custom outpost routine
@@ -249,7 +255,7 @@ c-----------------------------------------------------------------------
       if(istep.eq.0)call outpost(vx,vy,vz,pr,t,'   ')
 
       return
-      end
+      end subroutine nekStab_outpost
 c-----------------------------------------------------------------------
       subroutine nekStab_comment
       ! Comment the evoltuion of the simulation
@@ -313,7 +319,7 @@ c-----------------------------------------------------------------------
       endif
 
       return
-      end
+      end subroutine nekStab_comment
 c-----------------------------------------------------------------------
       subroutine nekStab_printNEKParams
       ! print parameters at initialization for sanity check
@@ -356,9 +362,10 @@ c-----------------------------------------------------------------------
          write(6,*)'uparam09=',uparam(09)
          write(6,*)'uparam10=',uparam(10)
       endif
-      end
+      end subroutine nekStab_printNEKParams
 c-----------------------------------------------------------------------   
       subroutine nekStab_energy(px, py, pz, pt, fname, skip)
+      !
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -389,5 +396,5 @@ c-----------------------------------------------------------------------
       endif
 
       return
-      end
+      end subroutine nekStab_energy
 c-----------------------------------------------------------------------   

@@ -472,7 +472,7 @@ c
       real, dimension(lt2,k_dim+1)       :: qp
 
 !     ----- Upper Hessenberg matrix -----
-      real, dimension(k_dim+1, k_dim)       :: H
+      real, dimension(k_dim+1, k_dim)    :: H
       
       n  = nx1*ny1*nz1*nelt
       n2 = nx2*ny2*nz2*nelt
