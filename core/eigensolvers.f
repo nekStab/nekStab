@@ -142,21 +142,68 @@
 
 
 
+! c-----------------------------------------------------------------------
+!       module KS
+!       implicit none
+!       include 'SIZE'
+!       include 'TOTAL'
+
+!       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
+!       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
+! !     
+! !----- Krylov basis V for the projection M*V = V*H -----
+!       real, allocatable,dimension(:,:) :: qx, qy, qz, qt
+!       real, allocatable,dimension(:,:) :: qp
+
+! !     ----- Upper Hessenberg matrix -----
+!       real, allocatable,dimension(:,:) :: H
+!       real, allocatable,dimension(:,:) :: b_vec
+
+! !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+!       complex*16, allocatable,dimension(:) :: vals
+!       complex*16, allocatable,dimension(:,:) :: vecs
+
+!       real, allocatable, dimension(:) :: residual
+
+
+!       end module KS
+
 c-----------------------------------------------------------------------
 
 
-      subroutine krylov_schur()
-
-!     
-!     
-!     
-
+      subroutine krylov_schur
+      !use KS
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
+!     
+!----- Krylov basis V for the projection M*V = V*H -----
+!       real, allocatable,dimension(:,:) :: qx, qy, qz, qt
+!       real, allocatable,dimension(:,:) :: qp
+
+! !     ----- Upper Hessenberg matrix -----
+!       real, allocatable,dimension(:,:) :: H
+!       real, allocatable,dimension(:,:) :: b_vec
+
+! !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+!       complex*16, allocatable,dimension(:) :: vals
+!       complex*16, allocatable,dimension(:,:) :: vecs
+
+!       real, allocatable, dimension(:) :: residual
+
+!     ----- Miscellaneous -----
+      real wo1(lt),wo2(lt),wo3(lt)
+      common /ugrad/ wo1,wo2,wo3
+
+      integer :: mstart, cnt
+      real, dimension(k_dim)             :: residual
+      real                               :: alpha, beta, glsc3
+      logical                            :: converged
+      integer                            :: n, n2, i, j
+      character(len=30)                  :: filename
 
 !     ----- Krylov basis V for the projection M*V = V*H -----
       real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
@@ -170,16 +217,8 @@ c-----------------------------------------------------------------------
       complex*16, dimension(k_dim)       :: vals
       complex*16, dimension(k_dim,k_dim) :: vecs
 
-!     ----- Miscellaneous -----
-      real wo1(lt),wo2(lt),wo3(lt)
-      common /ugrad/ wo1,wo2,wo3
-
-      integer :: mstart, cnt
-      real, dimension(k_dim)             :: residual
-      real                               :: alpha, beta, glsc3
-      logical                            :: converged
-      integer                            :: n, n2, i, j
-      character(len=30)                  :: filename
+      !allocate(qx(lt,k_dim+1), qy(lt,k_dim+1), qz(lt,k_dim+1), qt(lt,k_dim+1),qp(lt2,k_dim+1))
+      !allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
 
       n      = nx1*ny1*nz1*nelt
       n2     = nx2*ny2*nz2*nelt
@@ -189,6 +228,7 @@ c-----------------------------------------------------------------------
       residual = 0.0d0
 
       call oprzero(wo1, wo2, wo3)
+      !do i = 1, k_dim+1
       do i = 1, k_dim+1
          call noprzero(qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, i))
       !    call oprzero(qx(:, i), qy(:, i), qz(:, i))
@@ -212,7 +252,6 @@ c-----------------------------------------------------------------------
 !     ----- Prepare stability parameters -----
 
       call krylov_schur_prepare
-
 
 !     ----- First vector (new from noise or restart) -----
 
@@ -364,7 +403,7 @@ c-----------------------------------------------------------------------
       if(nid.eq.0)write(6,*)'Eigenproblem solver finished.'
 
       return
-      end
+      end subroutine krylov_schur
 
 
 
@@ -408,7 +447,6 @@ c-----------------------------------------------------------------------
 !     Navier-Stokes operator.
 !     
 !     Last edit : April 3rd 2020 by JC Loiseau.
-
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -425,17 +463,17 @@ c-----------------------------------------------------------------------
       real*8 :: eetime0,eetime1
       real   :: telapsed,tmiss,dnekclock
 
+!     ----- Orthogonal residual f = w - (Q,w)*Q -----
+      real, dimension(lt)                :: f_xr, f_yr, f_zr, f_tr
+      real, dimension(lt2)               :: f_pr
+c
 !     ----- Krylov basis V for the projection MQ = QH -----
       real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
       real, dimension(lt2,k_dim+1)       :: qp
 
-!     ----- Orthogonal residual f = w - (Q,w)*Q -----
-      real, dimension(lt)                :: f_xr, f_yr, f_zr, f_tr
-      real, dimension(lt2)               :: f_pr
-
 !     ----- Upper Hessenberg matrix -----
       real, dimension(k_dim+1, k_dim)       :: H
-
+      
       n  = nx1*ny1*nz1*nelt
       n2 = nx2*ny2*nz2*nelt
 
@@ -449,7 +487,7 @@ c-----------------------------------------------------------------------
 !     --> Arnoldi factorization.
       do mstep = mstart, mend
 
-         if (nid.eq.0) write(6,*) 'iteration current and total:', mstep , '/' , k_dim
+         if (nid.eq.0) write(6,*) 'iteration current and total:', mstep , '/' , mend
 
          eetime0=dnekclock()
 
@@ -477,7 +515,7 @@ c-----------------------------------------------------------------------
       !    if(ifheat) call copy(qt(:,mstep+1), f_tr, n)
 
 !     --> Save checkpoint for restarting/run-time analysis.
-         if(ifres)call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
+      if(ifres)call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
 
 !     --> Output timing statistics
 
@@ -495,8 +533,7 @@ c-----------------------------------------------------------------------
       enddo
 
       return
-      end
-
+      end subroutine arnoldi_factorization
 
 
 
@@ -597,7 +634,7 @@ c     ----- Schur and Hessenberg decomposition -----
 !       if(ifheat) copy(qt(:,mstart),qt(:,k_dim+1),n)
 
       return
-      end
+      end subroutine schur_condensation
 
 
 
@@ -674,7 +711,7 @@ c----------------------------------------------------------------------
       
 
       return
-      end
+      end subroutine prepare_baseflow
 
 
 
@@ -734,8 +771,8 @@ c----------------------------------------------------------------------
       ! broadcast all parameters to processors
       call bcast(param,200*wdsize) 
 
-      return 
-      end
+      return
+      end subroutine krylov_schur_prepare
 
 
       subroutine matrix_vector_product(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
@@ -872,7 +909,7 @@ c----------------------------------------------------------------------
       endif
 
       return
-      end
+      end subroutine matrix_vector_product
 
 
 
@@ -895,7 +932,7 @@ c----------------------------------------------------------------------
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
       real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
-      common /ugrad/ wo1,wo2,wo3,vort
+      !!! testingcommon /ns_ugrad/ wo1,wo2,wo3,vort
 
       real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
       real, dimension(lt2,k_dim+1)       :: qp
@@ -1038,50 +1075,50 @@ c     ----- Output vorticity from real part -----
       !write(filename,"(',I7.7,'.info')") itime/ioutput
       open (844,file=filename,action='write',status='replace')
 
-      write(844,'(A)')'[Nek5000]'
-      write(844,'(A,A)')' Nek5000 version        : ', NVERSION
-      write(844,'(A,A)')' nekStab version        : ', NSVERSION
-      write(844,fmt2) 'lx1        =',lx1
-      write(844,fmt2) 'polyOrder N=',lx1-1
-      write(844,fmt2) 'tot elemts=',nelgv
-      write(844,fmt2) 'tot points=',nelgv*(lx1)**ldim
-      write(844,fmt2) 'MPI ranks =',np
-      write(844,fmt2) 'e/MPI rank=',nelgv/np
-      write(844,'(A)')'[userParams]'
-      write(844,fmt4) 'uparam01=',uparam(01)
-      write(844,fmt4) 'uparam02=',uparam(02)
-      write(844,fmt4) 'uparam03=',uparam(03)
-      write(844,fmt4) 'uparam04=',uparam(04)
-      write(844,fmt4) 'uparam05=',uparam(05)
-      write(844,fmt4) 'uparam06=',uparam(06)
-      write(844,fmt4) 'uparam07=',uparam(07)
-      write(844,fmt4) 'uparam08=',uparam(08)
-      write(844,fmt4) 'uparam09=',uparam(09)
-      write(844,fmt4) 'uparam10=',uparam(10)
-      write(844,'(A)')'[solver]'
-      write(844,fmt3) 'ctarg=   ',ctarg
-      write(844,fmt2) 'nsteps=  ',nsteps
-      write(844,fmt5) 'dt=      ',dt
-      write(844,fmt3) 'Re=      ',1.0/param(2)
-      write(844,fmt6) 'residualTol PRE=',param(21)
-      write(844,fmt6) 'residualTol VEL=',param(22)
-      if(ifheat)then
-      write(844,fmt6) 'residualTol TEM=',param(22)
-      write(844,fmt3) 'Pe=      ',1.0/param(8)
-      endif
-      write(844,'(A)')'[time]'
-      write(844,fmt4) 'sampling period =',sampling_period
-      write(844,fmt2) 'k_dim=           ',k_dim
-      write(844,fmt6) 'eigentol=        ',eigen_tol
-      write(844,fmt2) 'schur_target=    ',schur_tgt
-      write(844,fmt3) 'schur_del=       ',schur_del
-      write(844,fmt2) 'schur iterations=',schur_cnt
-      write(844,fmt2) 'outposted=       ',outposted
+      write(844,'(A,A)')'Nek5000 version:',NVERSION
+      write(844,'(A,A)')'nekStab version:',NSVERSION
+      write(844,'(A)')  '[mesh]'
+      write(844,fmt2)   'lx1=             ',lx1
+      write(844,fmt2)   'polyOrder N=     ',lx1-1
+      write(844,fmt2)   'tot elemts=      ',nelgv
+      write(844,fmt2)   'tot points=      ',nelgv*(lx1)**ldim
+      write(844,fmt2)   'MPI ranks=       ',np
+      write(844,fmt2)   'e/rank=          ',nelgv/np
+      write(844,'(A)')  '[userParams]'
+      write(844,fmt4)   'uparam01=        ',uparam(01)
+      write(844,fmt4)   'uparam02=        ',uparam(02)
+      write(844,fmt4)   'uparam03=        ',uparam(03)
+      write(844,fmt4)   'uparam04=        ',uparam(04)
+      write(844,fmt4)   'uparam05=        ',uparam(05)
+      write(844,fmt4)   'uparam06=        ',uparam(06)
+      write(844,fmt4)   'uparam07=        ',uparam(07)
+      write(844,fmt4)   'uparam08=        ',uparam(08)
+      write(844,fmt4)   'uparam09=        ',uparam(09)
+      write(844,fmt4)   'uparam10=        ',uparam(10)
+      write(844,'(A)')  '[solver]'
+      write(844,fmt3)   'ctarg=           ',ctarg
+      write(844,fmt2)   'nsteps=          ',nsteps
+      write(844,fmt5)   'dt=              ',dt
+      write(844,fmt3)   'Re=              ',1.0/param(2)
+      write(844,fmt6)   'residualTol PRE= ',param(21)
+      write(844,fmt6)   'residualTol VEL= ',param(22)
+      if(ifheat)then  
+      write(844,fmt6)   'residualTol TEM= ',param(22)
+      write(844,fmt3)   'Pe=              ',1.0/param(8)
+      endif  
+      write(844,'(A)')  '[eigensolver]'
+      write(844,fmt4)   'sampling period =',sampling_period
+      write(844,fmt2)   'k_dim=           ',k_dim
+      write(844,fmt6)   'eigentol=        ',eigen_tol
+      write(844,fmt2)   'schur_target=    ',schur_tgt
+      write(844,fmt3)   'schur_del=       ',schur_del
+      write(844,fmt2)   'schur iterations=',schur_cnt
+      write(844,fmt2)   'outposted=       ',outposted
       close(844)
       endif
 
       return
-      end
+      end subroutine outpost_ks
 
 
 
@@ -1159,7 +1196,7 @@ c-----------------------------------------------------------------------
       cnt = count(selected)
 
       return
-      end
+      end subroutine select_eigenvalues
 
 
 
@@ -1264,7 +1301,7 @@ c-----------------------------------------------------------------------
       enddo
 
       return
-      end
+      end subroutine update_hessenberg_matrix
 
 
 
@@ -1368,12 +1405,11 @@ c-----------------------------------------------------------------------
          close(67)
 
 !     --> Write to logfile the current number of converged eigenvalues.
-!     keep small caps to ease grep
-         write(6, *) 'iteration converged and target :',cnt,'/',schur_tgt
+         write(6, *) 'iteration converged and target :',cnt,'/',schur_tgt !keep small caps to ease grep
       endif
 
       return
-      end
+      end subroutine arnoldi_checkpoint
 
 !     ------------------------------------------------------------------------------------
       function log_transform(x)
@@ -1384,4 +1420,4 @@ c-----------------------------------------------------------------------
       if (aimag(x) .eq. 0) log_transform = real(log_transform)
 
       return
-      end
+      end function log_transform
