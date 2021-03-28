@@ -4,6 +4,10 @@
 *core*
 fort*
 BFL*
+SPG*
+BMS*
+BF_*0.f00002
+nek5000
 *.nek5000
 *log*
 *.mod
@@ -19,19 +23,13 @@ session*
 SESSION*
 makefile
 .state
-nek5000
 vor*
 vox*
 KRY*
 *.swp
 NEKSTAB.inc
 *~
-SPG*
-BMS*
-BF_*0.f00002
 makefile_usr.inc
-*makefile_usr.inc
-# python stuff
 *.pyc
 .cache
 __pycache__
