@@ -1,0 +1,25 @@
+#!/bin/bash 
+#SBATCH --qos qos_cpu-dev
+#SBATCH -J cav
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=40
+#SBATCH --hint=nomultithread
+#SBATCH --exclusive
+#SBATCH -A vpo@cpu
+##SBATCH --mail-user=rasfrantz@gmail.com
+##SBATCH --mail-type=ALL
+#SBATCH --time=02:00:00
+cd ${SLURM_SUBMIT_DIR}
+module purge
+module load intel-all/19.0.4 openblas/0.3.6 netlib-lapack/3.8.0
+set -x
+
+ulimit -s unlimited
+ulimit -c unlimited
+
+export CASE='cav'
+echo $CASE > SESSION.NAME
+echo $SLURM_SUBMIT_DIR'/' >>  SESSION.NAME
+
+time srun -n $SLURM_NTASKS ./nek5000 >>logfile 2>&1
+
