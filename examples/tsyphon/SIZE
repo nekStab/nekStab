@@ -40,16 +40,4 @@ c
 
       ! INTERNALS
       include 'SIZE.inc'
-
-
-      ! LINEAR STABILITY FRAMEWORK
-      ! Shared memory bounded arrays and parameters
-
-      !integer k_dim
-      !parameter (k_dim=80)     
-
-      integer, parameter :: k_dim  = 80 ! max dim Krylov space for nekStab
-
-      ! nekStab INTERNALS
-
       include 'NEKSTAB.inc'

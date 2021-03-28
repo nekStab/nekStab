@@ -5,7 +5,7 @@ startfrom = 0 #BF_mfm0.f00001
 #endTime = 500
 
 stopat = numSteps
-numSteps = 10000000
+numSteps = 100
 
 userparam01 = 1   # 0:DNS;1:Baseflow;3:Stabilidade 
 userparam02 = 0   # krylov snapshot to load -> restart point for stab

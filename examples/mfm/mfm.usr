@@ -24,7 +24,7 @@ c-----------------------------------------------------------------------
       uff = uparam(7) !input in .par file
    
       !compute mplitude 
-      call nekStab_chk 
+      call nekStab_usrchk 
       call copy(int1,t(1,1,1,1,1),n)
       call add2sxy(int1,uff,ddtdx,param(8),n) !x := a*x + b*y 
       call col3(int2,ubb,vbb,n) !a := b*c
@@ -40,7 +40,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine nekStab_chk !called for linear and nonlinear cases
+      subroutine nekStab_usrchk !called for linear and nonlinear cases
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -82,11 +82,9 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      real xmax,xmin,xf0,delta
+      real xf0,delta
       integer e,ntot
-      ! ntot = nx1*ny1*nz1*nelv
-      ! xmax = glmax(xm1,ntot)
-      ! xmin = glmin(xm1,ntot)
+      
       xf0 = 5 !(xmax-xmin)*0.5d0
       delta = 4.0d0
 
