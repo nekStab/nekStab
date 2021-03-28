@@ -14,7 +14,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine nekstab_chk
+      subroutine nekstab_usrchk
       include 'SIZE'
       include 'TOTAL'
       return

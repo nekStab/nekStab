@@ -14,8 +14,8 @@ c
       parameter (lxd=12)!09,12,15,18   ! GL  points for over-integration (dealiasing)
       parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
 
-      parameter (lelg=10000)            ! max number of global elements
-      parameter (lpmin=  4)            ! min number of MPI ranks
+      parameter (lelg=1000)            ! max number of global elements
+      parameter (lpmin= 2)            ! min number of MPI ranks
       parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
       parameter (ldimt=1)              ! max auxiliary fields (temperature + scalars)
 
@@ -40,27 +40,9 @@ c
 
       ! INTERNALS
       include 'SIZE.inc'
+      include 'NEKSTAB.inc'
 
       real ddudx(lx1*ly1*lz1*lelt),ddudy(lx1*ly1*lz1*lelt),ddudz(lx1*ly1*lz1*lelt)
       real ddvdx(lx1*ly1*lz1*lelt),ddwdx(lx1*ly1*lz1*lelt),ddtdx(lx1*ly1*lz1*lelt)
       real uff,AAA
       common /mfm/ ddudx,ddudy,ddudz,ddvdx,ddwdx,ddtdx,uff,AAA
-
-      ! LINEAR STABILITY FRAMEWORK
-      ! Shared memory bounded arrays and parameters
-
-      logical, parameter :: ifres =  .true. !outpost restart files for eig
-      logical, parameter :: ifnois = .true.
-      logical, parameter :: ifldbf = .true.
-      logical, parameter :: ifbf2D = .false. ! force 2D solution
-
-      character(len=80), parameter :: bf_handle = 'BF_mfm0.f00001'
-
-      integer, parameter :: k_dim  = 150
-      integer, parameter :: schur_tgt  = 0 !schur on if >1
-
-      real, parameter    :: eigen_tol  = 1.0E-6 !standard value
-      real, parameter    :: schur_del  = 0.10D0
-
-
-      include 'NEKSTAB.inc'     ! include of arrays for nekStab

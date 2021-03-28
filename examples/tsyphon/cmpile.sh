@@ -9,9 +9,9 @@ export CASE="tsyphon" #--> case name goes here
 
 #uncomment the deisred compiler
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc.sh
-#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
+source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel.sh
-source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel_tb.sh
+#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_pgi.sh
 
 args=("$@")

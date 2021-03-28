@@ -4,8 +4,9 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
-
+      if(uparam(1).eq.0.and.istep.eq.0)t=0.0d0
       call nekStab
+      call hpts
 
       !call stat_avg
       !call stats_3d_full
@@ -13,9 +14,24 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine nekstab_chk
+      subroutine nekStab_usrchk
+      implicit none
       include 'SIZE'
       include 'TOTAL'
+
+      if(istep.eq.0)then !change defaults
+
+        xLspg = uparam(8); call bcast(xLspg , wdsize)
+        xRspg = uparam(9); call bcast(xRspg , wdsize)
+
+        schur_tgt = 4 ; call bcast(schur_tgt,isize)
+        maxmodes = 2 ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        !ifvor = .true. ; call bcast(ifvor,lsize)
+        !ifvox = .true. ; call bcast(ifvox,lsize)
+
+      endif
+
       return
       end
 c-----------------------------------------------------------------------
