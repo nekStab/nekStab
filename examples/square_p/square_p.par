@@ -1,0 +1,50 @@
+[GENERAL]
+startFrom = 0
+
+stopAt = numSteps
+numSteps = 1000000
+
+userParam01 = 0  # 0:dns,1:stabilization,3:stability
+userParam02 = 0  # krylov snapshot to load
+userParam03 = 1  # stabilization technique: 1:sfd
+userParam04 = 0.1250 # freq (Strouhal leading mode)
+userParam05 = 0.0500 # gain (twice growth rate leading mode)
+userParam06 = 0   # 
+userParam07 = 20   # PENALIZATION INTENSITY >0 TO ACTIVATE
+userParam08 = 1   # sponge lenght left
+userParam09 = 5   # sponge lenght right
+userParam10 = 1.7 # sponge strenght
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = yes
+density = 1.0
+viscosity = -50.0
+
+#[TEMPERATURE]
+#solver = helm
+#residualTol = 1.0E-10
+#residualProj = no
+#writeToFieldFile = yes
+#conductivity = -35.5 # re*0.71
+#rhoCp = 1.0
