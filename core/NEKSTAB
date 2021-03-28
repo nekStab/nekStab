@@ -12,8 +12,8 @@
       real                eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
       common /nStab_real/ eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
 
-      integer                  bst_skp 
-      common /nStab_boostconv/ bst_skp
+      integer                  bst_skp, bst_snp, k_dim
+      common /nStab_boostconv/ bst_skp, bst_snp, k_dim
 
       integer            mstep,schur_tgt,maxmodes,schur_cnt
       common /nStab_int/ mstep,schur_tgt,maxmodes,schur_cnt
