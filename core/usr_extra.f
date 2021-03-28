@@ -1,15 +1,18 @@
 c-----------------------------------------------------------------------
       subroutine nekStab_setDefault
+      !use nek_stab
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      schur_tgt = 0             ! schur target 
+      
+      k_dim = 1
+      schur_tgt = 2             ! schur target 
       eigen_tol = 1.0e-6        ! 
       schur_del = 0.10d0        ! 
       maxmodes = k_dim          ! max modes to outpost
-      bst_skp = 1 ! boostconv skip
 
+      bst_skp = 1 ! boostconv skip
+      bst_snp = 1 ! bootsconv matrix size
 
       ifres  = .false.          ! outpost restart files for eig
       ifvor  = .false.          ! outpost vorticity
@@ -32,10 +35,10 @@ c-----------------------------------------------------------------------
       ! arnDA = .false.
       ! arnAD = .false.
 
-      xLspg   = 0.0d0; call bcast(xLspg , wdsize)
-      xRspg   = 0.0d0; call bcast(xRspg , wdsize)
-      yLspg   = 0.0d0; call bcast(yLspg , wdsize)
-      yRspg   = 0.0d0; call bcast(yRspg , wdsize)
+      xLspg   = 0.0d0; call bcast(xLspg, wdsize)
+      xRspg   = 0.0d0; call bcast(xRspg, wdsize)
+      yLspg   = 0.0d0; call bcast(yLspg, wdsize)
+      yRspg   = 0.0d0; call bcast(yRspg, wdsize)
       zLspg   = 0.0d0; call bcast(zLspg, wdsize)
       zRspg   = 0.0d0; call bcast(zRspg, wdsize)
       acc_spg = 0.0d0; call bcast(acc_spg, wdsize) 
@@ -45,8 +48,10 @@ c-----------------------------------------------------------------------
       call bcast(eigen_tol, wdsize) ! wdsize for real
       call bcast(schur_del, wdsize)
       call bcast(maxmodes, isize)
+      call bcast(k_dim, isize)
       call bcast(bst_skp, isize)
-
+      call bcast(bst_snp, isize)
+      
       call bcast(ifres   , lsize) !lsize for boolean
       call bcast(ifvor   , lsize)
       call bcast(ifvox   , lsize)
@@ -360,7 +365,7 @@ c-----------------------------------------------------------------------
       integer, parameter :: lt=lx1*ly1*lz1*lelt
       real, dimension(lt), intent(in) :: px, py, pz, pt
       integer, intent(in) :: skip
-      character(len=30), intent(in) :: fname
+      character(len=20), intent(in) :: fname
       real glsc3,uek,vek,wek,eek,pot
       integer n
       save eek,n
