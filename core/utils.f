@@ -135,14 +135,14 @@ c-----------------------------------------------------------------------
       endif
 
       if (spng_str.gt.0) then
-      ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+         ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
          if (jp.eq.0) then
-            ! dns
+!     dns
             ffx = ffx + spng_fun(ip)*(spng_vr(ip,1) - vx(ix,iy,iz,iel))*spng_str
             ffy = ffy + spng_fun(ip)*(spng_vr(ip,2) - vy(ix,iy,iz,iel))*spng_str
             if (if3d) ffz = ffz + spng_fun(ip)*(spng_vr(ip,ndim) - vz(ix,iy,iz,iel))*spng_str
          else
-            ! perturbation
+!     perturbation
             ffx = ffx - spng_fun(ip)*vxp(ip,jp)
             ffy = ffy - spng_fun(ip)*vyp(ip,jp)
             if(if3d) ffz = ffz - spng_fun(ip)*vzp(ip,jp)
@@ -160,14 +160,14 @@ c-----------------------------------------------------------------------
       real temp
       integer ix,iy,iz,ieg,iel,ip
 
-      iel=gllel(ieg) !SUM HERE NEKSTAB CUSTOM TEMP FORCING
+      iel=gllel(ieg)            !SUM HERE NEKSTAB CUSTOM TEMP FORCING
       if (jp.eq.0) temp  = temp + fct(ix,iy,iz,iel)
-     
-      if (spng_str.gt.0) then !!!HERE SPONGE STRENGHT ALWAYS UNITY!
-      ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
-         if (jp.eq.0) then ! dns ! t(1,1,1,1,ifield-1)
+      
+      if (spng_str.gt.0) then   !!!HERE SPONGE STRENGHT ALWAYS UNITY!
+         ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+         if (jp.eq.0) then      ! dns ! t(1,1,1,1,ifield-1)
             temp = temp + spng_fun(ip)*(spng_vt(ip) - t(ix,iy,iz,iel,1))
-         else ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
+         else                   ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
             temp = temp - spng_fun(ip)*tp(ip,1,jp)
          endif
       endif
@@ -185,41 +185,41 @@ c-----------------------------------------------------------------------
       n = nx1*ny1*nz1*nelv
       acc_spg = ABS(acc_spg)
 
-                  spng_wl(1)=(1.0d0-acc_spg)*xLspg ! Sponge left section width; dimension X
-                  spng_wl(2)=(1.0d0-acc_spg)*yLspg
-          if(IF3D)spng_wl(3)=(1.0d0-acc_spg)*zLspg
+      spng_wl(1)=(1.0d0-acc_spg)*xLspg ! Sponge left section width; dimension X
+      spng_wl(2)=(1.0d0-acc_spg)*yLspg
+      if(IF3D)spng_wl(3)=(1.0d0-acc_spg)*zLspg
 
-                  spng_wr(1)=(1.0d0-acc_spg)*xRspg! Sponge right section width; dimension X
-                  spng_wr(2)=(1.0d0-acc_spg)*yRspg
-          if(IF3D)spng_wr(3)=(1.0d0-acc_spg)*zRspg
+      spng_wr(1)=(1.0d0-acc_spg)*xRspg ! Sponge right section width; dimension X
+      spng_wr(2)=(1.0d0-acc_spg)*yRspg
+      if(IF3D)spng_wr(3)=(1.0d0-acc_spg)*zRspg
 
-                 spng_dl(1)=(acc_spg)*xLspg ! Sponge left drop/rise section width; dimension X
-                 spng_dl(2)=(acc_spg)*yLspg
-         if(IF3D)spng_dl(3)=(acc_spg)*zLspg
+      spng_dl(1)=(acc_spg)*xLspg ! Sponge left drop/rise section width; dimension X
+      spng_dl(2)=(acc_spg)*yLspg
+      if(IF3D)spng_dl(3)=(acc_spg)*zLspg
 
-                spng_dr(1)=(acc_spg)*xRspg !Sponge right drop/rise section width; dimension X
-                spng_dr(2)=(acc_spg)*yRspg
-        if(IF3D)spng_dr(3)=(acc_spg)*zRspg
+      spng_dr(1)=(acc_spg)*xRspg !Sponge right drop/rise section width; dimension X
+      spng_dr(2)=(acc_spg)*yRspg
+      if(IF3D)spng_dr(3)=(acc_spg)*zRspg
 
-         if(nid.eq.0)then
-            write(6,*)' Left sponge width: ',left_sponge
-            write(6,*)' Right sponge width: ',right_sponge
-            write(6,*)' Sponge left section width: ',spng_wl
-            write(6,*)' Sponge right section width: ',spng_wr
-            write(6,*)' Sponge left drop/rise section width: ',spng_dl
-            write(6,*)' Sponge right drop/rise section width: ',spng_dr
-         endif
+      if(nid.eq.0)then
+         write(6,*)' Left sponge width: ',left_sponge
+         write(6,*)' Right sponge width: ',right_sponge
+         write(6,*)' Sponge left section width: ',spng_wl
+         write(6,*)' Sponge right section width: ',spng_wr
+         write(6,*)' Sponge left drop/rise section width: ',spng_dl
+         write(6,*)' Sponge right drop/rise section width: ',spng_dr
+      endif
 
-      ! save reference field -> sponge value reference
+!     save reference field -> sponge value reference
       call opcopy(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),vx,vy,vz) !only DNS
       if(ifheat)call copy(spng_vt,t(1,1,1,1,1),n) !only DNS - temperature
-      call spng_set ! -> compute spng_fun
+      call spng_set             ! -> compute spng_fun
 
       return
       end subroutine spng_init
 c-----------------------------------------------------------------------
       subroutine spng_set
-      !set sponge function and refernece fields
+!     set sponge function and refernece fields
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -234,64 +234,64 @@ c-----------------------------------------------------------------------
       logical ltmp, ltmp2
 
       ntot = NX1*NY1*NZ1*NELV
-      bmin(1) = xmn !glmin(XM1,ntot)
-      bmax(1) = xmx !glmax(XM1,ntot)
-      bmin(2) = ymn !glmin(YM1,ntot)
-      bmax(2) = ymx !glmax(YM1,ntot)
+      bmin(1) = xmn             !glmin(XM1,ntot)
+      bmax(1) = xmx             !glmax(XM1,ntot)
+      bmin(2) = ymn             !glmin(YM1,ntot)
+      bmax(2) = ymx             !glmax(YM1,ntot)
       if(IF3D) then
-        bmin(NDIM) = zmn !glmin(ZM1,ntot)
-        bmax(NDIM) = zmx !glmax(ZM1,ntot)
+         bmin(NDIM) = zmn       !glmin(ZM1,ntot)
+         bmax(NDIM) = zmx       !glmax(ZM1,ntot)
       endif
 
-         call rzero(spng_fun,ntot)
-         ! for every dimension
-         do il=1,NDIM
+      call rzero(spng_fun,ntot)
+!     for every dimension
+      do il=1,NDIM
 
-          if (spng_wl(il).gt.0.0.or.spng_wr(il).gt.0.0) then
+         if (spng_wl(il).gt.0.0.or.spng_wr(il).gt.0.0) then
 
-             if (spng_wl(il).lt.spng_dl(il).or.spng_wr(il).lt.spng_dr(il)) then
-                write(6,*)'Wrong sponge parameters!'
-             endif
+            if (spng_wl(il).lt.spng_dl(il).or.spng_wr(il).lt.spng_dr(il)) then
+            write(6,*)'Wrong sponge parameters!'
+         endif
 
-             xxmax   = bmax(il) - spng_wr(il)! sponge beginning (rise at xmax; right)
-             xxmin   = bmin(il) + spng_wl(il)! end (drop at xmin; left)
-             xxmax_c = xxmax    + spng_dr(il)! beginnign of constant part (right)
-             xxmin_c = xxmin    - spng_dl(il)! beginnign of constant part (left)
+         xxmax   = bmax(il) - spng_wr(il) ! sponge beginning (rise at xmax; right)
+         xxmin   = bmin(il) + spng_wl(il) ! end (drop at xmin; left)
+         xxmax_c = xxmax    + spng_dr(il) ! beginnign of constant part (right)
+         xxmin_c = xxmin    - spng_dl(il) ! beginnign of constant part (left)
 
-             ! get SPNG_FUN
-             if (xxmax.le.xxmin) then
-                write(6,*)'Sponge too wide'
-             else
-                ! this should be done by pointers, but for now I avoid it
-                if (il.eq.1) then
-                   call copy(lcoord,XM1, ntot)
-                elseif (il.eq.2) then
-                   call copy(lcoord,YM1, ntot)
-                elseif (il.eq.3) then
-                   call copy(lcoord,ZM1, ntot)
-                endif
+!     get SPNG_FUN
+         if (xxmax.le.xxmin) then
+            write(6,*)'Sponge too wide'
+         else
+!     this should be done by pointers, but for now I avoid it
+            if (il.eq.1) then
+               call copy(lcoord,XM1, ntot)
+            elseif (il.eq.2) then
+               call copy(lcoord,YM1, ntot)
+            elseif (il.eq.3) then
+               call copy(lcoord,ZM1, ntot)
+            endif
 
-                do jl=1,ntot
-                   rtmp = lcoord(jl)
-                   if(rtmp.le.xxmin_c) then ! constant; xmin
-                      rtmp=1.0d0 !spng_str
-                   elseif(rtmp.lt.xxmin) then ! fall; xmin
-                      arg = (xxmin-rtmp)/spng_wl(il)
-                      rtmp = mth_stepf(arg)
-                   elseif (rtmp.le.xxmax) then ! zero
-                      rtmp = 0.0
-                   elseif (rtmp.lt.xxmax_c) then ! rise
-                      arg = (rtmp-xxmax)/spng_wr(il)
-                      rtmp = mth_stepf(arg)
-                   else    ! constant
-                      rtmp = 1.0d0 !spng_str
-                   endif
-                   spng_fun(jl)=max(spng_fun(jl),rtmp)
-                enddo
+            do jl=1,ntot
+               rtmp = lcoord(jl)
+               if(rtmp.le.xxmin_c) then ! constant; xmin
+                  rtmp=1.0d0    !spng_str
+               elseif(rtmp.lt.xxmin) then ! fall; xmin
+                  arg = (xxmin-rtmp)/spng_wl(il)
+                  rtmp = mth_stepf(arg)
+               elseif (rtmp.le.xxmax) then ! zero
+                  rtmp = 0.0
+               elseif (rtmp.lt.xxmax_c) then ! rise
+                  arg = (rtmp-xxmax)/spng_wr(il)
+                  rtmp = mth_stepf(arg)
+               else             ! constant
+                  rtmp = 1.0d0  !spng_str
+               endif
+               spng_fun(jl)=max(spng_fun(jl),rtmp)
+            enddo
 
-             endif  ! xxmax.le.xxmin
-          endif  ! spng_w(il).gt.0.0
-       enddo
+         endif                  ! xxmax.le.xxmin
+      endif                     ! spng_w(il).gt.0.0
+      enddo
 
       ltmp = ifto; ltmp2 = ifpo
       ifto = .true.; ifpo= .false.
@@ -302,7 +302,7 @@ c-----------------------------------------------------------------------
       end subroutine spng_set
 c-----------------------------------------------------------------------
       real function mth_stepf(x)
-      !compute sponge function
+!     compute sponge function
       implicit none
       real x, xdmin, xdmax
       parameter (xdmin = 0.0010d0, xdmax = 0.9990d0)
@@ -316,7 +316,7 @@ c-----------------------------------------------------------------------
       end function mth_stepf
 c-----------------------------------------------------------------------
       subroutine add_noise(qx, qy, qz, qp)
-      !input random number to fields
+!     input random number to fields
       implicit none
       include 'SIZE'            ! NX1, NY1, NZ1, NELV, NID
       include 'TSTEP'           ! TIME, DT
@@ -331,37 +331,37 @@ c-----------------------------------------------------------------------
       n = nx1*ny1*nz1*nelv
 
       do iel=1,NELV
-       do kl=1,NZ1
-        do jl=1,NY1
-         do il=1,NX1
+         do kl=1,NZ1
+            do jl=1,NY1
+               do il=1,NX1
 
-            ieg = LGLEL(iel)
-            xl(1) = XM1(il,jl,kl,iel)
-            xl(2) = YM1(il,jl,kl,iel)
-            if (if3D) xl(NDIM) = ZM1(il,jl,kl,iel)
+                  ieg = LGLEL(iel)
+                  xl(1) = XM1(il,jl,kl,iel)
+                  xl(2) = YM1(il,jl,kl,iel)
+                  if (if3D) xl(NDIM) = ZM1(il,jl,kl,iel)
 
-            fcoeff(1)=  3.0e4;fcoeff(2)= -1.5e3;fcoeff(3)=  0.5e5
-            qx(il,jl,kl,iel)=qx(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+                  fcoeff(1)=  3.0e4;fcoeff(2)= -1.5e3;fcoeff(3)=  0.5e5
+                  qx(il,jl,kl,iel)=qx(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
 
-            fcoeff(1)=  2.3e4;fcoeff(2)=  2.3e3;fcoeff(3)= -2.0e5
-            qy(il,jl,kl,iel)=qy(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+                  fcoeff(1)=  2.3e4;fcoeff(2)=  2.3e3;fcoeff(3)= -2.0e5
+                  qy(il,jl,kl,iel)=qy(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
 
-            if (if3d) then
-               fcoeff(1)= 2.e4;fcoeff(2)= 1.e3;fcoeff(3)= 1.e5
-               qz(il,jl,kl,iel)=qz(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-            endif
+                  if (if3d) then
+                     fcoeff(1)= 2.e4;fcoeff(2)= 1.e3;fcoeff(3)= 1.e5
+                     qz(il,jl,kl,iel)=qz(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+                  endif
 
-            if (ifheat) then
-               fcoeff(1)= 9.e4;fcoeff(2)= 3.e3;fcoeff(3)= 4.e5
-               qp(il,jl,kl,iel)=qp(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
-            endif
+                  if (ifheat) then
+                     fcoeff(1)= 9.e4;fcoeff(2)= 3.e3;fcoeff(3)= 4.e5
+                     qp(il,jl,kl,iel)=qp(il,jl,kl,iel)+mth_rand(il,jl,kl,ieg,xl,fcoeff)
+                  endif
 
-          enddo
+               enddo
+            enddo
          enddo
-        enddo
-       enddo
+      enddo
 
-      ! face averaging
+!     face averaging
       call opdssum(qx, qy, qz)
       call opcolv (qx, qy, qz, VMULT)
 
@@ -371,10 +371,10 @@ c-----------------------------------------------------------------------
       call bcdirVC(qx, qy, qz,v1mask,v2mask,v3mask)
 
       if(ifheat)then
-      call dssum(qp,lx1,ly1,lz1)
-      call col2(qp, VMULT, n)
-      call dsavg(qp)
-      call bcdirSC(qp)
+         call dssum(qp,lx1,ly1,lz1)
+         call col2(qp, VMULT, n)
+         call dsavg(qp)
+         call bcdirSC(qp)
       endif
 
       return
@@ -393,31 +393,31 @@ c-----------------------------------------------------------------------
       xlx = xmx - xmn
       yly = ymx - ymn
       zlz = zmx - zmn
- 
+      
       alpha = 2*pi/zlz
- 
-      ! --> Create the initial velocity perturbation.
+      
+!     --> Create the initial velocity perturbation.
       
       do iel=1,NELV
-       do kl=1,NZ1
-        do jl=1,NY1
-         do il=1,NX1
+         do kl=1,NZ1
+            do jl=1,NY1
+               do il=1,NX1
 
-         ieg = LGLEL(iel)
-         x = XM1(il,jl,kl,iel)
-         y = YM1(il,jl,kl,iel)
-         if (if3D) z = ZM1(il,jl,kl,iel)
- 
-      ! -> Construct the perturbation. ! Note: Spanwise invariant.
-       qx(il,jl,kl,iel) = cos(alpha*z)*sin(2.*pi*y)
-       qz(il,jl,kl,iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
-       qp(il,jl,kl,iel) = cos(alpha*z)*cos(2.*pi*y)
+                  ieg = LGLEL(iel)
+                  x = XM1(il,jl,kl,iel)
+                  y = YM1(il,jl,kl,iel)
+                  if (if3D) z = ZM1(il,jl,kl,iel)
+                  
+!     -> Construct the perturbation. ! Note: Spanwise invariant.
+                  qx(il,jl,kl,iel) = cos(alpha*z)*sin(2.*pi*y)
+                  qz(il,jl,kl,iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
+                  qp(il,jl,kl,iel) = cos(alpha*z)*cos(2.*pi*y)
 
+               enddo
+            enddo
+         enddo
       enddo
-      enddo
-      enddo
-      enddo
- 
+      
       amp = glsc3(qx, bm1, qx, ntot)+ glsc3(qy, bm1, qy, ntot)
       if(if3d) amp = amp + glsc3(qz, bm1, qz, ntot)
       amp = 1e-6/(0.50d0*amp)
@@ -430,7 +430,7 @@ c-----------------------------------------------------------------------
       real function mth_rand(ix,iy,iz,ieg,xl,fcoeff) !generate random number
       implicit none
       include 'SIZE'
-      include 'INPUT'       ! IF3D
+      include 'INPUT'           ! IF3D
       integer ix,iy,iz,ieg
       real xl(LDIM), fcoeff(3)
       mth_rand = fcoeff(1)*(ieg+xl(1)*sin(xl(2))) + fcoeff(2)*ix*iy+fcoeff(3)*ix

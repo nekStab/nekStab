@@ -9,29 +9,29 @@
 !     This function computes the Schur decomposition of a general matrix A.
 !     Both the eigenvalues and the corresponding Schur basis are returned.
 !     Note that the matrix A is overwritten with its Schur factorization.
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     A : n x n real matrix
 !     Matrix to be factorized.
-!
+!     
 !     n : float
 !     Number of rows/columns of A.
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     A : n x n real matrix
 !     Schur decomposition of the input matrix A, in canonical form.
-!
+!     
 !     vecs : n x n real matrix
 !     Schur basis asssociated to A.
-!
+!     
 !     vals : n-dimensional complex array.
 !     Unsorted eigenvalues of matrix A.
-!
-!
+!     
+!     
 !     Last edit : April 1st 2020 by JC Loiseau.
 
       implicit none
@@ -50,14 +50,13 @@
       ldvs = max(1, n)
       lwork = max(1, 3*n)
 
-      call dgees(jobvs, sort, select_eigvals, n, A, lda
-     $     , sdim, wr, wi, vecs, ldvs, work, lwork, bwork, info)
+      call dgees(jobvs, sort, select_eigvals, n, A, lda, sdim, wr, wi, vecs, ldvs, work, lwork, bwork, info)
 
 !     --> Eigenvalues.
       vals = wr*(1.0D0, 0.0D0) + wi*(0.0D0, 1.0D0)
 
       return
-      end
+      end subroutine schur
 
 
 
@@ -75,31 +74,31 @@
 !     matrix and corresponding Schur vectors such that the selected eigenvalues are
 !     in the upper-left block of the matrix. Note that, after completion, both T
 !     and Q are overwritten by the reordered Schur matrix and vectors.
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     T : n x n real matrix
 !     Matrix in canonical Schur form to be reordered.
-!
+!     
 !     Q : n x n real matrix
 !     Matrix of Schur vectors to be reordered.
-!
+!     
 !     selected : logical n-dimensional array.
 !     Logical array indicating which eigenvalues need to be moved to the upper left block.
-!
+!     
 !     n : integer
 !     Number of rows/columns of T and Q.
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     T : n x n real matrix
 !     Reordered Schur matrix.
-!
+!     
 !     Q : n x n real matrix.
 !     Reordered Schur vectors.
-!
+!     
 !     Last edit : April 1st 2020 by JC Loiseau.
 
       implicit none
@@ -117,40 +116,39 @@
       lwork = max(1, n)
       liwork = 1
 
-      call dtrsen(job, compq, selected, n, T, ldt, Q, ldq, wr, wi,
-     $     m, s, sep, work, lwork, iwork, liwork, info)
+      call dtrsen(job, compq, selected, n, T, ldt, Q, ldq, wr, wi, m, s, sep, work, lwork, iwork, liwork, info)
 
       return
-      end
+      end subroutine ordschur
 
 
 
 
 
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
       subroutine eig(A, vecs, vals, n)
 
 !     This function computes the eigendecomposition of a general matrix A.
 !     Both the eigenvalues and the right eigenvectors are returned.
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     A : n x n real matrix.
 !     Matrix to be eigendecomposed.
-!
+!     
 !     n : integer
 !     Number of rows/columns of A.
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     vecs : n x n complex matrix.
 !     Matrix of eigenvectors.
-!
+!     
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
-!
+!     
 !     Last edit : April 1st 2020 by JC Loiseau.
 
       implicit none
@@ -191,9 +189,9 @@ c-----------------------------------------------------------------------
       call sort_eigendecomp(vals, vecs, n)
 
       return
-      end
+      end subroutine eig
 
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
 
 
@@ -202,7 +200,7 @@ c-----------------------------------------------------------------------
       subroutine matrix_matrix(A,B,nra,nc,ncb)
       implicit none
       integer :: nra, nc, ncb
-c     ----- Required variables for dgeem -----
+!     ----- Required variables for dgeem -----
       character :: TRANSA = 'N', TRANSB = 'N'
       integer   :: m, n, k
       integer   :: lda, ldb, ldc
@@ -210,20 +208,20 @@ c     ----- Required variables for dgeem -----
       real, dimension(nc,ncb)  :: B
       real, dimension(nra,ncb) :: C
       real :: alpha, beta
-c     ----- Matrix-matrix multiplication -----
+!     ----- Matrix-matrix multiplication -----
       m = nra;      n = ncb;      k = nc
       lda = max(1,m); ldb = max(1,k); ldc = max(1,m)
       alpha = 1.0D0; beta  = 0.0D0
       call dgemm(TRANSA,TRANSB,m,n,k,alpha,A,lda,B,ldb,beta,C,ldc)
       A(:,1:ncb) = C
       return
-      end subroutine
+      end subroutine matrix_matrix
 
 
 
 
 
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
 
 
@@ -233,18 +231,18 @@ c-----------------------------------------------------------------------
 
 !     This function sorts the eigenvalues in decreasing magnitude using a very
 !     naive sorting algorithm.
-!
+!     
 !     INPUTS/OUTPUTS
 !     --------------
-!
+!     
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues to be sorted as input.
 !     It is overwritten with the ordered eigenvalues as output.
-!
+!     
 !     vecs : n x n complex matrix.
 !     Matrix of corresponding eigenvectors. It is also overwritten with
 !     the reordered eigenvectors as output.
-!
+!     
 !     Last edit : April 2nd by JC Loiseau
 
       implicit none
@@ -276,7 +274,7 @@ c-----------------------------------------------------------------------
          enddo
       enddo
       return
-      end
+      end subroutine sort_eigendecomp
 
 !     -------------------------------------------------------------------
 
@@ -295,7 +293,7 @@ c-----------------------------------------------------------------------
       if(sqrt(wr**2 + wi**2) .GT. 0.9) select_eigvals=.true.
 
       return
-      end
+      end function select_eigvals
 
 
 
@@ -316,24 +314,24 @@ c-----------------------------------------------------------------------
 
 !     Wrapper for the LAPACK linear least-squares solver. Given the matrix A
 !     and right-hand side vector b, it solves for x that minimizes
-!
+!     
 !     min || Ax - b ||_2
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     A : m x n real matrix.
-!
+!     
 !     b : m x 1 real vector.
-!
+!     
 !     m, n : integers.
-!
-!
+!     
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     x : n x 1 real vector.
-!
+!     
 !     Last edit : March 22nd 2021 by JC Loiseau.
 
       implicit none
