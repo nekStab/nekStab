@@ -18,12 +18,17 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       if(istep.eq.0)then !change defaults
-      schur_tgt = 2
-      maxmodes = 1
-      ires = .false.
-      ifvox = .false.
-      call bcast(schur_tgt, isize) ! isize for integer   
-      call bcast(ifres   , lsize) !lsize for boolean
+
+        xLspg = uparam(8); call bcast(xLspg , wdsize)
+        xRspg = uparam(9); call bcast(xRspg , wdsize)
+
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
+        maxmodes = k_dim ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        !ifvor = .false. ; call bcast(ifvor,lsize)
+        !ifvox = .false. ; call bcast(ifvox,lsize)
+
       endif
 
       return

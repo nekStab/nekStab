@@ -1,22 +1,23 @@
 [GENERAL]
 startFrom = 0
-
-stopAt = numSteps
-numSteps = 10 # for BF computation
+stopAt = endTime
+endTime = 1
 
 userParam01 = 3  # 0:dns,1:stabilization,3:stability
 userParam02 = 0  # krylov snapshot to load
 userParam03 = 0  # stabilization technique: 1:sfd
-userParam04 = 0.1200 # freq (Strouhal leading mode)
-userParam05 = 0.2 # gain (twice growth rate leading mode)
-userParam06 = 0   #
-userParam07 = 0   #
-userParam08 = 5   # sponge lenght left
-userParam09 = 5   # sponge lenght right
+userParam04 = 0  # freq (Strouhal leading mode)
+userParam05 = 0  # gain (twice growth rate leading mode)
+userParam06 = 0  #
+userParam07 = 64 # k_dim
+userParam08 = 5  # sponge lenght left
+userParam09 = 5  # sponge lenght right
 userParam10 = 1.7 # sponge strenght
 
+
+# all should be automatic in time! 
 dt = 0
-variableDt = no
+variableDt = yes
 timeStepper = bdf3
 targetCFL = 0.5
 
@@ -25,9 +26,9 @@ writeInterval = 10.
 writeDoublePrecision = no
 
 dealiasing = yes
-filtering = explicit
-filterWeight = 0.01
-filterCutoffRatio = 0.84
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt

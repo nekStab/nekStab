@@ -40,7 +40,4 @@ c
 
       ! INTERNALS
       include 'SIZE.inc'
-
-      integer, parameter :: k_dim=128   !max Krylov dimension for eigensolvers
-      integer, parameter :: bst_snp=6  !BoostConv dimension for eigensolvers
       include 'NEKSTAB.inc'
