@@ -7,3 +7,4 @@
  $(OBJDIR)/IO.o           :$(NEKSTAB_SOURCE_ROOT)/core/IO.f;           $(F77) -c $(FL2) $< -o $@
  $(OBJDIR)/postproc.o     :$(NEKSTAB_SOURCE_ROOT)/core/postproc.f;      $(F77) -c $(FL2) $< -o $@
  $(OBJDIR)/newton_krylov.o     :$(NEKSTAB_SOURCE_ROOT)/core/newton_krylov.f;      $(F77) -c $(FL2) $< -o $@
+ $(OBJDIR)/sensitivity.o     :$(NEKSTAB_SOURCE_ROOT)/core/sensitivity.f;      $(F77) -c $(FL2) $< -o $@

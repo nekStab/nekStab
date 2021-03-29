@@ -5,15 +5,17 @@
 #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 #export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
-export USR="krylov_decomposition.o\
+export USR="krylov_decomposition.o \
     eigensolvers.o \
     lapack_wrapper.o \
     fixedp.o \
     usr_extra.o \
     utils.o \
     IO.o \
-    postproc.o\
-    newton_krylov.o"
+    postproc.o \
+    newton_krylov.o \
+    sensitivity.o \
+    "
 
 echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab" > makefile_usr.inc
 cp --verbose ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB NEKSTAB.inc
