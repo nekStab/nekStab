@@ -54,7 +54,7 @@
       if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, n)
 
       return
-      end
+      end subroutine inner_product
 
 
 
@@ -81,7 +81,7 @@
       alpha = dsqrt(alpha)
 
       return
-      end
+      end subroutine norm
 
 
 
@@ -123,9 +123,6 @@
       real, dimension(lt2), intent(inout) :: qp
       real, intent(out)                   :: alpha
       real                                :: beta
-!     integer n,n2
-!     n = nx1*ny1*nz1*nelt
-!     n2 = nx2*ny2*nz2*nelt
 
 !     --> Compute the user-defined norm.
       call norm(qx, qy, qz, qp, qt, alpha)
@@ -133,42 +130,11 @@
 
 !     --> Normalize the vector.
       call nopcmult(qx, qy, qz, qp, qt, beta)
-!     call opcmult(qx, qy, qz, beta)
-!     if(ifpo) call cmult(qp, beta, n2)
-!     if(ifheat) call cmult(qt, beta, n)
 
       return
-      end
+      end subroutine normalize
 
-
-
-!     c-----------------------------------------------------------------------
-!     module KS
-!     implicit none
-!     include 'SIZE'
-!     include 'TOTAL'
-
-!     integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-!     integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-!     !
-!     !----- Krylov basis V for the projection M*V = V*H -----
-!     real, allocatable,dimension(:,:) :: qx, qy, qz, qt
-!     real, allocatable,dimension(:,:) :: qp
-
-!     !     ----- Upper Hessenberg matrix -----
-!     real, allocatable,dimension(:,:) :: H
-!     real, allocatable,dimension(:,:) :: b_vec
-
-!     !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-!     complex*16, allocatable,dimension(:) :: vals
-!     complex*16, allocatable,dimension(:,:) :: vecs
-
-!     real, allocatable, dimension(:) :: residual
-
-
-!     end module KS
-
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
 
       subroutine krylov_schur
@@ -179,61 +145,45 @@ c-----------------------------------------------------------------------
 
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-!
-!-----Krylov basis V for the projection M*V = V*H -----
-!     real, allocatable,dimension(:,:) :: qx, qy, qz, qt
-!     real, allocatable,dimension(:,:) :: qp
 
-!     !     ----- Upper Hessenberg matrix -----
-!     real, allocatable,dimension(:,:) :: H
-!     real, allocatable,dimension(:,:) :: b_vec
+!     -----Krylov basis V for the projection M*V = V*H -----
+      real, allocatable,dimension(:,:) :: qx, qy, qz, qt
+      real, allocatable,dimension(:,:) :: qp
 
-!     !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-!     complex*16, allocatable,dimension(:) :: vals
-!     complex*16, allocatable,dimension(:,:) :: vecs
+!     ----- Upper Hessenberg matrix -----
+      real, allocatable,dimension(:,:) :: H
+      real, allocatable,dimension(:,:) :: b_vec
 
-!     real, allocatable, dimension(:) :: residual
+!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+      complex*16, allocatable,dimension(:) :: vals
+      complex*16, allocatable,dimension(:,:) :: vecs
+
+      real, allocatable, dimension(:) :: residual
 
 !     ----- Miscellaneous -----
       real wo1(lt),wo2(lt),wo3(lt)
       common /ugrad/ wo1,wo2,wo3
 
       integer :: mstart, cnt
-      real, dimension(k_dim)             :: residual
+!     real, dimension(k_dim)             :: residual
       real                               :: alpha, beta, glsc3
       logical                            :: converged
-      integer                            :: n, n2, i, j
+      integer                            :: n, i, j
       character(len=30)                  :: filename
 
-!     ----- Krylov basis V for the projection M*V = V*H -----
-      real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,k_dim+1)       :: qp
-
-!     ----- Upper Hessenberg matrix -----
-      real, dimension(k_dim+1,k_dim)     :: H
-      real, dimension(1,k_dim)           :: b_vec
-
-!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-      complex*16, dimension(k_dim)       :: vals
-      complex*16, dimension(k_dim,k_dim) :: vecs
-
-!     allocate(qx(lt,k_dim+1), qy(lt,k_dim+1), qz(lt,k_dim+1), qt(lt,k_dim+1),qp(lt2,k_dim+1))
-!     allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
+      !     ----- Allocate arrays -----
+      allocate(qx(lt,k_dim+1), qy(lt,k_dim+1), qz(lt,k_dim+1), qt(lt,k_dim+1),qp(lt2,k_dim+1))
+      allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
 
       n      = nx1*ny1*nz1*nelt
-      n2     = nx2*ny2*nz2*nelt
       time   = 0.0d0
       H(:,:)  = 0.0d0
       b_vec  = 0.0d0
       residual = 0.0d0
 
       call oprzero(wo1, wo2, wo3)
-!     do i = 1, k_dim+1
       do i = 1, k_dim+1
          call noprzero(qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, i))
-!     call oprzero(qx(:, i), qy(:, i), qz(:, i))
-!     if (ifpo) call rzero(qp(:, i), n2)
-!     if (ifheat) call rzero(qt(:, i), n)
       enddo
 
 !     ----- Loading baseflow from disk (optional) -----
@@ -282,9 +232,6 @@ c-----------------------------------------------------------------------
             if(nid.eq.0)write(*,*)'Load real part of leading mode as seed: ',filename
             call load_fld(filename)
             call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
-!     call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),vx,vy,vz)
-!     if(ifpo) call copy(prp(:,1),pr,n2)
-!     if(ifheat) call copy(tp(:,1,1),t(1,1,1,1,1),n)
 
          else
 
@@ -300,9 +247,6 @@ c-----------------------------------------------------------------------
          mstart = 1; istep = 1; time = 0.0d0
 
          call nopcopy(qx(:,1),qy(:,1),qz(:,1),qp(:,1),qt(:,1), vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
-!     call opcopy(qx(:,1), qy(:,1), qz(:,1), vxp(:,1), vyp(:,1), vzp(:,1))
-!     if(ifpo) call copy(qp(:,1), prp(:,1), n2)
-!     if(ifheat) call copy(qt(:,1), tp(:,1,1), n)
 
          call whereyouwant('KRY',1)
          time = 0.0d0
@@ -362,7 +306,7 @@ c-----------------------------------------------------------------------
       converged = .false.
       do while ( .not. converged )
 !     --> Arnoldi factorization.
-         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, k_dim)
+         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, k_dim, k_dim)
 
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
@@ -387,7 +331,7 @@ c-----------------------------------------------------------------------
             else                ! Apply Schur condensation before restarting the factorization.
                schur_cnt = schur_cnt + 1
                if (nid .eq. 0) write(6, *) 'Starting Schur condensation phase.',schur_cnt
-               call schur_condensation(mstart, H, qx, qy, qz, qp, qt)
+               call schur_condensation(mstart, H, qx, qy, qz, qp, qt, k_dim)
             endif
 
          end select
@@ -401,6 +345,10 @@ c-----------------------------------------------------------------------
 
       if(nid.eq.0)write(6,*)'converged eigenmodes:',cnt
       if(nid.eq.0)write(6,*)'Eigenproblem solver finished.'
+
+!     --> Deallocation.
+      deallocate(qx, qy, qz, qt, qp)
+      deallocate(H, b_vec, vals, vecs)
 
       return
       end subroutine krylov_schur
@@ -424,7 +372,7 @@ c-----------------------------------------------------------------------
 
 
 
-      subroutine schur_condensation(mstart, H, qx, qy, qz, qp, qt)
+      subroutine schur_condensation(mstart, H, qx, qy, qz, qp, qt, ksize)
 
       implicit none
       include 'SIZE'
@@ -439,56 +387,57 @@ c     =================================================
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
+      integer :: ksize
+
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
-      real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,k_dim+1)       :: qp
+      real, dimension(lt,ksize+1)        :: qx, qy, qz, qt
+      real, dimension(lt2,ksize+1)       :: qp
 
 c     ----- Upper Hessenberg matrix -----
 
-      real, dimension(k_dim+1, k_dim)     :: H
-      real, dimension(k_dim)           :: b_vec
+      real, dimension(ksize+1, ksize)     :: H
+      real, dimension(ksize)           :: b_vec
 
 c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
-      complex*16, dimension(k_dim)       :: vals
+      complex*16, dimension(ksize)       :: vals
 
 c     ----- Miscellaneous -----
 
-      integer :: mstart,n,n2
-      logical, dimension(k_dim)          :: selected
+      integer :: mstart,n
+      logical, dimension(ksize)          :: selected
 
 c     ----- Schur and Hessenberg decomposition -----
 
-      real, dimension(k_dim,k_dim)       :: vecs
+      real, dimension(ksize, ksize)       :: vecs
 
       n  = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
 
 !     --> Initialize arrays.
-      b_vec = 0.0D0 ; b_vec(k_dim) = H(k_dim+1, k_dim)
+      b_vec = 0.0D0 ; b_vec(ksize) = H(ksize+1, ksize)
       vals = ( 0.0D0 , 0.0D0 ) ; vecs = 0.0D0
 
 !     --> Perform the Schur decomposition.
-      call schur(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
+      call schur(H(1:ksize, 1:ksize), vecs, vals, ksize)
 
 !     --> Partition the eigenvalues in wanted / unwanted.
-      call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, k_dim)
+      call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, ksize)
       if ( nid.eq.0 ) write(6,*) mstart, 'Ritz eigenpairs have been selected.'
 
 !     --> Re-order the Schur decomposition based on the partition.
-      call ordschur(H(1:k_dim, 1:k_dim), vecs, selected, k_dim)
+      call ordschur(H(1:ksize, 1:ksize), vecs, selected, ksize)
 
 !     --> Zero-out the unwanted blocks of the Schur matrix.
-      H(1:mstart,mstart+1:k_dim) = 0.0D0
-      H(mstart+1:k_dim+1, :)     = 0.0D0
+      H(1:mstart,mstart+1:ksize) = 0.0D0
+      H(mstart+1:ksize+1, :)     = 0.0D0
 
 !     --> Re-order the Krylov basis accordingly.
-      qx(:, 1:k_dim) = matmul(qx(:, 1:k_dim), vecs)
-      qy(:, 1:k_dim) = matmul(qy(:, 1:k_dim), vecs)
-      if (if3d) qz(:, 1:k_dim) = matmul(qz(:, 1:k_dim), vecs)
-      if (ifpo) qp(:, 1:k_dim) = matmul(qp(:, 1:k_dim), vecs)
-      if (ifheat) qt(:, 1:k_dim) = matmul(qt(:, 1:k_dim), vecs)
+      qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
+      qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
+      if (if3d) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
+      if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
+      if (ifheat) qt(:, 1:ksize) = matmul(qt(:, 1:ksize), vecs)
 
 !     --> Update the Schur matrix with b.T @ Q corresponding to
 !     the residual beta in the new basis.
@@ -498,15 +447,7 @@ c     ----- Schur and Hessenberg decomposition -----
 !     --> Add the last generated Krylov vector as the new starting one.
       mstart = mstart + 1
 
-      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart),
-     $     qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1), qp(:,k_dim+1), qt(:,k_dim+1))
-
-!     call opcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),
-!     $     qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1))
-
-!     !JC CHECK HERE!
-!     if(ifpo) copy(qp(:,mstart),qp(:,k_dim+1),n2)
-!     if(ifheat) copy(qt(:,mstart),qt(:,k_dim+1),n)
+      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart), qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,ksize+1))
 
       return
       end subroutine schur_condensation
@@ -527,11 +468,10 @@ c----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      integer n,n2,i
+      integer n,i
       character(len=30) filename
       logical ifto_sav, ifpo_sav
       n  = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
 
       if(    uparam(3).eq.0.1)then !steady prescribe
 
@@ -672,16 +612,12 @@ c----------------------------------------------------------------------
       real, dimension(lt)                :: fx, fy, fz, ft, qx, qy, qz, qt
       real, dimension(lt2)               :: fp, qp
       integer imode,smode,nmode,incr
-      integer n, n2
+      integer n
       real :: umax
       n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
 
 !     ----- Initial condition -----
       call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), qx,qy,qz,qp,qt)
-!     call opcopy(vxp(:,1), vyp(:,1), vzp(:,1), qx, qy, qz)
-!     if(ifpo) call copy(prp(:,1), qp, n2)
-!     if(ifheat) call copy(tp(:,1,1), qt, n)
 
 !     ----- Time-stepper matrix-vector product -----
       if    (uparam(1).lt.3.2)then !direct
@@ -745,8 +681,6 @@ c----------------------------------------------------------------------
             call nekStab_usrchk !custom forcings in the linear solver
             call nek_advance
 
-
-
 !     for reference: core of nek_advance in drive1.f
 !     if (ifpert) then
 !     if (ifbase.and.ifheat) call heat
@@ -762,25 +696,10 @@ c----------------------------------------------------------------------
       enddo
 
       call nopcopy(fx,fy,fz,fp,ft, vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
-!     call opcopy(fx, fy, fz, vxp(:,1), vyp(:,1), vzp(:,1))
-!     if(ifpo) call copy(fp, prp(:,1), n2)
-!     if(ifheat) call copy(ft, tp(:,1,1), n)
-
-
 
       if (uparam(3).eq.3) then  ! newton-krylov extra
-
          call nopsub2(fx,fy,fz,fp,ft, qx,qy,qz,qp,qt)
-!     call opsub2(fx, fy, fz, qx, qy, qz)
-!     call sub2(fp, qp, n2)
-!     call sub2(ft, qt, n)
-
          call nopchsign(fx,fy,fz,fp,ft)
-!     call chsign(fx, n)
-!     call chsign(fy, n)
-!     call chsign(fz, n)
-!     call chsign(ft, n)
-!     call chsign(fp, n2)
       endif
 
       return
@@ -823,7 +742,7 @@ c     ----- Arrays for the storage/output of a given eigenmode of the NS operato
       complex*16, dimension(lt2)         :: fp_cp
 
 c     ----- Miscellaneous -----
-      integer :: n, n2, i
+      integer :: n, i
 
       real                               :: sampling_period
       real, dimension(k_dim)             :: residual
@@ -838,7 +757,6 @@ c     ----- Miscellaneous -----
 
       sampling_period = dt*nsteps
       n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
 
 c     ----- Output all the spectrums and converged eigenmodes -----
 
@@ -898,28 +816,12 @@ c     Note: volume integral of FP*conj(FP) = 1.
 
 c     ----- Output the real part -----
          call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
-!     call opcopy(vx, vy, vz, real(fp_cx), real(fp_cy), real(fp_cz))
-!     if (ifpo) call copy(pr, real(fp_cp), n2)
-!     if (ifto) call copy(t(1,1,1,1,1), real(fp_ct), n)
-
          call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
-!     call opcmult(vx, vy, vz, beta)
-!     if (ifpo) call cmult(pr, beta, n2)
-!     if (ifto) call cmult(t(1,1,1,1,1), beta, n)
-
          call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nRe)
 
 c     ----- Output the imaginary part -----
          call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
-!     call opcopy(vx, vy, vz, aimag(fp_cx), aimag(fp_cy), aimag(fp_cz))
-!     if(ifpo) call copy(pr, aimag(fp_cp), n2)
-!     if(ifto) call copy(t(1,1,1,1,1), aimag(fp_ct), n)
-
          call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
-!     call opcmult(vx, vy, vz, beta)
-!     if(ifpo) call cmult(pr, beta, n2)
-!     if(ifto) call cmult(t(1,1,1,1,1), beta, n)
-
          call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
 
          if(ifvor)then
