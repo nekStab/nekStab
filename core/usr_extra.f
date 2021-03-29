@@ -135,7 +135,15 @@ c-----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+      real, dimension(lt) :: qx, qy, qz, qt
+      real, dimension(lt2) :: qp
+
       integer n
+
       n = nx1*ny1*nz1*nelv
 
       if(istep.eq.0)call nekStab_init
@@ -169,7 +177,10 @@ c-----------------------------------------------------------------------
             elseif(uparam(3).eq.2)then
                call BoostConv   !ifbst=.true.
             elseif(uparam(3).eq.3)then
-               call Newton_Krylov
+!     --> Copy initial guess into newton-krylov array.
+               call nopcopy(qx, qy, qz, qp, qt, vx, vy, vz, pr, t)
+!     --> Newton-Krylov solver.
+               call newton_krylov(qx, qy, qz, qp, qt)
                call nek_end
             endif
 
@@ -194,7 +205,6 @@ c-----------------------------------------------------------------------
 
          if(uparam(01).eq.4.1)call wave_maker
          if(uparam(01).eq.4.2)call BF_sensitivity
-!     if(uparam(01).eq.4.3)call F_sensitivity
 
          call nek_end
 
