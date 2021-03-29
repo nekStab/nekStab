@@ -6,7 +6,7 @@
 #export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
 export USR="eigensolvers.o \
-    linalg.o \
+    lapack_wrapper.o \
     fixedp.o \
     usr_extra.o \
     utils.o \

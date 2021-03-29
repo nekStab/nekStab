@@ -1,6 +1,6 @@
 c-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-      !use nek_stab
+!     use nek_stab
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -11,29 +11,29 @@ c-----------------------------------------------------------------------
       schur_del = 0.10d0        ! 
       maxmodes = k_dim          ! max modes to outpost
 
-      bst_skp = 1 ! boostconv skip
-      bst_snp = 1 ! bootsconv matrix size
+      bst_skp = 1               ! boostconv skip
+      bst_snp = 1               ! bootsconv matrix size
 
       ifres  = .false.          ! outpost restart files for eig
       ifvor  = .false.          ! outpost vorticity
       ifvox  = .false.          ! outpost vortex
       ifldbf = .true.           ! load base flow for stability
       ifbf2D = .false.          ! force 2D solution
-     
-      ! ifnwt = .false. ! newton-iteration flag
-      ! ifsfd = .false.
-      ! ifbcv = .false.
-      ! iftdf = .false.
+      
+!     ifnwt = .false. ! newton-iteration flag
+!     ifsfd = .false.
+!     ifbcv = .false.
+!     iftdf = .false.
 
-      ifseed_nois = .true.  ! noise as initial seed 
-      ifseed_symm = .false.  ! symmetry initial seed
-      ifseed_load = .false.  ! loading initial seed (e.g. Re_ )
-      !else all fase -> prescribed by usric
+      ifseed_nois = .true.      ! noise as initial seed 
+      ifseed_symm = .false.     ! symmetry initial seed
+      ifseed_load = .false.     ! loading initial seed (e.g. Re_ )
+!     else all fase -> prescribed by usric
 
-      ! arnD_ = .false.
-      ! arnA_ = .false.
-      ! arnDA = .false.
-      ! arnAD = .false.
+!     arnD_ = .false.
+!     arnA_ = .false.
+!     arnDA = .false.
+!     arnAD = .false.
 
       xLspg   = 0.0d0; call bcast(xLspg, wdsize)
       xRspg   = 0.0d0; call bcast(xRspg, wdsize)
@@ -43,7 +43,7 @@ c-----------------------------------------------------------------------
       zRspg   = 0.0d0; call bcast(zRspg, wdsize)
       acc_spg = 0.0d0; call bcast(acc_spg, wdsize) 
 
-      ! !Broadcast all defaults !
+!     !Broadcast all defaults !
       call bcast(schur_tgt, isize) ! isize for integer
       call bcast(eigen_tol, wdsize) ! wdsize for real
       call bcast(schur_del, wdsize)
@@ -60,13 +60,13 @@ c-----------------------------------------------------------------------
       call bcast(ifseed_load  , lsize)
       call bcast(ifldbf  , lsize)
       call bcast(ifbf2D  , lsize)
-      !call bcast(ifnewton  , lsize)
+!     call bcast(ifnewton  , lsize)
 
       return
       end subroutine nekStab_setDefault
 c-----------------------------------------------------------------------
       subroutine nekStab_init
-      ! initialize arrays and variables defaults
+!     initialize arrays and variables defaults
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -85,7 +85,7 @@ c-----------------------------------------------------------------------
       endif
 
       call nekStab_setDefault
-      call nekStab_usrchk ! where user change defaults 
+      call nekStab_usrchk       ! where user change defaults 
       call nekStab_printNEKParams 
       
       xmn = glmin(xm1,n); xmx = glmax(xm1,n)
@@ -101,9 +101,9 @@ c-----------------------------------------------------------------------
          write(6,*)' z   total =',zmx-zmn
       endif
 
-      call copy(bm1s, bm1, n) ! never comment this ! 
+      call copy(bm1s, bm1, n)   ! never comment this ! 
 
-      if(uparam(10).gt.0)then !sponge on
+      if(uparam(10).gt.0)then   !sponge on
 
          if(nid.eq.0)write(6,*)
          if(nid.eq.0)write(6,*)' Initializing sponge...'
@@ -112,26 +112,26 @@ c-----------------------------------------------------------------------
          spng_str = uparam(10)
          call spng_init
 
-         !applying sponge to the BM1 matrix to remove the sponge zone from eigensolver
+!     applying sponge to the BM1 matrix to remove the sponge zone from eigensolver
          do i=1,n
             if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
          enddo
 
-         ! outposting BM1s to disk for check
-         !ifto_sav = ifto; ifpo_sav = ifpo
-         !ifvo=.false.; ifpo = .false.; ifto = .true.
-         !call outpost(vx,vy,vz,pr,bm1s,'BMS')
-         !ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
+!     outposting BM1s to disk for check
+!     ifto_sav = ifto; ifpo_sav = ifpo
+!     ifvo=.false.; ifpo = .false.; ifto = .true.
+!     call outpost(vx,vy,vz,pr,bm1s,'BMS')
+!     ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
 
       endif
-            
+      
       ifbfcv = .false.          ! 
 
       return
       end subroutine nekStab_init
 c-----------------------------------------------------------------------
       subroutine nekStab
-      ! nekStab main driver
+!     nekStab main driver
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -143,33 +143,33 @@ c-----------------------------------------------------------------------
       call oprzero(fcx,fcy,fcz) ! never comment this!
       call rzero(fct,n)
 
-      ! think on a better place for this part!
+!     think on a better place for this part!
       if(if3d .AND. ifbf2d)then
          if(nid.eq.0)write(6,*)' Forcing vz = 0'
          call rzero(vz,nx1*ny1*nz1*nelv)
       endif
 
       select case (floor(uparam(1)))
-      
-      case(0) ! DNS
+         
+      case(0)                   ! DNS
          
          call nekStab_outpost   ! outpost vorticity 
          call nekStab_comment   ! print comments
          call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',20)
 
-      case(1) ! fixed points computation
+      case(1)                   ! fixed points computation
 
          call nekStab_outpost   ! outpost vorticity 
          call nekStab_comment   ! print comments
 
-         if(uparam(1).ge.1)then   !compose forcings to fcx,fcy,fcz
+         if(uparam(1).ge.1)then !compose forcings to fcx,fcy,fcz
 
             if(uparam(3).eq.1)then
-                call SFD !ifSFD=.true.
+               call SFD         !ifSFD=.true.
             elseif(uparam(3).eq.2)then
-                call BoostConv !ifbst=.true.
+               call BoostConv   !ifbst=.true.
             elseif(uparam(3).eq.3)then
-               !ifnwt = .true.
+!     ifnwt = .true.
                param(12) = -abs(param(12)) !freeze dt
                param(31) = 1 ; npert = param(31)
                call bcast(param,200*wdsize) !broadcast all parameters to processors
@@ -180,11 +180,11 @@ c-----------------------------------------------------------------------
          endif
          if(ifbfcv)call nek_end
 
-      case(2) ! limit cycle computation
+      case(2)                   ! limit cycle computation
 
          write(6,*) 'NOT IMPLEMENTED'; call nek_end
 
-      case(3) ! eigenvalue problem
+      case(3)                   ! eigenvalue problem
 
          if(uparam(3).eq.3)then
             if(nid.eq.0)write(6,*) 'forcing uparam(3) to ZERO!!!!! OTHERWISE CRASH'
@@ -194,12 +194,12 @@ c-----------------------------------------------------------------------
          call Krylov_Schur
          call nek_end
 
-      case(4) ! in postprocessing.f
+      case(4)                   ! in postprocessing.f
 
          if(uparam(01).eq.4.1)call wave_maker
          if(uparam(01).eq.4.2)call BF_sensitivity
-         !if(uparam(01).eq.4.3)call F_sensitivity
-           
+!     if(uparam(01).eq.4.3)call F_sensitivity
+         
          call nek_end
 
 
@@ -209,7 +209,7 @@ c-----------------------------------------------------------------------
       end subroutine nekStab
 c-----------------------------------------------------------------------
       subroutine nekStab_outpost
-      ! nekStab custom outpost routine
+!     nekStab custom outpost routine
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -222,10 +222,10 @@ c-----------------------------------------------------------------------
 
       if((istep.eq.0).OR.ifoutfld.AND.(ifvor.or.ifvox))then
 
-      ifto_sav = ifto; ifpo_sav = ifpo
-      ifto = .false.; ifpo = .false.
+         ifto_sav = ifto; ifpo_sav = ifpo
+         ifto = .false.; ifpo = .false.
 
-         !---> Compute and oupost vorticity.
+!---  > Compute and oupost vorticity.
          if(ifvor)then
             call oprzero(wo1,wo2,wo3)
             call oprzero(vort(:,1),vort(:,2),vort(:,3))
@@ -233,7 +233,7 @@ c-----------------------------------------------------------------------
             call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'vor')
          endif
 
-         !---> Compute and outpost vortex fields.
+!---  > Compute and outpost vortex fields.
          if(ifvox.and.(ifaxis.eqv..false.))then
             call vortex_core(vort(:,1),'lambda2')
             call vortex_core(vort(:,2),'q')
@@ -241,24 +241,24 @@ c-----------------------------------------------------------------------
             call outpost(vort(:,1),vort(:,2),vort(:,3),pr,t,'vox')
 
             if(.not.if3d)then
-            ifvo=.false.; ifto = .true. ! just outposting one field ... v's and p ignored 
-            call outpost(vx,vy,vz,pr,vort(:,3),'omg')
-            ifvo=.true.; ifto = ifto_sav
+               ifvo=.false.; ifto = .true. ! just outposting one field ... v's and p ignored 
+               call outpost(vx,vy,vz,pr,vort(:,3),'omg')
+               ifvo=.true.; ifto = ifto_sav
             endif
 
          endif
 
-      ifto = ifto_sav ; ifpo = ifpo_sav
+         ifto = ifto_sav ; ifpo = ifpo_sav
 
       endif
-      !---> Outpost initial condition.
+!---  > Outpost initial condition.
       if(istep.eq.0)call outpost(vx,vy,vz,pr,t,'   ')
 
       return
       end subroutine nekStab_outpost
 c-----------------------------------------------------------------------
       subroutine nekStab_comment
-      ! Comment the evoltuion of the simulation
+!     Comment the evoltuion of the simulation
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -268,61 +268,61 @@ c-----------------------------------------------------------------------
       real telapsed,tpernondt,tmiss,dnekclock,ttime
       integer ttime_stp
 
-      !if extrapolation is not OIFS -> ifchar = false
-      !if OIFS active -> ifchar = .true. and CFL 2-5
-      !some cases can have CFL>1 in initial time steps
+!     if extrapolation is not OIFS -> ifchar = false
+!     if OIFS active -> ifchar = .true. and CFL 2-5
+!     some cases can have CFL>1 in initial time steps
       if (courno.gt.10) then
-        if (nio.eq.0)then
-          write(6,*)
+         if (nio.eq.0)then
+            write(6,*)
             write(6,*)'    CFL > 10 stopping code'
-          write(6,*)
+            write(6,*)
          endif
-        call nek_end
+         call nek_end
       endif
 
       if (nio.ne.0) return
       
       if (eetime0.eq.0.0 .and. istep.eq.1)then
-        eetime0=dnekclock()
-        deltatime=time
+         eetime0=dnekclock()
+         deltatime=time
       endif
       eetime1=eetime2
       eetime2=dnekclock()
 
       if (istep.gt.0 .and. lastep.eq.0 .and. iftran) then
 
-        ttime_stp = eetime2-eetime1 ! time per timestep
-        ttime     = eetime2-eetime0 ! sum of all timesteps
+         ttime_stp = eetime2-eetime1 ! time per timestep
+         ttime     = eetime2-eetime0 ! sum of all timesteps
 
-        if(istep.eq.1)then
-          ttime_stp = 0.0d0; ttime = 0.0d0
-        endif
-
-        if (mod(istep,5).eq.0) then
-
-          telapsed = ttime/3600.0d0
-          tpernondt = (ttime/(time-deltatime))
-          tmiss = (param(10)-time)*tpernondt/3600.0d0
-
-         print *,''
-         write(6,"('      Mean time per timestep: ',F8.4,'  dev:',I8,'ms')") ttime/istep,ceiling(((ttime/istep)-ttime_stp)*1000) !to ms
-         write(6,"('      Remaining time: ',I8,' h ',I2,' min')") int(tmiss),ceiling((tmiss-int(tmiss))*60.)
-         if(tpernondt.gt.60.)then
-            write(6,"('      Time per nondimensional time: ',F8.2,' sec')") tpernondt
-         else
-            write(6,"('      Time per nondimensional time: ',F8.2,' min ')") tpernondt/60.0d0
+         if(istep.eq.1)then
+            ttime_stp = 0.0d0; ttime = 0.0d0
          endif
-         write(6,"('      Local time: ',F8.4,'  File:',I8)") time-deltatime, int((time-deltatime)/param(14))+1
-         print *,''
 
-        endif
+         if (mod(istep,5).eq.0) then
+
+            telapsed = ttime/3600.0d0
+            tpernondt = (ttime/(time-deltatime))
+            tmiss = (param(10)-time)*tpernondt/3600.0d0
+
+            print *,''
+            write(6,"('      Mean time per timestep: ',F8.4,'  dev:',I8,'ms')") ttime/istep,ceiling(((ttime/istep)-ttime_stp)*1000) !to ms
+            write(6,"('      Remaining time: ',I8,' h ',I2,' min')") int(tmiss),ceiling((tmiss-int(tmiss))*60.)
+            if(tpernondt.gt.60.)then
+               write(6,"('      Time per nondimensional time: ',F8.2,' sec')") tpernondt
+            else
+               write(6,"('      Time per nondimensional time: ',F8.2,' min ')") tpernondt/60.0d0
+            endif
+            write(6,"('      Local time: ',F8.4,'  File:',I8)") time-deltatime, int((time-deltatime)/param(14))+1
+            print *,''
+
+         endif
       endif
 
       return
       end subroutine nekStab_comment
 c-----------------------------------------------------------------------
       subroutine nekStab_printNEKParams
-      ! print parameters at initialization for sanity check
+!     print parameters at initialization for sanity check
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -363,9 +363,9 @@ c-----------------------------------------------------------------------
          write(6,*)'uparam10=',uparam(10)
       endif
       end subroutine nekStab_printNEKParams
-c-----------------------------------------------------------------------   
+c-----------------------------------------------------------------------
       subroutine nekStab_energy(px, py, pz, pt, fname, skip)
-      !
+!     
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -386,7 +386,7 @@ c-----------------------------------------------------------------------
          if(nid.eq.0)open (730,file=fname,action='write',status='replace')
          initialized = .true.
       endif
-            
+      
       if (mod(istep,skip).eq.0) then
          uek = glsc3(px,bm1,px,n)
          vek = glsc3(py,bm1,py,n)
@@ -397,4 +397,4 @@ c-----------------------------------------------------------------------
 
       return
       end subroutine nekStab_energy
-c-----------------------------------------------------------------------   
+c-----------------------------------------------------------------------

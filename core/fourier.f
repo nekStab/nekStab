@@ -10,13 +10,13 @@ c-----------------------------------------------------------------------
       call oprzero(vx,vy,vz)
       call oprzero(d_x,d_y,d_z)
       do i = 1,f_modes
-       call add3s2(d_x,ubr(:,i),ubi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
-       call add3s2(d_y,vbr(:,i),vbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
-       if(if3D)
-     $ call add3s2(d_z,wbr(:,i),wbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
-       call opadd2(vx, vy, vz, d_x, d_y, d_z)
+         call add3s2(d_x,ubr(:,i),ubi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
+         call add3s2(d_y,vbr(:,i),vbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
+         if(if3D)
+     $        call add3s2(d_z,wbr(:,i),wbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
+         call opadd2(vx, vy, vz, d_x, d_y, d_z)
       enddo
-      !call outpost(vx,vy,vz,pr,t,'MFR')!debug only
+!     call outpost(vx,vy,vz,pr,t,'MFR')!debug only
       return
       end
 c-----------------------------------------------------------------------
@@ -44,44 +44,44 @@ c-----------------------------------------------------------------------
 
       energy = 0.0d0
       do i = 1,norbit/2
-        amp_real(i) = + glsc3(v_xr(:,i),bm1,v_xr(:,i),lt) + glsc3(v_yr(:,i),bm1,v_yr(:,i),lt)
-        if (if3d) amp_real(i) = amp_real(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lt)
-        amp_img(i) = + glsc3(v_xi(:,i),bm1,v_xi(:,i),lt) + glsc3(v_yi(:,i),bm1,v_yi(:,i),lt)
-        if (if3d) amp_img(i) = amp_img(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lt)
-        amp_real(i) = sqrt(amp_real(i))
-        amp_img(i) = sqrt(amp_img(i))
-        ampl(i) = sqrt(amp_real(i)**2+amp_img(i)**2)
-        energy  = energy + ampl(i)
+         amp_real(i) = + glsc3(v_xr(:,i),bm1,v_xr(:,i),lt) + glsc3(v_yr(:,i),bm1,v_yr(:,i),lt)
+         if (if3d) amp_real(i) = amp_real(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lt)
+         amp_img(i) = + glsc3(v_xi(:,i),bm1,v_xi(:,i),lt) + glsc3(v_yi(:,i),bm1,v_yi(:,i),lt)
+         if (if3d) amp_img(i) = amp_img(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lt)
+         amp_real(i) = sqrt(amp_real(i))
+         amp_img(i) = sqrt(amp_img(i))
+         ampl(i) = sqrt(amp_real(i)**2+amp_img(i)**2)
+         energy  = energy + ampl(i)
       enddo
 
-      call sortvec(ampl,ord,norbit/2)!sortvec[a(n),ord(n),n
+      call sortvec(ampl,ord,norbit/2) !sortvec[a(n),ord(n),n
       if(nid.eq.0)write(6,*)' sorted modes...',energy
       do i = 1,norbit/2
-        if(nid.eq.0)write(6,*)'mode: ',i,ampl(i),ord(i)
+         if(nid.eq.0)write(6,*)'mode: ',i,ampl(i),ord(i)
       enddo
 
       jj = 2
       do while (sum(ampl(2:jj))/(energy-ampl(1))*100.lt.99.0)
-        jj = jj+1
+         jj = jj+1
       enddo
       open(unit=25,file='fft_ampl.dat')
       write(25,*) porbit, sum(ampl(2:min(mxfourier,jj))) /(energy-ampl(1))*100, min(mxfourier,jj)
 
       do i = 1,min(mxfourier,jj)
-        call opcopy(rex(:,i),rey(:,i),rez(:,i), v_xr(:,ord(i)),v_yr(:,ord(i)),v_zr(:,ord(i)))
-        call opcopy(imx(:,i),imy(:,i),imz(:,i), v_xi(:,ord(i)),v_yi(:,ord(i)),v_zi(:,ord(i)))
-        write(25,*) amp_real(i), amp_img(i), ff(ord(i))
+         call opcopy(rex(:,i),rey(:,i),rez(:,i), v_xr(:,ord(i)),v_yr(:,ord(i)),v_zr(:,ord(i)))
+         call opcopy(imx(:,i),imy(:,i),imz(:,i), v_xi(:,ord(i)),v_yi(:,ord(i)),v_zi(:,ord(i)))
+         write(25,*) amp_real(i), amp_img(i), ff(ord(i))
 
       enddo
       close(25)
 
       do i = 1,min(mxfourier,jj)
-        time=i*dt!just to open in paraview!
-        ifpo=.false.;ifto=.false.
-        call opcmult(rex(:,i),rey(:,i),rez(:,i),1.0d0/amp_real(i))!normalize
-        call outpost(rex(:,i),rey(:,i),rez(:,i),pr,t,'fRe')!outpost
-        call opcmult(imx(:,i),imy(:,i),imz(:,i),1.0d0/amp_img(i))!normalize
-        call outpost(imx(:,i),imy(:,i),imz(:,i),pr,t,'fIm')!outpost
+         time=i*dt              !just to open in paraview!
+         ifpo=.false.;ifto=.false.
+         call opcmult(rex(:,i),rey(:,i),rez(:,i),1.0d0/amp_real(i)) !normalize
+         call outpost(rex(:,i),rey(:,i),rez(:,i),pr,t,'fRe') !outpost
+         call opcmult(imx(:,i),imy(:,i),imz(:,i),1.0d0/amp_img(i)) !normalize
+         call outpost(imx(:,i),imy(:,i),imz(:,i),pr,t,'fIm') !outpost
       enddo
 
       return
@@ -94,16 +94,16 @@ c----------------------------------------------------------------------
       a1(1) = a(1)
       ord(1) = 1
       do i = 2,n
-        temp = 0.0d0
-        do j = 2,n
-          if (a(j).gt.temp(1)) then
-            temp(1) = a(j)
-            temp(2) = j
-          endif
-        enddo
-        a1(i)  = temp(1)
-        ord(i) = int(temp(2))
-        a(int(temp(2))) = -1
+         temp = 0.0d0
+         do j = 2,n
+            if (a(j).gt.temp(1)) then
+               temp(1) = a(j)
+               temp(2) = j
+            endif
+         enddo
+         a1(i)  = temp(1)
+         ord(i) = int(temp(2))
+         a(int(temp(2))) = -1
       enddo
       a = a1
       return
@@ -138,7 +138,7 @@ c----------------------------------------------------------------------
       real, dimension(lt,snap/2) :: b1,b2,om
       real, dimension(snap)      :: time
       do i = 1,lt
-        call fftd(snap,a1(i,:),time,b1(i,:),b2(i,:),om)
+         call fftd(snap,a1(i,:),time,b1(i,:),b2(i,:),om)
       enddo
       return
       end
@@ -152,13 +152,13 @@ c----------------------------------------------------------------------
       call f_f_t_r_2(n,a1,a1,+1)
       a1 = a1*2; j = 1; b1 = 0.0d0; b2 = 0.0d0; om = 0.0d0
       do i = 1, n-1
-        if (mod(i,2).eq.0) then
-          b2(j) = a1(i)
-        else
-          b1(j) = a1(i)
-          om(j) = (j-1)*8.0d0*atan(1.0d0)/(time(n)-time(1))
-          j = j+1
-        endif
+         if (mod(i,2).eq.0) then
+            b2(j) = a1(i)
+         else
+            b1(j) = a1(i)
+            om(j) = (j-1)*8.0d0*atan(1.0d0)/(time(n)-time(1))
+            j = j+1
+         endif
       enddo
       a1 = temp
       b1(1) = b1(1)/2
@@ -218,11 +218,11 @@ c=======================================================================
 !     a2(0:n-1): vettore dei coefficienti (vedi sopra) o della funzione 2
 !     idir: se uguale a 1 effettua la trasformata se -1
 !     antitrasforma
-!
+!     
 !     Dati in uscita:
 !     a1(0:n-1): vettore della funzione o dei coefficienti 1
 !     a2(0:n-1): vettore della funzione o dei coefficienti 2
-C
+C     
 C     Memoria di lavoro:
 C     TRIGS(2*n), xr(0:n-1), xi(0:n-1)
 !     ------------------------------------------------------------
@@ -402,16 +402,16 @@ C     TRIGS(2*n), xr(0:n-1), xi(0:n-1)
 C     SUBROUTINE 'SETGPFA'
 C     SETUP ROUTINE FOR SELF-SORTING IN-PLACE
 C     GENERALIZED PRIME FACTOR (COMPLEX) FFT [GPFA]
-C
+C     
 C     CALL SETGPFA(TRIGS,N)
-C
+C     
 C     INPUT :
 C     -----
 C     N IS THE LENGTH OF THE TRANSFORMS. N MUST BE OF THE FORM:
 C     -----------------------------------
 C     N = (2**IP) * (3**IQ) * (5**IR)
 C     -----------------------------------
-C
+C     
 C     OUTPUT:
 C     ------
 C     TRIGS IS A TABLE OF TWIDDLE FACTORS,
@@ -419,13 +419,13 @@ C     OF LENGTH 2*IPQR (REAL) WORDS, WHERE:
 C     --------------------------------------
 C     IPQR = (2**IP) + (3**IQ) + (5**IR)
 C     --------------------------------------
-C
+C     
 C     WRITTEN BY CLIVE TEMPERTON 1990
-C
+C     
 C----------------------------------------------------------------------
-C
+C     
       SUBROUTINE SETGPFA(TRIGS,N)
-C
+C     
       IMPLICIT NONE
 C     Incoming data
       INTEGER N
@@ -436,12 +436,12 @@ C     Outcoming data
 C     Internal data
       INTEGER NJ(3), KK, LL, NN, NI, IFAC, I, K, IROT, IP, IQ, IR, KINK
       REAL*8  ANGLE, TWOPI, DEL
-C
+C     
 C     DECOMPOSE N INTO FACTORS 2,3,5
 C     ------------------------------
       NN = N
       IFAC = 2
-C
+C     
       DO 30 LL = 1 , 3
          KK = 0
  10      CONTINUE
@@ -453,35 +453,35 @@ C
          NJ(LL) = KK
          IFAC = IFAC + LL
  30   CONTINUE
-C
+C     
       IF (NN.NE.1) THEN
          WRITE(6,40) N
  40      FORMAT(' *** WARNING!!!',I10,' IS NOT A LEGAL VALUE OF N ***')
          RETURN
       ENDIF
-C
+C     
       IP = NJ(1)
       IQ = NJ(2)
       IR = NJ(3)
-C
+C     
 C     COMPUTE LIST OF ROTATED TWIDDLE FACTORS
 C     ---------------------------------------
       NJ(1) = 2**IP
       NJ(2) = 3**IQ
       NJ(3) = 5**IR
-C
+C     
       TWOPI = 4.0 * ASIN(1.d0)
       I = 1
-C
+C     
       DO 60 LL = 1 , 3
          NI = NJ(LL)
          IF (NI.EQ.1) GO TO 60
-C
+C     
          DEL = TWOPI / DFLOAT(NI)
          IROT = N / NI
          KINK = MOD(IROT,NI)
          KK = 0
-C
+C     
          DO 50 K = 1 , NI
             ANGLE = DFLOAT(KK) * DEL
             TRIGS(I) = COS(ANGLE)
@@ -491,7 +491,7 @@ C
             IF (KK.GT.NI) KK = KK - NI
  50      CONTINUE
  60   CONTINUE
-C
+C     
       RETURN
       END
 !=======================================================================
@@ -499,12 +499,12 @@ C     **********************************************************************
 C     **********************************************************************
 C     SUBROUTINE 'GPFA'
 C     SELF-SORTING IN-PLACE GENERALIZED PRIME FACTOR (COMPLEX) FFT
-C
+C     
 C     *** THIS IS THE ALL-FORTRAN VERSION ***
 C     -------------------------------
-C
+C     
 C     CALL GPFA(A,B,TRIGS,INC,JUMP,N,LOT,ISIGN)
-C
+C     
 C     A IS FIRST REAL INPUT/OUTPUT VECTOR
 C     B IS FIRST IMAGINARY INPUT/OUTPUT VECTOR
 C     TRIGS IS A TABLE OF TWIDDLE FACTORS, PRECALCULATED
@@ -518,31 +518,31 @@ C     -----------------------------------
 C     LOT IS THE NUMBER OF TRANSFORMS
 C     ISIGN = +1 FOR FORWARD TRANSFORM
 C     = -1 FOR INVERSE TRANSFORM
-C
+C     
 C     WRITTEN BY CLIVE TEMPERTON
 C     RECHERCHE EN PREVISION NUMERIQUE
 C     ATMOSPHERIC ENVIRONMENT SERVICE, CANADA
-C
+C     
 C----------------------------------------------------------------------
-C
+C     
 C     DEFINITION OF TRANSFORM
 C     -----------------------
-C
+C     
 C     X(J) = SUM(K=0,...,N-1)(C(K)*EXP(ISIGN*2*I*J*K*PI/N))
-C
+C     
 C---------------------------------------------------------------------
-C
+C     
 C     FOR A MATHEMATICAL DEVELOPMENT OF THE ALGORITHM USED,
 C     SEE:
-C
+C     
 C     C TEMPERTON : "A GENERALIZED PRIME FACTOR FFT ALGORITHM
 C     FOR ANY N = (2**P)(3**Q)(5**R)",
 C     SIAM J. SCI. STAT. COMP., MAY 1992.
-C
+C     
 C----------------------------------------------------------------------
-C
+C     
       SUBROUTINE GPFA(A,B,TRIGS,INC,JUMP,N,LOT,ISIGN)
-C
+C     
       IMPLICIT NONE
 
 C     Incoming data
@@ -554,12 +554,12 @@ C     In-Outcoming data
 
 C     Internal data
       INTEGER NJ(3), NN, IFAC, LL, KK, IP, IQ, IR, I
-C
+C     
 C     DECOMPOSE N INTO FACTORS 2,3,5
 C     ------------------------------
       NN = N
       IFAC = 2
-C
+C     
       DO 30 LL = 1 , 3
          KK = 0
  10      CONTINUE
@@ -571,17 +571,17 @@ C
          NJ(LL) = KK
          IFAC = IFAC + LL
  30   CONTINUE
-C
+C     
       IF (NN.NE.1) THEN
          WRITE(6,40) N
  40      FORMAT(' *** WARNING!!',I10,' IS NOT A LEGAL VALUE OF N ***')
          RETURN
       ENDIF
-C
+C     
       IP = NJ(1)
       IQ = NJ(2)
       IR = NJ(3)
-C
+C     
 C     COMPUTE THE TRANSFORM
 C     ---------------------
       I = 1
@@ -596,12 +596,12 @@ C     ---------------------
       IF (IR.GT.0) THEN
          CALL GPFA5F(A,B,TRIGS(I),INC,JUMP,N,IR,LOT,ISIGN)
       ENDIF
-C
+C     
       RETURN
       END
 !=======================================================================
 C-------------------------------------------------------------------
-C
+C     
       subroutine gpfa2f(a,b,trigs,inc,jump,n,mm,lot,isign)
       IMPLICIT NONE
 
@@ -626,7 +626,7 @@ C     Internal data
      &     si1, si2, si3, si4, si5, si6, si7,
      &     c1, c2, c3
 
-C
+C     
 C     ***************************************************************
 C     *                                                             *
 C     *  N.B. LVR = LENGTH OF VECTOR REGISTERS, SET TO 128 FOR C90. *
@@ -634,13 +634,13 @@ C     *  RESET TO 64 FOR OTHER CRAY MACHINES, OR TO ANY LARGE VALUE *
 C     *  (GREATER THAN OR EQUAL TO LOT) FOR A SCALAR COMPUTER.      *
 C     *                                                             *
 C     ***************************************************************
-C
+C     
       n2 = 2**mm
       inq = n/n2
       jstepx = (n2-n) * inc
       ninc = n * inc
       ink = inc * inq
-C
+C     
       m2 = 0
       m8 = 0
       if (mod(mm,2).eq.0) then
@@ -653,16 +653,16 @@ C
          m8 = 1
       endif
       mh = (m+1)/2
-C
+C     
       nblox = 1 + (lot-1)/lvr
       left = lot
       s = dfloat(isign)
       istart = 1
-C
+C     
 C     loop on blocks of lvr transforms
 C     --------------------------------
       do 500 nb = 1 , nblox
-C
+C     
          if (left.le.lvr) then
             nvex = left
          else if (left.lt.(2*lvr)) then
@@ -672,27 +672,27 @@ C
             nvex = lvr
          endif
          left = left - nvex
-C
+C     
          la = 1
-C
+C     
 C     loop on type I radix-4 passes
 C     -----------------------------
          mu = mod(inq,4)
          if (isign.eq.-1) mu = 4 - mu
          ss = 1.0d0
          if (mu.eq.3) ss = -1.0d0
-C
+C     
          if (mh.eq.0) go to 200
-C
+C     
          do 160 ipass = 1 , mh
             jstep = (n*inc) / (4*la)
             jstepl = jstep - ninc
-C
+C     
 C     k = 0 loop (no twiddle factors)
 C     -------------------------------
             do 120 jjj = 0 , (n-1)*inc , 4*jstep
                ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                do 115 nu = 1 , inq
@@ -703,7 +703,7 @@ C     -----------------
                   jd = jc + jstepl
                   if (jd.lt.istart) jd = jd + ninc
                   j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep, shortloop
@@ -738,12 +738,12 @@ c     dir$ ivdep, shortloop
                   if (ja.lt.istart) ja = ja + ninc
  115           continue
  120        continue
-C
+C     
 C     finished if n2 = 4
 C     ------------------
             if (n2.eq.4) go to 490
             kk = 2 * la
-C
+C     
 C     loop on nonzero k
 C     -----------------
             do 150 k = ink , jstep-ink , ink
@@ -753,12 +753,12 @@ C     -----------------
                si2 = s*trigs(2*kk+2)
                co3 = trigs(3*kk+1)
                si3 = s*trigs(3*kk+2)
-C
+C     
 C     loop along transform
 C     --------------------
                do 140 jjj = k , (n-1)*inc , 4*jstep
                   ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                   do 135 nu = 1 , inq
@@ -769,7 +769,7 @@ C     -----------------
                      jd = jc + jstepl
                      if (jd.lt.istart) jd = jd + ninc
                      j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep,shortloop
@@ -812,27 +812,27 @@ C-----( end of loop on nonzero k )
             la = 4*la
  160     continue
 C-----( end of loop on type I radix-4 passes)
-C
+C     
 C     central radix-2 pass
 C     --------------------
  200     continue
          if (m2.eq.0) go to 300
-C
+C     
          jstep = (n*inc) / (2*la)
          jstepl = jstep - ninc
-C
+C     
 C     k=0 loop (no twiddle factors)
 C     -----------------------------
          do 220 jjj = 0 , (n-1)*inc , 2*jstep
             ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
             do 215 nu = 1 , inq
                jb = ja + jstepl
                if (jb.lt.istart) jb = jb + ninc
                j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep, shortloop
@@ -854,31 +854,31 @@ C-----(end of loop across transforms)
                if (ja.lt.istart) ja = ja + ninc
  215        continue
  220     continue
-C
+C     
 C     finished if n2=2
 C     ----------------
          if (n2.eq.2) go to 490
-C
+C     
          kk = 2 * la
-C
+C     
 C     loop on nonzero k
 C     -----------------
          do 260 k = ink , jstep - ink , ink
             co1 = trigs(kk+1)
             si1 = s*trigs(kk+2)
-C
+C     
 C     loop along transforms
 C     ---------------------
             do 250 jjj = k , (n-1)*inc , 2*jstep
                ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                do 245 nu = 1 , inq
                   jb = ja + jstepl
                   if (jb.lt.istart) jb = jb + ninc
                   j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
                   if (kk.eq.n2/2) then
@@ -895,9 +895,9 @@ c     dir$ ivdep, shortloop
                         b(jb+j) = t0
                         j = j + jump
  230                 continue
-C
+C     
                   else
-C
+C     
 c     dir$ ivdep, shortloop
                      do 240 l = 1 , nvex
                         aja = a(ja+j)
@@ -912,9 +912,9 @@ c     dir$ ivdep, shortloop
                         b(jb+j) = si1*t0 + co1*u0
                         j = j + jump
  240                 continue
-C
+C     
                   endif
-C
+C     
 C-----(end of loop across transforms)
                   ja = ja + jstepx
                   if (ja.lt.istart) ja = ja + ninc
@@ -925,10 +925,10 @@ C-----(end of loop along transforms)
  260     continue
 C-----(end of loop on nonzero k)
 C-----(end of radix-2 pass)
-C
+C     
          la = 2 * la
          go to 400
-C
+C     
 C     central radix-8 pass
 C     --------------------
  300     continue
@@ -942,13 +942,13 @@ C     --------------------
          c2 = sqrt(0.5d0)
          if (mu.eq.3.or.mu.eq.5) c2 = -c2
          c3 = c1 * c2
-C
+C     
 C     stage 1
 C     -------
          do 320 k = 0 , jstep - ink , ink
             do 315 jjj = k , (n-1)*inc , 8*jstep
                ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                do 312 nu = 1 , inq
@@ -1016,15 +1016,15 @@ c     dir$ ivdep, shortloop
  312           continue
  315        continue
  320     continue
-C
+C     
 C     stage 2
 C     -------
-C
+C     
 C     k=0 (no twiddle factors)
 C     ------------------------
          do 330 jjj = 0 , (n-1)*inc , 8*jstep
             ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
             do 328 nu = 1 , inq
@@ -1099,15 +1099,15 @@ c     dir$ ivdep, shortloop
                if (ja.lt.istart) ja = ja + ninc
  328        continue
  330     continue
-C
+C     
          if (n2.eq.8) go to 490
-C
+C     
 C     loop on nonzero k
 C     -----------------
          kk = 2 * la
-C
+C     
          do 350 k = ink , jstep - ink , ink
-C
+C     
             co1 = trigs(kk+1)
             si1 = s * trigs(kk+2)
             co2 = trigs(2*kk+1)
@@ -1122,10 +1122,10 @@ C
             si6 = s * trigs(6*kk+2)
             co7 = trigs(7*kk+1)
             si7 = s * trigs(7*kk+2)
-C
+C     
             do 345 jjj = k , (n-1)*inc , 8*jstep
                ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                do 342 nu = 1 , inq
@@ -1202,9 +1202,9 @@ c     dir$ ivdep, shortloop
  345        continue
             kk = kk + 2 * la
  350     continue
-C
+C     
          la = 8 * la
-C
+C     
 C     loop on type II radix-4 passes
 C     ------------------------------
  400     continue
@@ -1212,19 +1212,19 @@ C     ------------------------------
          if (isign.eq.-1) mu = 4 - mu
          ss = 1.0d0
          if (mu.eq.3) ss = -1.0d0
-C
+C     
          do 480 ipass = mh+1 , m
             jstep = (n*inc) / (4*la)
             jstepl = jstep - ninc
             laincl = la * ink - ninc
-C
+C     
 C     k=0 loop (no twiddle factors)
 C     -----------------------------
             do 430 ll = 0 , (la-1)*ink , 4*jstep
-C
+C     
                do 420 jjj = ll , (n-1)*inc , 4*la*ink
                   ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                   do 415 nu = 1 , inq
@@ -1259,7 +1259,7 @@ C     -----------------
                      jp = jo + jstepl
                      if (jp.lt.istart) jp = jp + ninc
                      j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep, shortloop
@@ -1384,13 +1384,13 @@ C-----( end of loop across transforms )
  420           continue
  430        continue
 C-----( end of double loop for k=0 )
-C
+C     
 C     finished if last pass
 C     ---------------------
             if (ipass.eq.m) go to 490
-C
+C     
             kk = 2*la
-C
+C     
 C     loop on nonzero k
 C     -----------------
             do 470 k = ink , jstep-ink , ink
@@ -1400,14 +1400,14 @@ C     -----------------
                si2 = s*trigs(2*kk+2)
                co3 = trigs(3*kk+1)
                si3 = s*trigs(3*kk+2)
-C
+C     
 C     double loop along first transform in block
 C     ------------------------------------------
                do 460 ll = k , (la-1)*ink , 4*jstep
-C
+C     
                   do 450 jjj = ll , (n-1)*inc , 4*la*ink
                      ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                      do 445 nu = 1 , inq
@@ -1442,7 +1442,7 @@ C     -----------------
                         jp = jo + jstepl
                         if (jp.lt.istart) jp = jp + ninc
                         j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep, shortloop
@@ -1578,16 +1578,16 @@ C-----( nvex transforms completed)
          istart = istart + nvex * jump
  500  continue
 C-----( end of loop on blocks of transforms )
-C
+C     
       return
       end
 !=======================================================================
 C     fortran version of *gpfa3* -
 C     radix-3 section of self-sorting, in-place
 C     generalized PFA
-C
+C     
 C-------------------------------------------------------------------
-C
+C     
       subroutine gpfa3f(a,b,trigs,inc,jump,n,mm,lot,isign)
 
       IMPLICIT NONE
@@ -1618,7 +1618,7 @@ C     *  RESET TO 64 FOR OTHER CRAY MACHINES, OR TO ANY LARGE VALUE *
 C     *  (GREATER THAN OR EQUAL TO LOT) FOR A SCALAR COMPUTER.      *
 C     *                                                             *
 C     ***************************************************************
-C
+C     
       n3 = 3**mm
       inq = n/n3
       jstepx = (n3-n) * inc
@@ -1631,16 +1631,16 @@ C
       s = dfloat(isign)
       c1 = sin60
       if (mu.eq.2) c1 = -c1
-C
+C     
       nblox = 1 + (lot-1)/lvr
       left = lot
       s = dfloat(isign)
       istart = 1
-C
+C     
 C     loop on blocks of lvr transforms
 C     --------------------------------
       do 500 nb = 1 , nblox
-C
+C     
          if (left.le.lvr) then
             nvex = left
          else if (left.lt.(2*lvr)) then
@@ -1650,20 +1650,20 @@ C
             nvex = lvr
          endif
          left = left - nvex
-C
+C     
          la = 1
-C
+C     
 C     loop on type I radix-3 passes
 C     -----------------------------
          do 160 ipass = 1 , mh
             jstep = (n*inc) / (3*la)
             jstepl = jstep - ninc
-C
+C     
 C     k = 0 loop (no twiddle factors)
 C     -------------------------------
             do 120 jjj = 0 , (n-1)*inc , 3*jstep
                ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                do 115 nu = 1 , inq
@@ -1672,7 +1672,7 @@ C     -----------------
                   jc = jb + jstepl
                   if (jc.lt.istart) jc = jc + ninc
                   j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep, shortloop
@@ -1701,12 +1701,12 @@ c     dir$ ivdep, shortloop
                   if (ja.lt.istart) ja = ja + ninc
  115           continue
  120        continue
-C
+C     
 C     finished if n3 = 3
 C     ------------------
             if (n3.eq.3) go to 490
             kk = 2 * la
-C
+C     
 C     loop on nonzero k
 C     -----------------
             do 150 k = ink , jstep-ink , ink
@@ -1714,12 +1714,12 @@ C     -----------------
                si1 = s*trigs(kk+2)
                co2 = trigs(2*kk+1)
                si2 = s*trigs(2*kk+2)
-C
+C     
 C     loop along transform
 C     --------------------
                do 140 jjj = k , (n-1)*inc , 3*jstep
                   ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                   do 135 nu = 1 , inq
@@ -1728,7 +1728,7 @@ C     -----------------
                      jc = jb + jstepl
                      if (jc.lt.istart) jc = jc + ninc
                      j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep,shortloop
@@ -1765,23 +1765,23 @@ C-----( end of loop on nonzero k )
             la = 3*la
  160     continue
 C-----( end of loop on type I radix-3 passes)
-C
+C     
 C     loop on type II radix-3 passes
 C     ------------------------------
  400     continue
-C
+C     
          do 480 ipass = mh+1 , m
             jstep = (n*inc) / (3*la)
             jstepl = jstep - ninc
             laincl = la*ink - ninc
-C
+C     
 C     k=0 loop (no twiddle factors)
 C     -----------------------------
             do 430 ll = 0 , (la-1)*ink , 3*jstep
-C
+C     
                do 420 jjj = ll , (n-1)*inc , 3*la*ink
                   ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                   do 415 nu = 1 , inq
@@ -1802,7 +1802,7 @@ C     -----------------
                      ji = jh + jstepl
                      if (ji.lt.istart) ji = ji + ninc
                      j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep, shortloop
@@ -1880,13 +1880,13 @@ C-----( end of loop across transforms )
  420           continue
  430        continue
 C-----( end of double loop for k=0 )
-C
+C     
 C     finished if last pass
 C     ---------------------
             if (ipass.eq.m) go to 490
-C
+C     
             kk = 2*la
-C
+C     
 C     loop on nonzero k
 C     -----------------
             do 470 k = ink , jstep-ink , ink
@@ -1894,14 +1894,14 @@ C     -----------------
                si1 = s*trigs(kk+2)
                co2 = trigs(2*kk+1)
                si2 = s*trigs(2*kk+2)
-C
+C     
 C     double loop along first transform in block
 C     ------------------------------------------
                do 460 ll = k , (la-1)*ink , 3*jstep
-C
+C     
                   do 450 jjj = ll , (n-1)*inc , 3*la*ink
                      ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                      do 445 nu = 1 , inq
@@ -1922,7 +1922,7 @@ C     -----------------
                         ji = jh + jstepl
                         if (ji.lt.istart) ji = ji + ninc
                         j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
 c     dir$ ivdep, shortloop
@@ -2011,22 +2011,22 @@ C-----( nvex transforms completed)
          istart = istart + nvex * jump
  500  continue
 C-----( end of loop on blocks of transforms )
-C
+C     
       return
       end
 !=======================================================================
 C     fortran version of *gpfa5* -
 C     radix-5 section of self-sorting, in-place,
 C     generalized pfa
-C
+C     
 C     **********************************************************************
 C     **********************************************************************
 C     fortran version of *gpfa5* -
 C     radix-5 section of self-sorting, in-place,
 C     generalized pfa
-C
+C     
 C-------------------------------------------------------------------
-C
+C     
       subroutine gpfa5f(a,b,trigs,inc,jump,n,mm,lot,isign)
 
       IMPLICIT NONE
@@ -2065,7 +2065,7 @@ C     *  RESET TO 64 FOR OTHER CRAY MACHINES, OR TO ANY LARGE VALUE *
 C     *  (GREATER THAN OR EQUAL TO LOT) FOR A SCALAR COMPUTER.      *
 C     *                                                             *
 C     ***************************************************************
-C
+C     
       n5 = 5 ** mm
       inq = n / n5
       jstepx = (n5-n) * inc
@@ -2073,7 +2073,7 @@ C
       ink = inc * inq
       mu = mod(inq,5)
       if (isign.eq.-1) mu = 5 - mu
-C
+C     
       m = mm
       mh = (m+1)/2
       s = float(isign)
@@ -2087,16 +2087,16 @@ C
       endif
       if (mu.eq.3.or.mu.eq.4) c2 = -c2
       if (mu.eq.2.or.mu.eq.4) c3 = -c3
-C
+C     
       nblox = 1 + (lot-1)/lvr
       left = lot
       s = float(isign)
       istart = 1
-C
+C     
 C     loop on blocks of lvr transforms
 C     --------------------------------
       do 500 nb = 1 , nblox
-C
+C     
          if (left.le.lvr) then
             nvex = left
          else if (left.lt.(2*lvr)) then
@@ -2106,20 +2106,20 @@ C
             nvex = lvr
          endif
          left = left - nvex
-C
+C     
          la = 1
-C
+C     
 C     loop on type I radix-5 passes
 C     -----------------------------
          do 160 ipass = 1 , mh
             jstep = (n*inc) / (5*la)
             jstepl = jstep - ninc
             kk = 0
-C
+C     
 C     loop on k
 C     ---------
             do 150 k = 0 , jstep-ink , ink
-C
+C     
                if (k.gt.0) then
                   co1 = trigs(kk+1)
                   si1 = s*trigs(kk+2)
@@ -2130,12 +2130,12 @@ C
                   co4 = trigs(4*kk+1)
                   si4 = s*trigs(4*kk+2)
                endif
-C
+C     
 C     loop along transform
 C     --------------------
                do 140 jjj = k , (n-1)*inc , 5*jstep
                   ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                   do 135 nu = 1 , inq
@@ -2148,11 +2148,11 @@ C     -----------------
                      je = jd + jstepl
                      if (je.lt.istart) je = je + ninc
                      j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
                      if (k.eq.0) then
-C
+C     
 c     dir$ ivdep, shortloop
                         do 110 l = 1 , nvex
                            ajb = a(jb+j)
@@ -2199,9 +2199,9 @@ c     dir$ ivdep, shortloop
                            b(jd+j) = u9 - t10
                            j = j + jump
  110                    continue
-C
+C     
                      else
-C
+C     
 c     dir$ ivdep,shortloop
                         do 130 l = 1 , nvex
                            ajb = a(jb+j)
@@ -2248,11 +2248,11 @@ c     dir$ ivdep,shortloop
                            b(jd+j) = si3*(t9+u10) + co3*(u9-t10)
                            j = j + jump
  130                    continue
-C
+C     
                      endif
-C
+C     
 C-----( end of loop across transforms )
-C
+C     
                      ja = ja + jstepx
                      if (ja.lt.istart) ja = ja + ninc
  135              continue
@@ -2264,23 +2264,23 @@ C-----( end of loop on nonzero k )
             la = 5*la
  160     continue
 C-----( end of loop on type I radix-5 passes)
-C
+C     
          if (n.eq.5) go to 490
-C
+C     
 C     loop on type II radix-5 passes
 C     ------------------------------
  400     continue
-C
+C     
          do 480 ipass = mh+1 , m
             jstep = (n*inc) / (5*la)
             jstepl = jstep - ninc
             laincl = la * ink - ninc
             kk = 0
-C
+C     
 C     loop on k
 C     ---------
             do 470 k = 0 , jstep-ink , ink
-C
+C     
                if (k.gt.0) then
                   co1 = trigs(kk+1)
                   si1 = s*trigs(kk+2)
@@ -2291,14 +2291,14 @@ C
                   co4 = trigs(4*kk+1)
                   si4 = s*trigs(4*kk+2)
                endif
-C
+C     
 C     double loop along first transform in block
 C     ------------------------------------------
                do 460 ll = k , (la-1)*ink , 5*jstep
-C
+C     
                   do 450 jjj = ll , (n-1)*inc , 5*la*ink
                      ja = istart + jjj
-C
+C     
 C     "transverse" loop
 C     -----------------
                      do 445 nu = 1 , inq
@@ -2351,11 +2351,11 @@ C     -----------------
                         jy = jx + jstepl
                         if (jy.lt.istart) jy = jy + ninc
                         j = 0
-C
+C     
 C     loop across transforms
 C     ----------------------
                         if (k.eq.0) then
-C
+C     
 c     dir$ ivdep, shortloop
                            do 410 l = 1 , nvex
                               ajb = a(jb+j)
@@ -2598,9 +2598,9 @@ C----------------------
                               b(jt+j) = u9 - t10
                               j = j + jump
  410                       continue
-C
+C     
                         else
-C
+C     
 c     dir$ ivdep, shortloop
                            do 440 l = 1 , nvex
                               ajb = a(jb+j)
@@ -2843,11 +2843,11 @@ C----------------------
                               b(jt+j) = si3*(t9+u10) + co3*(u9-t10)
                               j = j + jump
  440                       continue
-C
+C     
                         endif
-C
+C     
 C-----(end of loop across transforms)
-C
+C     
                         ja = ja + jstepx
                         if (ja.lt.istart) ja = ja + ninc
  445                 continue
@@ -2865,6 +2865,6 @@ C-----( nvex transforms completed)
          istart = istart + nvex * jump
  500  continue
 C-----( end of loop on blocks of transforms )
-C
+C     
       return
       end
