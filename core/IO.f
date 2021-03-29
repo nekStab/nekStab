@@ -4,7 +4,7 @@ c-----------------------------------------------------------------------
       integer posfil
       common /RES_WANT/ nopen(99,2)
 
-      !change prepost.f line 1094 from "save nopen" to "common /RES_WANT/ nopen"
+!     change prepost.f line 1094 from "save nopen" to "common /RES_WANT/ nopen"
 
       iprefix          = i_find_prefix(resnam,99)
       nopen(iprefix,1) = posfil -1

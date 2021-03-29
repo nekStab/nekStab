@@ -54,7 +54,7 @@
       if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, n)
 
       return
-      end
+      end subroutine inner_product
 
 
 
@@ -81,7 +81,7 @@
       alpha = dsqrt(alpha)
 
       return
-      end
+      end subroutine norm
 
 
 
@@ -123,9 +123,6 @@
       real, dimension(lt2), intent(inout) :: qp
       real, intent(out)                   :: alpha
       real                                :: beta
-      !integer n,n2
-      !n = nx1*ny1*nz1*nelt
-      !n2 = nx2*ny2*nz2*nelt
 
 !     --> Compute the user-defined norm.
       call norm(qx, qy, qz, qp, qt, alpha)
@@ -133,107 +130,60 @@
 
 !     --> Normalize the vector.
       call nopcmult(qx, qy, qz, qp, qt, beta)
-      ! call opcmult(qx, qy, qz, beta)
-      ! if(ifpo) call cmult(qp, beta, n2)
-      ! if(ifheat) call cmult(qt, beta, n)
 
       return
-      end
+      end subroutine normalize
 
-
-
-! c-----------------------------------------------------------------------
-!       module KS
-!       implicit none
-!       include 'SIZE'
-!       include 'TOTAL'
-
-!       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-!       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-! !     
-! !----- Krylov basis V for the projection M*V = V*H -----
-!       real, allocatable,dimension(:,:) :: qx, qy, qz, qt
-!       real, allocatable,dimension(:,:) :: qp
-
-! !     ----- Upper Hessenberg matrix -----
-!       real, allocatable,dimension(:,:) :: H
-!       real, allocatable,dimension(:,:) :: b_vec
-
-! !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-!       complex*16, allocatable,dimension(:) :: vals
-!       complex*16, allocatable,dimension(:,:) :: vecs
-
-!       real, allocatable, dimension(:) :: residual
-
-
-!       end module KS
-
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
 
       subroutine krylov_schur
-      !use KS
+!     use KS
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-!     
-!----- Krylov basis V for the projection M*V = V*H -----
-!       real, allocatable,dimension(:,:) :: qx, qy, qz, qt
-!       real, allocatable,dimension(:,:) :: qp
 
-! !     ----- Upper Hessenberg matrix -----
-!       real, allocatable,dimension(:,:) :: H
-!       real, allocatable,dimension(:,:) :: b_vec
+!     -----Krylov basis V for the projection M*V = V*H -----
+      real, allocatable,dimension(:,:) :: qx, qy, qz, qt
+      real, allocatable,dimension(:,:) :: qp
 
-! !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-!       complex*16, allocatable,dimension(:) :: vals
-!       complex*16, allocatable,dimension(:,:) :: vecs
+!     ----- Upper Hessenberg matrix -----
+      real, allocatable,dimension(:,:) :: H
+      real, allocatable,dimension(:,:) :: b_vec
 
-!       real, allocatable, dimension(:) :: residual
+!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+      complex*16, allocatable,dimension(:) :: vals
+      complex*16, allocatable,dimension(:,:) :: vecs
+
+      real, allocatable, dimension(:) :: residual
 
 !     ----- Miscellaneous -----
       real wo1(lt),wo2(lt),wo3(lt)
       common /ugrad/ wo1,wo2,wo3
 
       integer :: mstart, cnt
-      real, dimension(k_dim)             :: residual
+!     real, dimension(k_dim)             :: residual
       real                               :: alpha, beta, glsc3
       logical                            :: converged
-      integer                            :: n, n2, i, j
+      integer                            :: n, i, j
       character(len=30)                  :: filename
 
-!     ----- Krylov basis V for the projection M*V = V*H -----
-      real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,k_dim+1)       :: qp
-
-!     ----- Upper Hessenberg matrix -----
-      real, dimension(k_dim+1,k_dim)     :: H
-      real, dimension(1,k_dim)           :: b_vec
-
-!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-      complex*16, dimension(k_dim)       :: vals
-      complex*16, dimension(k_dim,k_dim) :: vecs
-
-      !allocate(qx(lt,k_dim+1), qy(lt,k_dim+1), qz(lt,k_dim+1), qt(lt,k_dim+1),qp(lt2,k_dim+1))
-      !allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
+!     ----- Allocate arrays -----
+      allocate(qx(lt,k_dim+1), qy(lt,k_dim+1), qz(lt,k_dim+1), qt(lt,k_dim+1),qp(lt2,k_dim+1))
+      allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
 
       n      = nx1*ny1*nz1*nelt
-      n2     = nx2*ny2*nz2*nelt
       time   = 0.0d0
       H(:,:)  = 0.0d0
       b_vec  = 0.0d0
       residual = 0.0d0
 
       call oprzero(wo1, wo2, wo3)
-      !do i = 1, k_dim+1
       do i = 1, k_dim+1
          call noprzero(qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, i))
-      !    call oprzero(qx(:, i), qy(:, i), qz(:, i))
-      !    if (ifpo) call rzero(qp(:, i), n2)
-      !    if (ifheat) call rzero(qt(:, i), n)
       enddo
 
 !     ----- Loading baseflow from disk (optional) -----
@@ -247,7 +197,7 @@ c-----------------------------------------------------------------------
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
       if(ifto) call copy(tbase,t(1,1,1,1,1),n)
-      !call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
+!     call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
 
 !     ----- Prepare stability parameters -----
 
@@ -261,37 +211,34 @@ c-----------------------------------------------------------------------
 
 !     ----- Creates seed vector for the Krylov subspace -----
 
-            if(ifseed_nois)then ! noise as initial seed 
+         if(ifseed_nois)then    ! noise as initial seed
 
-                  if(nid.eq.0)write(6,*)'Filling fields with noise...'
-                  call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
-                  call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
-                  !call outpost(vxp,vyp,vzp,pr,tp,'SS_') !outpost for sanity check
-                  call matrix_vector_product(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), 
-     $                                       vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
+            if(nid.eq.0)write(6,*)'Filling fields with noise...'
+            call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
+            call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
+!     call outpost(vxp,vyp,vzp,pr,tp,'SS_') !outpost for sanity check
+            call matrix_vector_product(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),
+     $           vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
 
-            elseif(ifseed_symm)then ! symmetry initial seed
+         elseif(ifseed_symm)then ! symmetry initial seed
 
-                  if(nid.eq.0)write(6,*)'Enforcing symmetric seed perturb...'
-                  call add_symmetric_seed(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
-                  !call outpost(vxp,vyp,vzp,pr,t,'SS_') !outpost for sanity check
+            if(nid.eq.0)write(6,*)'Enforcing symmetric seed perturb...'
+            call add_symmetric_seed(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
+!     call outpost(vxp,vyp,vzp,pr,t,'SS_') !outpost for sanity check
 
-            elseif(ifseed_load)then ! loading initial seed (e.g. Re_ )
+         elseif(ifseed_load)then ! loading initial seed (e.g. Re_ )
 
-                  write(filename,'(a,a,a)')'Re_',trim(SESSION),'0.f00001'
-                  if(nid.eq.0)write(*,*)'Load real part of leading mode as seed: ',filename
-                  call load_fld(filename)
-                  call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
-                  ! call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),vx,vy,vz)
-                  ! if(ifpo) call copy(prp(:,1),pr,n2)
-                  ! if(ifheat) call copy(tp(:,1,1),t(1,1,1,1,1),n)
+            write(filename,'(a,a,a)')'Re_',trim(SESSION),'0.f00001'
+            if(nid.eq.0)write(*,*)'Load real part of leading mode as seed: ',filename
+            call load_fld(filename)
+            call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
 
-            else
+         else
 
-                  call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),ubase,vbase,wbase)
-                  if(ifheat) call copy(tp(:,1,1),tbase,n)
+            call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),ubase,vbase,wbase)
+            if(ifheat) call copy(tp(:,1,1),tbase,n)
 
-            endif
+         endif
 
 !     ----- Normalized to unit-norm -----
 
@@ -300,9 +247,6 @@ c-----------------------------------------------------------------------
          mstart = 1; istep = 1; time = 0.0d0
 
          call nopcopy(qx(:,1),qy(:,1),qz(:,1),qp(:,1),qt(:,1), vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
-      !    call opcopy(qx(:,1), qy(:,1), qz(:,1), vxp(:,1), vyp(:,1), vzp(:,1))
-      !    if(ifpo) call copy(qp(:,1), prp(:,1), n2)
-      !    if(ifheat) call copy(qt(:,1), tp(:,1,1), n)
 
          call whereyouwant('KRY',1)
          time = 0.0d0
@@ -329,25 +273,25 @@ c-----------------------------------------------------------------------
             endif
             close(67)
             write(6,*)'Broadcast H matrix to all procs...'
-         endif !nid.eq.0
+         endif                  !nid.eq.0
          call bcast(H,(k_dim+1)*k_dim*wdsize) !broadcast H matrix to all procs
 
-      !     if(nid.eq.2)then !-> debug only
-      !     write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
-      !     write(6,*) ''
-      !     open(67,file=trim(filename),status='unknown',form='formatted')
-      !     write(67,*) beta
-      !     do i = 1,mstart+1
-      !     do j = 1,mstart
-      !     write(67,*) H(i,j)
-      !     enddo
-      !     enddo
-      !     close(67)
-      !     endif
+!     if(nid.eq.2)then !-> debug only
+!     write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
+!     write(6,*) ''
+!     open(67,file=trim(filename),status='unknown',form='formatted')
+!     write(67,*) beta
+!     do i = 1,mstart+1
+!     do j = 1,mstart
+!     write(67,*) H(i,j)
+!     enddo
+!     enddo
+!     close(67)
+!     endif
 
          mstart=mstart+1        !careful here!
          call load_files(qx, qy, qz, qp, qt, mstart, k_dim+1, 'KRY')
-         !k_dim+1 is the dim of V_x
+!     k_dim+1 is the dim of V_x
          if(nid.eq.0) write(6,*)'Restart fields loaded to memory!'
 
       endif
@@ -362,7 +306,7 @@ c-----------------------------------------------------------------------
       converged = .false.
       do while ( .not. converged )
 !     --> Arnoldi factorization.
-         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, k_dim)
+         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, k_dim, k_dim)
 
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
@@ -387,7 +331,7 @@ c-----------------------------------------------------------------------
             else                ! Apply Schur condensation before restarting the factorization.
                schur_cnt = schur_cnt + 1
                if (nid .eq. 0) write(6, *) 'Starting Schur condensation phase.',schur_cnt
-               call schur_condensation(mstart, H, qx, qy, qz, qp, qt)
+               call schur_condensation(mstart, H, qx, qy, qz, qp, qt, k_dim)
             endif
 
          end select
@@ -402,6 +346,10 @@ c-----------------------------------------------------------------------
       if(nid.eq.0)write(6,*)'converged eigenmodes:',cnt
       if(nid.eq.0)write(6,*)'Eigenproblem solver finished.'
 
+!     --> Deallocation.
+      deallocate(qx, qy, qz, qt, qp)
+      deallocate(H, b_vec, vals, vecs)
+
       return
       end subroutine krylov_schur
 
@@ -409,131 +357,6 @@ c-----------------------------------------------------------------------
 
 
 
-!-----------------------------------------------------------------------
-
-
-
-
-
-      subroutine arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, mend)
-
-!     This function implements the k-step Arnoldi factorization of the linearized
-!     Navier-Stokes operator. The rank k of the Arnoldi factorization is set as a user
-!     parameter in x_SIZE.f (see parameter k_dim).
-!     
-!     INPUT
-!     -----
-!     
-!     mstart : integer
-!     Index at which to start the Arnoldi factorization. By default, it should be set to 1.
-!     Note that it changes when the Arnoldi factorization is used as part of the Krylov-Schur
-!     algorithm.
-!     
-!     mend : integer
-!     Index at which to stop the Arnoldi factorization. By default, it should be set to kdim.
-!     Note that it changes when the Arnoldi factorization is used as part of the GMRES solver
-!     
-!     RETURNS
-!     -------
-!     
-!     qx, qy, qz : nek arrays of size (lx1*ly1*lz1*lelt, k_dim).
-!     Arrays containing the various Krylov vectors associated to each velocity component.
-!     
-!     qp : nek arrays of size (lx2*ly2*lz2*lelt, k_dim)
-!     Arrays containing the various Krylov vectors associated to the pressure field.
-!     
-!     H : k x k real matrix.
-!     Upper Hessenberg matrix resulting from the Arnoldi factorization of the linearized
-!     Navier-Stokes operator.
-!     
-!     Last edit : April 3rd 2020 by JC Loiseau.
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-
-!     ----- Miscellaneous -----
-      real                               :: alpha
-      integer                            :: mstart, mend!, mstep moved to NEKSTAB.inc
-      integer                            :: n, n2
-
-!     ----- Timer -----
-      real*8 :: eetime0,eetime1
-      real   :: telapsed,tmiss,dnekclock
-
-!     ----- Orthogonal residual f = w - (Q,w)*Q -----
-      real, dimension(lt)                :: f_xr, f_yr, f_zr, f_tr
-      real, dimension(lt2)               :: f_pr
-c
-!     ----- Krylov basis V for the projection MQ = QH -----
-      real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,k_dim+1)       :: qp
-
-!     ----- Upper Hessenberg matrix -----
-      real, dimension(k_dim+1, k_dim)    :: H
-      
-      n  = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
-
-!     --> Initialize arrays.
-      call noprzero(f_xr, f_yr, f_zr, f_pr, f_tr)
-      ! call oprzero(f_xr, f_yr, f_zr)
-      ! if (ifpo) call rzero(f_pr, n2)
-      ! if (ifheat) call rzero(f_tr, n)
-      alpha = 0.0d0
-
-!     --> Arnoldi factorization.
-      do mstep = mstart, mend
-
-         if (nid.eq.0) write(6,*) 'iteration current and total:', mstep , '/' , mend
-
-         eetime0=dnekclock()
-
-!     --> Matrix-vector product f = M * v (e.g. calling the linearized Navier-Stokes solver).
-         call matrix_vector_product(f_xr, f_yr, f_zr, f_pr, f_tr, qx(:,mstep), qy(:,mstep), qz(:,mstep), qp(:,mstep), qt(:,mstep))
-
-!     --> Update Hessenberg matrix and compute the orthogonal residual f.
-         call update_hessenberg_matrix(
-     $        H(1:mstep, 1:mstep),
-     $        f_xr, f_yr, f_zr, f_pr, f_tr,
-     $        qx(:, 1:mstep), qy(:, 1:mstep), qz(:, 1:mstep), qp(:, 1:mstep), qt(:, 1:mstep),
-     $        mstep)
-
-!     --> Normalise the residual vector.
-         call normalize(f_xr, f_yr, f_zr, f_pr, f_tr, alpha)
-
-!     --> Update the Hessenberg matrix.
-         H(mstep+1, mstep) = alpha
-
-!     --> Add the residual vector as the new Krylov vector.
-
-         call nopcopy(qx(:,mstep+1),qy(:,mstep+1),qz(:,mstep+1),qp(:,mstep+1),qt(:,mstep+1),  f_xr,f_yr,f_zr,f_pr,f_tr)
-      !    call opcopy(qx(:,mstep+1), qy(:,mstep+1), qz(:,mstep+1), f_xr, f_yr, f_zr)
-      !    if(ifpo) call copy(qp(:,mstep+1), f_pr, n2)
-      !    if(ifheat) call copy(qt(:,mstep+1), f_tr, n)
-
-!     --> Save checkpoint for restarting/run-time analysis.
-      if(ifres)call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
-
-!     --> Output timing statistics
-
-         eetime1=dnekclock()
-         telapsed = (eetime1-eetime0)/3600.0d0
-         tmiss = telapsed*(k_dim-mstep)
-
-         if(nid.eq.0) then
-         write(6,"(' Time per iteration/remaining:',I3,'h ',I2,'min /',I3,'h ',I2,'min')"),
-     $              int(telapsed),ceiling((telapsed-int(telapsed))*60.),
-     $              int(tmiss),ceiling((tmiss-int(tmiss))*60.)
-         print *, ''
-         endif
-
-      enddo
-
-      return
-      end subroutine arnoldi_factorization
 
 
 
@@ -549,7 +372,7 @@ c-----------------------------------------------------------------------
 
 
 
-      subroutine schur_condensation(mstart, H, qx, qy, qz, qp, qt)
+      subroutine schur_condensation(mstart, H, qx, qy, qz, qp, qt, ksize)
 
       implicit none
       include 'SIZE'
@@ -564,56 +387,57 @@ c     =================================================
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
+      integer :: ksize
+
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
-      real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,k_dim+1)       :: qp
+      real, dimension(lt,ksize+1)        :: qx, qy, qz, qt
+      real, dimension(lt2,ksize+1)       :: qp
 
 c     ----- Upper Hessenberg matrix -----
 
-      real, dimension(k_dim+1, k_dim)     :: H
-      real, dimension(k_dim)           :: b_vec
+      real, dimension(ksize+1, ksize)     :: H
+      real, dimension(ksize)           :: b_vec
 
 c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
-      complex*16, dimension(k_dim)       :: vals
+      complex*16, dimension(ksize)       :: vals
 
 c     ----- Miscellaneous -----
 
-      integer :: mstart,n,n2
-      logical, dimension(k_dim)          :: selected
+      integer :: mstart,n
+      logical, dimension(ksize)          :: selected
 
 c     ----- Schur and Hessenberg decomposition -----
 
-      real, dimension(k_dim,k_dim)       :: vecs
+      real, dimension(ksize, ksize)       :: vecs
 
       n  = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
 
 !     --> Initialize arrays.
-      b_vec = 0.0D0 ; b_vec(k_dim) = H(k_dim+1, k_dim)
+      b_vec = 0.0D0 ; b_vec(ksize) = H(ksize+1, ksize)
       vals = ( 0.0D0 , 0.0D0 ) ; vecs = 0.0D0
 
 !     --> Perform the Schur decomposition.
-      call schur(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
+      call schur(H(1:ksize, 1:ksize), vecs, vals, ksize)
 
 !     --> Partition the eigenvalues in wanted / unwanted.
-      call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, k_dim)
+      call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, ksize)
       if ( nid.eq.0 ) write(6,*) mstart, 'Ritz eigenpairs have been selected.'
 
 !     --> Re-order the Schur decomposition based on the partition.
-      call ordschur(H(1:k_dim, 1:k_dim), vecs, selected, k_dim)
+      call ordschur(H(1:ksize, 1:ksize), vecs, selected, ksize)
 
 !     --> Zero-out the unwanted blocks of the Schur matrix.
-      H(1:mstart,mstart+1:k_dim) = 0.0D0
-      H(mstart+1:k_dim+1, :)     = 0.0D0
+      H(1:mstart,mstart+1:ksize) = 0.0D0
+      H(mstart+1:ksize+1, :)     = 0.0D0
 
 !     --> Re-order the Krylov basis accordingly.
-      qx(:, 1:k_dim) = matmul(qx(:, 1:k_dim), vecs)
-      qy(:, 1:k_dim) = matmul(qy(:, 1:k_dim), vecs)
-      if (if3d) qz(:, 1:k_dim) = matmul(qz(:, 1:k_dim), vecs)
-      if (ifpo) qp(:, 1:k_dim) = matmul(qp(:, 1:k_dim), vecs)
-      if (ifheat) qt(:, 1:k_dim) = matmul(qt(:, 1:k_dim), vecs)
+      qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
+      qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
+      if (if3d) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
+      if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
+      if (ifheat) qt(:, 1:ksize) = matmul(qt(:, 1:ksize), vecs)
 
 !     --> Update the Schur matrix with b.T @ Q corresponding to
 !     the residual beta in the new basis.
@@ -623,15 +447,7 @@ c     ----- Schur and Hessenberg decomposition -----
 !     --> Add the last generated Krylov vector as the new starting one.
       mstart = mstart + 1
 
-      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart),
-     $             qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1), qp(:,k_dim+1), qt(:,k_dim+1))
-
-!       call opcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),
-!      $     qx(:,k_dim+1), qy(:,k_dim+1), qz(:,k_dim+1))
-
-!       !JC CHECK HERE!
-!       if(ifpo) copy(qp(:,mstart),qp(:,k_dim+1),n2)
-!       if(ifheat) copy(qt(:,mstart),qt(:,k_dim+1),n)
+      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart), qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,ksize+1))
 
       return
       end subroutine schur_condensation
@@ -647,40 +463,39 @@ c----------------------------------------------------------------------
 
 
       subroutine prepare_baseflow
-      ! preparing for Floquet upgrade
+!     preparing for Floquet upgrade
 
-       implicit none
-       include 'SIZE'
-       include 'TOTAL'
-       integer n,n2,i
-       character(len=30) filename
-       logical ifto_sav, ifpo_sav
-       n  = nx1*ny1*nz1*nelt
-       n2 = nx2*ny2*nz2*nelt
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      integer n,i
+      character(len=30) filename
+      logical ifto_sav, ifpo_sav
+      n  = nx1*ny1*nz1*nelt
 
-       if(    uparam(3).eq.0.1)then !steady prescribe
+      if(    uparam(3).eq.0.1)then !steady prescribe
 
-         !if(nid.eq.0)write(6,*)'Copying base flow!'
+!     if(nid.eq.0)write(6,*)'Copying base flow!'
          call opcopy(vx,vy,vz,ubase,vbase,wbase)
          if(ifto) call copy(t(1,1,1,1,1), tbase, n)
-         
-        ! ----- Save baseflow to disk (recommended) -----
+
+!     ----- Save baseflow to disk (recommended) -----
          call opcopy(ubase,vbase,wbase,vx,vy,vz)
          if(ifto) call copy(tbase,t(1,1,1,1,1),n)
          ifto_sav=ifto;ifpo_sav=ifpo
          ifto=.true.;ifpo=.true.
          call outpost(vx,vy,vz,pr,t,'BFL') !outpost for sanity check
          ifto=ifto_sav;ifpo=ifpo_sav
-   
-       elseif(uparam(3).eq.0.2)then !steady load
+
+      elseif(uparam(3).eq.0.2)then !steady load
 
 
-        !if(.not.iffloq .and. (.not. ifbfcv .or. ifldbf))then 
+!     if(.not.iffloq .and. (.not. ifbfcv .or. ifldbf))then
          write(filename,'(a,a,a)')'BF_',trim(SESSION),'0.f00001'
          if(nid.eq.0)write(*,*)'Loading base flow: ',filename
          call load_fld(filename)
 
-        ! ----- Save baseflow to disk (recommended) -----
+!     ----- Save baseflow to disk (recommended) -----
          call opcopy(ubase,vbase,wbase,vx,vy,vz)
          if(ifto) call copy(tbase,t(1,1,1,1,1),n)
          ifto_sav=ifto;ifpo_sav=ifpo
@@ -689,26 +504,26 @@ c----------------------------------------------------------------------
          ifto=ifto_sav;ifpo=ifpo_sav
 
 
-       elseif(uparam(3).eq.0.3)then !steady compute
+      elseif(uparam(3).eq.0.3)then !steady compute
 
-        ifbase = .true.
-        if(nid.eq.0)write(6,*)'Running DNS alongside stability!'
+         ifbase = .true.
+         if(nid.eq.0)write(6,*)'Running DNS alongside stability!'
 
-       elseif(uparam(3).eq.1.1)then !periodic prescribe
+      elseif(uparam(3).eq.1.1)then !periodic prescribe
 
-        if(nid.eq.0)write(6,*)'Prescribed periodic baseflow!'
-            
-       elseif(uparam(3).eq.1.2)then !periodic reconstruct
-     
-       elseif(uparam(3).eq.1.21)then !periodic load all
+         if(nid.eq.0)write(6,*)'Prescribed periodic baseflow!'
 
-       elseif(uparam(3).eq.1.3)then !periodic compute
+      elseif(uparam(3).eq.1.2)then !periodic reconstruct
 
-        ifbase = .true.
-        if(nid.eq.0)write(6,*)'Running DNS alongside stability!'
-             
-       endif
-      
+      elseif(uparam(3).eq.1.21)then !periodic load all
+
+      elseif(uparam(3).eq.1.3)then !periodic compute
+
+         ifbase = .true.
+         if(nid.eq.0)write(6,*)'Running DNS alongside stability!'
+
+      endif
+
 
       return
       end subroutine prepare_baseflow
@@ -719,7 +534,7 @@ c----------------------------------------------------------------------
 
       subroutine krylov_schur_prepare
 
-!     This  
+!     This
 !     
 !     INPUT
 !     -----
@@ -734,7 +549,7 @@ c----------------------------------------------------------------------
       include 'TOTAL'
       include 'ADJOINT'
 
-!     forcing npert to unity 
+!     forcing npert to unity
       if(param(31).gt.1)then
          write(6,*)'nekStab not ready for npert>1 -- jp loops NOT implemented! STOPPING!'
          call nek_end
@@ -752,24 +567,24 @@ c----------------------------------------------------------------------
          param(26)=0.50d0 ; ctarg = param(26)
       endif
 
-      if(param(10).gt.0)then 
-      ! if param(10)=endTime=0 -> param(11) = numSteps
-        call compute_cfl(dt,vx,vy,vz,1.0) ! dt=1 ! vx at this point is base flow 
-        dt = ctarg/dt
-        nsteps = ceiling(param(10)/dt)
-        dt = param(10)/nsteps
-        if(nid.eq.0)write(6,*)'endTime specified! computing CFL from BASE FLOW!'
-        if(nid.eq.0)write(6,*)' computing timeStep dt=',dt
-        if(nid.eq.0)write(6,*)' computing numSteps=',nsteps
-        if(nid.eq.0)write(6,*)' sampling period =',nsteps*dt
-        param(12) = dt
+      if(param(10).gt.0)then
+!     if param(10)=endTime=0 -> param(11) = numSteps
+         call compute_cfl(dt,vx,vy,vz,1.0) ! dt=1 ! vx at this point is base flow
+         dt = ctarg/dt
+         nsteps = ceiling(param(10)/dt)
+         dt = param(10)/nsteps
+         if(nid.eq.0)write(6,*)'endTime specified! computing CFL from BASE FLOW!'
+         if(nid.eq.0)write(6,*)' computing timeStep dt=',dt
+         if(nid.eq.0)write(6,*)' computing numSteps=',nsteps
+         if(nid.eq.0)write(6,*)' sampling period =',nsteps*dt
+         param(12) = dt
       endif
 
-      ! deactivate variable time step! !freeze dt
+!     deactivate variable time step! !freeze dt
       param(12) = -abs(param(12))
 
-      ! broadcast all parameters to processors
-      call bcast(param,200*wdsize) 
+!     broadcast all parameters to processors
+      call bcast(param,200*wdsize)
 
       return
       end subroutine krylov_schur_prepare
@@ -797,16 +612,12 @@ c----------------------------------------------------------------------
       real, dimension(lt)                :: fx, fy, fz, ft, qx, qy, qz, qt
       real, dimension(lt2)               :: fp, qp
       integer imode,smode,nmode,incr
-      integer n, n2
+      integer n
       real :: umax
       n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
 
 !     ----- Initial condition -----
       call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), qx,qy,qz,qp,qt)
-      ! call opcopy(vxp(:,1), vyp(:,1), vzp(:,1), qx, qy, qz)
-      ! if(ifpo) call copy(prp(:,1), qp, n2)
-      ! if(ifheat) call copy(tp(:,1,1), qt, n)
 
 !     ----- Time-stepper matrix-vector product -----
       if    (uparam(1).lt.3.2)then !direct
@@ -825,7 +636,7 @@ c----------------------------------------------------------------------
       time = 0.0d0
       do imode = smode, nmode, incr
 
-         ! ifpert always true even if adjoint!
+!     ifpert always true even if adjoint!
          if    (imode.eq.1)then
             ifpert=.true.;ifadj=.false.
          elseif(imode.eq.2)then
@@ -856,56 +667,39 @@ c----------------------------------------------------------------------
 
 !     ----- Check CFL of velocity fields
 
-            ! think better about the position o this check! ubase doesnt change ...
-            if(istep.eq.1)then !.OR.istep.eq.nsteps)then
+!     think better about the position o this check! ubase doesnt change ...
+            if(istep.eq.1)then  !.OR.istep.eq.nsteps)then
                call compute_cfl(umax,vx,vy,vz,1.0);  dtmaxx = ctarg/umax
                if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,dtmaxx
             endif
 
             if(.not.ifadj.and.nid.eq.0)write(6,"(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')")
-     $      istep,nsteps,mstep,k_dim,schur_cnt
+     $istep,nsteps,mstep,k_dim,schur_cnt
             if(ifadj .and.nid.eq.0)write(6,"(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')")
-     $      istep,nsteps,mstep,k_dim,schur_cnt
+     $istep,nsteps,mstep,k_dim,schur_cnt
 
             call nekStab_usrchk !custom forcings in the linear solver
             call nek_advance
 
-
-
-            !     for reference: core of nek_advance in drive1.f
-            !     if (ifpert) then
-            !     if (ifbase.and.ifheat) call heat
-            !     if (ifbase.and.ifflow) call fluid -> forces in makef
-            !     if (ifflow)            call fluidp -> forces in makefp
-            !     if (ifheat)            call heatp
-            !     else  ! std. nek case
-            !     if (ifheat)            call heat
-            !     if (ifflow)            call fluid
-            !     endif
+!     for reference: core of nek_advance in drive1.f
+!     if (ifpert) then
+!     if (ifbase.and.ifheat) call heat
+!     if (ifbase.and.ifflow) call fluid -> forces in makef
+!     if (ifflow)            call fluidp -> forces in makefp
+!     if (ifheat)            call heatp
+!     else  ! std. nek case
+!     if (ifheat)            call heat
+!     if (ifflow)            call fluid
+!     endif
 
          enddo
       enddo
 
       call nopcopy(fx,fy,fz,fp,ft, vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
-      ! call opcopy(fx, fy, fz, vxp(:,1), vyp(:,1), vzp(:,1))
-      ! if(ifpo) call copy(fp, prp(:,1), n2)
-      ! if(ifheat) call copy(ft, tp(:,1,1), n)
 
-
-
-      if (uparam(3).eq.3) then ! newton-krylov extra
-
+      if (uparam(3).eq.3) then  ! newton-krylov extra
          call nopsub2(fx,fy,fz,fp,ft, qx,qy,qz,qp,qt)
-      !    call opsub2(fx, fy, fz, qx, qy, qz)
-      !    call sub2(fp, qp, n2)
-      !    call sub2(ft, qt, n)
-
          call nopchsign(fx,fy,fz,fp,ft)
-      !    call chsign(fx, n)
-      !    call chsign(fy, n)
-      !    call chsign(fz, n)
-      !    call chsign(ft, n)
-      !    call chsign(fp, n2)
       endif
 
       return
@@ -921,7 +715,7 @@ c----------------------------------------------------------------------
 
 
       subroutine outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
-      !     outposting vectors
+!     outposting vectors
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -932,7 +726,7 @@ c----------------------------------------------------------------------
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
       real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
-      !!! testingcommon /ns_ugrad/ wo1,wo2,wo3,vort
+!!!   testingcommon /ns_ugrad/ wo1,wo2,wo3,vort
 
       real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
       real, dimension(lt2,k_dim+1)       :: qp
@@ -948,7 +742,7 @@ c     ----- Arrays for the storage/output of a given eigenmode of the NS operato
       complex*16, dimension(lt2)         :: fp_cp
 
 c     ----- Miscellaneous -----
-      integer :: n, n2, i
+      integer :: n, i
 
       real                               :: sampling_period
       real, dimension(k_dim)             :: residual
@@ -963,11 +757,10 @@ c     ----- Miscellaneous -----
 
       sampling_period = dt*nsteps
       n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
 
 c     ----- Output all the spectrums and converged eigenmodes -----
 
-      !evop defined in matrix_vector_product
+!     evop defined in matrix_vector_product
 
       write(nre,'(A,A)')trim(evop),'Re'
       write(nim,'(A,A)')trim(evop),'Im'
@@ -1004,50 +797,34 @@ c     ----- Output all the spectrums and converged eigenmodes -----
          outposted = outposted + 1
 
 !     --> Outpost only the converged part of the log-transformed spectrum.
-            if(nid.eq.0)write(30, "(2E15.7)") real(log_transform(vals(i))) / sampling_period,
-     $              aimag(log_transform(vals(i))) / sampling_period
+         if(nid.eq.0)write(30, "(2E15.7)") real(log_transform(vals(i))) / sampling_period,
+     $        aimag(log_transform(vals(i))) / sampling_period
 
 c     ----- Computation of the corresponding eigenmode -----
-            fp_cx = matmul(qx(:, 1:k_dim), vecs(:, i))
-            fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
-            if (if3d) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
-            if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
-            if (ifheat) fp_ct = matmul(qt(:, 1:k_dim), vecs(:, i))
+         fp_cx = matmul(qx(:, 1:k_dim), vecs(:, i))
+         fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
+         if (if3d) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
+         if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
+         if (ifheat) fp_ct = matmul(qt(:, 1:k_dim), vecs(:, i))
 
 c     ----- Normalization to be unit-norm -----
 c     Note: volume integral of FP*conj(FP) = 1.
-            call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
-            call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), alpha_i)
-            alpha = alpha_r**2 + alpha_i**2
-            beta = 1.0d0/sqrt(alpha)
+         call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
+         call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), alpha_i)
+         alpha = alpha_r**2 + alpha_i**2
+         beta = 1.0d0/sqrt(alpha)
 
 c     ----- Output the real part -----
-            call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
-            ! call opcopy(vx, vy, vz, real(fp_cx), real(fp_cy), real(fp_cz))
-            ! if (ifpo) call copy(pr, real(fp_cp), n2)
-            ! if (ifto) call copy(t(1,1,1,1,1), real(fp_ct), n)
-
-            call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
-            ! call opcmult(vx, vy, vz, beta)
-            ! if (ifpo) call cmult(pr, beta, n2)
-            ! if (ifto) call cmult(t(1,1,1,1,1), beta, n)
-
-            call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nRe)
+         call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
+         call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
+         call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nRe)
 
 c     ----- Output the imaginary part -----
-            call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
-            ! call opcopy(vx, vy, vz, aimag(fp_cx), aimag(fp_cy), aimag(fp_cz))
-            ! if(ifpo) call copy(pr, aimag(fp_cp), n2)
-            ! if(ifto) call copy(t(1,1,1,1,1), aimag(fp_ct), n)
+         call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
+         call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
+         call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
 
-            call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
-            ! call opcmult(vx, vy, vz, beta)
-            ! if(ifpo) call cmult(pr, beta, n2)
-            ! if(ifto) call cmult(t(1,1,1,1,1), beta, n)
-
-            call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
-
-            if(ifvor)then
+         if(ifvor)then
 c     ----- Output vorticity from real part -----
             call oprzero(wo1, wo2, wo3)
             call comp_vort3(vort, wo1, wo2, vx, vy, vz)
@@ -1055,66 +832,66 @@ c     ----- Output vorticity from real part -----
             ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
             call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, nRv)
             ifto = ifto_sav ; ifpo = ifpo_sav
-            endif
-
          endif
+
+      endif
 
       enddo
 
       if (nid .eq. 0) then
 
-      close(10) ; close(20) ;  close(30)
-      !
-      write(fmt2,'("(A,I16)")')
-      write(fmt3,'("(A,F16.4)")')
-      write(fmt4,'("(A,F16.12)")')
-      write(fmt5,'("(A,E15.7)")') ! max precision     
-      write(fmt6,'("(A,E13.4)")') ! same as hmhlz
-      !         
-      write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
-      !write(filename,"(',I7.7,'.info')") itime/ioutput
-      open (844,file=filename,action='write',status='replace')
+         close(10) ; close(20) ;  close(30)
+!     
+         write(fmt2,'("(A,I16)")')
+         write(fmt3,'("(A,F16.4)")')
+         write(fmt4,'("(A,F16.12)")')
+         write(fmt5,'("(A,E15.7)")') ! max precision
+         write(fmt6,'("(A,E13.4)")') ! same as hmhlz
+!     
+         write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
+!     write(filename,"(',I7.7,'.info')") itime/ioutput
+         open (844,file=filename,action='write',status='replace')
 
-      write(844,'(A,A)')'Nek5000 version:',NVERSION
-      write(844,'(A,A)')'nekStab version:',NSVERSION
-      write(844,'(A)')  '[mesh]'
-      write(844,fmt2)   'lx1=             ',lx1
-      write(844,fmt2)   'polyOrder N=     ',lx1-1
-      write(844,fmt2)   'tot elemts=      ',nelgv
-      write(844,fmt2)   'tot points=      ',nelgv*(lx1)**ldim
-      write(844,fmt2)   'MPI ranks=       ',np
-      write(844,fmt2)   'e/rank=          ',nelgv/np
-      write(844,'(A)')  '[userParams]'
-      write(844,fmt4)   'uparam01=        ',uparam(01)
-      write(844,fmt4)   'uparam02=        ',uparam(02)
-      write(844,fmt4)   'uparam03=        ',uparam(03)
-      write(844,fmt4)   'uparam04=        ',uparam(04)
-      write(844,fmt4)   'uparam05=        ',uparam(05)
-      write(844,fmt4)   'uparam06=        ',uparam(06)
-      write(844,fmt4)   'uparam07=        ',uparam(07)
-      write(844,fmt4)   'uparam08=        ',uparam(08)
-      write(844,fmt4)   'uparam09=        ',uparam(09)
-      write(844,fmt4)   'uparam10=        ',uparam(10)
-      write(844,'(A)')  '[solver]'
-      write(844,fmt3)   'ctarg=           ',ctarg
-      write(844,fmt2)   'nsteps=          ',nsteps
-      write(844,fmt5)   'dt=              ',dt
-      write(844,fmt3)   'Re=              ',1.0/param(2)
-      write(844,fmt6)   'residualTol PRE= ',param(21)
-      write(844,fmt6)   'residualTol VEL= ',param(22)
-      if(ifheat)then  
-      write(844,fmt6)   'residualTol TEM= ',param(22)
-      write(844,fmt3)   'Pe=              ',1.0/param(8)
-      endif  
-      write(844,'(A)')  '[eigensolver]'
-      write(844,fmt4)   'sampling period =',sampling_period
-      write(844,fmt2)   'k_dim=           ',k_dim
-      write(844,fmt6)   'eigentol=        ',eigen_tol
-      write(844,fmt2)   'schur_target=    ',schur_tgt
-      write(844,fmt3)   'schur_del=       ',schur_del
-      write(844,fmt2)   'schur iterations=',schur_cnt
-      write(844,fmt2)   'outposted=       ',outposted
-      close(844)
+         write(844,'(A,A)')'Nek5000 version:',NVERSION
+         write(844,'(A,A)')'nekStab version:',NSVERSION
+         write(844,'(A)')  '[mesh]'
+         write(844,fmt2)   'lx1=             ',lx1
+         write(844,fmt2)   'polyOrder N=     ',lx1-1
+         write(844,fmt2)   'tot elemts=      ',nelgv
+         write(844,fmt2)   'tot points=      ',nelgv*(lx1)**ldim
+         write(844,fmt2)   'MPI ranks=       ',np
+         write(844,fmt2)   'e/rank=          ',nelgv/np
+         write(844,'(A)')  '[userParams]'
+         write(844,fmt4)   'uparam01=        ',uparam(01)
+         write(844,fmt4)   'uparam02=        ',uparam(02)
+         write(844,fmt4)   'uparam03=        ',uparam(03)
+         write(844,fmt4)   'uparam04=        ',uparam(04)
+         write(844,fmt4)   'uparam05=        ',uparam(05)
+         write(844,fmt4)   'uparam06=        ',uparam(06)
+         write(844,fmt4)   'uparam07=        ',uparam(07)
+         write(844,fmt4)   'uparam08=        ',uparam(08)
+         write(844,fmt4)   'uparam09=        ',uparam(09)
+         write(844,fmt4)   'uparam10=        ',uparam(10)
+         write(844,'(A)')  '[solver]'
+         write(844,fmt3)   'ctarg=           ',ctarg
+         write(844,fmt2)   'nsteps=          ',nsteps
+         write(844,fmt5)   'dt=              ',dt
+         write(844,fmt3)   'Re=              ',1.0/param(2)
+         write(844,fmt6)   'residualTol PRE= ',param(21)
+         write(844,fmt6)   'residualTol VEL= ',param(22)
+         if(ifheat)then
+            write(844,fmt6)   'residualTol TEM= ',param(22)
+            write(844,fmt3)   'Pe=              ',1.0/param(8)
+         endif
+         write(844,'(A)')  '[eigensolver]'
+         write(844,fmt4)   'sampling period =',sampling_period
+         write(844,fmt2)   'k_dim=           ',k_dim
+         write(844,fmt6)   'eigentol=        ',eigen_tol
+         write(844,fmt2)   'schur_target=    ',schur_tgt
+         write(844,fmt3)   'schur_del=       ',schur_del
+         write(844,fmt2)   'schur iterations=',schur_cnt
+         write(844,fmt2)   'outposted=       ',outposted
+         close(844)
       endif
 
       return
@@ -1202,106 +979,6 @@ c-----------------------------------------------------------------------
 
 
 
-!     -------------------------------------------------------------------------
-
-
-
-
-
-      subroutine update_hessenberg_matrix(
-     $     H,
-     $     f_xr, f_yr, f_zr, f_pr, f_tr,
-     $     qx, qy, qz, qp, qt,
-     $     k)
-
-!     This function orthonormalizes the latest Krylov vector f w.r.t. all of the
-!     previous ones and updates the entries of the Hessenberg matrix accordingly.
-!     
-!     INPUTS
-!     ------
-!     
-!     k : int
-!     Current step of the Arnoldi factorization.
-!     
-!     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt.
-!     Velocity components of the latest Krylov vector.
-!     When returned, it has been orthonormalized w.r.t. to all previous
-!     Krylov vectors.
-!     
-!     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt.
-!     Pressure component of the latest Krylov vector.
-!     
-!     qx, qy, qz : nek arrays of size (lt, k)
-!     Velocity components of the Krylov basis.
-!     
-!     qp : nek array of size (lt2, k).
-!     Pressure component of the Krylov basis.
-!     
-!     H : k x k real matrix.
-!     Upper Hessenberg matrix.
-!     
-!     Last edit : April 3rd 2020 by JC Loiseau.
-
-      implicit none
-      include "SIZE"
-      include "TOTAL"
-
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      integer, intent(in) :: k
-      real, dimension(k, k), intent(inout) :: H
-
-      real, dimension(lt, k), intent(in) :: qx, qy, qz, qt
-      real, dimension(lt2, k), intent(in) :: qp
-
-      real, dimension(lt), intent(inout) :: f_xr, f_yr, f_zr, f_tr
-      real, dimension(lt2), intent(inout) :: f_pr
-
-      integer i, n, n2
-      real alpha
-
-      real, dimension(lt) :: wk1, wk2, wk3, wkt
-      real, dimension(lt2) :: wkp
-      real, dimension(k) :: h_vec
-
-      n = nx1*ny1*nz1*nelt
-      n2 = nx2*ny2*nz2*nelt
-
-!     --> Initialize array.
-      call rzero(h_vec, k)
-
-!     --> Orthonormalize f w.r.t the Krylov basis.
-      do i = 1, k
-
-!     --> Copy the i-th Krylov vector to the working arrays.
-        call nopcopy(wk1,wk2,wk3,wkp,wkt, qx(:,i),qy(:,i),qz(:,i),qp(:,i),qt(:,i))
-
-      !    call opcopy(wk1, wk2, wk3, qx(:, i), qy(:, i), qz(:, i))
-      !    if (ifpo) call copy(wkp, qp(:, i), n2)
-      !    if (ifheat) call copy(wkt, qt(:, i), n)
-
-!     --> Orthogonalize f w.r.t. to q_i.
-         call inner_product(alpha, f_xr, f_yr, f_zr, f_pr, f_tr, wk1, wk2, wk3, wkp, wkt)
-
-         call nopcmult(wk1, wk2, wk3, wkp, wkt, alpha)
-      !    call opcmult(wk1, wk2, wk3, alpha)
-      !    if (ifpo) call cmult(wkp, alpha, n2)
-      !    if (ifheat) call cmult(wkt, alpha, n)
-
-         call nopsub2(f_xr,f_yr,f_zr,f_pr,f_tr, wk1,wk2,wk3,wkp,wkt)
-
-      !    call opsub2(f_xr, f_yr, f_zr, wk1, wk2, wk3)
-      !    if (ifpo) call sub2(f_pr, wkp, n2)
-      !    if (ifheat) call sub2(f_tr, wkt, n)
-
-!     --> Update the corresponding entry in the Hessenberg matrix.
-         H(i, k) = alpha
-
-      enddo
-
-      return
-      end subroutine update_hessenberg_matrix
 
 
 
