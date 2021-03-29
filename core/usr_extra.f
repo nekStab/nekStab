@@ -4,11 +4,11 @@ c-----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      
+
       k_dim = 1
-      schur_tgt = 2             ! schur target 
-      eigen_tol = 1.0e-6        ! 
-      schur_del = 0.10d0        ! 
+      schur_tgt = 2             ! schur target
+      eigen_tol = 1.0e-6        !
+      schur_del = 0.10d0        !
       maxmodes = k_dim          ! max modes to outpost
 
       bst_skp = 1               ! boostconv skip
@@ -19,13 +19,13 @@ c-----------------------------------------------------------------------
       ifvox  = .false.          ! outpost vortex
       ifldbf = .true.           ! load base flow for stability
       ifbf2D = .false.          ! force 2D solution
-      
+
 !     ifnwt = .false. ! newton-iteration flag
 !     ifsfd = .false.
 !     ifbcv = .false.
 !     iftdf = .false.
 
-      ifseed_nois = .true.      ! noise as initial seed 
+      ifseed_nois = .true.      ! noise as initial seed
       ifseed_symm = .false.     ! symmetry initial seed
       ifseed_load = .false.     ! loading initial seed (e.g. Re_ )
 !     else all fase -> prescribed by usric
@@ -41,7 +41,7 @@ c-----------------------------------------------------------------------
       yRspg   = 0.0d0; call bcast(yRspg, wdsize)
       zLspg   = 0.0d0; call bcast(zLspg, wdsize)
       zRspg   = 0.0d0; call bcast(zRspg, wdsize)
-      acc_spg = 0.0d0; call bcast(acc_spg, wdsize) 
+      acc_spg = 0.0d0; call bcast(acc_spg, wdsize)
 
 !     !Broadcast all defaults !
       call bcast(schur_tgt, isize) ! isize for integer
@@ -51,7 +51,7 @@ c-----------------------------------------------------------------------
       call bcast(k_dim, isize)
       call bcast(bst_skp, isize)
       call bcast(bst_snp, isize)
-      
+
       call bcast(ifres   , lsize) !lsize for boolean
       call bcast(ifvor   , lsize)
       call bcast(ifvox   , lsize)
@@ -85,9 +85,9 @@ c-----------------------------------------------------------------------
       endif
 
       call nekStab_setDefault
-      call nekStab_usrchk       ! where user change defaults 
-      call nekStab_printNEKParams 
-      
+      call nekStab_usrchk       ! where user change defaults
+      call nekStab_printNEKParams
+
       xmn = glmin(xm1,n); xmx = glmax(xm1,n)
       ymn = glmin(ym1,n); ymx = glmax(ym1,n)
       zmn = glmin(zm1,n); zmx = glmax(zm1,n)
@@ -101,14 +101,14 @@ c-----------------------------------------------------------------------
          write(6,*)' z   total =',zmx-zmn
       endif
 
-      call copy(bm1s, bm1, n)   ! never comment this ! 
+      call copy(bm1s, bm1, n)   ! never comment this !
 
       if(uparam(10).gt.0)then   !sponge on
 
          if(nid.eq.0)write(6,*)
          if(nid.eq.0)write(6,*)' Initializing sponge...'
          if(nid.eq.0)write(6,*)
-         
+
          spng_str = uparam(10)
          call spng_init
 
@@ -124,8 +124,8 @@ c-----------------------------------------------------------------------
 !     ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
 
       endif
-      
-      ifbfcv = .false.          ! 
+
+      ifbfcv = .false.          !
 
       return
       end subroutine nekStab_init
@@ -139,7 +139,7 @@ c-----------------------------------------------------------------------
       n = nx1*ny1*nz1*nelv
 
       if(istep.eq.0)call nekStab_init
-      
+
       call oprzero(fcx,fcy,fcz) ! never comment this!
       call rzero(fct,n)
 
@@ -150,16 +150,16 @@ c-----------------------------------------------------------------------
       endif
 
       select case (floor(uparam(1)))
-         
+
       case(0)                   ! DNS
-         
-         call nekStab_outpost   ! outpost vorticity 
+
+         call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
          call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',20)
 
       case(1)                   ! fixed points computation
 
-         call nekStab_outpost   ! outpost vorticity 
+         call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
 
          if(uparam(1).ge.1)then !compose forcings to fcx,fcy,fcz
@@ -169,10 +169,6 @@ c-----------------------------------------------------------------------
             elseif(uparam(3).eq.2)then
                call BoostConv   !ifbst=.true.
             elseif(uparam(3).eq.3)then
-!     ifnwt = .true.
-               param(12) = -abs(param(12)) !freeze dt
-               param(31) = 1 ; npert = param(31)
-               call bcast(param,200*wdsize) !broadcast all parameters to processors
                call Newton_Krylov
                call nek_end
             endif
@@ -190,7 +186,7 @@ c-----------------------------------------------------------------------
             if(nid.eq.0)write(6,*) 'forcing uparam(3) to ZERO!!!!! OTHERWISE CRASH'
             uparam(3)=0; call bcast(uparam, 1*wdsize)
 
-         endif 
+         endif
          call Krylov_Schur
          call nek_end
 
@@ -199,11 +195,11 @@ c-----------------------------------------------------------------------
          if(uparam(01).eq.4.1)call wave_maker
          if(uparam(01).eq.4.2)call BF_sensitivity
 !     if(uparam(01).eq.4.3)call F_sensitivity
-         
+
          call nek_end
 
 
-      end select         
+      end select
 
       return
       end subroutine nekStab
@@ -241,7 +237,7 @@ c-----------------------------------------------------------------------
             call outpost(vort(:,1),vort(:,2),vort(:,3),pr,t,'vox')
 
             if(.not.if3d)then
-               ifvo=.false.; ifto = .true. ! just outposting one field ... v's and p ignored 
+               ifvo=.false.; ifto = .true. ! just outposting one field ... v's and p ignored
                call outpost(vx,vy,vz,pr,vort(:,3),'omg')
                ifvo=.true.; ifto = ifto_sav
             endif
@@ -281,7 +277,7 @@ c-----------------------------------------------------------------------
       endif
 
       if (nio.ne.0) return
-      
+
       if (eetime0.eq.0.0 .and. istep.eq.1)then
          eetime0=dnekclock()
          deltatime=time
@@ -386,7 +382,7 @@ c-----------------------------------------------------------------------
          if(nid.eq.0)open (730,file=fname,action='write',status='replace')
          initialized = .true.
       endif
-      
+
       if (mod(istep,skip).eq.0) then
          uek = glsc3(px,bm1,px,n)
          vek = glsc3(py,bm1,py,n)

@@ -8,28 +8,28 @@
 
 !     This function provides the user-defined inner product to be used throughout
 !     the computation.
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     px, py, pz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays containing the velocity fields of the first vector.
-!
+!     
 !     pp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the first vector.
-!
+!     
 !     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays containing the velocity fields of the second vector.
-!
+!     
 !     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the second vector.
-!
+!     
 !     RETURN
 !     ------
-!
+!     
 !     alpha : real
 !     Value of the inner-product alpha = <p, q>.
-!
+!     
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -98,19 +98,19 @@
 !     This function normalizes the state vector [qx, qy, qz, qp]^T where
 !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
 !     components while qp is the corresponding pressure field.
-!
+!     
 !     INPUTS / OUTPUTS
 !     ----------------
-!
+!     
 !     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays storing the velocity components.
-!
+!     
 !     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array storing the corresponding pressure field.
-!
+!     
 !     alpha : real
 !     Norm of the vector.
-!
+!     
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -171,7 +171,7 @@
       integer                            :: n, i, j
       character(len=30)                  :: filename
 
-      !     ----- Allocate arrays -----
+!     ----- Allocate arrays -----
       allocate(qx(lt,k_dim+1), qy(lt,k_dim+1), qz(lt,k_dim+1), qt(lt,k_dim+1),qp(lt2,k_dim+1))
       allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
 
@@ -535,13 +535,13 @@ c----------------------------------------------------------------------
       subroutine krylov_schur_prepare
 
 !     This
-!
+!     
 !     INPUT
 !     -----
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     Last edit : March 26th 2021 by RAS Frantz.
 
       implicit none
@@ -593,13 +593,13 @@ c----------------------------------------------------------------------
       subroutine matrix_vector_product(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
 
 !     This function implements the k-step Arnoldi factorization of the linearized
-!
+!     
 !     INPUT
 !     -----
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       implicit none
@@ -841,13 +841,13 @@ c     ----- Output vorticity from real part -----
       if (nid .eq. 0) then
 
          close(10) ; close(20) ;  close(30)
-!
+!     
          write(fmt2,'("(A,I16)")')
          write(fmt3,'("(A,F16.4)")')
          write(fmt4,'("(A,F16.12)")')
          write(fmt5,'("(A,E15.7)")') ! max precision
          write(fmt6,'("(A,E13.4)")') ! same as hmhlz
-!
+!     
          write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
 !     write(filename,"(',I7.7,'.info')") itime/ioutput
          open (844,file=filename,action='write',status='replace')
@@ -911,32 +911,32 @@ c-----------------------------------------------------------------------
 
 !     This function selects the eigenvalues to be placed in the upper left corner
 !     during the Schur condensation phase.
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
 
 !     delta : real
 !     All eigenvalues outside the circle of radius 1-delta will be selected.
-!
+!     
 !     nev : integer
 !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
 !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-!
+!     
 !     n : integer
 !     Total number of eigenvalues.
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     selected : n-dimensional logical array.
 !     Array indicating which eigenvalue has been selected (.true.).
-!
+!     
 !     cnt : integer
 !     Number of selected eigenvalues. cnt >= nev + 4.
-!
+!     
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -994,22 +994,22 @@ c-----------------------------------------------------------------------
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt
 !     Velocity components of the latest Krylov vector.
-!
+!     
 !     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
-!
+!     
 !     H : k+1 x k real matrix.
 !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-!
+!     
 !     k : int
 !     Current iteration of the Arnoldi factorization.
-!
+!     
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       implicit none
