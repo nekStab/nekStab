@@ -2,6 +2,6 @@
 
 git submodule update --init --recursive
 
-cd ~/nekStab/Nek5000/tools
+cd Nek5000/tools
 
 ./maketools genmap genbox

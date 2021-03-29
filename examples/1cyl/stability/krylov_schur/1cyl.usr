@@ -13,9 +13,22 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine nekstab_chk
+      subroutine nekstab_usrchk
       include 'SIZE'
       include 'TOTAL'
+      if(istep.eq.0)then !change defaults
+
+        xLspg = uparam(8); call bcast(xLspg , wdsize)
+        xRspg = uparam(9); call bcast(xRspg , wdsize)
+
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        maxmodes = k_dim ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        !ifvor = .false. ; call bcast(ifvor,lsize)
+        !ifvox = .false. ; call bcast(ifvox,lsize)
+
+      endif
       return
       end
 c-----------------------------------------------------------------------
