@@ -19,20 +19,23 @@ jobs:
   job1:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    env: 
-      NEKSTAB_SOURCE_ROOT: ./
-      NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
-      MAKEFLAGS: "-j 4"
+    defaults:
+      run:
+        working-directory: ./
+    #env: 
+    #  NEKSTAB_SOURCE_ROOT: ./
+    #  NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
+    #  MAKEFLAGS: "-j 4"
 
    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
 
-      - name: Echoing paths...
-        run : echo $GITHUB_WORKSPACE
-              echo $WORKDIR
-              echo "$NEK_SOURCE_ROOT/bin" >> $GITHUB_PATH
-              echo $NEKSTAB_SOURCE_ROOT
-              echo $NEK_SOURCE_ROOT
+#      - name: Echoing paths...
+#        run : echo $GITHUB_WORKSPACE
+#              echo $WORKDIR
+#              echo "$NEK_SOURCE_ROOT/bin" >> $GITHUB_PATH
+#              echo $NEKSTAB_SOURCE_ROOT
+#              echo $NEK_SOURCE_ROOT
 
       - name: Checkout repository nekStab
         uses: actions/checkout@v2
@@ -47,25 +50,26 @@ jobs:
       
       - name: Compile cylinder case
         run: |       
-         cd examples/1cyl
-         echo $ROOT_DIR
-         echo $NEKSTAB_SOURCE_ROOT
-         echo $NEK_SOURCE_ROOT
+         cd examples/1cyl/autotest/base
          ./cmpile.sh all
+     #ROOT_DIR:
+      #echo $NEKSTAB_SOURCE_ROOT
+    #echo $NEK_SOURCE_ROOT
+       #  ./cmpile.sh all
          
-      - name: Running cylinder case
-        run: |
-         export CASE='1cyl'
-         export CASE_DIR=`pwd`
-         echo $CASE > SESSION.NAME
-         echo $CASE_DIR'/' >> SESSION.NAME
-         mpiexec -np 2 ./nek5000
-         
-      - name: Running cylinder case
-        run: |
-         export CASE='1cyl'
-         export CASE_DIR=`pwd`
-         echo $CASE > SESSION.NAME
-         echo $CASE_DIR'/' >> SESSION.NAME
+     ## - name: Running cylinder case
+     #   run: |
+    #     export CASE='1cyl'
+    ##     export CASE_DIR=`pwd`
+    #     echo $CASE > SESSION.NAME
+   #      echo $CASE_DIR'/' >> SESSION.NAME
+   #      mpiexec -np 2 ./nek5000
+   ##      
+   #   - name: Running cylinder case
+   #     run: |
+  #       export CASE='1cyl'
+  #       export CASE_DIR=`pwd`
+  #       echo $CASE > SESSION.NAME
+  #       echo $CASE_DIR'/' >> SESSION.NAME
          mpiexec -np 2 ./nek5000
 
