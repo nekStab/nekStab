@@ -71,5 +71,5 @@ jobs:
   #       export CASE_DIR=`pwd`
   #       echo $CASE > SESSION.NAME
   #       echo $CASE_DIR'/' >> SESSION.NAME
-         mpiexec -np 2 ./nek5000
+     #    mpiexec -np 2 ./nek5000
 
