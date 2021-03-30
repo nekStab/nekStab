@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NEKSTAB_SOURCE_ROOT: ./
-      NEK_SOURCE_ROOT: ${{NEKSTAB_SOURCE_ROOT}}/Nek5000
-      PATH: ${{NEK_SOURCE_ROOT}}/bin:$PATH
+      NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
+      PATH: $NEK_SOURCE_ROOT/bin:$PATH
       MAKEFLAGS: "-j 4"
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
