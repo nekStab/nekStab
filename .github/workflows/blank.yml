@@ -22,10 +22,10 @@ jobs:
     defaults:
       run:
         working-directory: ./
-    #env: 
+    env: 
     #  NEKSTAB_SOURCE_ROOT: ./
     #  NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
-    #  MAKEFLAGS: "-j 4"
+      MAKEFLAGS: "-j 4"
 
    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -39,17 +39,19 @@ jobs:
 
       - name: Checkout repository nekStab
         uses: actions/checkout@v2
+        
       - name: Checkout submodules Nek5000
         run: git submodule update --init --recursive
       
       - name: Install dependecies for Nek500 and NekStab
-        run: sudo apt-get install libmpich-dev gfortran mpich libopenblas-dev
+        run: sudo apt-get install gfortran libmpich-dev libopenblas-dev
           
       - name: Get cpu-information
         run: lscpu
       
       - name: Compile cylinder case
-        run: |       
+        run: |
+         which mpif77
          cd examples/1cyl/autotest/base
          sh ./cmpile.sh all
          
