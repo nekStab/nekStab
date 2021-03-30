@@ -71,15 +71,12 @@
 
       if (nid.eq.0) write(*, *) "LINEAR SOLVER"
 !     --> Solve the linear system.
-      call time_stepper_gmres(f_x, f_y, f_z, f_p, f_t, dqx, dqy, dqz, dqp, dqt, maxiter_gmres, k_dim)
+      call ts_gmres(f_x, f_y, f_z, f_p, f_t, dqx, dqy, dqz, dqp, dqt, maxiter_gmres, k_dim)
 
 !     --> Update Newton solution.
       call nopsub2(qx, qy, qz, qp, qt, dqx, dqy, dqz, dqp, dqt)
 
       enddo newton
-
-!     --> Outpost solution.
-      call outpost(qx, qy, qz, qp, qt, "NBF")
 
       return
       end subroutine newton_krylov
@@ -89,7 +86,7 @@
 
 
 
-      subroutine time_stepper_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, maxiter, ksize)
+      subroutine ts_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, maxiter, ksize)
 
 !     Implementation of simple GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
@@ -154,9 +151,6 @@
       integer :: i, j, k, maxiter !, n, n2
       real :: beta, tol
 
-!     n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
-      uparam(01) = 3 ; ifpert = .true. ; call bcast(ifpert, lsize)
-
 !     Initialize arrays.
       tol = max(param(21), param(22))
 
@@ -212,14 +206,12 @@
 
       enddo gmres
 
-      uparam(01) = 1 ; ifpert = .false. ; call bcast(ifpert, lsize)
-
 !     ----- Deallocate arrays -----
       deallocate(qx, qy, qz, qt, qp)
       deallocate(H, yvec, evec)
 
       return
-      end subroutine time_stepper_gmres
+      end subroutine ts_gmres
 
 
 
@@ -249,7 +241,7 @@
       real :: beta
 
 !     --> Initial Krylov vector.
-      call matrix_vector_product(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
+      call matvec(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
       call nopsub2(f_x,f_y,f_z,f_p,f_t, rhs_x,rhs_y,rhs_z,rhs_p,rhs_t)
 
 !     --> Normalize the starting vector.
@@ -281,10 +273,8 @@
       real, dimension(lt) :: fx, fy, fz, ft
       real, dimension(lt2) :: fp
 
-      ! --> Fixed point/UPO computation.
-      if ((uparam(01).eq.1) .and. (uparam(03).eq.3)) then
-          call nonlinear_forward_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
-      end if
+! --> Fixed point/UPO computation.
+      if (uparam(01) .eq. 1) call nonlinear_forward_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
 
       return
       end subroutine forward_map
@@ -330,7 +320,7 @@
       call nopsub2(f_x,f_y,f_z,f_p,f_t, qx,qy,qz,qp,qt)
       call nopchsign(f_x,f_y,f_z,f_p,f_t)
 
-      ! --> Pass current guess as base flow for the linearized calculation.
+! --> Pass current guess as base flow for the linearized calculation.
       call opcopy(ubase, vbase, wbase, qx, qy, qz) ; call copy(tbase, qt, n)
 
       return
