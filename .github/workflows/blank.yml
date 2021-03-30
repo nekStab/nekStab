@@ -51,7 +51,9 @@ jobs:
       - name: Compile cylinder case
         run: |       
          cd examples/1cyl/autotest/base
-         ./cmpile.sh all
+         sh ./cmpile.sh all
+         
+     #git update-index --chmod +x for the whole repo
      #ROOT_DIR:
       #echo $NEKSTAB_SOURCE_ROOT
     #echo $NEK_SOURCE_ROOT
