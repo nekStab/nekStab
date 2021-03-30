@@ -20,9 +20,9 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     env: |
-      NEKSTAB_SOURCE_ROOT=${{env.working-directory}}
-      NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
-      PATH=$NEK_SOURCE_ROOT/bin:$PATH
+      NEKSTAB_SOURCE_ROOT: ./
+      NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
+      PATH: $NEK_SOURCE_ROOT/bin:$PATH
       MAKEFLAGS="-j 4"
       echo $ROOT_DIR
       echo $NEKSTAB_SOURCE_ROOT
