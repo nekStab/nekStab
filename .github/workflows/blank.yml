@@ -19,13 +19,13 @@ jobs:
   ubuntu:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    env: 
-        CASE: "1cyl"
-        NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
-        NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
-        #FC: "mpif77"
-        #CC: "mpicc"
-        FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
+#     env: 
+#         CASE: "1cyl"
+#         NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
+#         NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
+#         #FC: "mpif77"
+#         #CC: "mpicc"
+#         FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
          
 # NEKSTAB_SOURCE_ROOT: ./
 #       NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
@@ -46,24 +46,42 @@ jobs:
       - name: Get cpu-information
         run: lscpu
 
+        # Export NEW_VAR_NAME variable for subsequent steps, and export all environment variables matching the optional regexp.
+      - uses: lukka/set-shell-env@v1
+        with:
+          CASE: "1cyl"
+          NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
+          NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
+          FC: "mpif77"
+          CC: "mpicc"
+          FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
+         
+      # with:
+      #   shell: 'bash' or 'tcsh' or any command that starts a shell.
+      #   args: '-c env' or any arguments that list the environment variables as NAME=VALUE pairs.
+      #   filter: an optional reg exp to export matching variables out of the desired shell.
+      #   YOUR_VARIABLE_NAME: provide value for any new variable you name. Note the name will always be converted to be all uppercase.
+      #  Here onward any following step can access the environment variable using:
+      #  in your yml file:
+      #     ${{ env.YOUR_VARIABLE_NAME }}
       - name: Compile cylinder case
         run: |
-         which mpif77
-         which mpicc
-         export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
-         echo $MAKEFLAGS
-
-         export USR_LFLAGS+="-L/usr/lib -lopenblas"
-         echo $FC
-         echo $CC
-         cd Nek5000/tools
-         ./maketools genmap genbox
-         cd ../..
-         pwd
-         cd examples/1cyl/autotest/base
-         source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
-         sh ../../../../Nek5000/bin/makenek $CASE
-         more build.log
+          which mpif77
+          which mpicc
+          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
+          echo $MAKEFLAGS
+          export USR_LFLAGS+="-L/usr/lib -lopenblas"
+          echo $FC
+          echo $CC
+          cd Nek5000/tools
+          ./maketools genmap genbox
+          cd ../..
+          pwd
+          cd examples/1cyl/autotest/base
+          source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
+          sh ../../../../Nek5000/bin/makenek $CASE
+          more build.log
+  #        shell: bash
 
 #         sh ./cmpile.sh all
          
