@@ -63,35 +63,23 @@ jobs:
       - name: Compile cylinder case
         run: |
           pwd
-          ls
-          export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
-          export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
-          echo $MAKEFLAGS
-          
-          echo $FC
-          echo $CC
           cd Nek5000/tools
           ./maketools genmap genbox
           cd ../..          
           pwd
           cd examples/1cyl/autotest/base
-          echo $FC
-          echo $CC
-          source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
-          echo $FC
-          echo $CC
-          source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
-          echo $FC
-          echo $CC
-          sh $NEK_SOURCE_ROOT/bin/makenek $CASE
+          sh ./cmpile.sh all
           more build.log
-  #        shell: bash
 
-#         sh ./cmpile.sh all
-         
+#export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
+        #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+        #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
+        #source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
+        #sh $NEK_SOURCE_ROOT/bin/makenek $CASE
      #git update-index --chmod +x for the whole repo
      #ROOT_DIR:
+             #export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
+          #echo $MAKEFLAGS
       #echo $NEKSTAB_SOURCE_ROOT
     #echo $NEK_SOURCE_ROOT
        #  ./cmpile.sh all
