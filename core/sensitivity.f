@@ -31,100 +31,46 @@
 
       real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
       real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
+
       real, dimension(lt) :: vx_aRe, vy_aRe, vz_aRe
       real, dimension(lt) :: vx_aIm, vy_aIm, vz_aIm
-      real, dimension(lt) :: vx_aRet, vy_aRet, vz_aRet
-      real, dimension(lt) :: vx_aImt, vy_aImt, vz_aImt
 
-      real, dimension(lt) :: vx_dw,vy_dw,vz_dw
-      real, dimension(lt) :: vx_aw,vy_aw,vz_aw
-      real, dimension(lt) :: vx_wm,vy_wm,vz_wm
+      real, dimension(lt) :: wavemaker, work1, work2
 
       character(len=80)   :: filename
 
-      real :: alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota
-      alpha   = 0.0d0
-      beta    = 0.0d0
-      gamma   = 0.0d0
-      delta   = 0.0d0
-      epsilon = 0.0d0
-      zeta    = 0.0d0
-      eta     = 0.0d0
-      theta   = 0.0d0
-      iota    = 0.0d0
+      ifto=.false. ; ifpo=.false.
 
-      ifto=.false.;ifpo=.false.
-
-!     load real part of the direct mode
+!     --> Load real part of the direct mode
       write(filename,'(a,a,a)')'dRe',trim(SESSION),'0.f00001'
       call load_fld(filename)
       call opcopy(vx_dRe,vy_dRe,vz_dRe,vx,vy,vz)
 
-!     load imaginary part of the direct mode
+!     --> Load imaginary part of the direct mode
       write(filename,'(a,a,a)')'dIm',trim(SESSION),'0.f00001'
       call load_fld(filename)
       call opcopy(vx_dIm,vy_dIm,vz_dIm,vx,vy,vz)
 
-!     load real part of the adjoint mode
+!     --> Load real part of the adjoint mode
       write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aRe,vy_aRe,vz_aRe,vx,vy,vz)
 
-!     load imaginary part of the adjoint mode
+!     --> Load imaginary part of the adjoint mode
       write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 
-!     normalisation of direct mode
-      call inner_product(alpha  ,vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dRe, vy_dRe, vz_dRe, pr, t)
-      call inner_product(beta   ,vx_dIm, vy_dIm, vz_dIm, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t)
-      alpha   = 1.0d0/dsqrt(alpha+beta)
-      call opcmult(vx_dRe,vy_dRe,vz_dRe, alpha)
-      call opcmult(vx_dIm,vy_dIm,vz_dIm, alpha)
+!     --> Normalize the adjoint mode.
+      call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
 
-!     normalisation of adjoint mode
-      call inner_product(theta  ,vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t)
-      call inner_product(iota   ,vx_aIm, vy_aIm, vz_aIm, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
-      theta   = 1.0d0/dsqrt(theta+iota)
-      call opcmult(vx_aRe,vy_aRe,vz_aRe, theta)
-      call opcmult(vx_aIm,vy_aIm,vz_aIm, theta)
+!     --> Compute the wavemaker.
+      work1 = sqrt(vx_dRe**2 + vx_dIm**2 + vy_dRe**2 + vy_dIm**2 + vz_dRe**2 + vz_dIm**2)
+      work2 = sqrt(vx_aRe**2 + vx_aIm**2 + vy_aRe**2 + vy_aIm**2 + vz_aRe**2 + vz_aIm**2)
+      wavemaker = work1 * work2
 
-!     biorthonormality condition
-      call inner_product(gamma  ,vx_aRe, vy_aRe, vz_aRe, pr, t, vx_dRe, vy_dRe, vz_dRe, pr, t)
-      call inner_product(delta  ,vx_aIm, vy_aIm, vz_aIm, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t)
-      gamma   = gamma+delta
-      call inner_product(epsilon,vx_aRe, vy_aRe, vz_aRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t)
-      call inner_product(zeta   ,vx_aIm, vy_aIm, vz_aIm, pr, t, vx_dRe, vy_dRe, vz_dRe, pr, t)
-      epsilon = epsilon-zeta
-      eta     = gamma*gamma + epsilon*epsilon
-      gamma   = gamma/eta
-      epsilon = epsilon/eta
-      call opcopy(vx_aRet,vy_aRet,vz_aRet,vx_aRe,vy_aRe,vz_aRe)
-      call opcopy(vx_aImt,vy_aImt,vz_aImt,vx_aIm,vy_aIm,vz_aIm)
-      call opcmult(vx_aRe,vy_aRe,vz_aRe, gamma)
-      call opcmult(vx_aImt,vy_aImt,vz_aImt, epsilon)
-      call opcmult(vx_aRet,vy_aRet,vz_aRet,-epsilon)
-      call opcmult(vx_aIm,vy_aIm,vz_aIm, gamma)
-      call opadd2(vx_aRe,vy_aRe,vz_aRe,vx_aImt,vy_aImt,vz_aImt)
-      call opadd2(vx_aIm,vy_aIm,vz_aIm,vx_aRet,vy_aRet,vz_aRet)
-
-!     wave maker computation
-      call oprzero(vx_wm,vy_wm,vz_wm)
-      call oprzero(vx_dw,vy_dw,vz_dw)
-      call opaddcol3(vx_dw,vy_dw,vz_dw, vx_dRe,vy_dRe,vz_dRe, vx_dRe,vy_dRe,vz_dRe)
-      call opaddcol3(vx_dw,vy_dw,vz_dw, vx_dIm,vy_dIm,vz_dIm, vx_dIm,vy_dIm,vz_dIm)
-      call add4(vx_wm,vx_dw,vy_dw,vz_dw,lt)
-      call vsqrt(vx_wm,lt)
-      call oprzero(vx_aw,vy_aw,vz_aw)
-      call opaddcol3(vx_aw,vy_aw,vz_aw, vx_aRe,vy_aRe,vz_aRe, vx_aRe,vy_aRe,vz_aRe)
-      call opaddcol3(vx_aw,vy_aw,vz_aw, vx_aIm,vy_aIm,vz_aIm, vx_aIm,vy_aIm,vz_aIm)
-      call add4(vy_wm,vx_aw,vy_aw,vz_aw,lt)
-      call vsqrt(vy_wm,lt)
-      call addcol3(vz_wm,vx_wm,vy_wm,lt)
-      call filter_s0(vz_wm,0.5,1,'vortx')
-      ifvo=.false.; ifpo=.false.; ifto=.true.
-      call outpost(vz_wm, vz_dw, vz_aw, pr, vz_wm, 'wm_')
-      ifvo=.true.; ifpo=.true.; ifto=.true.
+      ifto = .true. ; ifvo = .false.
+      call outpost(vx, vy, vz, pr, wavemaker, "wm_")
 
       return
       end subroutine wave_maker
@@ -329,32 +275,35 @@
       call opaddcol3(vx_pi,vy_pi,vz_pi,-vz_dIm,-vz_dIm,-vz_dIm,dudz_aRe,dvdz_aRe,dwdz_aRe)
 
       ifvo=.true.; ifpo=.false.; ifto=.false.
-      call filter_s0(vx_tr,0.5,1,'vortx')
-      call filter_s0(vy_tr,0.5,1,'vortx')
-      call filter_s0(vz_tr,0.5,1,'vortx')
+! call filter_s0(vx_tr,0.5,1,'vortx')
+! call filter_s0(vy_tr,0.5,1,'vortx')
+! call filter_s0(vz_tr,0.5,1,'vortx')
       call outpost(vx_tr, vy_tr, vz_tr, pr, t, 'tr_')
 
-      call filter_s0(vx_ti,0.5,1,'vortx')
-      call filter_s0(vy_ti,0.5,1,'vortx')
-      call filter_s0(vz_ti,0.5,1,'vortx')
+! call filter_s0(vx_ti,0.5,1,'vortx')
+! call filter_s0(vy_ti,0.5,1,'vortx')
+! call filter_s0(vz_ti,0.5,1,'vortx')
       call outpost(vx_ti, vy_ti, vz_ti, pr, t, 'ti_')
 
-      call filter_s0(vx_pr,0.5,1,'vortx')
-      call filter_s0(vy_pr,0.5,1,'vortx')
-      call filter_s0(vz_pr,0.5,1,'vortx')
+! call filter_s0(vx_pr,0.5,1,'vortx')
+! call filter_s0(vy_pr,0.5,1,'vortx')
+! call filter_s0(vz_pr,0.5,1,'vortx')
       call outpost(vx_pr, vy_pr, vz_pr, pr, t, 'pr_')
 
-      call filter_s0(vx_pi,0.5,1,'vortx')
-      call filter_s0(vy_pi,0.5,1,'vortx')
-      call filter_s0(vz_pi,0.5,1,'vortx')
+! call filter_s0(vx_pi,0.5,1,'vortx')
+! call filter_s0(vy_pi,0.5,1,'vortx')
+! call filter_s0(vz_pi,0.5,1,'vortx')
       call outpost(vx_pi, vy_pi, vz_pi, pr, t, 'pi_')
 
-      call opadd2(vx_tr,vy_tr,vz_tr, vx_pr,vy_pr,vz_pr)
-      call opadd2(vx_ti,vy_ti,vz_ti, vx_pi,vy_pi,vz_pi)
+      call opadd2(vx_tr, vy_tr, vz_tr, vx_pr, vy_pr, vz_pr)
+      call opadd2(vx_ti, vy_ti, vz_ti, vx_pi, vy_pi, vz_pi)
 
-      call outpost(vx_tr,vy_tr,vz_tr, pr, t, 'sr_')
-      call opcmult(vx_ti,vy_ti,vz_ti, kappa)
-      call outpost(vx_ti,vy_ti,vz_ti, pr, t, 'si_')
+      call outpost(vx_tr, vy_tr, vz_tr, pr, t, 'sr_')
+!call opcmult(vx_ti, vy_ti, vz_ti, kappa)
+
+! ! check
+! call opchsgn(vx_ti, vy_ti, vz_ti)
+      call outpost(vx_ti, vy_ti, vz_ti, pr, t, 'si_')
 
       return
       end subroutine bf_sensitivity
@@ -491,3 +440,84 @@
 
       return
       end subroutine initialize_rhs_ts_steady_force_sensitivity
+
+
+
+
+
+      subroutine biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm)
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+!     ----- Real part of the direct mode.
+      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
+      real, dimension(lt2) :: pr_dRe
+
+!     ----- Imaginary part of the direct mode.
+      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
+      real, dimension(lt2) :: pr_dIm
+
+!     ----- Real part of the adjoint mode.
+      real, dimension(lt) :: vx_aRe, vy_aRe, vz_aRe, t_aRe
+      real, dimension(lt2) :: pr_aRe
+
+!     ----- Imaginary part of the adjoint mode.
+      real, dimension(lt) :: vx_aIm, vy_aIm, vz_aIm, t_aIm
+      real, dimension(lt2) :: pr_aIm
+
+!     ----- Temporary arrays.
+      real, dimension(lt) :: work1_vx, work1_vy, work1_vz, work1_t
+      real, dimension(lt2) :: work1_pr
+
+      real, dimension(lt) :: work2_vx, work2_vy, work2_vz, work2_t
+      real, dimension(lt2) :: work2_pr
+
+      real :: alpha, beta, gamma, delta
+
+!  --> Ensure that the direct mode is normalize to || u || = 1
+      call norm(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
+      alpha = alpha**2
+
+      call norm(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, beta)
+      beta = beta**2
+
+      gamma = 1.0D+00 / sqrt(alpha + beta)
+
+      call opcmult(vx_dRe, vy_dRe, vz_dRe, gamma)
+      call opcmult(vx_dIm, vy_dIm, vz_dIm, gamma)
+
+! --> Compute the scalar product between the direct and adjoint mode.
+      call inner_product(alpha, vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe)
+      call inner_product(beta, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm)
+      gamma = alpha + beta      ! Real part of the inner product
+
+      call inner_product(alpha, vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm)
+      call inner_product(beta, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe)
+      delta = alpha - beta      ! Complex part of the inner product
+
+! --> Bi-orthonormalize the adjoint mode.
+      work1_vx = (gamma * vx_aRe - delta * vx_aIm) / (gamma**2 + delta**2)
+      work2_vx = (gamma * vx_aIm + delta * vx_aRe) / (gamma**2 + delta**2)
+
+      work1_vy = (gamma * vy_aRe - delta * vy_aIm) / (gamma**2 + delta**2)
+      work2_vy = (gamma * vy_aIm + delta * vy_aRe) / (gamma**2 + delta**2)
+
+      work1_vz = (gamma * vz_aRe - delta * vz_aIm) / (gamma**2 + delta**2)
+      work2_vz = (gamma * vz_aIm + delta * vz_aRe) / (gamma**2 + delta**2)
+
+      work1_pr = (gamma * pr_aRe - delta * pr_aIm) / (gamma**2 + delta**2)
+      work2_pr = (gamma * pr_aIm + delta * pr_aRe) / (gamma**2 + delta**2)
+
+      work1_t = (gamma * t_aRe - delta * t_aIm) / (gamma**2 + delta**2)
+      work2_t = (gamma * t_aIm + delta * t_aRe) / (gamma**2 + delta**2)
+
+      call nopcopy(vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, work1_vx, work1_vy, work1_vz, work1_pr, work1_t)
+      call nopcopy(vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, work2_vx, work2_vy, work2_vz, work2_pr, work2_t)
+
+      return
+      end subroutine biorthogonalize
