@@ -23,8 +23,8 @@ jobs:
         CASE: "1cyl"
         NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
         NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
-        FC: "mpif77"
-        CC: "mpicc"
+        #FC: "mpif77"
+        #CC: "mpicc"
         FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
          
 # NEKSTAB_SOURCE_ROOT: ./
