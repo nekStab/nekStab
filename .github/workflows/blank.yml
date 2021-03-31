@@ -62,6 +62,7 @@ jobs:
          pwd
          cd examples/1cyl/autotest/base
          source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
+         echo $FFLAGS
          sh $NEK_SOURCE_ROOT/bin/makenek $CASE
          more build.log
 
