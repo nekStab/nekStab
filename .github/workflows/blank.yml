@@ -68,21 +68,16 @@ jobs:
           cd ../..          
           pwd
           cd examples/1cyl/autotest/base
-          sh cmpile.sh all
+          #sh cmpile.sh all
+          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
+          export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
+          export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+          source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
+          source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
+          echo $FC
+          echo ${FC}
+          sh $NEK_SOURCE_ROOT/bin/makenek $CASE
           more build.log
-
-#export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
-        #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-        #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
-        #source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
-        #sh $NEK_SOURCE_ROOT/bin/makenek $CASE
-     #git update-index --chmod +x for the whole repo
-     #ROOT_DIR:
-             #export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
-          #echo $MAKEFLAGS
-      #echo $NEKSTAB_SOURCE_ROOT
-    #echo $NEK_SOURCE_ROOT
-       #  ./cmpile.sh all
          
      ## - name: Running cylinder case
      #   run: |
@@ -91,12 +86,3 @@ jobs:
     #     echo $CASE > SESSION.NAME
    #      echo $CASE_DIR'/' >> SESSION.NAME
    #      mpiexec -np 2 ./nek5000
-   ##      
-   #   - name: Running cylinder case
-   #     run: |
-  #       export CASE='1cyl'
-  #       export CASE_DIR=`pwd`
-  #       echo $CASE > SESSION.NAME
-  #       echo $CASE_DIR'/' >> SESSION.NAME
-     #    mpiexec -np 2 ./nek5000
-
