@@ -8,9 +8,12 @@ export NEKSTAB_SOURCE_ROOT="../../../.." #--> path to nekStab
 export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
+echo $NEKSTAB_SOURCE_ROOT
+echo $NEK_SOURCE_ROOT
+
 #uncomment the deisred compiler
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc.sh
-source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
+source $NEKSTAB_SOURCE_ROOT/core/compiler_gcc_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_pgi.sh
