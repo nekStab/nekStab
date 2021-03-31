@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Compiling nekStab
+name: Compiling
 
 # Controls when the action will run. 
 on:
@@ -16,7 +16,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
+  ubuntu:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     env: 
@@ -39,13 +39,14 @@ jobs:
       - name: Get cpu-information
         run: lscpu
 
-      - uses: actions/github-script@v3
+      #- uses: actions/github-script@v3
+      - name: Sourcing 
         env:
           NEKSTAB_SOURCE_ROOT: ./
           NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
           MAKEFLAGS: "-j 2"
-          FIRST_NAME: Mona
-          LAST_NAME: Octocat
+#           FIRST_NAME: Mona
+#           LAST_NAME: Octocat
 #         with:
 #           script: |
 #             const { FIRST_NAME, LAST_NAME } = process.env
