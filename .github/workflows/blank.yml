@@ -16,41 +16,41 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  compiling:
+  build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    defaults:
-      run: working-directory: ./
-    steps:
-      run: apt-get install gfortran libmpich-dev libopenblas-dev
-      env: 
+    env: 
       NEKSTAB_SOURCE_ROOT: ./
       NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
       MAKEFLAGS: "-j 2"
 
    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+    
       - name: Checkout repository nekStab
         uses: actions/checkout@v2
         
       - name: Checkout submodules Nek5000
         run: git submodule update --init --recursive
       
-      #- name: Install dependecies for Nek500 and NekStab
-      #  run: sudo apt-get install gfortran libmpich-dev libopenblas-dev
+      - name: Install dependecies for Nek500 and NekStab
+        run: sudo apt-get install gfortran libmpich-dev libopenblas-dev
           
       - name: Get cpu-information
         run: lscpu
 
       - uses: actions/github-script@v3
         env:
+          NEKSTAB_SOURCE_ROOT: ./
+          NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
+          MAKEFLAGS: "-j 2"
           FIRST_NAME: Mona
           LAST_NAME: Octocat
-        with:
-          script: |
-            const { FIRST_NAME, LAST_NAME } = process.env
+#         with:
+#           script: |
+#             const { FIRST_NAME, LAST_NAME } = process.env
 
-            console.log(`Hello ${FIRST_NAME} ${LAST_NAME}`)
+#             console.log(`Hello ${FIRST_NAME} ${LAST_NAME}`)
             
 #      - name: Echoing paths...
 #        run : echo $GITHUB_WORKSPACE
