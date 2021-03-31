@@ -74,6 +74,12 @@ jobs:
          export CC="mpicc"
          export FFLAGS="-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
          export USR_LFLAGS+="-L/usr/lib -lopenblas"
+         echo CASE
+         echo NEKSTAB_SOURCE_ROOT
+         echo NEK_SOURCE_ROOT
+         echo FC
+         echo FFLAGS
+         echo USR_LFLAGS
          source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh        
          sh $SOURCE_ROOT/bin/makenek $CASE
          more build.log
