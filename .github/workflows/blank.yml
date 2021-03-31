@@ -34,7 +34,10 @@ jobs:
         run: git submodule update --init --recursive
       
       - name: Install dependecies for Nek500 and NekStab
-        run: sudo apt-get install gcc gfortran libmpich-dev libopenblas-dev
+        run: |
+         which mpif77
+         which mpicc
+         sudo apt-get install gcc gfortran libmpich-dev libopenblas-dev
           
       - name: Get cpu-information
         run: lscpu
@@ -84,7 +87,7 @@ jobs:
          echo $USR_LFLAGS  
          
          echo 'Calling makenek'
-         sh $SOURCE_ROOT/bin/makenek $CASE
+         sh $NEK_SOURCE_ROOT/bin/makenek $CASE
          more build.log
 
 #         sh ./cmpile.sh all
