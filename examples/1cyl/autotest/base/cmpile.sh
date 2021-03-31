@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 export CASE="1cyl" #--> case name goes here
 
@@ -14,7 +15,7 @@ source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_pgi.sh
 
-if [[ $#  -ne 1 ]]; then
+if [ $#  -ne 1 ] ; then
     error_quit 'Wrong arguments number!'
 fi
 for il in "$@"
