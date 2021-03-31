@@ -1,4 +1,5 @@
       subroutine prepare_linearized_solver
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -53,6 +54,31 @@
 
 
       subroutine matvec(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+!     Dispatch the correct matrix-vector product to the Arnoldi factorization.
+!     All subroutines need to have the same interface.
+!
+!     NOTE : The baseflow needs to be pass to (ubase, vbase, wbase, tbase)
+!            before this function is called.
+!
+!     INPUTS
+!     ------
+!
+!     qx, qy, qz, qt : nek-arrays of size lt
+!                      Initial velocity and temperature components.
+!
+!     qp : nek-array of size lt2
+!          Initial pressure component.
+!
+!     OUTPUTS
+!     -------
+!
+!     fx, fy, fz, ft : nek-arrays of size lt
+!                      Final velocity and temperature components.
+!
+!     fp : nek-array of size lt2
+!          Final pressure component.
+!
 
       implicit none
       include 'SIZE'
@@ -116,6 +142,16 @@
 
 
       subroutine forward_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+!     Integrate forward in time the linearized Navier-Stokes equations.
+!     Denoting by L the Jacobian of the Navier-Stokes equations, the corresponding
+!     matrix vector product is thus
+!
+!     x(t) = exp(t * L) * x(0)
+!
+!     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
+!     one (fx, fy, fz, fp, ft).
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -167,6 +203,16 @@
 
 
       subroutine adjoint_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+!     Integrate forward in time the adjoint Navier-Stokes equations.
+!     Denoting by L adjoint Navier-Stokes operator, the corresponding
+!     matrix vector product is thus
+!
+!     x(t) = exp(t * L) * x(0)
+!
+!     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
+!     one (fx, fy, fz, fp, ft).
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -218,6 +264,7 @@
 
 
       subroutine newton_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -252,6 +299,7 @@
 
 
       subroutine ts_force_sensitivity_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
       implicit none
       include 'SIZE'
       include 'TOTAL'

@@ -6,6 +6,23 @@
 
       subroutine wave_maker
 
+!     Provided the direct and adjoint modes have already been computed,
+!     this function computes the wavemaker following the formulation by
+!     Giannetti et al. [1]. Set uparam(01) = 4.1 in the par file to use it.
+!     
+!     OUTPOST
+!     -------
+!     
+!     wm_blah0.f000001 : Nek file. The wavemaker is stored in the array
+!     for the temperature.
+!     
+!     References
+!     ----------
+!     
+!     [1] Giannetti F. & Luchini P.
+!     Structural sensitivity of the first instability of the cylinder wake.
+!     J. Fluid Mech., vol 581., 2007.
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -123,6 +140,18 @@
 
 
       subroutine bf_sensitivity
+
+!     Provided the direct and adjoint modes have been computed,
+!     this function computes the baseflow sensitivity following
+!     the formulation by Marquet et al. [1].
+!     
+!     OUTPOST
+!     -------
+!     
+!     References
+!     ----------
+!     
+!     [1]
 
       implicit none
       include 'SIZE'
@@ -342,6 +371,25 @@
 
       subroutine ts_steady_force_sensitivity
 
+!     Provided the baseflow sensitivity has been computed,
+!     this function computes the sensitivity of the flow to
+!     a steady force following the formulation by Marquet at al. [1].
+!     A time-stepper formulation of the problem is used and
+!     the linearized system is solved using GMRES. Set uparam(01) = 4.31
+!     to compute the real part and uparam(01) = 4.32 for the imaginary one.
+!     
+!     OUTPOST
+!     -------
+!     
+!     fsr_blah0.f00001 / fsi_blah0.f00001 : Sensitivity fields.
+!     
+!     References
+!     ----------
+!     
+!     [1] Marquet O., Sipp D. and Jacquin L.
+!     Sensitivity analysis and passive control of cylinder flow
+!     J. Fluid Mech., vol 615, pp. 221-252, 2008.
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -402,6 +450,7 @@
 
 
       subroutine initialize_rhs_ts_steady_force_sensitivity(rhs_x, rhs_y, rhs_z)
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
