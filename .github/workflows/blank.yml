@@ -65,6 +65,10 @@ jobs:
         run: |
          which mpif77
          which mpicc
+         cd Nek5000/tools
+         sh ./maketools genmap genbox
+         cd ../..
+         pwd
          cd examples/1cyl/autotest/base
          export CASE="1cyl"
          export NEKSTAB_SOURCE_ROOT="../../../.." #--> path to nekStab
