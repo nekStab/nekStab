@@ -19,18 +19,14 @@ jobs:
   ubuntu:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-#     env: 
-#         CASE: "1cyl"
-#         NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
-#         NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
-#         #FC: "mpif77"
-#         #CC: "mpicc"
-#         FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
-         
-# NEKSTAB_SOURCE_ROOT: ./
-#       NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
-#       MAKEFLAGS: "-j 2"
-
+    env: 
+        CASE: "1cyl"
+        NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
+        NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
+        FC: "mpif77"
+        CC: "mpicc"
+        FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
+      
    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     
@@ -47,14 +43,14 @@ jobs:
         run: lscpu
 
         # Export NEW_VAR_NAME variable for subsequent steps, and export all environment variables matching the optional regexp.
-      - uses: lukka/set-shell-env@v1
-        with:
-          CASE: "1cyl"
-          NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
-          NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
-          FC: "mpif77"
-          CC: "mpicc"
-          FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
+#       - uses: lukka/set-shell-env@v1
+#         with:
+#           CASE: "1cyl"
+#           NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
+#           NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
+#           FC: "mpif77"
+#           CC: "mpicc"
+#           FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
          
       # with:
       #   shell: 'bash' or 'tcsh' or any command that starts a shell.
@@ -66,6 +62,7 @@ jobs:
       #     ${{ env.YOUR_VARIABLE_NAME }}
       - name: Compile cylinder case
         run: |
+          pwd
           which mpif77
           which mpicc
           export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
