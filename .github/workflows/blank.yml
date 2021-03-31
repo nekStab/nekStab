@@ -72,7 +72,7 @@ jobs:
           export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
           export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
           export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-          
+          export FCcomp="gfotran"
           source $NEKSTAB_SOURCE_ROOT/core/compiler_gcc_tb.sh
           echo $FC
           which mpif77
