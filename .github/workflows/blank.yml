@@ -88,7 +88,7 @@ jobs:
          echo $USR_LFLAGS  
          
          echo 'Calling makenek'
-         sh $NEK_SOURCE_ROOT/bin/makenek $CASE
+         $NEK_SOURCE_ROOT/bin/makenek $CASE
          more build.log
 
 #         sh ./cmpile.sh all
