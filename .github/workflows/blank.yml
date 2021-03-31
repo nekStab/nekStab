@@ -34,10 +34,7 @@ jobs:
         run: git submodule update --init --recursive
       
       - name: Install dependecies for Nek500 and NekStab
-        run: |
-         which mpif77
-         which mpicc
-         sudo apt-get install gcc gfortran libmpich-dev libopenblas-dev
+        run: sudo apt-get install gcc gfortran libmpich-dev libopenblas-dev
           
       - name: Get cpu-information
         run: lscpu
