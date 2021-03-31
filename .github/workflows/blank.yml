@@ -20,7 +20,13 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     env: 
-        FIRST_NAME: Mona
+        CASE: "1cyl"
+        NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
+        NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
+        FC: "mpif77"
+        CC: "mpicc"
+        FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
+         
 # NEKSTAB_SOURCE_ROOT: ./
 #       NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
 #       MAKEFLAGS: "-j 2"
@@ -40,47 +46,20 @@ jobs:
       - name: Get cpu-information
         run: lscpu
 
-      #- uses: actions/github-script@v3
-#       - name: Sourcing 
-#         env:
-#           NEKSTAB_SOURCE_ROOT: ./
-#           NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
-#           MAKEFLAGS: "-j 2"
-#           FIRST_NAME: Mona
-#           LAST_NAME: Octocat
-#         with:
-#           script: |
-#             const { FIRST_NAME, LAST_NAME } = process.env
-
-#             console.log(`Hello ${FIRST_NAME} ${LAST_NAME}`)
-            
-#      - name: Echoing paths...
-#        run : echo $GITHUB_WORKSPACE
-#              echo $WORKDIR
-#              echo "$NEK_SOURCE_ROOT/bin" >> $GITHUB_PATH
-#              echo $NEKSTAB_SOURCE_ROOT
-#              echo $NEK_SOURCE_ROOT
-
-
       - name: Compile cylinder case
         run: |
          which mpif77
          which mpicc
-         echo $FIRST_NAME
          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
          echo $MAKEFLAGS
+
+         export USR_LFLAGS+="-L/usr/lib -lopenblas"
 
          cd Nek5000/tools
          ./maketools genmap genbox
          cd ../..
          pwd
          cd examples/1cyl/autotest/base
-
-         export CASE="1cyl"
-         export NEKSTAB_SOURCE_ROOT="../../../.." #--> path to nekStab
-         export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-         export FFLAGS="-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
-         export USR_LFLAGS+="-L/usr/lib -lopenblas"
          source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
          $NEK_SOURCE_ROOT/bin/makenek $CASE
          more build.log
