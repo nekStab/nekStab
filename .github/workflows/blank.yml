@@ -41,7 +41,7 @@ jobs:
         run: git submodule update --init --recursive
       
       - name: Install dependecies for Nek500 and NekStab
-        run: sudo apt-get install gcc gfortran libmpich-dev libopenblas-dev
+        run: sudo apt-get install libmpich-dev libopenblas-dev
           
       - name: Get cpu-information
         run: lscpu
@@ -54,14 +54,15 @@ jobs:
          echo $MAKEFLAGS
 
          export USR_LFLAGS+="-L/usr/lib -lopenblas"
-
+         echo $FC
+         echo $CC
          cd Nek5000/tools
          ./maketools genmap genbox
          cd ../..
          pwd
          cd examples/1cyl/autotest/base
          source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
-         $NEK_SOURCE_ROOT/bin/makenek $CASE
+         sh $NEK_SOURCE_ROOT/bin/makenek $CASE
          more build.log
 
 #         sh ./cmpile.sh all
