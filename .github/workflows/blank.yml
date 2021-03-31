@@ -68,7 +68,7 @@ jobs:
           cd ../..          
           pwd
           cd examples/1cyl/autotest/base
-          sh ./cmpile.sh all
+          sh cmpile.sh all
           more build.log
 
 #export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
