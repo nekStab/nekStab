@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run: |
-        sudo apt-get install gfortran libmpich-dev libopenblas-dev
-        working-directory: ./
+       apt-get install gfortran libmpich-dev libopenblas-dev
+       working-directory: ./
     env: 
       NEKSTAB_SOURCE_ROOT: ./
       NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
