@@ -19,8 +19,9 @@ jobs:
   ubuntu:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-#     env: 
-#       NEKSTAB_SOURCE_ROOT: ./
+    env: 
+        FIRST_NAME: Mona
+# NEKSTAB_SOURCE_ROOT: ./
 #       NEK_SOURCE_ROOT: $NEKSTAB_SOURCE_ROOT/Nek5000
 #       MAKEFLAGS: "-j 2"
 
@@ -65,15 +66,16 @@ jobs:
         run: |
          which mpif77
          which mpicc
-         export CORES=$(sh sysctl -n hw.ncpu || echo 1)
+         echo $FIRST_NAME
+         export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
+         echo $MAKEFLAGS
 
          cd Nek5000/tools
          ./maketools genmap genbox
          cd ../..
          pwd
          cd examples/1cyl/autotest/base
-         export MAKEFLAGS: "-j "$(CORES)
-         echo $MAKEFLAGS
+
          export CASE="1cyl"
          export NEKSTAB_SOURCE_ROOT="../../../.." #--> path to nekStab
          export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
