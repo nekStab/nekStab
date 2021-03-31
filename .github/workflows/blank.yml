@@ -65,7 +65,7 @@ jobs:
         run: |
          which mpif77
          which mpicc
-         CORES ?= $(shell sysctl -n hw.ncpu || echo 1)
+         export CORES=$(sh sysctl -n hw.ncpu || echo 1)
 
          cd Nek5000/tools
          ./maketools genmap genbox
