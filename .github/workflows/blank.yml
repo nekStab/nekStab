@@ -63,6 +63,9 @@ jobs:
       - name: Compile cylinder case
         run: |
           pwd
+          ls
+          export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
+          export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
           which mpif77
           which mpicc
           export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
@@ -76,7 +79,7 @@ jobs:
           pwd
           cd examples/1cyl/autotest/base
           source $NEKSTAB_SOURCE_ROOT/core/nekStab.sh
-          sh ../../../../Nek5000/bin/makenek $CASE
+          sh $NEK_SOURCE_ROOT/Nek5000/bin/makenek $CASE
           more build.log
   #        shell: bash
 
