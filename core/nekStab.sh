@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 #add to .bashrc
 #export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
