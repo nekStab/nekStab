@@ -1,4 +1,9 @@
 !-----------------------------------------------------------------------
+
+
+
+
+
       subroutine wave_maker
 
       implicit none
@@ -44,12 +49,12 @@
       call opcopy(vx_dIm,vy_dIm,vz_dIm,vx,vy,vz)
 
 !     load real part of the adjoint mode
-      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aRe,vy_aRe,vz_aRe,vx,vy,vz)
 
 !     load imaginary part of the adjoint mode
-      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 
@@ -106,7 +111,17 @@
 
       return
       end subroutine wave_maker
+
+
+
+
+
 !-----------------------------------------------------------------------
+
+
+
+
+
       subroutine bf_sensitivity
 
       implicit none
@@ -171,12 +186,12 @@
       call opcopy(vx_dIm,vy_dIm,vz_dIm,vx,vy,vz)
 
 !     load real part of the adjoint mode
-      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aRe,vy_aRe,vz_aRe,vx,vy,vz)
 
 !     load imaginary part of the adjoint mode
-      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 
@@ -314,3 +329,116 @@
 
       return
       end subroutine bf_sensitivity
+
+
+
+
+
+!-----------------------------------------------------------------------
+
+
+
+
+
+      subroutine ts_steady_force_sensitivity
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+!     ----- Right-hand side : baseflow sensitivity
+      real, dimension(lt) :: rhs_x, rhs_y, rhs_z, rhs_t
+      real, dimension(lt2) :: rhs_p
+
+!     ----- Solution of the linear system.
+      real, dimension(lt) :: sol_x, sol_y, sol_z, sol_t
+      real, dimension(lt2) :: sol_p
+
+!     ----- Misc.
+      character(len=80) :: filename
+      character(len=3) :: prefix
+
+!     --> Load base flow.
+      write(filename, '(a, a, a)') 'BF_', trim(session), '0.f00001'
+      call load_fld(filename)
+      call opcopy(ubase, vbase, wbase, vx, vy, vz)
+
+!     --> Load the forcing term.
+      if (uparam(01) .eq. 4.31) then
+         write(filename, '(a, a, a)') 'sr_', trim(session), '0.f00001'
+         prefix = 'fsr'
+      elseif (uparam(01) .eq. 4.32) then
+         write(filename, '(a, a, a)') 'si_', trim(session), '0.f00001'
+         prefix = 'fsi'
+      endif
+      call load_fld(filename)
+      call opcopy(rhs_x, rhs_y, rhs_z, vx, vy, vz)
+
+!     --> Zero-out initial guess.
+      call noprzero(sol_x, sol_y, sol_z, sol_p, sol_t)
+
+!     --> Recast rhs into time-stepper/discrete-time framework.
+      call initialize_rhs_ts_steady_force_sensitivity(rhs_x, rhs_y, rhs_z)
+
+!     --> Solve the linear system.
+      call ts_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, 10, k_dim)
+
+!     --> Outpost solution.
+      call outpost(sol_x, sol_y, sol_z, sol_p, sol_t, prefix)
+
+      return
+      end subroutine ts_steady_force_sensitivity
+
+
+
+
+!-----------------------------------------------------------------------
+
+
+
+
+
+      subroutine initialize_rhs_ts_steady_force_sensitivity(rhs_x, rhs_y, rhs_z)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'ADJOINT'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+      real, dimension(lt) :: rhs_x, rhs_y, rhs_z
+      real, dimension(lt) :: fx, fy, fz
+
+!     --> Setup the parameters for the linearized solver.
+      ifpert = .true. ; ifadj = .true.
+      call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
+
+!     --> General initialization of the linear solver.
+      call prepare_linearized_solver()
+
+!     -->
+      ifbase = .false.
+
+!     --> Zero-out the initial perturbation.
+      call oprzero(vxp, vyp, vzp)
+
+      time = 0.0D+00
+      do istep = 1, nsteps
+!     --> Pass the forcing to nek.
+         call opcopy(fcx, fcy, fcz, rhs_x, rhs_y, rhs_z)
+
+!     --> Integrate forward in time.
+         call nekstab_usrchk()
+         call nek_advance()
+      enddo
+
+!     --> Copy the final solution as the new rhs for the time-stepper formulation.
+      call opcopy(rhs_x, rhs_y, rhs_z, vxp(:, 1), vyp(:, 1), vzp(:, 1))
+      call oprzero(fcx, fcy, fcz)
+
+      return
+      end subroutine initialize_rhs_ts_steady_force_sensitivity
