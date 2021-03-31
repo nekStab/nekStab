@@ -181,6 +181,8 @@ c-----------------------------------------------------------------------
                call nopcopy(qx, qy, qz, qp, qt, vx, vy, vz, pr, t)
 !     --> Newton-Krylov solver.
                call newton_krylov(qx, qy, qz, qp, qt)
+!     --> Outpost solution.
+               call outpost(qx, qy, qz, qp, qt, "BF_")
                call nek_end
             endif
 
@@ -203,11 +205,15 @@ c-----------------------------------------------------------------------
 
       case(4)                   ! in postprocessing.f
 
-         if(uparam(01).eq.4.1)call wave_maker
-         if(uparam(01).eq.4.2)call BF_sensitivity
+         if(uparam(01) .eq. 4.1) call wave_maker
+
+         if(uparam(01) .eq. 4.2) call BF_sensitivity
+
+         if( (uparam(01) .eq. 4.31) .or. (uparam(01) .eq. 4.32) ) then
+            call ts_steady_force_sensitivity()
+         end if
 
          call nek_end
-
 
       end select
 
