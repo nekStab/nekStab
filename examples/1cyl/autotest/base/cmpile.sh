@@ -14,13 +14,9 @@ source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_pgi.sh
 
-args=$@
-argsnr=$#
-
-if [ $[argsnr] -ne 1 ]; then
+if [[ $#  -ne 1 ]]; then
     error_quit 'Wrong arguments number!'
 fi
-
 for il in "$@"
 do
 case $il in
