@@ -22,6 +22,9 @@
 !     [1] Giannetti F. & Luchini P.
 !     Structural sensitivity of the first instability of the cylinder wake.
 !     J. Fluid Mech., vol 581., 2007.
+!     
+!     NOTE : This implementation does not apply to cases involving temperature
+!     or any other scalar.
 
       implicit none
       include 'SIZE'
@@ -44,22 +47,22 @@
 !     --> Load real part of the direct mode
       write(filename,'(a,a,a)')'dRe',trim(SESSION),'0.f00001'
       call load_fld(filename)
-      call opcopy(vx_dRe,vy_dRe,vz_dRe,vx,vy,vz)
+      call opcopy(vx_dRe, vy_dRe, vz_dRe, vx, vy, vz)
 
 !     --> Load imaginary part of the direct mode
       write(filename,'(a,a,a)')'dIm',trim(SESSION),'0.f00001'
       call load_fld(filename)
-      call opcopy(vx_dIm,vy_dIm,vz_dIm,vx,vy,vz)
+      call opcopy(vx_dIm, vy_dIm, vz_dIm, vx, vy, vz)
 
 !     --> Load real part of the adjoint mode
       write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
       call load_fld(filename)
-      call opcopy(vx_aRe,vy_aRe,vz_aRe,vx,vy,vz)
+      call opcopy(vx_aRe, vy_aRe, vz_aRe, vx, vy, vz)
 
 !     --> Load imaginary part of the adjoint mode
       write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
       call load_fld(filename)
-      call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
+      call opcopy(vx_aIm, vy_aIm, vz_aIm, vx, vy, vz)
 
 !     --> Normalize the adjoint mode.
       call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
@@ -275,34 +278,34 @@
       call opaddcol3(vx_pi,vy_pi,vz_pi,-vz_dIm,-vz_dIm,-vz_dIm,dudz_aRe,dvdz_aRe,dwdz_aRe)
 
       ifvo=.true.; ifpo=.false.; ifto=.false.
-! call filter_s0(vx_tr,0.5,1,'vortx')
-! call filter_s0(vy_tr,0.5,1,'vortx')
-! call filter_s0(vz_tr,0.5,1,'vortx')
+!     call filter_s0(vx_tr,0.5,1,'vortx')
+!     call filter_s0(vy_tr,0.5,1,'vortx')
+!     call filter_s0(vz_tr,0.5,1,'vortx')
       call outpost(vx_tr, vy_tr, vz_tr, pr, t, 'tr_')
 
-! call filter_s0(vx_ti,0.5,1,'vortx')
-! call filter_s0(vy_ti,0.5,1,'vortx')
-! call filter_s0(vz_ti,0.5,1,'vortx')
+!     call filter_s0(vx_ti,0.5,1,'vortx')
+!     call filter_s0(vy_ti,0.5,1,'vortx')
+!     call filter_s0(vz_ti,0.5,1,'vortx')
       call outpost(vx_ti, vy_ti, vz_ti, pr, t, 'ti_')
 
-! call filter_s0(vx_pr,0.5,1,'vortx')
-! call filter_s0(vy_pr,0.5,1,'vortx')
-! call filter_s0(vz_pr,0.5,1,'vortx')
+!     call filter_s0(vx_pr,0.5,1,'vortx')
+!     call filter_s0(vy_pr,0.5,1,'vortx')
+!     call filter_s0(vz_pr,0.5,1,'vortx')
       call outpost(vx_pr, vy_pr, vz_pr, pr, t, 'pr_')
 
-! call filter_s0(vx_pi,0.5,1,'vortx')
-! call filter_s0(vy_pi,0.5,1,'vortx')
-! call filter_s0(vz_pi,0.5,1,'vortx')
+!     call filter_s0(vx_pi,0.5,1,'vortx')
+!     call filter_s0(vy_pi,0.5,1,'vortx')
+!     call filter_s0(vz_pi,0.5,1,'vortx')
       call outpost(vx_pi, vy_pi, vz_pi, pr, t, 'pi_')
 
       call opadd2(vx_tr, vy_tr, vz_tr, vx_pr, vy_pr, vz_pr)
       call opadd2(vx_ti, vy_ti, vz_ti, vx_pi, vy_pi, vz_pi)
 
       call outpost(vx_tr, vy_tr, vz_tr, pr, t, 'sr_')
-!call opcmult(vx_ti, vy_ti, vz_ti, kappa)
+!     call opcmult(vx_ti, vy_ti, vz_ti, kappa)
 
-! ! check
-! call opchsgn(vx_ti, vy_ti, vz_ti)
+!     ! check
+!     call opchsgn(vx_ti, vy_ti, vz_ti)
       call outpost(vx_ti, vy_ti, vz_ti, pr, t, 'si_')
 
       return
@@ -479,7 +482,7 @@
 
       real :: alpha, beta, gamma, delta
 
-!  --> Ensure that the direct mode is normalize to || u || = 1
+!     --> Ensure that the direct mode is normalize to || u || = 1
       call norm(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
       alpha = alpha**2
 
@@ -491,7 +494,7 @@
       call opcmult(vx_dRe, vy_dRe, vz_dRe, gamma)
       call opcmult(vx_dIm, vy_dIm, vz_dIm, gamma)
 
-! --> Compute the scalar product between the direct and adjoint mode.
+!     --> Compute the scalar product between the direct and adjoint mode.
       call inner_product(alpha, vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe)
       call inner_product(beta, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm)
       gamma = alpha + beta      ! Real part of the inner product
@@ -500,7 +503,7 @@
       call inner_product(beta, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe)
       delta = alpha - beta      ! Complex part of the inner product
 
-! --> Bi-orthonormalize the adjoint mode.
+!     --> Bi-orthonormalize the adjoint mode.
       work1_vx = (gamma * vx_aRe - delta * vx_aIm) / (gamma**2 + delta**2)
       work2_vx = (gamma * vx_aIm + delta * vx_aRe) / (gamma**2 + delta**2)
 
