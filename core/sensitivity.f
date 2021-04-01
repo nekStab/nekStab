@@ -9,20 +9,20 @@
 !     Provided the direct and adjoint modes have already been computed,
 !     this function computes the wavemaker following the formulation by
 !     Giannetti et al. [1]. Set uparam(01) = 4.1 in the par file to use it.
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     wm_blah0.f000001 : Nek file. The wavemaker is stored in the array
 !     for the temperature.
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Giannetti F. & Luchini P.
 !     Structural sensitivity of the first instability of the cylinder wake.
 !     J. Fluid Mech., vol 581., 2007.
-!     
+!
 !     NOTE : This implementation does not apply to cases involving temperature
 !     or any other scalar.
 
@@ -93,13 +93,13 @@
 !     Provided the direct and adjoint modes have been computed,
 !     this function computes the baseflow sensitivity following
 !     the formulation by Marquet et al. [1].
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1]
 
       implicit none
@@ -173,40 +173,8 @@
       call load_fld(filename)
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 
-!     normalisation of direct mode
-      call inner_product(alpha  ,vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dRe, vy_dRe, vz_dRe, pr, t)
-      call inner_product(beta   ,vx_dIm, vy_dIm, vz_dIm, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t)
-      alpha   = 1.0d0/dsqrt(alpha+beta)
-      call opcmult(vx_dRe,vy_dRe,vz_dRe, alpha)
-      call opcmult(vx_dIm,vy_dIm,vz_dIm, alpha)
-!     call outpost(vx_dRe,vy_dRe,vz_dRe, pr, t, 'dr_')
-!     call outpost(vx_dIm,vy_dIm,vz_dIm, pr, t, 'di_')
-
-!     normalisation of adjoint mode
-      call inner_product(theta  ,vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t)
-      call inner_product(iota   ,vx_aIm, vy_aIm, vz_aIm, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
-      theta   = 1.0d0/dsqrt(theta+iota)
-      call opcmult(vx_aRe,vy_aRe,vz_aRe, theta)
-      call opcmult(vx_aIm,vy_aIm,vz_aIm, theta)
-
-!     biorthonormality condition
-      call inner_product(gamma  ,vx_aRe, vy_aRe, vz_aRe, pr, t, vx_dRe, vy_dRe, vz_dRe, pr, t)
-      call inner_product(delta  ,vx_aIm, vy_aIm, vz_aIm, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t)
-      gamma   = gamma+delta
-      call inner_product(epsilon,vx_aRe, vy_aRe, vz_aRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t)
-      call inner_product(zeta   ,vx_aIm, vy_aIm, vz_aIm, pr, t, vx_dRe, vy_dRe, vz_dRe, pr, t)
-      epsilon = epsilon-zeta
-      eta     = gamma*gamma + epsilon*epsilon
-      gamma   = gamma/eta
-      epsilon = epsilon/eta
-      call opcopy(vx_aRet,vy_aRet,vz_aRet,vx_aRe,vy_aRe,vz_aRe)
-      call opcopy(vx_aImt,vy_aImt,vz_aImt,vx_aIm,vy_aIm,vz_aIm)
-      call opcmult(vx_aRe,vy_aRe,vz_aRe, gamma)
-      call opcmult(vx_aImt,vy_aImt,vz_aImt, epsilon)
-      call opcmult(vx_aRet,vy_aRet,vz_aRet,-epsilon)
-      call opcmult(vx_aIm,vy_aIm,vz_aIm, gamma)
-      call opadd2(vx_aRe,vy_aRe,vz_aRe,vx_aImt,vy_aImt,vz_aImt)
-      call opadd2(vx_aIm,vy_aIm,vz_aIm,vx_aRet,vy_aRet,vz_aRet)
+      !     --> Normalize the adjoint mode.
+      call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
 
 !     gradient computation
 !     real part of the direct mode
@@ -329,15 +297,15 @@
 !     A time-stepper formulation of the problem is used and
 !     the linearized system is solved using GMRES. Set uparam(01) = 4.31
 !     to compute the real part and uparam(01) = 4.32 for the imaginary one.
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     fsr_blah0.f00001 / fsi_blah0.f00001 : Sensitivity fields.
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Marquet O., Sipp D. and Jacquin L.
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
