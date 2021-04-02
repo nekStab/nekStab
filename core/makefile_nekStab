@@ -1,3 +1,4 @@
+ $(OBJDIR)/matvec.o :$(NEKSTAB_SOURCE_ROOT)/core/matvec.f; $(F77) -c $(FL2) $< -o $@
  $(OBJDIR)/krylov_decomposition.o :$(NEKSTAB_SOURCE_ROOT)/core/krylov_decomposition.f; $(F77) -c $(FL2) $< -o $@
  $(OBJDIR)/eigensolvers.o :$(NEKSTAB_SOURCE_ROOT)/core/eigensolvers.f; $(F77) -c $(FL2) $< -o $@
  $(OBJDIR)/lapack_wrapper.o       :$(NEKSTAB_SOURCE_ROOT)/core/lapack_wrapper.f;       $(F77) -c $(FL2) $< -o $@

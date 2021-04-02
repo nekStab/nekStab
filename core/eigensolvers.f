@@ -8,28 +8,28 @@
 
 !     This function provides the user-defined inner product to be used throughout
 !     the computation.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     px, py, pz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays containing the velocity fields of the first vector.
-!     
+!
 !     pp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the first vector.
-!     
+!
 !     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays containing the velocity fields of the second vector.
-!     
+!
 !     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the second vector.
-!     
+!
 !     RETURN
 !     ------
-!     
+!
 !     alpha : real
 !     Value of the inner-product alpha = <p, q>.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -98,19 +98,19 @@
 !     This function normalizes the state vector [qx, qy, qz, qp]^T where
 !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
 !     components while qp is the corresponding pressure field.
-!     
+!
 !     INPUTS / OUTPUTS
 !     ----------------
-!     
+!
 !     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Arrays storing the velocity components.
-!     
+!
 !     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Array storing the corresponding pressure field.
-!     
+!
 !     alpha : real
 !     Norm of the vector.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -217,7 +217,7 @@
             call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
             call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
 !     call outpost(vxp,vyp,vzp,pr,tp,'SS_') !outpost for sanity check
-            call matrix_vector_product(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),
+            call matvec(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),
      $           vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
 
          elseif(ifseed_symm)then ! symmetry initial seed
@@ -535,13 +535,13 @@ c----------------------------------------------------------------------
       subroutine krylov_schur_prepare
 
 !     This
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     Last edit : March 26th 2021 by RAS Frantz.
 
       implicit none
@@ -590,120 +590,13 @@ c----------------------------------------------------------------------
       end subroutine krylov_schur_prepare
 
 
-      subroutine matrix_vector_product(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
 
-!     This function implements the k-step Arnoldi factorization of the linearized
-!     
-!     INPUT
-!     -----
-!     
-!     RETURNS
-!     -------
-!     
-!     Last edit : April 3rd 2020 by JC Loiseau.
 
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-      include 'ADJOINT'
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-      real, dimension(lt)                :: fx, fy, fz, ft, qx, qy, qz, qt
-      real, dimension(lt2)               :: fp, qp
-      integer imode,smode,nmode,incr
-      integer n
-      real :: umax
-      n = nx1*ny1*nz1*nelt
 
-!     ----- Initial condition -----
-      call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), qx,qy,qz,qp,qt)
 
-!     ----- Time-stepper matrix-vector product -----
-      if    (uparam(1).lt.3.2)then !direct
-         smode = 1; nmode = 1; incr = 1; evop = 'd'
-      elseif(uparam(1).eq.3.2)then !adjoint
-         smode = 2; nmode = 2; incr = 1; evop = 'a'
-      elseif(uparam(1).eq.3.3)then !direct-adjoint !optimal perturbation
-         smode = 1; nmode = 2; incr = 1; evop = 'p'
-      elseif(uparam(1).eq.3.4)then !adjoint-direct !optimal response
-         smode = 2; nmode = 1; incr = -1; evop = 'r'
-      else
-         if(nid.eq.0)write(6,*)'Specify uparam(1) to 3 3.2 3.3 or 3.4'
-         call nek_end
-      endif
 
-      time = 0.0d0
-      do imode = smode, nmode, incr
 
-!     ifpert always true even if adjoint!
-         if    (imode.eq.1)then
-            ifpert=.true.;ifadj=.false.
-         elseif(imode.eq.2)then
-            ifpert=.true.;ifadj=.true.
-         endif
-         call bcast(ifpert, lsize)
-         call bcast(ifadj, lsize)
-
-         do istep = 1, nsteps
-
-!     ----- Prepare the base flow to vx,vy,vz
-
-            if(ifldbf)then
-
-               if(nid.eq.0)write(6,*)'Copying base flow!'
-               call opcopy(vx,vy,vz,ubase,vbase,wbase)
-               if(ifheat) call copy(t(1,1,1,1,1), tbase, n)
-               ifbase=.false.
-
-            else
-
-               ifbase=.true.
-               if(nid.eq.0)write(6,*)'Running DNS alongside stability!' !update vx,vy,vz
-
-            endif
-
-!     ----- Integrate in time vxp,vyp,vzp on top of vx,vy,vz
-
-!     ----- Check CFL of velocity fields
-
-!     think better about the position o this check! ubase doesnt change ...
-            if(istep.eq.1)then  !.OR.istep.eq.nsteps)then
-               call compute_cfl(umax,vx,vy,vz,1.0);  dtmaxx = ctarg/umax
-               if (nid.eq.0) write(6,*) 'CFL,dtmax=',dt*umax,dtmaxx
-            endif
-
-            if(.not.ifadj.and.nid.eq.0)write(6,"(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')")
-     $istep,nsteps,mstep,k_dim,schur_cnt
-            if(ifadj .and.nid.eq.0)write(6,"(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')")
-     $istep,nsteps,mstep,k_dim,schur_cnt
-
-            call nekStab_usrchk !custom forcings in the linear solver
-            call nek_advance
-
-!     for reference: core of nek_advance in drive1.f
-!     if (ifpert) then
-!     if (ifbase.and.ifheat) call heat
-!     if (ifbase.and.ifflow) call fluid -> forces in makef
-!     if (ifflow)            call fluidp -> forces in makefp
-!     if (ifheat)            call heatp
-!     else  ! std. nek case
-!     if (ifheat)            call heat
-!     if (ifflow)            call fluid
-!     endif
-
-         enddo
-      enddo
-
-      call nopcopy(fx,fy,fz,fp,ft, vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
-
-      if (uparam(3).eq.3) then  ! newton-krylov extra
-         call nopsub2(fx,fy,fz,fp,ft, qx,qy,qz,qp,qt)
-         call nopchsign(fx,fy,fz,fp,ft)
-      endif
-
-      return
-      end subroutine matrix_vector_product
 
 
 
@@ -841,13 +734,13 @@ c     ----- Output vorticity from real part -----
       if (nid .eq. 0) then
 
          close(10) ; close(20) ;  close(30)
-!     
+!
          write(fmt2,'("(A,I16)")')
          write(fmt3,'("(A,F16.4)")')
          write(fmt4,'("(A,F16.12)")')
          write(fmt5,'("(A,E15.7)")') ! max precision
          write(fmt6,'("(A,E13.4)")') ! same as hmhlz
-!     
+!
          write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
 !     write(filename,"(',I7.7,'.info')") itime/ioutput
          open (844,file=filename,action='write',status='replace')
@@ -911,32 +804,32 @@ c-----------------------------------------------------------------------
 
 !     This function selects the eigenvalues to be placed in the upper left corner
 !     during the Schur condensation phase.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
 
 !     delta : real
 !     All eigenvalues outside the circle of radius 1-delta will be selected.
-!     
+!
 !     nev : integer
 !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
 !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-!     
+!
 !     n : integer
 !     Total number of eigenvalues.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     selected : n-dimensional logical array.
 !     Array indicating which eigenvalue has been selected (.true.).
-!     
+!
 !     cnt : integer
 !     Number of selected eigenvalues. cnt >= nev + 4.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -994,22 +887,22 @@ c-----------------------------------------------------------------------
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt
 !     Velocity components of the latest Krylov vector.
-!     
+!
 !     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
-!     
+!
 !     H : k+1 x k real matrix.
 !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-!     
+!
 !     k : int
 !     Current iteration of the Arnoldi factorization.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       implicit none
