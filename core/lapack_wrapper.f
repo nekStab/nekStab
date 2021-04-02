@@ -9,29 +9,29 @@
 !     This function computes the Schur decomposition of a general matrix A.
 !     Both the eigenvalues and the corresponding Schur basis are returned.
 !     Note that the matrix A is overwritten with its Schur factorization.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     A : n x n real matrix
 !     Matrix to be factorized.
-!     
+!
 !     n : float
 !     Number of rows/columns of A.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     A : n x n real matrix
 !     Schur decomposition of the input matrix A, in canonical form.
-!     
+!
 !     vecs : n x n real matrix
 !     Schur basis asssociated to A.
-!     
+!
 !     vals : n-dimensional complex array.
 !     Unsorted eigenvalues of matrix A.
-!     
-!     
+!
+!
 !     Last edit : April 1st 2020 by JC Loiseau.
 
       implicit none
@@ -74,31 +74,31 @@
 !     matrix and corresponding Schur vectors such that the selected eigenvalues are
 !     in the upper-left block of the matrix. Note that, after completion, both T
 !     and Q are overwritten by the reordered Schur matrix and vectors.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     T : n x n real matrix
 !     Matrix in canonical Schur form to be reordered.
-!     
+!
 !     Q : n x n real matrix
 !     Matrix of Schur vectors to be reordered.
-!     
+!
 !     selected : logical n-dimensional array.
 !     Logical array indicating which eigenvalues need to be moved to the upper left block.
-!     
+!
 !     n : integer
 !     Number of rows/columns of T and Q.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     T : n x n real matrix
 !     Reordered Schur matrix.
-!     
+!
 !     Q : n x n real matrix.
 !     Reordered Schur vectors.
-!     
+!
 !     Last edit : April 1st 2020 by JC Loiseau.
 
       implicit none
@@ -130,25 +130,25 @@
 
 !     This function computes the eigendecomposition of a general matrix A.
 !     Both the eigenvalues and the right eigenvectors are returned.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     A : n x n real matrix.
 !     Matrix to be eigendecomposed.
-!     
+!
 !     n : integer
 !     Number of rows/columns of A.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     vecs : n x n complex matrix.
 !     Matrix of eigenvectors.
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
-!     
+!
 !     Last edit : April 1st 2020 by JC Loiseau.
 
       implicit none
@@ -191,32 +191,6 @@
       return
       end subroutine eig
 
-!-----------------------------------------------------------------------
-
-
-
-
-
-      subroutine matrix_matrix(A,B,nra,nc,ncb)
-      implicit none
-      integer :: nra, nc, ncb
-!     ----- Required variables for dgeem -----
-      character :: TRANSA = 'N', TRANSB = 'N'
-      integer   :: m, n, k
-      integer   :: lda, ldb, ldc
-      real, dimension(nra,nc)  :: A
-      real, dimension(nc,ncb)  :: B
-      real, dimension(nra,ncb) :: C
-      real :: alpha, beta
-!     ----- Matrix-matrix multiplication -----
-      m = nra;      n = ncb;      k = nc
-      lda = max(1,m); ldb = max(1,k); ldc = max(1,m)
-      alpha = 1.0D0; beta  = 0.0D0
-      call dgemm(TRANSA,TRANSB,m,n,k,alpha,A,lda,B,ldb,beta,C,ldc)
-      A(:,1:ncb) = C
-      return
-      end subroutine matrix_matrix
-
 
 
 
@@ -231,18 +205,18 @@
 
 !     This function sorts the eigenvalues in decreasing magnitude using a very
 !     naive sorting algorithm.
-!     
+!
 !     INPUTS/OUTPUTS
 !     --------------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues to be sorted as input.
 !     It is overwritten with the ordered eigenvalues as output.
-!     
+!
 !     vecs : n x n complex matrix.
 !     Matrix of corresponding eigenvectors. It is also overwritten with
 !     the reordered eigenvectors as output.
-!     
+!
 !     Last edit : April 2nd by JC Loiseau
 
       implicit none
@@ -314,24 +288,24 @@
 
 !     Wrapper for the LAPACK linear least-squares solver. Given the matrix A
 !     and right-hand side vector b, it solves for x that minimizes
-!     
+!
 !     min || Ax - b ||_2
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     A : m x n real matrix.
-!     
+!
 !     b : m x 1 real vector.
-!     
+!
 !     m, n : integers.
-!     
-!     
+!
+!
 !     RETURNS
 !     -------
-!     
+!
 !     x : n x 1 real vector.
-!     
+!
 !     Last edit : March 22nd 2021 by JC Loiseau.
 
       implicit none

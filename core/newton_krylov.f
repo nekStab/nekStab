@@ -4,7 +4,7 @@
 
 
 
-      subroutine newton_krylov()
+      subroutine newton_krylov(qx, qy, qz, qp, qt)
 
 !     Implementation of a simple Newton-Krylov solver for fixed point
 !     computation using a time-stepper formulation. The resolution of
@@ -51,9 +51,6 @@
 !     --> Initialize arrays.
       call noprzero(f_x, f_y, f_z, f_p, f_t)
 
-!     --> Copy initial guess for the Newton solver.
-      call nopcopy(qx, qy, qz, qp, qt, vx, vy, vz, pr, t(1,1,1,1,1))
-
 !     --> Newton iteration.
       newton : do i = 1, maxiter_newton
 
@@ -73,19 +70,13 @@
       if (residual .lt. tol) exit newton
 
       if (nid.eq.0) write(*, *) "LINEAR SOLVER"
-!     --> Copy the current guess into the base flow.
-      call opcopy(ubase, vbase, wbase, qx, qy, qz) ; call copy(tbase, t, n)
-
 !     --> Solve the linear system.
-      call time_stepper_gmres(f_x, f_y, f_z, f_p, f_t, dqx, dqy, dqz, dqp, dqt, maxiter_gmres, k_dim)
+      call ts_gmres(f_x, f_y, f_z, f_p, f_t, dqx, dqy, dqz, dqp, dqt, maxiter_gmres, k_dim)
 
 !     --> Update Newton solution.
       call nopsub2(qx, qy, qz, qp, qt, dqx, dqy, dqz, dqp, dqt)
 
       enddo newton
-
-!     --> Outpost solution.
-      call outpost(qx, qy, qz, qp, qt, "BF_")
 
       return
       end subroutine newton_krylov
@@ -95,7 +86,7 @@
 
 
 
-      subroutine time_stepper_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, maxiter, ksize)
+      subroutine ts_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, maxiter, ksize)
 
 !     Implementation of simple GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
@@ -160,9 +151,6 @@
       integer :: i, j, k, maxiter !, n, n2
       real :: beta, tol
 
-!     n = nx1*ny1*nz1*nelt ; n2 = nx2*ny2*nz2*nelt
-      uparam(01) = 3 ; ifpert = .true. ; call bcast(ifpert, lsize)
-
 !     Initialize arrays.
       tol = max(param(21), param(22))
 
@@ -218,14 +206,12 @@
 
       enddo gmres
 
-      uparam(01) = 1 ; ifpert = .false. ; call bcast(ifpert, lsize)
-
 !     ----- Deallocate arrays -----
       deallocate(qx, qy, qz, qt, qp)
       deallocate(H, yvec, evec)
 
       return
-      end subroutine time_stepper_gmres
+      end subroutine ts_gmres
 
 
 
@@ -255,7 +241,7 @@
       real :: beta
 
 !     --> Initial Krylov vector.
-      call matrix_vector_product(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
+      call matvec(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
       call nopsub2(f_x,f_y,f_z,f_p,f_t, rhs_x,rhs_y,rhs_z,rhs_p,rhs_t)
 
 !     --> Normalize the starting vector.
@@ -270,11 +256,32 @@
 
 
 !-----------------------------------------------------------------------
+      subroutine forward_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelv
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelv
+
+!     ----- Initial condition for the forward simulation.
+      real, dimension(lt) :: qx, qy, qz, qt
+      real, dimension(lt2) :: qp
+
+!     ----- Right-hand side of the Newton.
+      real, dimension(lt) :: fx, fy, fz, ft
+      real, dimension(lt2) :: fp
+
+!     --> Fixed point/UPO computation.
+      if (uparam(01) .eq. 1) call nonlinear_forward_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+      return
+      end subroutine forward_map
 
 
 
-
-      subroutine forward_map(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
+      subroutine nonlinear_forward_map(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
 
       implicit none
       include 'SIZE'
@@ -291,8 +298,12 @@
       real, dimension(lt) :: f_x, f_y, f_z, f_t
       real, dimension(lt2) :: f_p
 
+      integer n
+
+      n = nx1*ny1*nz1*nelt
+
 !     --> Copy the initial condition to Nek.
-      call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), qx,qy,qz,qp,qt)
+      call nopcopy(vx, vy, vz, pr, t(1,1,1,1,1), qx, qy, qz, qp, qt)
 
 !     --> Turn-off the linearized solver.
       ifpert = .false. ; call bcast(ifpert, lsize)
@@ -309,8 +320,11 @@
       call nopsub2(f_x,f_y,f_z,f_p,f_t, qx,qy,qz,qp,qt)
       call nopchsign(f_x,f_y,f_z,f_p,f_t)
 
+!     --> Pass current guess as base flow for the linearized calculation.
+      call opcopy(ubase, vbase, wbase, qx, qy, qz) ; call copy(tbase, qt, n)
+
       return
-      end subroutine forward_map
+      end subroutine nonlinear_forward_map
 
 
       subroutine newton_krylov_prepare
