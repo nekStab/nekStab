@@ -128,11 +128,9 @@ c-----------------------------------------------------------------------
       integer ix,iy,iz,ieg,iel,ip
 
       iel=gllel(ieg)
-      if (jp.eq.0) then
-         ffx = ffx + fcx(ix,iy,iz,iel)
-         ffy = ffy + fcy(ix,iy,iz,iel)
-         if (if3d) ffz = ffz + fcz(ix,iy,iz,iel)
-      endif
+      ffx = ffx + fcx(ix,iy,iz,iel)
+      ffy = ffy + fcy(ix,iy,iz,iel)
+      if (if3d) ffz = ffz + fcz(ix,iy,iz,iel)
 
       if (spng_str.gt.0) then
          ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
@@ -162,7 +160,7 @@ c-----------------------------------------------------------------------
 
       iel=gllel(ieg)            !SUM HERE NEKSTAB CUSTOM TEMP FORCING
       if (jp.eq.0) temp  = temp + fct(ix,iy,iz,iel)
-      
+
       if (spng_str.gt.0) then   !!!HERE SPONGE STRENGHT ALWAYS UNITY!
          ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
          if (jp.eq.0) then      ! dns ! t(1,1,1,1,ifield-1)
@@ -393,11 +391,11 @@ c-----------------------------------------------------------------------
       xlx = xmx - xmn
       yly = ymx - ymn
       zlz = zmx - zmn
-      
+
       alpha = 2*pi/zlz
-      
+
 !     --> Create the initial velocity perturbation.
-      
+
       do iel=1,NELV
          do kl=1,NZ1
             do jl=1,NY1
@@ -407,7 +405,7 @@ c-----------------------------------------------------------------------
                   x = XM1(il,jl,kl,iel)
                   y = YM1(il,jl,kl,iel)
                   if (if3D) z = ZM1(il,jl,kl,iel)
-                  
+
 !     -> Construct the perturbation. ! Note: Spanwise invariant.
                   qx(il,jl,kl,iel) = cos(alpha*z)*sin(2.*pi*y)
                   qz(il,jl,kl,iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
@@ -417,7 +415,7 @@ c-----------------------------------------------------------------------
             enddo
          enddo
       enddo
-      
+
       amp = glsc3(qx, bm1, qx, ntot)+ glsc3(qy, bm1, qy, ntot)
       if(if3d) amp = amp + glsc3(qz, bm1, qz, ntot)
       amp = 1e-6/(0.50d0*amp)
@@ -444,7 +442,7 @@ c-----------------------------------------------------------------------
       subroutine nopcopy(a1,a2,a3,a4,a5, b1,b2,b3,b4,b5)
       implicit none
       include 'SIZE'
-      include 'INPUT' 
+      include 'INPUT'
       integer n,n2
       real a1(1),a2(1),a3(1),a4(1),a5(1),b1(1),b2(1),b3(1),b4(1),b5(1)
       n=nx1*ny1*nz1*nelv
@@ -618,7 +616,7 @@ c-----------------------------------------------------------------------
       enddo
 
       return
-      end subroutine compute_sb 
+      end subroutine compute_sb
 c-----------------------------------------------------------------------
       subroutine outpost_blayer_pert
       implicit none
@@ -630,7 +628,7 @@ c-----------------------------------------------------------------------
       real ampx, ampy, glamax
       integer n
       logical ifto_sav, ifpo_sav
-      
+
       n = nx1*ny1*nz1*nelv
 
       if((istep.eq.0).OR.ifoutfld)then
@@ -641,7 +639,7 @@ c-----------------------------------------------------------------------
          call outpost( do1,do2,do3,pr,t,'per')
          ifto = ifto_sav ; ifpo = ifpo_sav
 
-         ampx = glamax(do1,n)      
+         ampx = glamax(do1,n)
          ampy = glamax(do2,n)
 
          if(nid.eq.0)then
@@ -652,7 +650,7 @@ c-----------------------------------------------------------------------
             write(111,"(6E15.7)")time,uparam(06),ampx,ampy,ampx**2,ampy**2
             if(istep.eq.nsteps)close(111)
          endif
-      endif      
+      endif
       return
       end
 c-----------------------------------------------------------------------
@@ -679,7 +677,7 @@ c-----------------------------------------------------------------------
          write(6,*)'delta99_0=',delta99_0
          write(6,*)'delta_star=',delta_star
          write(6,*)'u_0=',u_0
-         write(6,*)'x_0=',x_0 
+         write(6,*)'x_0=',x_0
          write(6,*)'x_inflow=',x_inflow
          write(6,*)'x_m=',x_m
       endif
@@ -694,7 +692,7 @@ c-----------------------------------------------------------------------
          if(x.eq.xmn)write(6,*)'if x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
          if(x.eq.x_m)write(6,*)'sb x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
          if(x.eq.xmx)write(6,*)'of x,rex=',real(x,4),real(rex,4),real(sqrt(rex),4)
-         
+
          eta = y*sqrt(rex)/x_t
          call blasius(ub(i),vb(i),eta,rex)
 
@@ -712,10 +710,10 @@ c-----------------------------------------------------------------------
       parameter (lb=100)
       real blasius_soln(0:4,0:lb)
       save blasius_soln
-c     
+c
 c     Algorithm found in Lighthills monograph on mathematical fluid mech.
 c     (c. of M. Choudhari)
-c     
+c
       real  w(4)
 
       twok2 =  1.6551903602308323382003140460740
