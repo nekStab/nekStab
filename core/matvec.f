@@ -57,28 +57,28 @@
 
 !     Dispatch the correct matrix-vector product to the Arnoldi factorization.
 !     All subroutines need to have the same interface.
-!
+!     
 !     NOTE : The baseflow needs to be pass to (ubase, vbase, wbase, tbase)
-!            before this function is called.
-!
+!     before this function is called.
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     qx, qy, qz, qt : nek-arrays of size lt
-!                      Initial velocity and temperature components.
-!
+!     Initial velocity and temperature components.
+!     
 !     qp : nek-array of size lt2
-!          Initial pressure component.
-!
+!     Initial pressure component.
+!     
 !     OUTPUTS
 !     -------
-!
+!     
 !     fx, fy, fz, ft : nek-arrays of size lt
-!                      Final velocity and temperature components.
-!
+!     Final velocity and temperature components.
+!     
 !     fp : nek-array of size lt2
-!          Final pressure component.
-!
+!     Final pressure component.
+!     
 
       implicit none
       include 'SIZE'
@@ -117,6 +117,10 @@
       endif
 
 !     --> Direct-Adjoint for optimal transient growth.
+      if (uparam(01) .eq. 3.3) then
+         evop="p"
+         call transient_growth_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      endif
 
 !     --> Linearized forward map for the Newton-Krylov solver.
       if (floor(uparam(01)) .eq. 1) then
@@ -146,9 +150,9 @@
 !     Integrate forward in time the linearized Navier-Stokes equations.
 !     Denoting by L the Jacobian of the Navier-Stokes equations, the corresponding
 !     matrix vector product is thus
-!
+!     
 !     x(t) = exp(t * L) * x(0)
-!
+!     
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -207,9 +211,9 @@
 !     Integrate forward in time the adjoint Navier-Stokes equations.
 !     Denoting by L adjoint Navier-Stokes operator, the corresponding
 !     matrix vector product is thus
-!
+!     
 !     x(t) = exp(t * L) * x(0)
-!
+!     
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -323,3 +327,39 @@
 
       return
       end subroutine ts_force_sensitivity_map
+
+
+
+
+!-----------------------------------------------------------------------
+
+
+
+
+      subroutine transient_growth_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'ADJOINT'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+      real, dimension(lt) :: qx, qy, qz, qt
+      real, dimension(lt2) :: qp
+
+      real, dimension(lt) :: fx, fy, fz, ft
+      real, dimension(lt2) :: fp
+
+! --> Evaluate the forward map.
+      call forward_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+! --> Initial condition for adjoint is final condition of direct.
+      call nopcopy(qx, qy, qz, qp, qt, fx, fy, fz, fp, ft)
+
+! --> Evaluate the adjoint map.
+      call adjoint_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+
+      return
+      end subroutine transient_growth_map
