@@ -1,0 +1,43 @@
+[GENERAL]
+startFrom = 0
+stopAt = endTime
+endTime = 1.0
+
+userParam01 = 4.31  # 0:dns,1:stabilization,3:stability
+userParam02 = 0  # krylov snapshot to load
+userParam03 = 0  # stabilization technique: 1:sfd
+userParam04 = 0  # freq (Strouhal leading mode)
+userParam05 = 0  # gain (twice growth rate leading mode)
+userParam06 = 0  #
+userParam07 = 128 # k_dim
+userParam08 = 0  # sponge lenght left
+userParam09 = 0  # sponge lenght right
+userParam10 = 0 # sponge strenght
+
+
+# all should be automatic in time! 
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 10.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-10
+residualProj = no
+density = 1.0
+viscosity = -50.0

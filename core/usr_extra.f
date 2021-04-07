@@ -198,17 +198,19 @@ c-----------------------------------------------------------------------
          if(uparam(3).eq.3)then
             if(nid.eq.0)write(6,*) 'forcing uparam(3) to ZERO!!!!! OTHERWISE CRASH'
             uparam(3)=0; call bcast(uparam, 1*wdsize)
-
          endif
          call Krylov_Schur
          call nek_end
 
       case(4)                   ! in postprocessing.f
 
+!     -----> Wavemaker computation.
          if(uparam(01) .eq. 4.1) call wave_maker
 
+!     -----> Baseflow sensitivity.
          if(uparam(01) .eq. 4.2) call BF_sensitivity
 
+!     -----> Sensitivity to steady force.
          if( (uparam(01) .eq. 4.31) .or. (uparam(01) .eq. 4.32) ) then
             call ts_steady_force_sensitivity()
          end if
@@ -377,7 +379,7 @@ c-----------------------------------------------------------------------
       end subroutine nekStab_printNEKParams
 c-----------------------------------------------------------------------
       subroutine nekStab_energy(px, py, pz, pt, fname, skip)
-!     
+!
       implicit none
       include 'SIZE'
       include 'TOTAL'
