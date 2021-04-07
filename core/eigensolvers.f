@@ -991,3 +991,56 @@ c-----------------------------------------------------------------------
 
       return
       end function log_transform
+
+
+      subroutine power_iteration
+
+          implicit none
+          include 'SIZE'
+          include 'TOTAL'
+
+          integer, parameter :: lt = lx1*ly1*lz1*lelt
+          integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+          ! -->
+          real, dimension(lt) :: qx, qy, qz, qt
+          real, dimension(lt2) :: qp
+
+          ! -->
+          real, dimension(lt) :: fx, fy, fz, ft
+          real, dimension(lt2) :: fp
+
+          real :: alpha, beta
+          integer :: n, i, j
+          character(len=80) :: filename
+
+          n = nx1 * ny1 * nz1 * nelt
+
+          write(filename,'(a,a,a)')'BF_',trim(SESSION),'0.f00001'
+          if(nid.eq.0)write(*,*)'Loading base flow: ',filename
+          call load_fld(filename)
+          call opcopy(ubase,vbase,wbase,vx,vy,vz)
+          if(ifto) call copy(tbase,t(1,1,1,1,1),n)
+
+          call krylov_schur_prepare
+
+          call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
+          call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
+          call nopcopy(qx, qy, qz, qp, qt, vxp(:,1), vyp(:,1), vzp(:,1), prp(:,1), tp(:,1,1))
+
+          call outpost(qx, qy, qz, qp, qt, "PRT")
+
+          do i = 1, 10
+              call matvec(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+              call inner_product(alpha, fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+              call norm(qx, qy, qz, qp, qt, beta)
+              if (nid.EQ.0) write(*, *) "Rayleigh Quotient : ", alpha/beta, alpha, beta
+              call nopcopy(qx, qy, qz, qp, qt, fx, fy, fz, fp, ft)
+              call normalize(qx, qy, qz, qp, qt, alpha)
+              call outpost(qx, qy, qz, qp, qt, "PRT")
+          enddo
+
+          call nek_end
+
+          return
+      end subroutine power_iteration
