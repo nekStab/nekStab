@@ -9,20 +9,20 @@
 !     Provided the direct and adjoint modes have already been computed,
 !     this function computes the wavemaker following the formulation by
 !     Giannetti et al. [1]. Set uparam(01) = 4.1 in the par file to use it.
-!
+!     
 !     OUTPOST
 !     -------
-!
+!     
 !     wm_blah0.f000001 : Nek file. The wavemaker is stored in the array
 !     for the temperature.
-!
+!     
 !     References
 !     ----------
-!
+!     
 !     [1] Giannetti F. & Luchini P.
 !     Structural sensitivity of the first instability of the cylinder wake.
 !     J. Fluid Mech., vol 581., 2007.
-!
+!     
 !     NOTE : This implementation does not apply to cases involving temperature
 !     or any other scalar.
 
@@ -93,13 +93,13 @@
 !     Provided the direct and adjoint modes have been computed,
 !     this function computes the baseflow sensitivity following
 !     the formulation by Marquet et al. [1].
-!
+!     
 !     OUTPOST
 !     -------
-!
+!     
 !     References
 !     ----------
-!
+!     
 !     [1]
 
       implicit none
@@ -173,7 +173,7 @@
       call load_fld(filename)
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 
-      !     --> Normalize the adjoint mode.
+!     --> Normalize the adjoint mode.
       call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
 
 !     gradient computation
@@ -297,15 +297,15 @@
 !     A time-stepper formulation of the problem is used and
 !     the linearized system is solved using GMRES. Set uparam(01) = 4.31
 !     to compute the real part and uparam(01) = 4.32 for the imaginary one.
-!
+!     
 !     OUTPOST
 !     -------
-!
+!     
 !     fsr_blah0.f00001 / fsi_blah0.f00001 : Sensitivity fields.
-!
+!     
 !     References
 !     ----------
-!
+!     
 !     [1] Marquet O., Sipp D. and Jacquin L.
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
