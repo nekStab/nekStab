@@ -9,20 +9,20 @@
 !     Provided the direct and adjoint modes have already been computed,
 !     this function computes the wavemaker following the formulation by
 !     Giannetti et al. [1]. Set uparam(01) = 4.1 in the par file to use it.
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     wm_blah0.f000001 : Nek file. The wavemaker is stored in the array
 !     for the temperature.
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Giannetti F. & Luchini P.
 !     Structural sensitivity of the first instability of the cylinder wake.
 !     J. Fluid Mech., vol 581., 2007.
-!     
+!
 !     NOTE : This implementation does not apply to cases involving temperature
 !     or any other scalar.
 
@@ -93,13 +93,13 @@
 !     Provided the direct and adjoint modes have been computed,
 !     this function computes the baseflow sensitivity following
 !     the formulation by Marquet et al. [1].
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1]
 
       implicit none
@@ -297,15 +297,15 @@
 !     A time-stepper formulation of the problem is used and
 !     the linearized system is solved using GMRES. Set uparam(01) = 4.31
 !     to compute the real part and uparam(01) = 4.32 for the imaginary one.
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     fsr_blah0.f00001 / fsi_blah0.f00001 : Sensitivity fields.
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Marquet O., Sipp D. and Jacquin L.
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
@@ -328,6 +328,7 @@
 !     ----- Misc.
       character(len=80) :: filename
       character(len=3) :: prefix
+      real :: alpha
 
 !     --> Load base flow.
       write(filename, '(a, a, a)') 'BF_', trim(session), '0.f00001'
@@ -351,8 +352,14 @@
 !     --> Recast rhs into time-stepper/discrete-time framework.
       call initialize_rhs_ts_steady_force_sensitivity(rhs_x, rhs_y, rhs_z)
 
+      ! --> Normalize right-hand side for simplicity in gmres.
+      call normalize(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, alpha)
+
 !     --> Solve the linear system.
       call ts_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, 10, k_dim)
+
+      ! -->
+      call nopcmult(sol_x, sol_y, sol_z, sol_p, sol_t, alpha)
 
 !     --> Outpost solution.
       call outpost(sol_x, sol_y, sol_z, sol_p, sol_t, prefix)
@@ -382,9 +389,17 @@
       real, dimension(lt) :: rhs_x, rhs_y, rhs_z
       real, dimension(lt) :: fx, fy, fz
 
+      integer :: n
+
+      n = nx1*ny1*nz1*nelt
+
 !     --> Setup the parameters for the linearized solver.
       ifpert = .true. ; ifadj = .true.
       call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
+
+      ! -->
+      call opcopy(vx, vy, vz, ubase, vbase, wbase)
+      if (ifheat) call copy(t, tbase, n)
 
 !     --> General initialization of the linear solver.
       call prepare_linearized_solver()
