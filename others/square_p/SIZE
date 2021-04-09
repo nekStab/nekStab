@@ -10,8 +10,8 @@ c
 
       ! BASIC
       parameter (ldim=2)               ! domain dimension (2 or 3)
-      parameter (lx1=06)!04,06,08,10,12 ! GLL points per element along each direction
-      parameter (lxd=09)!06,09,12,15,18 ! GL  points for over-integration (dealiasing)
+      parameter (lx1=10)!04,06,08,10,12 ! GLL points per element along each direction
+      parameter (lxd=15)!06,09,12,15,18 ! GL  points for over-integration (dealiasing)
       parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
 
       parameter (lelg=1980)            ! max number of global elements
@@ -55,7 +55,7 @@ c
       common /SPONGER/ spng_str2, spng_wl2, spng_wr2, spng_dl2, spng_dr2
 
       logical ifvans
-      real vansforce_x(LX1,LY1,LZ1,LELV),
-     $ vansforce_y(LX1,LY1,LZ1,LELV),
-     $ vansforce_z(LX1,LY1,LZ1,LELV)
+      real vansforce_x(lx1,ly1,lz1,lelt),
+     $ vansforce_y(lx1,ly1,lz1,lelt),
+     $ vansforce_z(lx1,ly1,lz1,lelt)
       common /vansforce/ vansforce_x, vansforce_y, vansforce_z, ifvans

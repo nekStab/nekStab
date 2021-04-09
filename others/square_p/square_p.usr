@@ -19,9 +19,6 @@ c-----------------------------------------------------------------------
          bst_skp = 0; call bcast(bst_skp,isize)
          bst_snp = 0 ; call bcast(bst_snp,isize)
 
-      
-      
-
       endif
       return 
       end subroutine nekstab_usrchk
@@ -50,7 +47,7 @@ c-----------------------------------------------------------------------
       !scale = 2.  ! Cd = F/(.5 rho U^2 ) = 2*F
       !if (mod(istep,10).eq.0) call torque_calc(scale,x0,.true.,.false.)
       
-      spng_str2 = uparam(08) !penalization forcing strenght
+      spng_str2 = uparam(07) !penalization forcing strenght
       d_cube = 0.4 !hakf cube diamter ! must match the mesh
       d_sponge = 0.1 !sponge thickness 
       !D_TOTAL = D_CUBE + 2*D_SPONGE = 1.0 !
@@ -62,8 +59,10 @@ c-----------------------------------------------------------------------
         call spng_init2
       endif
 
-      if(ifvans)call vansforcing          ! Soubroutine to calculate the forcing   
-
+      if(ifvans)then
+         call oprzero(vansforce_x,vansforce_y,vansforce_z)
+         call vans_forcing ! Soubroutine to calculate the forcing   
+      endif
       return
       end
 c-----------------------------------------------------------------------
@@ -77,10 +76,10 @@ c-----------------------------------------------------------------------
       ffz = 0.0d0
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
-      if(ifvans)then
-         ffx = ffx + vansforce_x(ix,iy,iz,ie) 
-         ffy = ffy + vansforce_y(ix,iy,iz,ie)
-         ffz = ffz + vansforce_z(ix,iy,iz,ie)
+      if(ifvans.and.istep.gt.100)then
+         ffx = ffx + vansforce_x(ix,iy,iz,ieg)
+         ffy = ffy + vansforce_y(ix,iy,iz,ieg)
+         ffz = ffz + vansforce_z(ix,iy,iz,ieg)
       else ! birkman model
          call penalization_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
       endif
@@ -134,23 +133,6 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine uservp (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      udiff = 0.0d0
-      utrans = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine userq (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      qvol = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
       subroutine usrdat
       return
       end
@@ -164,13 +146,6 @@ c-----------------------------------------------------------------------
       integer isideset1
       ntot = nx1*ny1*nz1*nelv	  
       call rzero(bcflag,ntot)
-
-
-! W           2
-! lower           3
-! O           4
-! upper           5
-! v           6
 
       do iel=1,nelv
       do ifc=1,2*ndim
@@ -201,11 +176,7 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine usrdat3
-      return
-      end
-c-----------------------------------------------------------------------
-c PENALIZATION LAYER AROUND THE SQUARE CYLINDER      
+c     PENALIZATION LAYER AROUND THE SQUARE CYLINDER      
 c-----------------------------------------------------------------------
       subroutine penalization_forcing (ffx,ffy,ffz,ix,iy,iz,ieg)
       implicit none
@@ -291,52 +262,52 @@ c-----------------------------------------------------------------------
          ! for every dimension
          do il=1,NDIM
 
-          if (spng_wl2(il).gt.0.0.or.spng_wr2(il).gt.0.0) then
+         if (spng_wl2(il).gt.0.0.or.spng_wr2(il).gt.0.0) then
 
-             xxmax   = d_cube  !+ spng_wr2(il)! sponge beginning (rise at xmax; right)
-             xxmin   = -d_cube !- spng_wl2(il)! end (drop at xmin; left)
-             xxmax_c = xxmax   + spng_dr2(il)! beginnign of constant part (right)
-             xxmin_c = xxmin   - spng_dl2(il)! beginnign of constant part (left)
+            xxmax   = d_cube  !+ spng_wr2(il)! sponge beginning (rise at xmax; right)
+            xxmin   = -d_cube !- spng_wl2(il)! end (drop at xmin; left)
+            xxmax_c = xxmax   + spng_dr2(il)! beginnign of constant part (right)
+            xxmin_c = xxmin   - spng_dl2(il)! beginnign of constant part (left)
 
-             ! get SPNG_FUN
-             if (xxmax.le.xxmin) then
-                write(6,*)'Sponge too wide'
-             else
-                ! this should be done by pointers, but for now I avoid it
-                if (il.eq.1) then
-                   call copy(lcoord,XM1, ntot)
-                elseif (il.eq.2) then
-                   call copy(lcoord,YM1, ntot)
-                elseif (il.eq.3) then
-                   call copy(lcoord,ZM1, ntot)
-                endif
+            ! get SPNG_FUN
+            if (xxmax.le.xxmin) then
+               write(6,*)'Sponge too wide'
+            else
+               ! this should be done by pointers, but for now I avoid it
+               if (il.eq.1) then
+                  call copy(lcoord,XM1, ntot)
+               elseif (il.eq.2) then
+                  call copy(lcoord,YM1, ntot)
+               elseif (il.eq.3) then
+                  call copy(lcoord,ZM1, ntot)
+               endif
 
-                do jl=1,ntot
-                   rtmp = lcoord(jl)
-                   !if(rtmp.le.xxmin_c) then ! constant; xmin
-                   !   rtmp=1.0d0
-                   !elseif(rtmp.lt.xxmin) then ! fall; xmin
-                   !   arg = (xxmin-rtmp)/spng_wl2(il)
-                   !   rtmp = 0.0d0 !mth_stepf(arg)
-                   !elseif (rtmp.le.xxmax) then ! zero
-                   !   rtmp = 0.0d0
-                   !else
-                   if ( rtmp.ge.xxmin_c .and. rtmp.le.xxmax_c) then ! rise
-                      !arg = (rtmp-xxmax)/spng_wr2(il)
-                      rtmp = 0.0d0!mth_stepf(arg)
-                   else    ! constant
-                      rtmp = 1.0d0
-                   endif
-                   spng_fun2(jl)=max(spng_fun2(jl),rtmp)
-                enddo
+               do jl=1,ntot
+                  rtmp = lcoord(jl)
+                  !if(rtmp.le.xxmin_c) then ! constant; xmin
+                  !   rtmp=1.0d0
+                  !elseif(rtmp.lt.xxmin) then ! fall; xmin
+                  !   arg = (xxmin-rtmp)/spng_wl2(il)
+                  !   rtmp = 0.0d0 !mth_stepf(arg)
+                  !elseif (rtmp.le.xxmax) then ! zero
+                  !   rtmp = 0.0d0
+                  !else
+                  if ( rtmp.ge.xxmin_c .and. rtmp.le.xxmax_c) then ! rise
+                     !arg = (rtmp-xxmax)/spng_wr2(il)
+                     rtmp = 0.0d0!mth_stepf(arg)
+                  else    ! constant
+                     rtmp = 1.0d0
+                  endif
+                  spng_fun2(jl)=max(spng_fun2(jl),rtmp)
+               enddo
 
-             endif  ! xxmax.le.xxmin
-          endif  ! spng_w(il).gt.0.0
-       enddo
+            endif  ! xxmax.le.xxmin
+         endif  ! spng_w(il).gt.0.0
+      enddo
 
       spg_max = glmax(spng_fun2,ntot)
       do jl=1,LX1*LY1*LZ1*LELV
-        spng_fun2(jl)=(spg_max-spng_fun2(jl))*spng_str2
+      spng_fun2(jl)=(spg_max-spng_fun2(jl))*spng_str2
       enddo
 
       ltmp = ifto; ltmp2 = ifpo
@@ -347,29 +318,119 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine vansforcing
+      subroutine set_eps(tmp1,coord,a,b)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      real tmp1(1),coord(1),a,b
+      integer n,i
+      n = nx1*ny1*nz1*nelv
+      call rzero(tmp1,n)
+      do i=1,n
+         tmp1(i)=(0.5d0+0.5d0*tanh((coord(i)+a)/b))*(0.5d0-0.5d0*tanh((coord(i)-a)/b))
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      function sech(x)
+      IMPLICIT NONE
+      REAL :: sech
+      REAL, INTENT(IN) :: x
+      sech=1.0d0/cosh(x)
+      end function
+c-----------------------------------------------------------------------
+      subroutine set_deps(tmp1,coord,a,b)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      real tmp1(1),coord(1),a,b,sech,x
+      integer n,i
+      n = nx1*ny1*nz1*nelv
+      call rzero(tmp1,n)
+      do i=1,n
+         x=coord(i)
+         tmp1(i)=(sech((x-a)/b)**2*(-0.250d0+0.250d0*tanh((-x-a)/b))+sech((-x-a)/b)**2*(0.250d0-0.250d0*tanh((x-a)/b)))/b
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine set_d2eps(tmp1,coord,a,b)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      real tmp1(1),coord(1),a,b,sech,x
+      integer n,i
+      n = nx1*ny1*nz1*nelv
+      call rzero(tmp1,n)
+      do i=1,n
+         x=coord(i)
+         tmp1(i)=(-0.5*sech((a+x)/b)**2*sech((x-a)/b)**2)/b**2-(sech((a+x)/b)**2*tanh((a+x)/b)*
+     $           (0.5-0.5*tanh((x-a)/b)))/b**2+(sech((x-a)/b)**2*(0.5+0.5*tanh((a+x)/b))*tanh((x-a)/b))/b**2
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine vans_forcing
       ! Volume-Averaged-NS based on ...
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      
-      real, dimension(lx1,ly1,lz1,lelt) :: dum, vxy, vxx, vyy, vyx, vzy ,vzx , oym1
-      real, dimension(lx1,ly1,lz1,lelt) :: eps,epsy,dyeps,ddyeps,epsx,dxeps,ddxeps,coeff,kappa,Dar,Fo
-      real, dimension(lx1,ly1,lz1,lelt) :: absu
-      real Reb,dph,deltab,epsc,glmax,gmax,y,x,cd1,cd2 
+
+      real, dimension(lx1,ly1,lz1,lelt) :: dum, vxy, vxx, vyy, vyx, vzy ,vzx, absu
+      real, dimension(lx1,ly1,lz1,lelt), save :: eps,dxeps,dyeps,dzeps,ddxeps,ddyeps,ddzeps
+      real, dimension(lx1,ly1,lz1,lelt), save :: coeff,Dar,Fo,coeffx,coeffy,coeffz
+      real Reb,dph,deltab,epsc,glmax,gmax,y,x,cd1,cd2,halfdx,halfdy,halfdz
       integer e,k,j,i,lt,n,a,b,c,d
       logical ifto_sav, ifpo_sav
 
       n = nx1*ny1*nz1*nelt
-      Reb    =    1/abs(param(2))
-      dph    =    0.01d0
-      deltab =    0.02
-      epsc   =    0.65  ! porosity?
+      Reb    =    1.0d0/abs(param(2))
+      dph    =    0.01 ! d_p -> mean particle diameter
+      halfdx =    0.5  ! H ~ porous layer thickness 
+      halfdy =    1
+      halfdz =    0.5
+      deltab =    0.04 ! delta_i = 0.02 - porous layer interface
+      epsc   =    0.95  ! porosity
 
       if(nid.eq.0)write(6,*)' Computing VANS forcing...'
 
-      call copy(oym1,spng_fun2,n) ! 1 porous 0 fluid
-      call copy(coeff,ym1,xm1,n) ! 1 porous 0 fluid
+      if(istep.eq.0)then ! compute just once
+      call set_eps(coeffx,xm1,halfdx,deltab)
+      call set_eps(coeffy,ym1,halfdy,deltab)
+      call set_eps(coeffz,zm1,halfdz,deltab)
+      do i=1,n
+         coeff(i,1,1,1)=coeffx(i,1,1,1)*coeffy(i,1,1,1)*coeffz(i,1,1,1)
+         eps(i,1,1,1)=1.0d0-((1.0d0-epsc)*coeff(i,1,1,1))
+         Dar(i,1,1,1) = ((dph**2)*(eps(i,1,1,1)**3))/(180*((1.0d0-eps(i,1,1,1))**2))
+         Fo(i,1,1,1) = (eps(i,1,1,1)*dph*Reb) / (100.0d0*(1.0d0-eps(i,1,1,1)))
+      enddo
+
+      call set_deps(dxeps,xm1,halfdx,deltab)
+      call col2(dxeps,coeffy,n)
+      call col2(dxeps,coeffz,n)
+
+      call set_deps(dyeps,ym1,halfdy,deltab)
+      call col2(dyeps,coeffx,n)
+      call col2(dyeps,coeffz,n)
+
+      call set_deps(dzeps,zm1,halfdz,deltab)
+      call col2(dzeps,coeffx,n)
+      call col2(dzeps,coeffy,n)
+
+      call set_d2eps(ddxeps,xm1,halfdx,deltab)
+      call col2(ddxeps,coeffy,n)
+      call col2(ddxeps,coeffz,n)
+
+      call set_d2eps(ddyeps,ym1,halfdy,deltab)
+      call col2(ddyeps,coeffx,n)
+      call col2(ddyeps,coeffz,n)
+
+      call set_d2eps(ddzeps,zm1,halfdz,deltab)
+      call col2(ddzeps,coeffx,n)
+      call col2(ddzeps,coeffy,n)
+
+      endif 
+
 
       call gradm1(dum,vxy,dum,vx)
       call col2(vxy,bm1,n)
@@ -380,7 +441,7 @@ c-----------------------------------------------------------------------
       call col2(vxx,bm1,n)
       call dssum(vxx,nx1,ny1,nz1)
       call col2(vxx,binvm1,n)
-      
+
       call gradm1(dum,vyy,dum,vy)
       call col2(vyy,bm1,n)
       call dssum(vyy,nx1,ny1,nz1)
@@ -390,7 +451,8 @@ c-----------------------------------------------------------------------
       call col2(vyx,bm1,n)
       call dssum(vyx,nx1,ny1,nz1)
       call col2(vyx,binvm1,n)
-      
+
+      if(if3d)then
       call gradm1(dum,vzy,dum,vz)
       call col2(vzy,bm1,n)
       call dssum(vzy,nx1,ny1,nz1)
@@ -400,151 +462,66 @@ c-----------------------------------------------------------------------
       call col2(vzx,bm1,n)
       call dssum(vzx,nx1,ny1,nz1)
       call col2(vzx,binvm1,n)
+      endif
 
       do e=1,nelv
-         do k=1,NZ1
-            do j=1,NY1
-               do i=1,NX1
+      do k=1,NZ1
+      do j=1,NY1
+      do i=1,NX1
 
-                  cd1=-0.5+deltab
-                  cd2=0.5-deltab
+               absu(i,j,k,e) = sqrt ( vx(i,j,k,e)**2  + vy(i,j,k,e)**2 + vz(i,j,k,e)**2)
+               
+               a=vx(i,j,k,e)*vx(i,j,k,e)*dxeps(i,j,k,e)+vx(i,j,k,e)*vy(i,j,k,e)*dyeps(i,j,k,e)
+               b=dxeps(i,j,k,e)*vxx(i,j,k,e)+dyeps(i,j,k,e)*vxy(i,j,k,e)
+               c=absu(i,j,k,e)*vx(i,j,k,e)
+               d=ddxeps(i,j,k,e)+ddyeps(i,j,k,e)-(eps(i,j,k,e)/Dar(i,j,k,e))
 
-                  if (ym1(i,j,k,e).ge.0.5 .and. ym1(i,j,k,e).le.-0.5 .and. xm1(i,j,k,e).le.-0.5 .and xm1(i,j,k,e).ge.0.5) then ! fluidzone
-         
-                     eps(i,j,k,e)    = 1
-                     coeff(i,j,k,e)  = 0
-                     Dar(i,j,k,e)    = 1
-                     Fo(i,j,k,e)     = 1
-
-                  elseif ((ym1(i,j,k,e).gt.cd2 .and. ym1(i,j,k,e).lt.cd1 .and. xm1(i,j,k,e).gt.cd2 .and. xm1(i,j,k,e).lt.cd1 )) then 
-                     
-                     a=-6 *(epsc-1)*(ym1(i,j,k,e)/deltab)**5
-                     b=-15 *(epsc-1)*(ym1(i,j,k,e)/deltab)**4
-                     c=-10 *(epsc-1)*(ym1(i,j,k,e)/deltab)**3
-                     d=1
-                     epsy(i,j,k,e)= a+b+c+d
-                     a=-30 *(epsc-1)*(ym1(i,j,k,e)/deltab)**4*(1/deltab)
-                     b=-60 *(epsc-1)*(ym1(i,j,k,e)/deltab)**3*(1/deltab)
-                     c=-30 *(epsc-1)*(ym1(i,j,k,e)/deltab)**2*(1/deltab)
-                     dyeps(i,j,k,e)=a+b+c
-                     a=-120 *(epsc-1)*(ym1(i,j,k,e)/deltab)**3*(1/deltab)**2
-                     b=-180 *(epsc-1)*(ym1(i,j,k,e)/deltab)**2*(1/deltab)**2 
-                     c=-60 *(epsc-1)*(ym1(i,j,k,e)/deltab)**1*(1/deltab)**2              
-                     ddyeps(i,j,k,e)=a+b+c
-
-                     a=-6 *(epsc-1)*(xm1(i,j,k,e)/deltab)**5
-                     b=-15 *(epsc-1)*(xm1(i,j,k,e)/deltab)**4
-                     c=-10 *(epsc-1)*(xm1(i,j,k,e)/deltab)**3
-                     d=1
-                     epsx(i,j,k,e)= a+b+c+d
-                     a=-30 *(epsc-1)*(xm1(i,j,k,e)/deltab)**4*(1/deltab)
-                     b=-60 *(epsc-1)*(xm1(i,j,k,e)/deltab)**3*(1/deltab)
-                     c=-30 *(epsc-1)*(xm1(i,j,k,e)/deltab)**2*(1/deltab)
-                     dxeps(i,j,k,e)=a+b+c
-                     a=-120 *(epsc-1)*(xm1(i,j,k,e)/deltab)**3*(1/deltab)**2
-                     b=-180 *(epsc-1)*(xm1(i,j,k,e)/deltab)**2*(1/deltab)**2 
-                     c=-60 *(epsc-1)*(xm1(i,j,k,e)/deltab)**1*(1/deltab)**2              
-                     ddxeps(i,j,k,e)=a+b+c
-                     
-
-                     coeff(i,j,k,e) = 1
-                     eps(i,j,k,e)=(epsx(i,j,k,e)+epsy(i,j,k,e))/2
-                     kappa(i,j,k,e) = (dph**2 * eps(i,j,k,e)**3)/(180*(1-eps(i,j,k,e))**2)
-                     Dar(i,j,k,e) = kappa(i,j,k,e)
-                     Fo(i,j,k,e) = eps(i,j,k,e) * dph * Reb/(100*(1-eps(i,j,k,e)))
-                     usrdiv(i,j,k,e) = -(1/eps(i,j,k,e))*(dyeps(i,j,k,e)*vy(i,j,k,e)+dxeps(i,j,k,e)*vx(i,j,k,e))
-                     dxeps(i,j,k,e)=0
-                     ddxeps(i,j,k,e)=0
-
-
-                  else ! vans zone
-
-                     eps(i,j,k,e)    = epsc
-                     dyeps(i,j,k,e)  = 0.0d0
-                     ddyeps(i,j,k,e) = 0.0d0
-                     dxeps(i,j,k,e)  = 0.0d0
-                     ddxeps(i,j,k,e) = 0.0d0
-                     coeff(i,j,k,e)  = 1.0d0
-                     !print*, "vans" !Verifying if calculating vans
-                     kappa(i,j,k,e)  = (dph**2 * eps(i,j,k,e)**3) / (180*(1-eps(i,j,k,e))**2)
-                     Dar(i,j,k,e)    = kappa(i,j,k,e)
-                     Fo(i,j,k,e)     = eps(i,j,k,e) * dph * Reb / (100*(1-eps(i,j,k,e)))
-                        
-                     
-                  endif
-                  
-                  absu(i,j,k,e) = sqrt ( vx(i,j,k,e)**2  + vy(i,j,k,e)**2 + vz(i,j,k,e)**2)
-                  
-                  a=vx(i,j,k,e)*vx(i,j,k,e)*dxeps(i,j,k,e)+vx(i,j,k,e)*vy(i,j,k,e)*dyeps(i,j,k,e)
-                  b=dxeps(i,j,k,e)*vxx(i,j,k,e)+dyeps(i,j,k,e)*vxy(i,j,k,e)
-                  c=absu(i,j,k,e)*vx(i,j,k,e)
-                  d=ddxeps(i,j,k,e)+ddyeps(i,j,k,e)-(eps(i,j,k,e)/Dar(i,j,k,e))
-
-                  vansforce_x(i,j,k,e)= coeff(i,j,k,e)*((-1/eps(i,j,k,e))*a 
+               vansforce_x(i,j,k,e)= coeff(i,j,k,e)*((-1/eps(i,j,k,e))*a 
      $                +(1/(eps(i,j,k,e)*Reb))*b
      $                -(1/Reb)*(Fo(i,j,k,e)/Dar(i,j,k,e))*eps(i,j,k,e)*c
      $                +(1/(Reb*eps(i,j,k,e)))*d*vx(i,j,k,e)) 
 
-                  a=vy(i,j,k,e)*vx(i,j,k,e)*dxeps(i,j,k,e)+vy(i,j,k,e)*vy(i,j,k,e)*dyeps(i,j,k,e)
-                  b=dxeps(i,j,k,e)*vyx(i,j,k,e)+dyeps(i,j,k,e)*vyy(i,j,k,e)
-                  c=absu(i,j,k,e)*vy(i,j,k,e)
-                  d=ddxeps(i,j,k,e)+ddyeps(i,j,k,e)-(eps(i,j,k,e)/Dar(i,j,k,e))
+               a=vy(i,j,k,e)*vx(i,j,k,e)*dxeps(i,j,k,e)+vy(i,j,k,e)*vy(i,j,k,e)*dyeps(i,j,k,e)
+               b=dxeps(i,j,k,e)*vyx(i,j,k,e)+dyeps(i,j,k,e)*vyy(i,j,k,e)
+               c=absu(i,j,k,e)*vy(i,j,k,e)
+               d=ddxeps(i,j,k,e)+ddyeps(i,j,k,e)-(eps(i,j,k,e)/Dar(i,j,k,e))
 
-                  vansforce_y(i,j,k,e)= coeff(i,j,k,e)*((-1/eps(i,j,k,e))*a 
+               vansforce_y(i,j,k,e)= coeff(i,j,k,e)*((-1/eps(i,j,k,e))*a 
      $                +(1/(eps(i,j,k,e)*Reb))*b
      $                -(1/Reb)*(Fo(i,j,k,e)/Dar(i,j,k,e))*eps(i,j,k,e)*c
      $                +(1/(Reb*eps(i,j,k,e)))*d*vy(i,j,k,e)) 
-                  
-                  a=vz(i,j,k,e)*vx(i,j,k,e)*dxeps(i,j,k,e)+vz(i,j,k,e)*vy(i,j,k,e)*dyeps(i,j,k,e)
-                  b=dxeps(i,j,k,e)*vzx(i,j,k,e)+dyeps(i,j,k,e)*vzy(i,j,k,e)
-                  c=absu(i,j,k,e)*vz(i,j,k,e)
-                  d=ddxeps(i,j,k,e)+ddyeps(i,j,k,e)-(eps(i,j,k,e)/Dar(i,j,k,e))
+               
+               if(if3d)then
+               a=vz(i,j,k,e)*vx(i,j,k,e)*dxeps(i,j,k,e)+vz(i,j,k,e)*vy(i,j,k,e)*dyeps(i,j,k,e)
+               b=dxeps(i,j,k,e)*vzx(i,j,k,e)+dyeps(i,j,k,e)*vzy(i,j,k,e)
+               c=absu(i,j,k,e)*vz(i,j,k,e)
+               d=ddxeps(i,j,k,e)+ddyeps(i,j,k,e)-(eps(i,j,k,e)/Dar(i,j,k,e))
 
-                  vansforce_z(i,j,k,e)= coeff(i,j,k,e)*((-1/eps(i,j,k,e))*a 
+               vansforce_z(i,j,k,e)= coeff(i,j,k,e)*((-1/eps(i,j,k,e))*a 
      $                +(1/(eps(i,j,k,e)*Reb))*b
      $                -(1/Reb)*(Fo(i,j,k,e)/Dar(i,j,k,e))*eps(i,j,k,e)*c
      $                +(1/(Reb*eps(i,j,k,e)))*d*vz(i,j,k,e)) 
-                  
-               t(i,j,k,e,1)=vansforce_x(i,j,k,e)  
-                  
-               end do
-            end do
-         end do
+               endif   
       end do
-      
-         !write(*,*)'ym1(2,3,4,20)==============', ym1(2,3,4,20)
-         !write(*,*)'eps(2,3,4,20)==============', eps(2,3,4,20)
-         !write(*,*)'dyeps(2,3,4,20)==============', dyeps(2,3,4,20)
-         !write(*,*)'ddyeps(2,3,4,20)==============', ddyeps(2,3,4,20)
-         !write(*,*)'Dar(2,3,4,20)==============', Dar(2,3,4,20)
-         !
-         !write(*,*)'Fx(2,3,4,20)==============', vansforce_x(2,3,4,20)
-         !write(*,*)'Fy(2,3,4,20)==============', vansforce_y(2,3,4,20)
-         !write(*,*)'Fz(2,3,4,20)==============', vansforce_z(2,3,4,20)
-      
+      end do
+      end do
+      end do
 
       if ((istep.eq.0).OR.ifoutfld)then
-         ifto_sav = ifto; ifpo_sav = ifpo
-         ifvo=.false.; ifpo = .false.; ifto = .true. ! just outposting one field ... v's and p ignored 
-         call outpost(vx,vy,vz,pr,ym1  ,'vs1')
-         call outpost(vx,vy,vz,pr,eps   ,'vs2')
-         call outpost(vx,vy,vz,pr,dyeps ,'vs3')
-         call outpost(vx,vy,vz,pr,ddyeps,'vs4')
-         call outpost(vx,vy,vz,pr,coeff ,'vs5')
-         call outpost(vx,vy,vz,pr,Dar   ,'vs6')
-         call outpost(vx,vy,vz,pr,Fo    ,'vs7')
-         call outpost(vx,vy,vz,pr,vansforce_x    ,'vs8')
-         call outpost(vx,vy,vz,pr,vansforce_y   ,'vs9')
-         call outpost(vx,vy,vz,pr,vansforce_z    ,'vs10')
-         call outpost(vx,vy,vz,pr,xm1  ,'vs11')
 
-         ifvo=.true.; ifto = .false.
-         call outpost(vansforce_x,vansforce_y,vansforce_z,pr,t ,'vof')
-         ifpo = ifpo_sav; ifto = ifto_sav
+      ifto_sav = ifto; ifpo_sav = ifpo
+      ifvo=.false.; ifpo = .false.; ifto = .true. ! just outposting one field ... v's and p ignored 
+      call outpost(vx,vy,vz,pr,eps   ,'d0s')
+      call outpost(vx,vy,vz,pr,coeff ,'cof')
+      call outpost(vx,vy,vz,pr,Dar   ,'Dar')
+      call outpost(vx,vy,vz,pr,Fo    ,'Fo_')
+      ifvo=.true.; ifto = .false.
+      call outpost(vansforce_x,vansforce_y,vansforce_z,pr,t ,'VSf')
+      call outpost(dxeps,dyeps,dzeps,pr,t ,'d1s')
+      call outpost(ddxeps,ddyeps,ddzeps,pr,t,'d2s')
+      ifpo = ifpo_sav; ifto = ifto_sav
       endif
 
-
       return
-      end
-
-     
+      end subroutine vans_forcing
+c-----------------------------------------------------------------------
