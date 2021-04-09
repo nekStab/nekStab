@@ -2,6 +2,8 @@
 
 git submodule update --init --recursive
 
-cd Nek5000/tools
+cd Nek5000
+git checkout v19
 
-./maketools genmap genbox
+cd tools
+./maketools genmap genbox n2to3 gmsh2nek nekamg_setup

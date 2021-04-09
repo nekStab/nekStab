@@ -447,7 +447,8 @@ c     ----- Schur and Hessenberg decomposition -----
 !     --> Add the last generated Krylov vector as the new starting one.
       mstart = mstart + 1
 
-      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart), qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,ksize+1))
+      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart),
+     $             qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,ksize+1))
 
       return
       end subroutine schur_condensation
