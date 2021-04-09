@@ -65,7 +65,10 @@
       call opcopy(vx_aIm, vy_aIm, vz_aIm, vx, vy, vz)
 
 !     --> Normalize the adjoint mode.
-      call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
+      call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, 
+     $                      vx_dIm, vy_dIm, vz_dIm, pr, t, 
+     $                      vx_aRe, vy_aRe, vz_aRe, pr, t, 
+     $                      vx_aIm, vy_aIm, vz_aIm, pr, t)
 
 !     --> Compute the wavemaker.
       work1 = sqrt(vx_dRe**2 + vx_dIm**2 + vy_dRe**2 + vy_dIm**2 + vz_dRe**2 + vz_dIm**2)
@@ -174,7 +177,10 @@
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 
 !     --> Normalize the adjoint mode.
-      call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, vx_dIm, vy_dIm, vz_dIm, pr, t, vx_aRe, vy_aRe, vz_aRe, pr, t, vx_aIm, vy_aIm, vz_aIm, pr, t)
+      call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t,
+     $                     vx_dIm, vy_dIm, vz_dIm, pr, t, 
+     $                     vx_aRe, vy_aRe, vz_aRe, pr, t, 
+     $                     vx_aIm, vy_aIm, vz_aIm, pr, t)
 
 !     gradient computation
 !     real part of the direct mode
@@ -416,7 +422,10 @@
 
 
 
-      subroutine biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm)
+      subroutine biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, 
+     $                           vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, 
+     $                           vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, 
+     $                           vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm)
 
       implicit none
       include 'SIZE'
