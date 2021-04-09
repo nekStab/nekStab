@@ -10,14 +10,14 @@
 !     computation using a time-stepper formulation. The resolution of
 !     the linear system for each Newton iteration is sovled by means
 !     of GMRES.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     OUTPUTS
 !     -------
-!     
-!     
+!
+!
 !     Last edited : March 26th by JC Loiseau.
 
       implicit none
@@ -90,37 +90,37 @@
 
 !     Implementation of simple GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     rhs_x, rhs_y, rhs_z, rhs_t : nek arrays of size (lt).
 !     Arrays containing the right-hand side of the linear problem to be solved.
-!     
+!
 !     rhs_p : nek array of size (lt2)
 !     Array containing the right-hand side of the linear problem to be solved (pressure component).
-!     
+!
 !     maxiter : integer
 !     Maximum number of restarts for the GMRES computation.
-!     
+!
 !     ksize : integer
 !     Dimension of the Krylov subspace.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     sol_x, sol_y, sol_z, sol_t : nek arrays of size (lt).
 !     Arrays containing the solution of the linear problem.
-!     
+!
 !     sol_p : nek array of size (lt2).
 !     Array containing the solution of the linear problem (pressure component).
-!     
-!     
+!
+!
 !     NOTE : This is a plain implementation of GMRES following the algorithm given in
 !     Y. Saad. Iterative methods for sparse linear systems. Section 6.5 GMRES, alg. 6.9
-!     
+!
 !     Last Edit : March 26th 2021 by JC Loiseau.
-!     
+!
 
       implicit none
       include 'SIZE'
@@ -243,6 +243,7 @@
 !     --> Initial Krylov vector.
       call matvec(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
       call nopsub2(f_x,f_y,f_z,f_p,f_t, rhs_x,rhs_y,rhs_z,rhs_p,rhs_t)
+      call nopchsign(f_x,f_y,f_z,f_p,f_t)
 
 !     --> Normalize the starting vector.
       call normalize(f_x, f_y, f_z, f_p, f_t, beta)
@@ -330,13 +331,13 @@
       subroutine newton_krylov_prepare
 
 !     This
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     Last edit : March 26th 2021 by RAS Frantz.
 
       implicit none
