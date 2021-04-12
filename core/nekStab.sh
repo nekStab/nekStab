@@ -24,7 +24,7 @@ cp --verbose ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB NEKSTAB.inc
 export SOURCE_ROOT=$NEK_SOURCE_ROOT
 export N_VERSION=$(cd $NEK_SOURCE_ROOT && git describe --tag --long --always)
 echo 'Nek5000 version: '$N_VERSION
-export NS_VERSION=$(git describe --tag --long --always)
+export NS_VERSION=$(cd $NEKSTAB_SOURCE_ROOT && git describe --tag --long --always)
 echo 'nekStab version: '$NS_VERSION
 
 export FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
