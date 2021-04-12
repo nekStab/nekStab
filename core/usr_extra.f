@@ -1,18 +1,19 @@
 c-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-!     use nek_stab
+      ! specifying default values for nekStab
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      k_dim = 1
+      k_dim = 100               ! standard value at least 100
       schur_tgt = 2             ! schur target
       eigen_tol = 1.0e-6        !
       schur_del = 0.10d0        !
-      maxmodes = k_dim          ! max modes to outpost
+      maxmodes = 20             ! max modes to outpost
 
-      bst_skp = 1               ! boostconv skip
-      bst_snp = 1               ! bootsconv matrix size
+      bst_skp = 10               ! boostconv skip
+      bst_snp = 6               ! bootsconv matrix size
 
       ifres  = .false.          ! outpost restart files for eig
       ifvor  = .false.          ! outpost vorticity
@@ -20,20 +21,10 @@ c-----------------------------------------------------------------------
       ifldbf = .true.           ! load base flow for stability
       ifbf2D = .false.          ! force 2D solution
 
-!     ifnwt = .false. ! newton-iteration flag
-!     ifsfd = .false.
-!     ifbcv = .false.
-!     iftdf = .false.
-
       ifseed_nois = .true.      ! noise as initial seed
       ifseed_symm = .false.     ! symmetry initial seed
       ifseed_load = .false.     ! loading initial seed (e.g. Re_ )
 !     else all fase -> prescribed by usric
-
-!     arnD_ = .false.
-!     arnA_ = .false.
-!     arnDA = .false.
-!     arnAD = .false.
 
       xLspg   = 0.0d0; call bcast(xLspg, wdsize)
       xRspg   = 0.0d0; call bcast(xRspg, wdsize)
