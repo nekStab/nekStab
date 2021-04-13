@@ -101,7 +101,7 @@ for ratio in range(0,len(ratios)):
     for n, line in zip(range(nps), file):
         x[n], y[n], z[n] = line.split(" ")
     file.close()
-    data = np.loadtxt(filen, skiprows=nps+1).reshape(-1, nps, 5)
+    data = np.loadtxt(filen, skiprows=nps+1).reshape(-1, nps, 4)
 
     for prb in range(0,nps,1):
         print('Probe number ',prb)
@@ -116,8 +116,8 @@ for ratio in range(0,len(ratios)):
         t=data[:,prb,0]
         u=data[:,prb,1]
         v=data[:,prb,2]
-        w=data[:,prb,3]
-        p=data[:,prb,4]
+        w=data[:,prb,2]
+        p=data[:,prb,3]
     
         #if tskps[ratio] == 0:
         #   tsk =  t[0]

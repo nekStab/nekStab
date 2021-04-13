@@ -3,12 +3,13 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      !if(istep.eq.0) call gfldr("naca44120.fXXXXX")
+      if(istep.eq.0.and.uparam(01).eq.0)time=0.0d0 ! call gfldr("naca44120.fXXXXX")
 
       call nekStab
-
-      !call stat_avg
-      !call stats_3d_full
+      
+      ifto=.false.
+      if(uparam(1).eq.0)call hpts
+      ifto=.true.
 
       !applying solid rotation -- bad ideia for high AoA
       !uxx = cos(4*atan(1.0d0)*uparam(7)/180.0d0)
@@ -21,6 +22,21 @@ c-----------------------------------------------------------------------
       subroutine nekstab_usrchk
       include 'SIZE'
       include 'TOTAL'
+
+      if(istep.eq.0)then !change defaults
+
+            xLspg = uparam(8); call bcast(xLspg , wdsize)
+            xRspg = uparam(9); call bcast(xRspg , wdsize)
+    
+            k_dim = 128 ; call bcast(k_dim,isize)
+            schur_tgt = 2 ; call bcast(schur_tgt,isize)
+            maxmodes = 2 ; call bcast(maxmodes,isize)
+            ifres = .false. ; call bcast(ifres,lsize)
+            !ifvor = .false. ; call bcast(ifvor,lsize)
+            !ifvox = .false. ; call bcast(ifvox,lsize)
+    
+          endif
+
       return
       end
 c-----------------------------------------------------------------------
