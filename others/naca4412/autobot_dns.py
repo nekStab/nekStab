@@ -24,6 +24,33 @@ CVIOLET = '\33[35m'
 CBEIGE  = '\33[36m'
 CWHITE  = '\33[37m'
 
+CBLACKBG  = '\33[40m'
+CREDBG    = '\33[41m'
+CGREENBG  = '\33[42m'
+CYELLOWBG = '\33[43m'
+CBLUEBG   = '\33[44m'
+CVIOLETBG = '\33[45m'
+CBEIGEBG  = '\33[46m'
+CWHITEBG  = '\33[47m'
+
+CGREY    = '\33[90m'
+CRED2    = '\33[91m'
+CGREEN2  = '\33[92m'
+CYELLOW2 = '\33[93m'
+CBLUE2   = '\33[94m'
+CVIOLET2 = '\33[95m'
+CBEIGE2  = '\33[96m'
+CWHITE2  = '\33[97m'
+
+CGREYBG    = '\33[100m'
+CREDBG2    = '\33[101m'
+CGREENBG2  = '\33[102m'
+CYELLOWBG2 = '\33[103m'
+CBLUEBG2   = '\33[104m'
+CVIOLETBG2 = '\33[105m'
+CBEIGEBG2  = '\33[106m'
+CWHITEBG2  = '\33[107m'
+
 def copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
         s = os.path.join(src, item)
@@ -100,7 +127,7 @@ def cSZ(infile, outfile,params):
         lines = f.readlines()
     # Substitute all the variables
     for key, value in params.items():
-        print("Modf.",key, "to",value,'in',infile)
+        print("Modf.",CBOLD+CITALIC+key+CEND, "to",CBOLD+value+CEND,'in',infile)
         if value:
             lines = [
                 re.sub(
@@ -120,7 +147,16 @@ def c_pf(infile, outfile, opts):
     parfile.read(infile)
     for section, name_vals in opts.items():
         for name, val in name_vals.items():
-            print("In",section,':',name,'set to',val,'in',infile)
+            if section=='GENERAL':
+                print("In",section,':',CGREEN+name+CEND,'set to',CURL+CGREEN+CBOLD+val+CEND,'in',infile)
+            elif section=='VELOCITY':
+                print("In",section,':',CBLUE+name+CEND,'set to',CURL+CBLUE+CBOLD+val+CEND,'in',infile)
+            elif section=='PRESSURE': 
+                print("In",section,':',CYELLOW+name+CEND,'set to',CURL+CYELLOW+CBOLD+val+CEND,'in',infile)
+            elif section=='TEMPERATURE':
+                print("In",section,':',CRED+name+CEND,'set to',CURL+CRED+CBOLD+val+CEND,'in',infile)
+            else:
+                print("In",section,':',name,'set to',val,'in',infile)
             parfile.set(section, name, val)
     with open(outfile, "w") as f:
         parfile.write(f)
@@ -149,15 +185,11 @@ if __name__ == "__main__":
     base = "base"  # reference case - base case to copy
     cn = "naca4412"  # case name
 
-    aoa = ['8']#,'10','12','14','16','18','20','24','28','32','40','50','60']
+    aoa = ['8']#,10,12,14,16,18,20,24,28,32,40,50,60]
     nps = 40
 
     for a in range(len(aoa)):
-        estimated_rec = round(rec(float(aoa[a])))
-        print('AoA=',aoa[a],'Re_c=',estimated_rec)
-        rey = [round(0.65*estimated_rec),round(0.85*estimated_rec)]
-        print('Re_sub=',rey[0])
-        print('Re_sup=',rey[1])
+        rey = [50,100,200,300,400,500,600,]
 
         for r in range(len(rey)):
             ctic = time.perf_counter()
@@ -188,98 +220,28 @@ if __name__ == "__main__":
             else: # supercritical -- start from previous case
                 prev_path = 'aoA_'+str(aoa[a]) + "_Re_" + str(rey[r-1])
                 prev_folder = root +'/' + prev_path + '/'
-                shutil.copyfile(prev_folder+'/naca44120.f00030',folder+'/naca44120.f00001')
+                shutil.copyfile(prev_folder+'/naca44120.f00006',folder+'/naca44120.f00001')
                 c_pf(pf,pf,{'GENERAL':{'startFrom':'naca44120.f00001'}})
 
-            c_pf(pf,pf,{'GENERAL':{'endTime':str(round(30*Tau,2))}})
-            c_pf(pf,pf,{'GENERAL':{'writeInterval':str(round(Tau,2))}})
+            c_pf(pf,pf,{'GENERAL':{'endTime':'500')}})
+            c_pf(pf,pf,{'GENERAL':{'writeInterval':'100'}})
             c_pf(pf,pf,{'GENERAL':{'userParam01':'0'}})
             c_pf(pf,pf,{'GENERAL':{'userParam03':'0'}})
+            #c_pf(pf,pf,{'GENERAL':{'userParam04':str(St)}})
+            #c_pf(pf,pf,{'GENERAL':{'userParam05':'0.1'}})
             c_pf(pf,pf,{'GENERAL':{'variableDt':'yes'}})
             c_pf(pf,pf,{'GENERAL':{'targetCFL':'1.5'}})
             c_pf(pf,pf,{'GENERAL':{'extrapolation':'OIFS'}})
             c_pf(pf,pf,{'VELOCITY':{'viscosity':'-'+str(Re)}})
             c_pf(pf,pf,{'VELOCITY':{'residualtol':tole}})
-            c_pf(pf,pf,{'VELOCITY':{'residualproj':'no'}})
+            c_pf(pf,pf,{'VELOCITY':{'residualproj':'yes'}})
             c_pf(pf,pf,{'PRESSURE':{'residualtol':tolep}})
-            c_pf(pf,pf,{'PRESSURE':{'residualproj':'no'}})
-            c_pf(pf,pf,{'TEMPERATURE':{'conductivity':'-'+str(Pe)}})
-            c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
-            c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'no'}})
+            c_pf(pf,pf,{'PRESSURE':{'residualproj':'yes'}})
+            #c_pf(pf,pf,{'TEMPERATURE':{'conductivity':'-'+str(Pe)}})
+            #c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
+            #c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'no'}})
             rnek(folder,cn,True,log_suffix="_0dns",n_procs=nps)
             ccall(('visnek '+cn).split(), cwd=folder)
-            
-            # BASE FLOW
-            tole = '1.E-10'
-            # BASE FLOW # sfd
-            c_pf(pf,pf,{'GENERAL':{'endTime':'10000'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'1'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam03':'1'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam04':str(Tau)}})
-            c_pf(pf,pf,{'GENERAL':{'userParam05':'0.1'}})
-            c_pf(pf,pf,{'GENERAL':{'variableDt':'yes'}})
-            c_pf(pf,pf,{'GENERAL':{'targetCFL':'1.5'}})
-            c_pf(pf,pf,{'GENERAL':{'extrapolation':'OIFS'}})
-            c_pf(pf,pf,{'GENERAL':{'writeInterval':'9999'}})
-            c_pf(pf,pf,{'VELOCITY':{'viscosity':'-'+str(Re)}})
-            c_pf(pf,pf,{'VELOCITY':{'residualtol':tole}})
-            c_pf(pf,pf,{'VELOCITY':{'residualproj':'yes'}})
-            c_pf(pf,pf,{'PRESSURE':{'residualtol':tole}})
-            c_pf(pf,pf,{'PRESSURE':{'residualproj':'yes'}})
-            c_pf(pf,pf,{'TEMPERATURE':{'conductivity':'-'+str(Pe)}})
-            c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
-            c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'yes'}})
-            rnek(folder,cn,True,log_suffix="_1b",n_procs=nps)
-            ccall(('visnek BF_'+cn).split(), cwd=folder)
-
-            # DIRECT 
-            tole = tole ; tolep = '1.0E-7'
-            c_pf(pf,pf,{'GENERAL':{'endTime':str(Tau/8)}}) # T/8
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'3'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam03':'0'}})
-            c_pf(pf,pf,{'GENERAL':{'variableDt':'no'}})
-            c_pf(pf,pf,{'GENERAL':{'targetCFL':'0.5'}})
-            c_pf(pf,pf,{'GENERAL':{'extrapolation':'standard'}})
-            c_pf(pf,pf,{'VELOCITY':{'residualtol':tole}})
-            c_pf(pf,pf,{'VELOCITY':{'residualproj':'yes'}})
-            c_pf(pf,pf,{'PRESSURE':{'residualtol':tolep}})
-            c_pf(pf,pf,{'PRESSURE':{'residualproj':'yes'}})
-            c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
-            c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'yes'}})
-            rnek(folder,cn,True,log_suffix="_2d",n_procs=nps)
-            ccall(('visnek dRe'+cn).split(), cwd=folder)
-            ccall(('visnek dIm'+cn).split(), cwd=folder)
-
-            # ADJOINT
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'3.2'}})
-            rnek(folder,cn,True,log_suffix="_3a",n_procs=nps)
-            ccall(('visnek aRe'+cn).split(), cwd=folder)
-            ccall(('visnek aIm'+cn).split(), cwd=folder)
-
-            # WAVEMAKER
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.1'}})
-            rnek(folder,cn,True,log_suffix="_4w",n_procs=nps)
-            ccall(('visnek wm_'+cn).split(), cwd=folder)
-
-            # BF SENSITIVITY
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.2'}})
-            rnek(folder,cn,True,log_suffix="_5s",n_procs=nps)
-            ccall(('visnek tr_'+cn).split(), cwd=folder)
-            ccall(('visnek ti_'+cn).split(), cwd=folder)
-            ccall(('visnek pr_'+cn).split(), cwd=folder)
-            ccall(('visnek pi_'+cn).split(), cwd=folder)
-            ccall(('visnek sr_'+cn).split(), cwd=folder)
-            ccall(('visnek si_'+cn).split(), cwd=folder)
-            
-            # FORCING SENSITIVITY
-
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.31'}})
-            rnek(folder,cn,True,log_suffix="_6fR",n_procs=nps)
-            ccall(('visnek fsr'+cn).split(), cwd=folder)
-            
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.32'}})
-            rnek(folder,cn,True,log_suffix="_6fI",n_procs=nps)
-            ccall(('visnek fsi'+cn).split(), cwd=folder)
 
             ctoc = time.perf_counter(); cttime=ctoc-ctic
             print(f"Case finished in in {cttime:0.1f} seconds")
@@ -287,6 +249,6 @@ if __name__ == "__main__":
             print(f"                    {cttime/3600:0.2f} hours")
 
     toc = time.perf_counter(); ttime=toc-tic
-    print(f"Script finished in in {ttime:0.2f} seconds")
-    print(f"                      {ttime/60:0.1f} minutes")
-    print(f"                      {ttime/3600:0.2f} hours")
+    print(CBLINK + f"Script finished in in {ttime:0.2f} seconds" + CEND)
+    print(CBLINK + f"                      {ttime/60:0.1f} minutes" + CEND)
+    print(CBLINK + f"                      {ttime/3600:0.2f} hours" + CEND)

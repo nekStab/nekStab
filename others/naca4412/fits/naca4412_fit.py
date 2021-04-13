@@ -41,7 +41,7 @@ if __name__ == "__main__":
     fig.set_size_inches(fig_width, fig_height)
     plt.ylabel(r"$St$")
     plt.xlabel(r"$\alpha_c$")
-    plt.xlim(0,100); plt.ylim(0,0.8)
+    plt.xlim(0,100); #plt.ylim(0,0.8)
 
     f = file("naca4412_1.csv")
     poly = np.poly1d(np.polyfit(f.x,f.y, 9))
@@ -61,8 +61,9 @@ if __name__ == "__main__":
 
     def St(x):
         return 2.65677490e+00 -4.11598506e-01*x +  3.52670003e-02*x**2 -1.83464151e-03*x**3 + 6.05343182e-05*x**4 -1.28872800e-06*x**5 +1.75989973e-08*x**6 -1.48597380e-10*x**7 + 7.05235396e-13*x**8 -1.43724492e-15*x**9 
-    aoac = np.linspace(9, 90, 100)
+    aoac = np.linspace(0, 100, 200)
     plt.plot(aoac, St(aoac), c='g',ls='--',lw=1.7)
+
 
     fname = "naca4412_St_alpha_c." + formt
     plt.savefig(fname, format=formt, dpi=qual, bbox_inches=ajust)
@@ -74,22 +75,27 @@ if __name__ == "__main__":
     fig.set_size_inches(fig_width, fig_height)
     plt.ylabel(r"$\alpha_c$")
     plt.xlabel(r"$Re_c$")
-    plt.xlim(0,700); plt.ylim(0,100)
-
+    #plt.xlim(0,700); #plt.ylim(0,100)
 
     f = file("naca4412_2.csv")    
     plt.scatter(f.x, f.y, c='k',s=8)
-    def func(x, a0,a1,a2,a3,a4,a5,a6,a7):
+
+    print(np.poly1d(np.polyfit(f.y,f.x, 9)))
+    def func(x, a0,a1,a2,a3,a4,a5,a6,a7,a8,a9):
         #return a * np.exp(-b * x) + c
-        return a0 + a1*x + a2*x**2 + a3*x**3 + a4*x**4 + a5*x**5 + a6*x**6 + a7*x**7 
+        return a0 + a1*x + a2*x**2 + a3*x**3 + a4*x**4 + a5*x**5 + a6*x**6 + a7*x**7 + a8*x**8 + a9*x**9 
 
-    popt, pcov = curve_fit(func,f.x, f.y)
-    plt.plot(f.x, func(f.x, *popt), 'r-')#,label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+    popt, pcov = curve_fit(func,f.y, f.x)
+    plt.plot(func(f.y, *popt),f.y,  'r-')#,label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+    print(popt)
+    def rec(x):
+        return 3.83207915e+03 -6.96661369e+02*x  +5.99070559e+01*x**2 -3.00364213e+00*x**3  +9.47417747e-02*x**4 -1.93536665e-03*x**5 +2.55607403e-05*x**6 -2.10608078e-07*x**7 + 9.84008556e-10*x**8 -1.99034184e-12*x**9
+    aoa = np.linspace(0, 100, 200)
+    plt.plot(rec(aoa),aoa, c='y',ls='--',lw=2)
 
-    def aoac(x):
-        return 2.65677490e+00 -4.11598506e-01*x +  3.52670003e-02*x**2 -1.83464151e-03*x**3 + 6.05343182e-05*x**4 -1.28872800e-06*x**5 +1.75989973e-08*x**6 -1.48597380e-10*x**7 + 7.05235396e-13*x**8 -1.43724492e-15*x**9 
-    rec = np.linspace(9, 700, 100)
-    plt.plot(rec, aoac(rec), c='g',ls='--',lw=1.7)
+    print(St(8),rec(8))
+    print(St(60),rec(60))
+
 
     fname = "naca4412_alpha_c_Re_c." + formt
     plt.savefig(fname, format=formt, dpi=qual, bbox_inches=ajust)
