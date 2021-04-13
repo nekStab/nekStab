@@ -150,7 +150,7 @@ if __name__ == "__main__":
     cn = "naca4412"  # case name
 
     aoa = ['8']#,'10','12','14','16','18','20','24','28','32','40','50','60']
-    nps = 40
+    nps = 6
 
     for a in range(len(aoa)):
         estimated_rec = round(rec(float(aoa[a])))
