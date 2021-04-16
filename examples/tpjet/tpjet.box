@@ -1,0 +1,7 @@
+-2
+1
+Box #132 
+-160 -30                      nelx,nely,nelz for Box
+0. 40. 1.01                     x0,x1,gain  (rescaled in usrdat)
+0.  5. 1.03                     y0,y1,gain  (rescaled in usrdat)
+v  ,O  ,A  ,O  
