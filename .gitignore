@@ -35,3 +35,5 @@ makefile_usr.inc
 __pycache__
 slurm*
 examples/tpjet/tpjet.f
+*.f0*
+examples/tpjet/baseflow/tpjet.f
