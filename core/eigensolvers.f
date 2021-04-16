@@ -196,7 +196,7 @@
 
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
-      if(ifto) call copy(tbase,t(1,1,1,1,1),n)
+      if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
 !     call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
 
 !     ----- Prepare stability parameters -----
@@ -478,11 +478,11 @@ c----------------------------------------------------------------------
 
 !     if(nid.eq.0)write(6,*)'Copying base flow!'
          call opcopy(vx,vy,vz,ubase,vbase,wbase)
-         if(ifto) call copy(t(1,1,1,1,1), tbase, n)
+         if(ifheat) call copy(t(1,1,1,1,1), tbase, n)
 
 !     ----- Save baseflow to disk (recommended) -----
          call opcopy(ubase,vbase,wbase,vx,vy,vz)
-         if(ifto) call copy(tbase,t(1,1,1,1,1),n)
+         if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
          ifto_sav=ifto;ifpo_sav=ifpo
          ifto=.true.;ifpo=.true.
          call outpost(vx,vy,vz,pr,t,'BFL') !outpost for sanity check
@@ -498,7 +498,7 @@ c----------------------------------------------------------------------
 
 !     ----- Save baseflow to disk (recommended) -----
          call opcopy(ubase,vbase,wbase,vx,vy,vz)
-         if(ifto) call copy(tbase,t(1,1,1,1,1),n)
+         if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
          ifto_sav=ifto;ifpo_sav=ifpo
          ifto=.true.;ifpo=.true.
          call outpost(vx,vy,vz,pr,t,'BFL') !outpost for sanity check
@@ -620,8 +620,6 @@ c----------------------------------------------------------------------
 c     ----- Krylov basis V for the projection M*V = V*H -----
 
       real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
-!!!   testingcommon /ns_ugrad/ wo1,wo2,wo3,vort
-
       real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
       real, dimension(lt2,k_dim+1)       :: qp
 
@@ -979,6 +977,14 @@ c-----------------------------------------------------------------------
          write(6, *) 'iteration converged and target :',cnt,'/',schur_tgt !keep small caps to ease grep
       endif
 
+
+      !if(cnt.ge.schur_tgt)then
+      !  if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
+      !  !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
+      !  call nek_end
+      !endif
+
+
       return
       end subroutine arnoldi_checkpoint
 
@@ -1021,7 +1027,7 @@ c-----------------------------------------------------------------------
           if(nid.eq.0)write(*,*)'Loading base flow: ',filename
           call load_fld(filename)
           call opcopy(ubase,vbase,wbase,vx,vy,vz)
-          if(ifto) call copy(tbase,t(1,1,1,1,1),n)
+          if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
 
           call krylov_schur_prepare
 
