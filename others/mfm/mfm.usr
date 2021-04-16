@@ -70,10 +70,24 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
 
-      ffx = 0.0d0;      ffy = -temp;      ffz = 0.0d0
+
+      integer ip, iel
+      real rtmp
+ 
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      if(ifheat.and.uparam(06).gt.0)then
+      iel = gllel(ieg)
+      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
+      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+      ffy=-rtmp
+      endif
+      
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg) !sponge vel here
-      !call nekStab_forcing_temp(temp,ix,iy,iz,ieg) !sponge temp here
-      call nfm_forcing(ffx,ffy,ffz,temp,ix,iy,iz,ieg) !coupling + extra terms here
+      call nfm_forcing(ffx,ffy,ffz,rtmp,ix,iy,iz,ieg) !coupling + extra terms here
 
       return
       end
@@ -126,23 +140,6 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine uservp (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      udiff = 0.0d0
-      utrans = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine userq (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      qvol = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
       subroutine usrdat
       return
       end
@@ -164,10 +161,6 @@ c-----------------------------------------------------------------------
       endif
 
       call compute_inflow(ubb,vbb) !compute inflow profile to variables
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine usrdat3
       return
       end
 c-----------------------------------------------------------------------
