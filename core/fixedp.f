@@ -101,10 +101,6 @@ c-----------------------------------------------------------------------
          if( istep.gt.100 .and. residu .lt. max(param(21), param(22)) )then !save to disk and change flag
             if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21), param(22))
 
-!     call compute_cfl(umax,vx,vy,vz,1.0)
-!     if (nid.eq.0) write(6,*) 'CFL=0.5 dt max=',0.50d0/umax
-!     if (nid.eq.0) write(6,*) 'CFL=5 dt max=',5.0d0/umax
-
             ifbfcv = .true.
             call bcast(ifbfcv  , lsize)
             param(63) = 1       ! Enforce 64-bit output
@@ -130,7 +126,6 @@ c-----------------------------------------------------------------------c
       real, save                        ::  residu0
       logical, save :: init
       data             init /.false./
-
 
       if(mod(istep,bst_skp).eq.0)then
 
@@ -179,11 +174,6 @@ c-----------------------------------------------------------------------
 
       logical, save :: init
       data             init /.FALSE./
-
-      ! real, dimension(bst_snp) :: cc, ccb
-      ! real, dimension(bst_snp, bst_snp) :: dd
-      ! real, dimension(lt,bst_snp) :: q_x, q_y, q_z
-      ! real, dimension(lt,bst_snp) :: x_x, x_y, x_z, y_x, y_y, y_z
 
       real, allocatable, save, dimension(:)   :: cc, ccb
       real, allocatable, save, dimension(:, :) :: dd
