@@ -94,21 +94,3 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine usrdat
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine usrdat2
-      include 'SIZE'
-      include 'TOTAL'
-      integer iel,ifc
-      !cbc(:,:,2)=cbc(:,:,1)
-      !do iel=1,nelt
-      ! do iface = 1, 2*ndim
-      !  if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='I  '
-      !  if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
-      !enddo
-      !enddo
-
-      return
-      end
