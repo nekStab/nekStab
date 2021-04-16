@@ -66,15 +66,6 @@ c-----------------------------------------------------------------------
       integer n,i
       n = nx1*ny1*nz1*nelv
 
-      if (nid==0) then
-         print *,'==================================================='
-         print *,'== nekStab ========================================'
-         print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
-         print *,'==================================================='
-         write(6,'(A,A)')' Nek5000 version        : ', NVERSION
-         write(6,'(A,A)')' NekStab version        : ', NSVERSION
-      endif
-
       call nekStab_setDefault
       call nekStab_usrchk       ! where user change defaults
       call nekStab_printNEKParams
@@ -83,13 +74,21 @@ c-----------------------------------------------------------------------
       ymn = glmin(ym1,n); ymx = glmax(ym1,n)
       zmn = glmin(zm1,n); zmx = glmax(zm1,n)
 
-      if(nid.eq.0)then
-         write(6,*)' x min max =',xmn,xmx
-         write(6,*)' x   total =',xmx-xmn
-         write(6,*)' y min max =',ymn,ymx
-         write(6,*)' y   total =',ymx-xmn
-         write(6,*)' z min max =',zmn,zmx
-         write(6,*)' z   total =',zmx-zmn
+      if (nid==0) then
+         print *,'                 __   _____  __          __  '
+         print *,'   ____   ___   / /__/ ___/ / /_ ____ _ / /_ '
+         print *,'  / __ \ / _ \ / //_/\__ \ / __// __ `// __ \'
+         print *,' / / / //  __// ,<  ___/ // /_ / /_/ // /_/ /'
+         print *,'/_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/ '  
+         print *,'COPYRIGHT (c) 2020-2021 DynFluid Laboratoire Paris ',NSVERSION
+         print *,'Nek5000 ', NVERSION
+         print *,''
+         ! print *,'==================================================='
+         ! print *,'== nekStab ========================================'
+         ! print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
+         ! print *,'==================================================='
+         ! write(6,'(A,A)')' Nek5000 version        : ', NVERSION
+         ! write(6,'(A,A)')' NekStab version        : ', NSVERSION
       endif
 
       call copy(bm1s, bm1, n)   ! never comment this !
@@ -351,10 +350,11 @@ c-----------------------------------------------------------------------
          write(6,*)'P43=',param(43),'0:additive multilevel scheme 1:orig 2lvl sch'
          write(6,*)'P44=',param(44),'0=E-based addit Schwarz PnPn-2;1=A-based'
          write(6,*)'P93=',param(93),'num vectors for projection'
-         write(6,*)'P94=',param(94),'num projection for helmholz solves (controled by ifprojfld)'
+         write(6,*)'P94 =',param(94),'num projection for helmholz solves'
          write(6,*)'P95=',param(95),'projection for pressure solver on/off'
          write(6,*)'P101=',param(101),'no additional modes'
          write(6,*)'P103=',param(103),'filter weight'
+         write(6,*)
          write(6,*)'uparam1=',uparam(1)
          write(6,*)'uparam01=',uparam(01)
          write(6,*)'uparam02=',uparam(02)
@@ -366,6 +366,11 @@ c-----------------------------------------------------------------------
          write(6,*)'uparam08=',uparam(08)
          write(6,*)'uparam09=',uparam(09)
          write(6,*)'uparam10=',uparam(10)
+         write(6,*)
+         write(6,*)'x min,max,tot=',xmn,xmx,xmx-xmn
+         write(6,*)'y min,max,tot=',ymn,ymx,ymx-xmn
+         write(6,*)'z min,max,tot=',zmn,zmx,zmx-zmn
+         write(6,*)
       endif
       end subroutine nekStab_printNEKParams
 c-----------------------------------------------------------------------
