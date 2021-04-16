@@ -30,10 +30,20 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-
+      integer ip, iel
+      real rtmp
+ 
       ffx = 0.0d0
       ffy = 0.0d0
       ffz = 0.0d0
+
+      if(ifheat.and.uparam(06).gt.0)then
+      iel = gllel(ieg)
+      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
+      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+      ffy=rtmp*uparam(06)
+      endif
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
