@@ -3,13 +3,8 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
-      if(uparam(1).eq.0.and.istep.eq.0)t=0.0d0
       call nekStab
       call hpts
-
-      !call stat_avg
-      !call stats_3d_full
 
       return
       end
@@ -25,11 +20,11 @@ c-----------------------------------------------------------------------
         xRspg = uparam(9); call bcast(xRspg , wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 0 ; call bcast(schur_tgt,isize)
-        maxmodes = 20 ; call bcast(maxmodes,isize)
-        ifres = .true. ; call bcast(ifres,lsize)
-        !ifvor = .true. ; call bcast(ifvor,lsize)
-        !ifvox = .true. ; call bcast(ifvox,lsize)
+        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        maxmodes = 2 ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
 
       endif
 
@@ -94,23 +89,6 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine uservp (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      udiff = 0.0d0
-      utrans = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine userq (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      qvol = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
       subroutine usrdat
       return
       end
@@ -120,30 +98,11 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       integer iel,ifc
 
-                 !ID, FIELD, BC
       call setbc(4,1,'v  ')
-      !call setbc(2,1,'O  ')
       call setbc(2,1,'v  ')
       call setbc(3,1,'W  ')
 
-      !this mesh was generatd with genbox
-      !with only BCs for velicity
-      !here we chenge outflow to dirichlet if adjoint
-      !and initilize BCs for scalar field
-
-      !if(uparam(1)==3.2)then !if adjoint, change BCs
-      !do iel=1,nelt
-      !do ifc = 1, 2*ndim
-      !  if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
-      !enddo
-      !enddo
-    !endif
-
-      !call compute_inflow(ubb) !compute inflow profile to variables
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine usrdat3
+      call compute_inflow(ubb) !compute inflow profile to variables
       return
       end
 c-----------------------------------------------------------------------
