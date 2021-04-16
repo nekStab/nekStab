@@ -2,9 +2,9 @@
 
 more /etc/lsb-release
 
-sudo -E apt autoremove intel-hpckit intel-basekit
+#sudo -E apt autoremove intel-hpckit intel-basekit
 
-sudo apt install gnupg wget libigc-dev libigdfcl-dev libigfxcmrt-dev
+sudo apt install gnupg wget cmake pkg-config build-essential #libigc-dev libigdfcl-dev libigfxcmrt-dev
 
 cd $HOME
 wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
@@ -18,3 +18,9 @@ sudo apt update
 sudo apt install intel-basekit intel-hpckit
 
 sudo apt-cache pkgnames intel | grep kit$
+
+#source /opt/intel/oneapi/setvars.sh intel64 --force
+sudo echo -e "\nalias oneap='source /opt/intel/oneapi/setvars.sh intel64 --force'" >> $HOME/.bashrc
+source $HOME/.bashrc
+echo 'to load just type: oneap'
+
