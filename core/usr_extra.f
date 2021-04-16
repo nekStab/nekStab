@@ -163,9 +163,9 @@ c-----------------------------------------------------------------------
          if(uparam(1).ge.1)then !compose forcings to fcx,fcy,fcz
 
             if(uparam(3).eq.1)then
-               call SFD         !ifSFD=.true.
+               call SFD
             elseif(uparam(3).eq.2)then
-               call BoostConv   !ifbst=.true.
+               call BoostConv
             elseif(uparam(3).eq.3)then
 !     --> Copy initial guess into newton-krylov array.
                call nopcopy(qx, qy, qz, qp, qt, vx, vy, vz, pr, t)
