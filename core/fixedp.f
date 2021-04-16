@@ -20,7 +20,7 @@ c-----------------------------------------------------------------------
       real residu,h1,l2,semi,linf,rate,residu0,cutoff,gain,frq,sig,umax
       real glmin,glmax,glsum,glsc3,tol
       integer n,i
-      save n,residu0,tol
+      save n,residu0
 
       if(uparam(4).gt.0. OR. uparam(5).gt.0) then
 
@@ -37,6 +37,7 @@ c-----------------------------------------------------------------------
 !     Casacuberta 2018 JCP 375:481-497
          cutoff = 0.5*(sqrt(frq**2+sig**2)-sig)
          gain = -0.5*(sqrt(frq**2+sig**2)+sig)
+         tol = max(param(21), param(22))
 
          if(istep.eq.0)then
 
@@ -49,7 +50,6 @@ c-----------------------------------------------------------------------
             if(nid.eq.0)open(unit=10,file='residu.dat')
             call opcopy(qxo,qyo,qzo,vx,vy,vz)
             call opcopy(vxo,vyo,vzo,vx,vy,vz)
-            tol = max(param(21), param(22))
 
          else
             
@@ -98,8 +98,8 @@ c-----------------------------------------------------------------------
             write(6,*)
          endif
 
-         if( istep.gt.100 .and. residu .lt. tol )then !save to disk and change flag
-            if(nid.eq.0)write(6,*)' Converged base flow to:',tol
+         if( istep.gt.100 .and. residu .lt. max(param(21), param(22)) )then !save to disk and change flag
+            if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21), param(22))
 
 !     call compute_cfl(umax,vx,vy,vz,1.0)
 !     if (nid.eq.0) write(6,*) 'CFL=0.5 dt max=',0.50d0/umax
@@ -126,17 +126,17 @@ c-----------------------------------------------------------------------c
       include 'TOTAL'
       
       real, dimension(lx1*ly1*lz1*lelt) ::  dvx,dvy,dvz
-      real                              ::  residu,h1,semi,linf,rate
-      real, save                        ::  residu0,tol
+      real                              ::  residu,h1,semi,linf,rate,tol
+      real, save                        ::  residu0
       logical, save :: init
       data             init /.false./
+
 
       if(mod(istep,bst_skp).eq.0)then
 
          if(.not.init)then
             residu = 0.0d0; rate = 0.0d0; residu0 = 0.0d0
             open(unit=10,file='residu.dat')
-            tol = max(param(21), param(22))
             init=.true.
          endif
 
@@ -151,6 +151,7 @@ c-----------------------------------------------------------------------c
             write(6,*)' '
          endif
 
+         tol = max(param(21), param(22))
          if(residu.lt.tol)then
             if(nid.eq.0)write(6,*)' Converged base flow to:',tol
             ifbfcv = .true.
@@ -179,17 +180,26 @@ c-----------------------------------------------------------------------
       logical, save :: init
       data             init /.FALSE./
 
-      real, dimension(bst_snp, bst_snp) :: dd
-      real, dimension(bst_snp) :: cc, ccb
-      real, dimension(lt) :: rbx,rby,rbz,dumx,dumy,dumz
+      ! real, dimension(bst_snp) :: cc, ccb
+      ! real, dimension(bst_snp, bst_snp) :: dd
+      ! real, dimension(lt,bst_snp) :: q_x, q_y, q_z
+      ! real, dimension(lt,bst_snp) :: x_x, x_y, x_z, y_x, y_y, y_z
 
-      real, dimension(lt,bst_snp) :: q_x, q_y, q_z
-      real, dimension(lt,bst_snp) :: x_x, x_y, x_z, y_x, y_y, y_z
+      real, allocatable, save, dimension(:)   :: cc, ccb
+      real, allocatable, save, dimension(:, :) :: dd
+      real, allocatable, save, dimension(:, :) :: q_x, q_y, q_z
+      real, allocatable, save, dimension(:, :) :: x_x, x_y, x_z, y_x, y_y, y_z
+
+      real, dimension(lt) :: rbx,rby,rbz,dumx,dumy,dumz
 
       real :: glsc3
       n = nx1*ny1*nz1*nelt
 
       if (.not.init) then
+         allocate(cc(bst_snp),ccb(bst_snp),dd(bst_snp, bst_snp))
+         allocate(q_x(lt,bst_snp),q_y(lt,bst_snp),q_z(lt,bst_snp))
+         allocate(x_x(lt,bst_snp),x_y(lt,bst_snp),x_z(lt,bst_snp))
+         allocate(y_x(lt,bst_snp),y_y(lt,bst_snp),y_z(lt,bst_snp))
 
          call oprzero(x_x(:,:), x_y(:,:), x_z(:,:))
          call oprzero(y_x(:,:), y_y(:,:), y_z(:,:))
