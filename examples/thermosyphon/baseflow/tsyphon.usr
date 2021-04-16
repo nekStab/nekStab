@@ -17,6 +17,15 @@ c-----------------------------------------------------------------------
       subroutine nekstab_usrchk
       include 'SIZE'
       include 'TOTAL'
+
+      if(istep.eq.0)then !change defaults
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        maxmodes = 10 ; call bcast(maxmodes,isize)
+        ifres = .true. ; call bcast(ifres,lsize)
+        ifvor = .true. ; call bcast(ifvor,lsize)
+        ifvox = .true. ; call bcast(ifvox,lsize)
+      endif
       return
       end
 c-----------------------------------------------------------------------
@@ -24,11 +33,22 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-
+      integer ip, iel
+      real rtmp
+ 
       ffx = 0.0d0
-      ffy = 0.0d0         ! Pr          !  Ra
-      if(ifheat)ffy = temp*abs(param(2))*abs(uparam(6))
+      ffy = 0.0d0
       ffz = 0.0d0
+
+      if(ifheat)then
+      iel = gllel(ieg)
+      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
+      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+      
+                 ! Pr         !  Ra
+      ffy = rtmp*abs(param(2))*abs(uparam(6))
+      endif
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
@@ -75,23 +95,6 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine uservp (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      udiff = 0.0d0
-      utrans = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine userq (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      qvol = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
       subroutine usrdat
       return
       end
@@ -99,10 +102,6 @@ c-----------------------------------------------------------------------
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine usrdat3
       return
       end
 c-----------------------------------------------------------------------
