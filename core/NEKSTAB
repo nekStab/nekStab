@@ -6,8 +6,8 @@
       character(len=1) :: evop = '_'
       common /nStab_char/ evop
 
-      logical                ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,ifseed_load,ifvor,ifvox,ifnewton
-      common /nStab_logical/ ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,ifseed_load,ifvor,ifvox,ifnewton
+      logical                ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,ifseed_load,ifvor,ifvox
+      common /nStab_logical/ ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,ifseed_load,ifvor,ifvox
 
       real                eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
       common /nStab_real/ eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
