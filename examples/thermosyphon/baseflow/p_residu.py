@@ -23,12 +23,18 @@ fig_height = 2.45
 
 class res(object):
     def __init__(self, filename):
-        #data = np.transpose(np.loadtxt(filename))
         print('Reading '+filename)
         data = np.transpose(np.genfromtxt(filename))
         self.t  = data[0]
         self.r  = data[1]
         self.rt = data[2]
+        del data
+
+class res1(object):
+    def __init__(self, filename):
+        print('Reading '+filename)
+        data = np.genfromtxt(filename)
+        self.r = data
         del data
 
 def plot_rs(ax, filename, sized = 0, color='gray', label=None):
@@ -50,11 +56,30 @@ if __name__ == '__main__':
     plt.axhline(y=1e-06, lw=0.1, c='k', ls='dotted')
     plt.axhline(y=1e-08, lw=0.1, c='k', ls='dotted')
     plt.axhline(y=1e-10, lw=0.1, c='k', ls='dotted')
+    plt.axhline(y=1e-12, lw=0.1, c='k', ls='dotted')
+    plt.axhline(y=1e-13, lw=0.1, c='k', ls='dotted')
 
-    plot_rs(plt, 'residu.dat',   0.2, 'm', r'Re=50')
-
+    plot_rs(plt, 'residu.dat',   0.2, 'r', r'Ra=400')
 
     plt.legend(loc='best',fontsize=6);
     fname='residu.'+formt
+    plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
+    print('------------------------------------------')
+
+
+    fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
+    plt.yscale('log');plt.xlabel(r'$nsteps$')
+    plt.xscale('log')
+    plt.axhline(y=1e-9, lw=0.1, c='k', ls='dotted')
+
+    file = res1('residu_newton.dat')
+    plt.plot(file.r,c='m',lw=0.5,label=r'NEWTON Ra=400')
+    file = res1('residu_gmres.dat')
+    plt.plot(file.r,c='g',lw=0.5,label=r'GMRES Ra=400')
+    file = res1('residu_arnoldi.dat')
+    plt.plot(file.r,c='b',lw=0.5,label=r'ARNOLDI Ra=400')
+
+    plt.legend(loc='best',fontsize=6)
+    fname='residu_newton.'+formt
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')
