@@ -5,7 +5,7 @@ from shutil import copyfile
 import unittest, argparse, shutil, fileinput
 from subprocess import call, PIPE, STDOUT, Popen
 from subprocess import check_call as ccall 
-from numpy import exp, log10
+from numpy import exp, log10, logspace
 
 def copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
@@ -126,13 +126,16 @@ if __name__ == "__main__":
     print("Current working directory: {0}".format(os.getcwd()))
     base = "transient_growth"  # reference case - base case to copy
     cn = "bfs"  # case name
+
     p1 = ['5','10','15','20','25','30','35','40','45','50','55','58','60','65','70','75','80','85','90','95','100']
+    p1 = logspace(0, 2, 10)
+ 
     print(p1)
     nps = 6
 
     for i in range(len(p1)):
         ctic = time.perf_counter()
-        path = "t_" + p1[i] 
+        path = "t_" + str(p1[i])
         ccopy(base,path)
         
         folder = root +'/' + path + '/'
