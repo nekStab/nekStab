@@ -131,9 +131,10 @@ if __name__ == "__main__":
     p1 = logspace(0, 2, 10)
  
     print(p1)
-    nps = 6
+    nps = 16
 
     for i in range(len(p1)):
+        p1[i] = round(p1[i],2)
         ctic = time.perf_counter()
         path = "t_" + str(p1[i])
         ccopy(base,path)
