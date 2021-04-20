@@ -45,8 +45,13 @@
       integer :: i, j, k, n     !, n2
 
       n = nx1*ny1*nz1*nelt      !; n2 = nx2*ny2*nz2*nelt
-      maxiter_newton = 10 ; maxiter_gmres = 10
+      maxiter_newton = 30 ; maxiter_gmres = 60
       tol = max(param(21), param(22))
+      if(istep.eq.0.and.nid.eq.0)then
+            open(unit=887,file='residu_newton.dat',status='replace')
+            open(unit=888,file='residu_gmres.dat',status='replace');close(888)
+            open(unit=889,file='residu_arnoldi.dat',status='replace');close(889)
+      endif
 
 !     --> Initialize arrays.
       call noprzero(f_x, f_y, f_z, f_p, f_t)
@@ -66,10 +71,12 @@
 !     --> Check residual || f(q) ||
       call norm(f_x, f_y, f_z, f_p, f_t, residual) ; residual = residual ** 2
 
-      if (nid .eq. 0) write(6, *) "NEWTON --- Iteration :", i, " residual :", residual
-      if (residual .lt. tol) exit newton
+      if(nid.eq.0)write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
+      write(887,"(I6,1E15.7)")i,residual
 
-      if (nid.eq.0) write(*, *) "LINEAR SOLVER"
+      if(residual .lt. tol) exit newton
+
+      if(nid.eq.0)write(6,*)'LINEAR SOLVER'
 !     --> Solve the linear system.
       call ts_gmres(f_x, f_y, f_z, f_p, f_t, dqx, dqy, dqz, dqp, dqt, maxiter_gmres, k_dim)
 
@@ -77,7 +84,7 @@
       call nopsub2(qx, qy, qz, qp, qt, dqx, dqy, dqz, dqp, dqt)
 
       enddo newton
-
+      if(nid.eq.0)close(887)
       return
       end subroutine newton_krylov
 
@@ -184,7 +191,14 @@
 
 !     --> Compute residual.
       beta = norm2(evec(1:k+1) - matmul(H(1:k+1, 1:k), yvec(1:k)))
-      if (nid.eq.0) write(6, *) "Inner iteration residual : ", beta**2
+
+      if(nid.eq.0)then
+            open(889,file='residu_arnoldi.dat',action='write',position='append')
+            write(6,"(' ARNOLDI --- Iteration:',I5,'/',I5,' residual:',E15.7)")k,ksize,beta**2
+            write(889,"(I6,1E15.7)")k,beta**2
+            close(889)
+      endif
+
       if (beta**2 .lt. tol) exit arnoldi
 
       enddo arnoldi
@@ -192,16 +206,22 @@
 !     --> Update solution.
       sol_x = sol_x + matmul(qx(:, 1:k), yvec(1:k))
       sol_y = sol_y + matmul(qy(:, 1:k), yvec(1:k))
-      if (if3d) sol_z = sol_z + matmul(qz(:, 1:k), yvec(1:k))
-      if (ifpo) sol_p = sol_p + matmul(qp(:, 1:k), yvec(1:k))
-      if (ifto) sol_t = sol_t + matmul(qt(:, 1:k), yvec(1:k))
+      if (if3d)   sol_z = sol_z + matmul(qz(:, 1:k), yvec(1:k))
+      if (ifpo)   sol_p = sol_p + matmul(qp(:, 1:k), yvec(1:k))
+      if (ifheat) sol_t = sol_t + matmul(qt(:, 1:k), yvec(1:k))
 
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
 
       call nopcopy(qx(:, 1),qy(:, 1),qz(:, 1),qp(:, 1),qt(:, 1), sol_x,sol_y,sol_z,sol_p,sol_t)
       call initialize_gmres_vector(beta, qx(:, 1), qy(:, 1), qz(:, 1), qp(:, 1), qt(:, 1), rhs_x, rhs_y, rhs_z, rhs_p, rhs_t)
 
-      if (nid.EQ.0) write(6, *) "GMRES --- Iteration : ", i, " residual : ", beta**2
+      if(nid.eq.0)then
+            open(888,file='residu_gmres.dat',action='write',position='append')
+            write(6,"(' GMRES   -- Iteration:',I4,'/',I4,' residual:',E15.7)")i,maxiter,beta**2
+            write(888,"(I6,1E15.7)")i,beta**2
+            close(888)
+      endif
+
       if (beta**2 .lt. tol) exit gmres
 
       enddo gmres
