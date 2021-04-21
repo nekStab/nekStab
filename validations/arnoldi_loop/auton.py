@@ -130,9 +130,9 @@ if __name__ == "__main__":
     print("Current working directory: {0}".format(os.getcwd()))
     base = "base"  # reference case - base case to copy
     cn = "1cyl"  # case name
-    p1 = ['8','16','32','64','128']
+    p1 = ['500'] # lopp will break when target is reached
     T = 1.0/0.125
-    p2 = [T/32,T/16,T/8,T/4,T/2]
+    p2 = [T/10,T/8,T/6,T/4,T/2,T,2*T]
     nps = 6
 
     for i in range(len(p1)):
@@ -149,11 +149,8 @@ if __name__ == "__main__":
             pf = folder + cn + ".par"
 
             c_pf(pf,pf,{'GENERAL':{'endTime':str(p2[j])}})
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'1'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam03':'3'}})
             c_pf(pf,pf,{'GENERAL':{'userParam07':str(int(p1[i]))}})
-            rnek(folder,cn,True,log_suffix="_nwt",n_procs=nps)
-            ccall(('visnek BF_'+cn).split(), cwd=folder)
+            rnek(folder,cn,True,log_suffix="_dir",n_procs=nps)
 
             ctoc = time.perf_counter(); cttime=ctoc-ctic
             print(f"Case finished in in {cttime:0.1f} seconds")
