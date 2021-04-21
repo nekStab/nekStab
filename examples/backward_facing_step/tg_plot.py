@@ -56,10 +56,10 @@ if __name__ == '__main__':
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
     #plt.yscale('log')
     plt.xlabel(r'$t$')
-    plt.ylabel(r'$E$')
+    plt.ylabel(r'$E(t)/E(0)$')
 
     f = res('ref_barkley2008_fig5.dat')
-    plt.plot(f.t,f.e,c='k',lw=0.2,ls='-',label='Barkley (2008)')
+    plt.plot(f.t,f.e,c='k',lw=0.2,ls='-',label='Barkley et al. (2008)')
 
     base = "transient_growth"  # reference case - base case to copy
     p1 = logspace(0, 2, 10)
