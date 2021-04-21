@@ -3,10 +3,10 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      if(istep.eq.0)t=0.0d0 !call gfldr("1cyl0.fXXXXX")
+      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
 
       call nekStab
-      call hpts
+      !call hpts
 
       return
       end
