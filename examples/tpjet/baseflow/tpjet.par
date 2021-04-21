@@ -1,7 +1,7 @@
 [GENERAL]
 startFrom = PERtpjet0.f00001 
 stopAt = endTime
-endTime = 1.6666666666666666666667
+endTime = 1.666666666667
 
 userParam01 = 1  #
 userParam02 = 0  #krylov snapshot to load
@@ -33,12 +33,12 @@ axiSymmetry = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-8
+residualTol = 1.0E-10
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-8
-residualProj = no
+residualTol = 1.0E-10
+residualProj = yes
 density = 1.0
-viscosity = -2000.0
+viscosity = -1300.0
