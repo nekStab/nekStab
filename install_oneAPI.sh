@@ -20,7 +20,10 @@ sudo apt install intel-basekit intel-hpckit
 sudo apt-cache pkgnames intel | grep kit$
 
 #source /opt/intel/oneapi/setvars.sh intel64 --force
-sudo echo -e "\nalias oneap='source /opt/intel/oneapi/setvars.sh intel64 --force'" >> $HOME/.bashrc
+
+#. ~/intel/oneapi/setvars.sh   ->>> for non-sudo installation
+
+sudo echo -e "\nalias oneapi='. /opt/intel/oneapi/setvars.sh'" >> $HOME/.bashrc
 source $HOME/.bashrc
-echo 'to load just type: oneap'
+echo 'to load just type: oneapi'
 
