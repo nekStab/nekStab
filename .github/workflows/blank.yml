@@ -57,23 +57,32 @@ jobs:
       - name: Compiling examples/cylinder/baseflow/
         shell: bash
         run: |
-          cd examples/cylinder/baseflow/
+          cd examples/cylinder/baseflow/sfd
           ./cmpile.sh all
-          cd ../../../
+          cd ../newton
+          ./cmpile.sh all
+          cd ../boostconv
+          cd ../../../../
   
       - name: Compiling examples/cylinder/stability/
         shell: bash
         run: |
-          cd examples/cylinder/stability/
+          cd examples/cylinder/stability/direct
           ./cmpile.sh all
-          cd ../../../
+          cd ../adjoint
+          ./cmpile.sh all
+          cd ../../../../
           
       - name: Compiling examples/cylinder/sensitivity/
         shell: bash
         run: |
-          cd examples/cylinder/sensitivity/
+          cd examples/cylinder/sensitivity/wavemaker
           ./cmpile.sh all
-          cd ../../../
+          cd ../baseflow_sensitivity
+          ./cmpile.sh all
+          cd ../steady_force_sensitivity
+          ./cmpile.sh all
+          cd ../../../../
           
       - name: Compiling examples/cylinder/energy_budget/
         shell: bash
