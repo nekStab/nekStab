@@ -1,23 +1,22 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Compiling
 
-# Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
-  # Allows you to run this workflow manually from the Actions tab
+  # allows us to run workflows manually
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  MPICH_FC: gfortran
+
 jobs:
-  # This workflow contains a single job called "build"
-  ubuntu:
-    # The type of runner that the job will run on
+  main:
     runs-on: ubuntu-latest
 #    env: 
         #CASE: "1cyl"
@@ -37,7 +36,11 @@ jobs:
         run: git submodule update --init --recursive
       
       - name: Install dependecies for Nek500 and NekStab
-        run: sudo apt-get install build-essential cmake libmpich-dev libopenblas-dev
+        shell: bash
+        run: |
+          sudo apt -y update
+          sudo apt install -y gfortran mpich libmpich-dev python3-pytest
+          sudo apt install -Y build-essential cmake libmpich-dev libopenblas-dev
           
       - name: Get cpu-information
         run: lscpu
@@ -61,6 +64,7 @@ jobs:
       #  in your yml file:
       #     ${{ env.YOUR_VARIABLE_NAME }}
       - name: Compile cylinder case
+        shell: bash
         run: |
           pwd
           cd Nek5000/tools
