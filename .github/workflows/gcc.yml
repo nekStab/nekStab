@@ -1,4 +1,4 @@
-name: Compiling
+name: GCC build
 
 on:
   # allows us to run workflows manually
