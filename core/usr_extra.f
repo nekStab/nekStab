@@ -1,6 +1,6 @@
 c-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-      ! specifying default values for nekStab
+!     specifying default values for nekStab
 
       implicit none
       include 'SIZE'
@@ -12,7 +12,7 @@ c-----------------------------------------------------------------------
       schur_del = 0.10d0        !
       maxmodes = 20             ! max modes to outpost
 
-      bst_skp = 10               ! boostconv skip
+      bst_skp = 10              ! boostconv skip
       bst_snp = 6               ! bootsconv matrix size
 
       ifres  = .false.          ! outpost restart files for eig
@@ -83,12 +83,12 @@ c-----------------------------------------------------------------------
          print *,'COPYRIGHT (c) 2020-2021 DynFluid Laboratoire Paris ',NSVERSION
          print *,'Nek5000 ', NVERSION
          print *,''
-         ! print *,'==================================================='
-         ! print *,'== nekStab ========================================'
-         ! print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
-         ! print *,'==================================================='
-         ! write(6,'(A,A)')' Nek5000 version        : ', NVERSION
-         ! write(6,'(A,A)')' NekStab version        : ', NSVERSION
+!     print *,'==================================================='
+!     print *,'== nekStab ========================================'
+!     print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
+!     print *,'==================================================='
+!     write(6,'(A,A)')' Nek5000 version        : ', NVERSION
+!     write(6,'(A,A)')' NekStab version        : ', NSVERSION
       endif
 
       call copy(bm1s, bm1, n)   ! never comment this !
@@ -375,7 +375,7 @@ c-----------------------------------------------------------------------
       end subroutine nekStab_printNEKParams
 c-----------------------------------------------------------------------
       subroutine nekStab_energy(px, py, pz, pt, fname, skip)
-!
+!     
       implicit none
       include 'SIZE'
       include 'TOTAL'

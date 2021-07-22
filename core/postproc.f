@@ -654,3 +654,232 @@ c-------------------------------------------------------------------
       return
       end
 c----------------------------------------------------------------------
+
+
+      subroutine stability_energy_budget()
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+!     ----- Arrays to store the instability mode real and imaginary parts.
+      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
+      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
+      real, dimension(lt2) :: pr_dRe, pr_dIm
+
+!     ----- Energy budget terms.
+      real, dimension(lt, 10) :: energy_budget
+      real, dimension(10) :: integrals
+
+!     ----- Miscellaneous.
+      real :: alpha, beta, glsc2
+      integer :: i, j, k, n
+      character(len=80) :: filename
+
+      n = nx1*ny1*nz1*nelt
+      energy_budget = 0.0D+00
+      integrals = 0.0D+00
+
+!     #####
+!     #####
+!     #####     PREPROCESSING
+!     #####
+!     #####
+
+!     --> Load the base flow.
+      write(filename, '(a, a, a)') 'BF_', trim(SESSION), '0.f00001'
+      call load_fld(filename)
+      call nopcopy(ubase, vbase, wbase, pr, tbase, vx, vy, vz, pr, t)
+
+!     --> Load the real part of the mode.
+      write(filename, '(a, a, a)') 'dRe', trim(SESSION), '0.f00001'
+      call load_fld(filename)
+      call nopcopy(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, vx, vy, vz, pr, t)
+
+!     --> Load the imaginary part of the mode.
+      write(filename, '(a, a, a)') 'dIm', trim(SESSION), '0.f00001'
+      call load_fld(filename)
+      call nopcopy(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, vx, vy, vz, pr, t)
+
+!     --> Normalize eigenmode to unit-norm (Sanity check).
+      call norm(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
+      call norm(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, beta)
+      alpha = sqrt(alpha**2 + beta**2)
+      call nopcmult(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
+      call nopcmult(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, alpha)
+
+
+
+
+
+!     #####
+!     #####
+!     #####     COMPUTE THE ENERGY BUDGET
+!     #####
+!     #####
+
+!     --> Compute the production terms.
+      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 1, energy_budget(:, 1), energy_budget(:, 2), energy_budget(:, 3))
+      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 2, energy_budget(:, 4), energy_budget(:, 5), energy_budget(:, 6))
+      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 3, energy_budget(:, 7), energy_budget(:, 8), energy_budget(:, 9))
+
+!     --> Compute the dissipation term.
+      call compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, energy_budget(:, 10))
+
+!     --> Compute the integrals and the sum.
+      do i = 1,10
+         integrals(i) = glsc2(bm1, energy_budget(:, i), n)
+      enddo
+
+      if (if3d) then
+         k = 9
+      else
+         k = 6
+      endif
+
+      do i = 1, k, 3
+         call opcopy(vx, vy, vz, energy_budget(:, i), energy_budget(:, i+1), energy_budget(:, i+2))
+         call outpost(vx, vy, vz, pr, t, "KIN")
+      enddo
+
+      if (nid .eq. 0) write(*, *) "Energy Budget :", integrals
+      if (nid .eq. 0) write(*, *) "Sum Energy budget :", sum(integrals)
+
+      return
+      end subroutine stability_energy_budget
+
+
+      subroutine compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, dissipation)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+
+      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
+      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
+
+      real, dimension(lt) :: Laplacian_ax, Laplacian_ay, Laplacian_az
+      real, dimension(lt) :: Laplacian_bx, Laplacian_by, Laplacian_bz
+
+      real, dimension(lt) :: dissipation, dummy
+
+!     --> Compute Laplacians.
+      call compute_laplacian(vx_dRe, Laplacian_ax)
+      call compute_laplacian(vy_dRe, Laplacian_ay)
+      call compute_laplacian(vz_dRe, Laplacian_az)
+
+      call compute_laplacian(vx_dIm, Laplacian_bx)
+      call compute_laplacian(vy_dIm, Laplacian_by)
+      call compute_laplacian(vz_dIm, Laplacian_bz)
+
+!     --> Compute dissipation term.
+      dissipation = 0.0D+00
+
+      dummy = vx_dRe * Laplacian_ax + vx_dIm * Laplacian_bx
+      dissipation = dissipation + dummy
+
+      dummy = vy_dRe * Laplacian_ay + vy_dIm * Laplacian_by
+      dissipation = dissipation + dummy
+
+      dummy = vz_dRe * Laplacian_az + vz_dIm * Laplacian_bz
+      dissipation = dissipation + dummy
+
+      dissipation = 0.5 * dissipation  * param(2) / param(1)
+
+      return
+      end subroutine compute_dissipation
+
+
+
+
+
+      subroutine compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, component, prod_x, prod_y, prod_z)
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+
+      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
+      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
+      real, dimension(lt) :: prod_x, prod_y, prod_z
+      real, dimension(lt) :: dcdx, dcdy, dcdz
+      integer :: component
+
+      if (component .eq. 1) then
+         call gradm1(dcdx, dcdy, dcdz, ubase, nelv)
+
+         prod_x = -0.5 * (vx_dRe**2 + vx_dIm**2) * dcdx
+         prod_y = -0.5 * (vx_dRe * vy_dRe + vy_dIm * vx_dIm) * dcdy
+         prod_z = -0.5 * (vx_dRe * vz_dRe + vz_dIm * vx_dIm) * dcdz
+
+      else if (component .eq. 2) then
+         call gradm1(dcdx, dcdy, dcdz, vbase, nelv)
+
+         prod_x = -0.5 * (vx_dRe * vy_dRe + vy_dIm * vx_dIm) * dcdx
+         prod_y = -0.5 * (vy_dRe**2 + vy_dIm**2) * dcdy
+         prod_z = -0.5 * (vy_dRe * vz_dRe + vz_dIm * vy_dIm) * dcdz
+
+      else if (component .eq. 3) then
+         call gradm1(dcdx, dcdy, dcdz, wbase, nelv)
+
+         prod_x = -0.5 * (vx_dRe * vz_dRe + vz_dIm * vx_dIm) * dcdx
+         prod_y = -0.5 * (vy_dRe * vz_dRe + vz_dIm * vy_dIm) * dcdy
+         prod_z = -0.5 * (vz_dRe**2 + vz_dIm**2) * dcdz
+      endif
+
+      return
+      end subroutine compute_production
+
+
+
+
+
+      subroutine compute_gradients(u, dudx, dudy, dudz)
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+
+      real, dimension(lt) :: u
+      real, dimension(lt) :: dudx, dudy, dudz
+
+      call gradm1(dudx, dudy, dudz, u)
+      call dsavg(dudx) ; call dsavg(dudy) ; call dsavg(dudz)
+
+      return
+      end subroutine compute_gradients
+
+
+
+
+
+      subroutine compute_laplacian(a, Lap_a)
+
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer, parameter :: lt = lx1*ly1*lz1*lelt
+
+      real, dimension(lt) :: a
+      real, dimension(lt) :: dadx, dady, dadz
+      real, dimension(lt) :: d2adx2, d2ady2, d2adz2
+      real, dimension(lt) :: Lap_a, wrk1, wrk2
+
+      call compute_gradients(a, dadx, dady, dadz)
+      call compute_gradients(dadx, d2adx2, wrk1, wrk2)
+      call compute_gradients(dady, wrk1, d2ady2, wrk2)
+      call compute_gradients(dadz, wrk1, wrk2, d2adz2)
+
+      Lap_a = d2adx2 + d2ady2 + d2adz2
+
+      return
+      end subroutine compute_laplacian
