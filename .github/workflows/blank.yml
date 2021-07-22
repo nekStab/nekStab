@@ -31,31 +31,53 @@ jobs:
         shell: bash
         run: |
           sudo apt -y update
-          sudo apt install -y build-essential cmake 
+          #sudo apt install -y build-essential cmake 
           sudo apt install -y gfortran mpich libmpich-dev libopenblas-dev
-         
-      - name: Get cpu-information
-        run: lscpu
-
-      - name: Compile cylinder case
+      
+      - name: Export parallel flag 
+        shell: bash
+        run: |
+          lscpu
+          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
+          
+      - name: Compile nektools
         shell: bash
         run: |
           cd Nek5000/tools
           ./maketools genmap genbox
-          cd ../..          
-          #pwd
+          cd ../..
           
-          #export FC="mpif77"
-          #export CC="mpicc"
-          #export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none"
-          #export USR_LFLAGS+="-L/usr/lib -lopenblas"
-
+      - name: Compiling examples/cylinder/dns/
+        shell: bash
+        run: |
           cd examples/cylinder/dns/
-          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
-          #export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
-          #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-          #export FCcomp="gfotran"
-          #source $NEKSTAB_SOURCE_ROOT/core/compiler_gcc_tb.sh
-          #echo $FC
-          #which mpif77
           ./cmpile.sh all
+          cd ../../../
+
+      - name: Compiling examples/cylinder/baseflow/
+        shell: bash
+        run: |
+          cd examples/cylinder/baseflow/
+          ./cmpile.sh all
+          cd ../../../
+  
+      - name: Compiling examples/cylinder/stability/
+        shell: bash
+        run: |
+          cd examples/cylinder/stability/
+          ./cmpile.sh all
+          cd ../../../
+          
+      - name: Compiling examples/cylinder/sensitivity/
+        shell: bash
+        run: |
+          cd examples/cylinder/sensitivity/
+          ./cmpile.sh all
+          cd ../../../
+          
+      - name: Compiling examples/cylinder/energy_budget/
+        shell: bash
+        run: |
+          cd examples/cylinder/energy_budget/
+          ./cmpile.sh all
+          cd ../../../
