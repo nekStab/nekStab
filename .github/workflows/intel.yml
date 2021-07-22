@@ -22,24 +22,27 @@ jobs:
       run:
         shell: bash --noprofile --norc {0}
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup Intel OneApi repository
-      run: |
-        wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-        rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-        sudo echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
-        sudo apt-get update
-        
-    - name: Install Intel OneApi repository
-      run: |
-        sudo apt-get install -y intel-oneapi-common-vars
-        sudo apt-get install -y intel-oneapi-compiler-fortran
-        sudo apt-get install -y intel-oneapi-mkl
-        sudo apt-get install -y intel-oneapi-mpi
-        sudo apt-get install -y intel-oneapi-mpi-devel
-        source /opt/intel/oneapi/setvars.sh
-        printenv >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+      - name: Setup Intel OneApi repository
+        run: |
+          wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+
+      - name: Install Intel OneApi repository
+        run: |
+          sudo apt-get install -y intel-oneapi-common-vars
+          sudo apt-get install -y intel-oneapi-compiler-fortran
+          sudo apt-get install -y intel-oneapi-mkl
+          sudo apt-get install -y intel-oneapi-mpi
+          sudo apt-get install -y intel-oneapi-mpi-devel
+          source /opt/intel/oneapi/setvars.sh
+          printenv >> $GITHUB_ENV
+
+      - name: Checkout repository nekStab
+        uses: actions/checkout@v2
         
       - name: Checkout submodules Nek5000
         run: git submodule update --init --recursive
