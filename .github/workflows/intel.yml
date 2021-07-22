@@ -1,0 +1,102 @@
+name: Intel OneAPI build
+
+on:
+  # allows us to run workflows manually
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #MPICH_FC: gfortran
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash --noprofile --norc {0}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Intel OneApi repository
+      run: |
+        wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+        rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+        sudo echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+        sudo apt-get update
+        
+    - name: Install Intel OneApi repository
+      run: |
+        sudo apt-get install -y intel-oneapi-common-vars
+        sudo apt-get install -y intel-oneapi-compiler-fortran
+        sudo apt-get install -y intel-oneapi-mkl
+        sudo apt-get install -y intel-oneapi-mpi
+        sudo apt-get install -y intel-oneapi-mpi-devel
+        source /opt/intel/oneapi/setvars.sh
+        printenv >> $GITHUB_ENV
+        
+      - name: Checkout submodules Nek5000
+        run: git submodule update --init --recursive
+      
+      - name: Export parallel flag 
+        shell: bash
+        run: |
+          lscpu
+          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
+          
+      - name: Compile nektools
+        shell: bash
+        run: |
+          cd Nek5000/tools
+          ./maketools genmap genbox
+          cd ../..
+          
+      - name: Compiling examples/cylinder/dns/
+        shell: bash
+        run: |
+          cd examples/cylinder/dns/
+          ./cmpile.sh all
+          cd ../../../
+
+      - name: Compiling examples/cylinder/baseflow/
+        shell: bash
+        run: |
+          cd examples/cylinder/baseflow/sfd
+          ./cmpile.sh all
+          cd ../newton
+          ./cmpile.sh all
+          cd ../boostconv
+          cd ../../../../
+  
+      - name: Compiling examples/cylinder/stability/
+        shell: bash
+        run: |
+          cd examples/cylinder/stability/direct
+          ./cmpile.sh all
+          cd ../adjoint
+          ./cmpile.sh all
+          cd ../../../../
+          
+      - name: Compiling examples/cylinder/sensitivity/
+        shell: bash
+        run: |
+          cd examples/cylinder/sensitivity/wavemaker
+          ./cmpile.sh all
+          cd ../baseflow_sensitivity
+          ./cmpile.sh all
+          cd ../steady_force_sensitivity
+          ./cmpile.sh all
+          cd ../../../../
+          
+      - name: Compiling examples/cylinder/energy_budget/
+        shell: bash
+        run: |
+          cd examples/cylinder/energy_budget/
+          ./cmpile.sh all
+          cd ../../../
