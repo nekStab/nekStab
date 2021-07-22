@@ -71,8 +71,7 @@ jobs:
           ./maketools genmap genbox
           cd ../..          
           pwd
-          cd examples/1cyl/autotest/base
-          #sh cmpile.sh all
+          cd examples/1cyl/dns
           export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
           export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
           export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
@@ -80,8 +79,9 @@ jobs:
           source $NEKSTAB_SOURCE_ROOT/core/compiler_gcc_tb.sh
           echo $FC
           which mpif77
-          sh $NEK_SOURCE_ROOT/bin/makenek $CASE
-          more build.log
+          ./cmpile.sh all
+          #sh $NEK_SOURCE_ROOT/bin/makenek $CASE
+          #more build.log
          
      ## - name: Running cylinder case
      #   run: |
