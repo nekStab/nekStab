@@ -18,15 +18,7 @@ env:
 jobs:
   main:
     runs-on: ubuntu-latest
-#    env: 
-        #CASE: "1cyl"
-        #NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
-        #NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
-#         FC: "mpif77"
-#         CC: "mpicc"
-        #FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
-      
-   # Steps represent a sequence of tasks that will be executed as part of the job
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     
       - name: Checkout repository nekStab
@@ -45,48 +37,25 @@ jobs:
       - name: Get cpu-information
         run: lscpu
 
-        # Export NEW_VAR_NAME variable for subsequent steps, and export all environment variables matching the optional regexp.
-#       - uses: lukka/set-shell-env@v1
-#         with:
-#           CASE: "1cyl"
-#           NEKSTAB_SOURCE_ROOT: "../../../.." #--> path to nekStab
-#           NEK_SOURCE_ROOT: "$NEKSTAB_SOURCE_ROOT/Nek5000"
-#           FC: "mpif77"
-#           CC: "mpicc"
-#           FFLAGS: "-mcmodel=large -march=native -ffixed-line-length-none -g -fbacktrace"
-         
-      # with:
-      #   shell: 'bash' or 'tcsh' or any command that starts a shell.
-      #   args: '-c env' or any arguments that list the environment variables as NAME=VALUE pairs.
-      #   filter: an optional reg exp to export matching variables out of the desired shell.
-      #   YOUR_VARIABLE_NAME: provide value for any new variable you name. Note the name will always be converted to be all uppercase.
-      #  Here onward any following step can access the environment variable using:
-      #  in your yml file:
-      #     ${{ env.YOUR_VARIABLE_NAME }}
       - name: Compile cylinder case
         shell: bash
         run: |
-          pwd
           cd Nek5000/tools
           ./maketools genmap genbox
           cd ../..          
-          pwd
+          #pwd
+          
+          #export FC="mpif77"
+          #export CC="mpicc"
+          #export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none"
+          #export USR_LFLAGS+="-L/usr/lib -lopenblas"
+
           cd examples/cylinder/dns/
           export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
-          export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
-          export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-          export FCcomp="gfotran"
-          source $NEKSTAB_SOURCE_ROOT/core/compiler_gcc_tb.sh
-          echo $FC
-          which mpif77
+          #export NEKSTAB_SOURCE_ROOT="/home/runner/work/nekStab/nekStab"
+          #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+          #export FCcomp="gfotran"
+          #source $NEKSTAB_SOURCE_ROOT/core/compiler_gcc_tb.sh
+          #echo $FC
+          #which mpif77
           ./cmpile.sh all
-          #sh $NEK_SOURCE_ROOT/bin/makenek $CASE
-          #more build.log
-         
-     ## - name: Running cylinder case
-     #   run: |
-    #     export CASE='1cyl'
-    ##     export CASE_DIR=`pwd`
-    #     echo $CASE > SESSION.NAME
-   #      echo $CASE_DIR'/' >> SESSION.NAME
-   #      mpiexec -np 2 ./nek5000
