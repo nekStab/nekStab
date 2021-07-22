@@ -6,7 +6,7 @@
 
 export FC="mpif77"
 export CC="mpicc"
-export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none -w"
+export FFLAGS="-mcmodel=medium -march=native -ffixed-line-length-none -w -Wall"
 export USR_LFLAGS+="-L/usr/lib -lopenblas"
 
 source ${NEKSTAB_SOURCE_ROOT}/core/nekStab.sh
