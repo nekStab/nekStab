@@ -99,18 +99,18 @@ c-----------------------------------------------------------------------
          endif
 
          if( istep.gt.100 .and. residu .lt. max(param(21), param(22)) )then !save to disk and change flag
-            if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21), param(22))
+         if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21), param(22))
 
-            ifbfcv = .true.
-            call bcast(ifbfcv  , lsize)
-            param(63) = 1       ! Enforce 64-bit output
-            call bcast(param,200*wdsize)
-            call outpost(vx,vy,vz,pr,t,'BF_')
-            param(63) = 0       ! Enforce 32-bit output
-            call bcast(param,200*wdsize)
-         endif
+         ifbfcv = .true.
+         call bcast(ifbfcv  , lsize)
+         param(63) = 1          ! Enforce 64-bit output
+         call bcast(param,200*wdsize)
+         call outpost(vx,vy,vz,pr,t,'BF_')
+         param(63) = 0          ! Enforce 32-bit output
+         call bcast(param,200*wdsize)
+      endif
 
-         if(istep.eq.nsteps)close(10)
+      if(istep.eq.nsteps)close(10)
       endif
       return
       end subroutine SFD

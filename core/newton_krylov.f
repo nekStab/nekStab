@@ -10,14 +10,14 @@
 !     computation using a time-stepper formulation. The resolution of
 !     the linear system for each Newton iteration is sovled by means
 !     of GMRES.
-!
+!     
 !     INPUTS
 !     ------
-!
+!     
 !     OUTPUTS
 !     -------
-!
-!
+!     
+!     
 !     Last edited : March 26th by JC Loiseau.
 
       implicit none
@@ -48,9 +48,9 @@
       maxiter_newton = 30 ; maxiter_gmres = 60
       tol = max(param(21), param(22))
       if(istep.eq.0.and.nid.eq.0)then
-            open(unit=887,file='residu_newton.dat',status='replace')
-            open(unit=888,file='residu_gmres.dat',status='replace');close(888)
-            open(unit=889,file='residu_arnoldi.dat',status='replace');close(889)
+         open(unit=887,file='residu_newton.dat',status='replace')
+         open(unit=888,file='residu_gmres.dat',status='replace');close(888)
+         open(unit=889,file='residu_arnoldi.dat',status='replace');close(889)
       endif
 
 !     --> Initialize arrays.
@@ -97,37 +97,37 @@
 
 !     Implementation of simple GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
-!
+!     
 !     INPUT
 !     -----
-!
+!     
 !     rhs_x, rhs_y, rhs_z, rhs_t : nek arrays of size (lt).
 !     Arrays containing the right-hand side of the linear problem to be solved.
-!
+!     
 !     rhs_p : nek array of size (lt2)
 !     Array containing the right-hand side of the linear problem to be solved (pressure component).
-!
+!     
 !     maxiter : integer
 !     Maximum number of restarts for the GMRES computation.
-!
+!     
 !     ksize : integer
 !     Dimension of the Krylov subspace.
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     sol_x, sol_y, sol_z, sol_t : nek arrays of size (lt).
 !     Arrays containing the solution of the linear problem.
-!
+!     
 !     sol_p : nek array of size (lt2).
 !     Array containing the solution of the linear problem (pressure component).
-!
-!
+!     
+!     
 !     NOTE : This is a plain implementation of GMRES following the algorithm given in
 !     Y. Saad. Iterative methods for sparse linear systems. Section 6.5 GMRES, alg. 6.9
-!
+!     
 !     Last Edit : March 26th 2021 by JC Loiseau.
-!
+!     
 
       implicit none
       include 'SIZE'
@@ -193,10 +193,10 @@
       beta = norm2(evec(1:k+1) - matmul(H(1:k+1, 1:k), yvec(1:k)))
 
       if(nid.eq.0)then
-            open(889,file='residu_arnoldi.dat',action='write',position='append')
-            write(6,"(' ARNOLDI --- Iteration:',I5,'/',I5,' residual:',E15.7)")k,ksize,beta**2
-            write(889,"(I6,1E15.7)")k,beta**2
-            close(889)
+         open(889,file='residu_arnoldi.dat',action='write',position='append')
+         write(6,"(' ARNOLDI --- Iteration:',I5,'/',I5,' residual:',E15.7)")k,ksize,beta**2
+         write(889,"(I6,1E15.7)")k,beta**2
+         close(889)
       endif
 
       if (beta**2 .lt. tol) exit arnoldi
@@ -216,10 +216,10 @@
       call initialize_gmres_vector(beta, qx(:, 1), qy(:, 1), qz(:, 1), qp(:, 1), qt(:, 1), rhs_x, rhs_y, rhs_z, rhs_p, rhs_t)
 
       if(nid.eq.0)then
-            open(888,file='residu_gmres.dat',action='write',position='append')
-            write(6,"(' GMRES   -- Iteration:',I4,'/',I4,' residual:',E15.7)")i,maxiter,beta**2
-            write(888,"(I6,1E15.7)")i,beta**2
-            close(888)
+         open(888,file='residu_gmres.dat',action='write',position='append')
+         write(6,"(' GMRES   -- Iteration:',I4,'/',I4,' residual:',E15.7)")i,maxiter,beta**2
+         write(888,"(I6,1E15.7)")i,beta**2
+         close(888)
       endif
 
       if (beta**2 .lt. tol) exit gmres
@@ -351,13 +351,13 @@
       subroutine newton_krylov_prepare
 
 !     This
-!
+!     
 !     INPUT
 !     -----
-!
+!     
 !     RETURNS
 !     -------
-!
+!     
 !     Last edit : March 26th 2021 by RAS Frantz.
 
       implicit none
