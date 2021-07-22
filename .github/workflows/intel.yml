@@ -33,11 +33,13 @@ jobs:
 
       - name: Install Intel OneApi repository
         run: |
-          sudo apt-get install -y intel-oneapi-common-vars
-          sudo apt-get install -y intel-oneapi-compiler-fortran
-          sudo apt-get install -y intel-oneapi-mkl
-          sudo apt-get install -y intel-oneapi-mpi
-          sudo apt-get install -y intel-oneapi-mpi-devel
+          sudo apt -y update
+          sudo apt -y libopenblas-dev
+          sudo apt -y install intel-oneapi-common-vars
+          sudo apt -y install intel-oneapi-compiler-fortran
+          sudo apt -y install intel-oneapi-mkl
+          sudo apt -y install intel-oneapi-mpi
+          sudo apt -y install intel-oneapi-mpi-devel
           source /opt/intel/oneapi/setvars.sh
           printenv >> $GITHUB_ENV
 
