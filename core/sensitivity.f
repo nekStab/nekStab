@@ -9,20 +9,20 @@
 !     Provided the direct and adjoint modes have already been computed,
 !     this function computes the wavemaker following the formulation by
 !     Giannetti et al. [1]. Set uparam(01) = 4.1 in the par file to use it.
-!
+!     
 !     OUTPOST
 !     -------
-!
+!     
 !     wm_blah0.f000001 : Nek file. The wavemaker is stored in the array
 !     for the temperature.
-!
+!     
 !     References
 !     ----------
-!
+!     
 !     [1] Giannetti F. & Luchini P.
 !     Structural sensitivity of the first instability of the cylinder wake.
 !     J. Fluid Mech., vol 581., 2007.
-!
+!     
 !     NOTE : This implementation does not apply to cases involving temperature
 !     or any other scalar.
 
@@ -66,9 +66,9 @@
 
 !     --> Normalize the adjoint mode.
       call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t, 
-     $                      vx_dIm, vy_dIm, vz_dIm, pr, t, 
-     $                      vx_aRe, vy_aRe, vz_aRe, pr, t, 
-     $                      vx_aIm, vy_aIm, vz_aIm, pr, t)
+     $     vx_dIm, vy_dIm, vz_dIm, pr, t, 
+     $     vx_aRe, vy_aRe, vz_aRe, pr, t, 
+     $     vx_aIm, vy_aIm, vz_aIm, pr, t)
 
 !     --> Compute the wavemaker.
       work1 = sqrt(vx_dRe**2 + vx_dIm**2 + vy_dRe**2 + vy_dIm**2 + vz_dRe**2 + vz_dIm**2)
@@ -96,13 +96,13 @@
 !     Provided the direct and adjoint modes have been computed,
 !     this function computes the baseflow sensitivity following
 !     the formulation by Marquet et al. [1].
-!
+!     
 !     OUTPOST
 !     -------
-!
+!     
 !     References
 !     ----------
-!
+!     
 !     [1]
 
       implicit none
@@ -178,9 +178,9 @@
 
 !     --> Normalize the adjoint mode.
       call biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr, t,
-     $                     vx_dIm, vy_dIm, vz_dIm, pr, t, 
-     $                     vx_aRe, vy_aRe, vz_aRe, pr, t, 
-     $                     vx_aIm, vy_aIm, vz_aIm, pr, t)
+     $     vx_dIm, vy_dIm, vz_dIm, pr, t, 
+     $     vx_aRe, vy_aRe, vz_aRe, pr, t, 
+     $     vx_aIm, vy_aIm, vz_aIm, pr, t)
 
 !     gradient computation
 !     real part of the direct mode
@@ -303,15 +303,15 @@
 !     A time-stepper formulation of the problem is used and
 !     the linearized system is solved using GMRES. Set uparam(01) = 4.31
 !     to compute the real part and uparam(01) = 4.32 for the imaginary one.
-!
+!     
 !     OUTPOST
 !     -------
-!
+!     
 !     fsr_blah0.f00001 / fsi_blah0.f00001 : Sensitivity fields.
-!
+!     
 !     References
 !     ----------
-!
+!     
 !     [1] Marquet O., Sipp D. and Jacquin L.
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
@@ -358,13 +358,13 @@
 !     --> Recast rhs into time-stepper/discrete-time framework.
       call initialize_rhs_ts_steady_force_sensitivity(rhs_x, rhs_y, rhs_z)
 
-      ! --> Normalize right-hand side for simplicity in gmres.
+!     --> Normalize right-hand side for simplicity in gmres.
       call normalize(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, alpha)
 
 !     --> Solve the linear system.
       call ts_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, 10, k_dim)
 
-      ! -->
+!     -->
       call nopcmult(sol_x, sol_y, sol_z, sol_p, sol_t, alpha)
 
 !     --> Outpost solution.
@@ -403,7 +403,7 @@
       ifpert = .true. ; ifadj = .true.
       call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
 
-      ! -->
+!     -->
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
       if (ifheat) call copy(t, tbase, n)
 
@@ -438,9 +438,9 @@
 
 
       subroutine biorthogonalize(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, 
-     $                           vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, 
-     $                           vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, 
-     $                           vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm)
+     $     vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, 
+     $     vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, 
+     $     vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm)
 
       implicit none
       include 'SIZE'
