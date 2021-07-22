@@ -3,7 +3,7 @@
 export CASE="1cyl" #--> case name goes here
 
 #add to .bashrc
-export NEKSTAB_SOURCE_ROOT="../../../../" #--> path to nekStab
+export NEKSTAB_SOURCE_ROOT="../../../" #--> path to nekStab
 export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
