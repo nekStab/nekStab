@@ -1,4 +1,4 @@
-name: GCC build
+name: GCC+BLAS build
 
 on:
   # allows us to run workflows manually
