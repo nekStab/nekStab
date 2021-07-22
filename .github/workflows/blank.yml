@@ -39,9 +39,9 @@ jobs:
         shell: bash
         run: |
           sudo apt -y update
-          sudo apt install -y gfortran mpich libmpich-dev python3-pytest
-          sudo apt install -Y build-essential cmake libmpich-dev libopenblas-dev
-          
+          sudo apt install -y build-essential cmake 
+          sudo apt install -y gfortran mpich libmpich-dev libopenblas-dev
+         
       - name: Get cpu-information
         run: lscpu
 
