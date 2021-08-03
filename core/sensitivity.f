@@ -316,6 +316,7 @@
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -324,12 +325,10 @@
       integer, parameter :: lt2 = lx2*ly2*lz2*lelt
 
 !     ----- Right-hand side : baseflow sensitivity
-      real, dimension(lt) :: rhs_x, rhs_y, rhs_z, rhs_t
-      real, dimension(lt2) :: rhs_p
+      type(krylov_vector) :: rhs
 
 !     ----- Solution of the linear system.
-      real, dimension(lt) :: sol_x, sol_y, sol_z, sol_t
-      real, dimension(lt2) :: sol_p
+      type(krylov_vector) :: sol
 
 !     ----- Misc.
       character(len=80) :: filename
@@ -350,25 +349,25 @@
          prefix = 'fsi'
       endif
       call load_fld(filename)
-      call opcopy(rhs_x, rhs_y, rhs_z, vx, vy, vz)
+      call opcopy(rhs%vx, rhs%vy, rhs%vz, vx, vy, vz)
 
 !     --> Zero-out initial guess.
-      call noprzero(sol_x, sol_y, sol_z, sol_p, sol_t)
+      call krylov_zero(sol)
 
 !     --> Recast rhs into time-stepper/discrete-time framework.
-      call initialize_rhs_ts_steady_force_sensitivity(rhs_x, rhs_y, rhs_z)
+      call initialize_rhs_ts_steady_force_sensitivity(rhs)
 
 !     --> Normalize right-hand side for simplicity in gmres.
-      call normalize(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, alpha)
+      call krylov_normalize(rhs, alpha)
 
 !     --> Solve the linear system.
-      call ts_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, 10, k_dim)
+      call ts_gmres(rhs, sol, 10, k_dim)
 
 !     -->
-      call nopcmult(sol_x, sol_y, sol_z, sol_p, sol_t, alpha)
+      call krylov_cmult(sol, alpha)
 
 !     --> Outpost solution.
-      call outpost(sol_x, sol_y, sol_z, sol_p, sol_t, prefix)
+      call outpost(sol%vx, sol%vy, sol%vz, sol%pr, sol%theta, prefix)
 
       return
       end subroutine ts_steady_force_sensitivity
@@ -382,8 +381,9 @@
 
 
 
-      subroutine initialize_rhs_ts_steady_force_sensitivity(rhs_x, rhs_y, rhs_z)
+      subroutine initialize_rhs_ts_steady_force_sensitivity(rhs)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -392,8 +392,7 @@
       integer, parameter :: lt = lx1*ly1*lz1*lelt
       integer, parameter :: lt2 = lx2*ly2*lz2*lelt
 
-      real, dimension(lt) :: rhs_x, rhs_y, rhs_z
-      real, dimension(lt) :: fx, fy, fz
+      type(krylov_vector) :: rhs
 
       integer :: n
 
@@ -419,7 +418,7 @@
       time = 0.0D+00
       do istep = 1, nsteps
 !     --> Pass the forcing to nek.
-         call opcopy(fcx, fcy, fcz, rhs_x, rhs_y, rhs_z)
+         call opcopy(fcx, fcy, fcz, rhs%vx, rhs%vy, rhs%vz)
 
 !     --> Integrate forward in time.
          call nekstab_usrchk()
@@ -427,7 +426,7 @@
       enddo
 
 !     --> Copy the final solution as the new rhs for the time-stepper formulation.
-      call opcopy(rhs_x, rhs_y, rhs_z, vxp(:, 1), vyp(:, 1), vzp(:, 1))
+      call opcopy(rhs%vx, rhs%vy, rhs%vz, vxp(:, 1), vyp(:, 1), vzp(:, 1))
       call oprzero(fcx, fcy, fcz)
 
       return

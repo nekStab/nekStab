@@ -164,11 +164,13 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-         if(uparam(1).eq.1)then
+
+         if( uparam(1) .eq. 1.1)then
             call SFD
-         elseif(uparam(1).eq.2)then
+         elseif( uparam(1) .eq. 1.2)then
             call BoostConv
          endif
+
          if(ifbfcv)call nek_end
 
       case(2)                   ! Newton-Krylov solver
@@ -194,10 +196,10 @@ c-----------------------------------------------------------------------
          if(uparam(01) .eq. 4.1) call wave_maker
 
 !     -----> Baseflow sensitivity.
-         if(uparam(01) .eq. 4.2) call BF_sensitivity
+         if(uparam(01) .eq. 4.2) call bf_sensitivity
 
 !     -----> Sensitivity to steady force.
-         if( (uparam(01) .eq. 4.31) .or. (uparam(01) .eq. 4.32) ) call ts_steady_force_sensitivity()
+         if(uparam(01) .eq. 4.3) call ts_steady_force_sensitivity
 
          call nek_end
 

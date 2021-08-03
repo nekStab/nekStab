@@ -12,7 +12,8 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine load_files(V_x,V_y,V_z,P_r,V_t,mstart,kd,fname)
+      subroutine load_files(Q, mstart, kd, fname)
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -21,10 +22,8 @@ c-----------------------------------------------------------------------
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelv
       integer                            :: kd,mstart,n,n2,i,j
 
-c     ----- Krylov basis V for the projection M*V = V*H -----
-
-      real, dimension(lt,kd+1)        :: V_x, V_y, V_z, V_t
-      real, dimension(lt2,kd+1)       :: P_r
+!     ----- Krylov basis V for the projection M*V = V*H -----
+      type(krylov_vector), dimension(kd) :: Q
       character*3  fname
       character*60  filename
       character(len=7)   :: tl
@@ -57,11 +56,11 @@ c     ----- Upload the snapshots -----
      $        filename = trim(fname)//trim(SESSION)//'0.f'//trim(tl)
 
          call load_fld(filename)
-         call opcopy(V_x(:,i),V_y(:,i),V_z(:,i),vx,vy,vz)
-         if(ifpo)call copy(P_r(:,i),pr,n2)
-         if(ifto)call copy(V_t(:,i),t(1,1,1,1,1),n)
+         call opcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, vx, vy, vz)
+         if(ifpo)call copy(Q(i)%pr,pr,n2)
+         if(ifto)call copy(Q(i)%theta,t(1,1,1,1,1),n)
 
       enddo
       return
-      end
+      end subroutine load_files
 c-----------------------------------------------------------------------
