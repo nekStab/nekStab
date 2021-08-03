@@ -39,4 +39,4 @@ writeToFieldFile = yes
 residualTol = 1.0E-10
 residualProj = no
 density = 1.0
-viscosity = -50
+viscosity = -50.0

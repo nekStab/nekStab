@@ -2,18 +2,20 @@
 startFrom = BFRe40_1cyl0.f00001
 
 stopAt = endTime
-endTime = 1.0
+endTime = 400.0
 
-userParam01 = 2
-userParam07 = 128 # k_dim
+userParam01 = 1.1  #
+userParam04 = 0.12 # freq (Strouhal leading mode)
+userParam05 = 0.05  # gain (twice growth rate leading mode)
 
 dt = 0
-variableDt = no
+variableDt = yes
 timeStepper = bdf3
-targetCFL = 0.5
+targetCFL = 5
+extrapolation = OIFS
 
 writeControl = runTime
-writeInterval = 10.
+writeInterval = 1000.
 writeDoublePrecision = no
 
 dealiasing = yes
@@ -29,6 +31,6 @@ writeToFieldFile = yes
 
 [VELOCITY]
 residualTol = 1.0E-9
-residualProj = yes
+residualProj = no
 density = 1.0
 viscosity = -50.0

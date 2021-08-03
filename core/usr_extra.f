@@ -6,36 +6,38 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      k_dim = 100               ! standard value at least 100
-      schur_tgt = 2             ! schur target
-      eigen_tol = 1.0e-6        !
-      schur_del = 0.10d0        !
-      maxmodes = 20             ! max modes to outpost
+      k_dim = 100               ! standard value, increas  in .usr 
+      schur_tgt = 2             ! schur target for schur step factorizaiton
+      eigen_tol = 1.0e-6        ! tolerance for eigenmodes convergence
+      schur_del = 0.10d0        ! 
+      maxmodes = 20             ! max number of converged modes to disk
       glob_skip = 20            ! global energy computation skip frequency
 
-      bst_skp = 10              ! boostconv skip
-      bst_snp = 6               ! bootsconv matrix size
+      bst_skp = 10              ! boostconv skip iterations
+      bst_snp = 6               ! bootsconv residual subspace matrix size 
 
-      ifres  = .false.          ! outpost restart files for eig
-      ifvor  = .false.          ! outpost vorticity
-      ifvox  = .false.          ! outpost vortex
-      ifldbf = .true.           ! load base flow for stability
-      ifbf2D = .false.          ! force 2D solution
-      ifstorebase = .false.     ! store base flow for Floquet
-      ifdyntol = .false.        ! dynamical tolerances
+      ifres  = .false.          ! outpost restart files (KRY* HES*)
+      ifvor  = .false.          ! outpost vorticity (vor* omega_x,omega_y,omega_z components)
+      ifvox  = .false.          ! outpost vortex (vox*: q,lambda2,omega criterions)
+      ifldbf = .true.           ! load base flow for stability computations
+      ifbf2D = .false.          ! force 2D base flow solution
+      ifstorebase = .false.     ! store base flow for Floquet analysis (dynamic allocated)
+      ifdyntol = .false.        ! dynamical tolerances for SFD and Newton (potential speed-up)
 
       ifseed_nois = .true.      ! noise as initial seed
       ifseed_symm = .false.     ! symmetry initial seed
       ifseed_load = .false.     ! loading initial seed (e.g. Re_ )
-!     else all fase -> prescribed by usric
+!     if all false the 'useric' subroutine prescribes the initial seed
 
-      xLspg   = 0.0d0; call bcast(xLspg, wdsize)
-      xRspg   = 0.0d0; call bcast(xRspg, wdsize)
+      xLspg   = 0.0d0; call bcast(xLspg, wdsize) ! x left
+      xRspg   = 0.0d0; call bcast(xRspg, wdsize) ! x right
       yLspg   = 0.0d0; call bcast(yLspg, wdsize)
       yRspg   = 0.0d0; call bcast(yRspg, wdsize)
       zLspg   = 0.0d0; call bcast(zLspg, wdsize)
       zRspg   = 0.0d0; call bcast(zRspg, wdsize)
-      acc_spg = 0.0d0; call bcast(acc_spg, wdsize)
+
+      ! percentage for the acceleration phase in the sponge (e.g. 1/3)
+      acc_spg = 0.333d0; call bcast(acc_spg, wdsize)
 
 !     !Broadcast all defaults !
       call bcast(schur_tgt, isize) ! isize for integer

@@ -12,7 +12,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 10.
+writeInterval = 50.
 writeDoublePrecision = no
 
 dealiasing = yes
@@ -22,12 +22,12 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-07
+residualTol = 1.0E-06
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-09
+residualTol = 1.0E-08
 residualProj = no
 density = 1.0
-viscosity = -100.0
+viscosity = -50.0
