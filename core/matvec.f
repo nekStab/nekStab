@@ -32,6 +32,8 @@
          if(nid.eq.0)write(6,*)' computing numSteps=',nsteps
          if(nid.eq.0)write(6,*)' sampling period =',nsteps*dt
          param(12) = dt
+         FINTIM = nsteps*dt
+         !NSTEPS = PARAM(11)
       endif
 
 !     --> Force constant time step.
@@ -104,19 +106,19 @@
 !     --> Standard setup for the linearized solver.
       call prepare_linearized_solver()
 
-!     --> Direct solver only.
-      if (uparam(01) .eq. 3) then
+!     --> Direct solver only steady and periodic!
+      if (uparam(01) .eq. 3 .or. uparam(01).eq.3.1) then
          evop = 'd'
          call forward_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
       endif
 
-!     --> Adjoint solver only.
-      if (uparam(01) .eq. 3.2) then
+!     --> Adjoint solver only steady and periodic!
+      if (uparam(01) .eq. 3.2 .or. uparam(01).eq.3.21) then
          evop = 'a'
          call adjoint_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
       endif
 
-!     --> Direct-Adjoint for optimal transient growth.
+!     --> Direct-Adjoint for optimal transient growth steady only.
       if (uparam(01) .eq. 3.3) then
          evop="p"
          call transient_growth_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
@@ -169,6 +171,10 @@
 
       real, dimension(lt) :: fx, fy, fz, ft
       real, dimension(lt2) :: fp
+      real, save, allocatable, dimension(:, :) :: uor,vor,wor
+
+      logical, save :: init
+      data             init /.false./
 
 !     --> Setup the parameters for the linearized solver.
       ifpert = .true. ; ifadj = .false.
@@ -176,6 +182,13 @@
 
 !     --> Turning-off the base flow side-by-side computation. Need to change for Floquet.
       ifbase = .false.
+      if(uparam(01) .eq. 3.1)ifbase=.true. ! activate floquet
+      if(ifstorebase.and.init)ifbase=.false.
+
+      if(ifstorebase .and.ifbase.and..not.init)then
+       if(nid .eq. 0) write(6,*) 'ALLOCATING UOR WITH NSTEPS:',nsteps
+       allocate(uor(lt, nsteps), vor(lt, nsteps), wor(lt,nsteps))
+      endif
 
 !     --> Pass the initial condition for the perturbation.
       call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1), qx, qy, qz, qp, qt)
@@ -188,7 +201,16 @@
          ! --> Integrate forward in time.
          call nekstab_usrchk()
          call nek_advance()
+         if    (ifstorebase .and.ifbase .and..not.  init)then !storing first time
+           if(nid.eq.0)write(6,*)'storing first series:',istep,'/',nsteps
+           call opcopy(uor(:,istep),vor(:,istep),wor(:,istep),vx,vy,vz)
+         elseif(ifstorebase .and.init   .and..not.ifbase)then !just moving in memory
+           call opcopy(vx,vy,vz,uor(:,istep),vor(:,istep),wor(:,istep))
+         endif
       end do
+      if(ifstorebase .and..not.init.and.ifbase)then
+        ifbase=.false.;init=.true.
+      endif
 
 !     --> Copy the solution.
       call nopcopy(fx, fy, fz, fp, ft, vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1))
@@ -231,12 +253,23 @@
       real, dimension(lt) :: fx, fy, fz, ft
       real, dimension(lt2) :: fp
 
+      real, save, allocatable, dimension(:, :) :: uor,vor,wor
+
+      logical, save :: init
+      data             init /.false./
 !     --> Setup the parameters for the linearized solver.
       ifpert = .true. ; ifadj = .true.
       call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
 
-!     --> Turning-off base flow computation.
+!     --> Turning-off the base flow side-by-side computation. Need to change for Floquet.
       ifbase = .false.
+      if(uparam(01) .eq. 3.21)ifbase=.true. ! activate floquet
+      if(ifstorebase.and.init)ifbase=.false.
+
+      if(ifstorebase .and.ifbase.and..not.init)then
+       if(nid .eq. 0) write(6,*) 'ALLOCATING UOR WITH NSTEPS:',nsteps
+       allocate(uor(lt, nsteps), vor(lt, nsteps), wor(lt,nsteps))
+      endif
 
 !     --> Pass the initial condition for the perturbation.
       call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1), qx, qy, qz, qp, qt)
@@ -249,7 +282,16 @@
          ! --> Integrate forward in time.
          call nekstab_usrchk()
          call nek_advance()
+         if    (ifstorebase .and.ifbase .and..not.  init)then !storing first time
+           if(nid.eq.0)write(6,*)'storing first series:',istep,'/',nsteps
+           call opcopy(uor(:,istep),vor(:,istep),wor(:,istep),vx,vy,vz)
+         elseif(ifstorebase .and.init   .and..not.ifbase)then !just moving in memory
+           call opcopy(vx,vy,vz,uor(:,istep),vor(:,istep),wor(:,istep))
+         endif
       end do
+      if(ifstorebase .and..not.init.and.ifbase)then
+        ifbase=.false.;init=.true.
+      endif
 
 !     --> Copy the solution.
       call nopcopy(fx, fy, fz, fp, ft, vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1))
