@@ -29,6 +29,6 @@ writeToFieldFile = yes
 
 [VELOCITY]
 residualTol = 1.0E-9
-residualProj = yes
+residualProj = no
 density = 1.0
 viscosity = -50.0

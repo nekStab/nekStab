@@ -2,7 +2,7 @@
 startFrom = BFRe40_1cyl0.f00001
 
 stopAt = endTime
-endTime = 400.0
+endTime = 150.0
 
 userParam01 = 1.2
 
@@ -12,7 +12,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 200.
+writeInterval = 1000.
 writeDoublePrecision = no
 
 dealiasing = yes
@@ -22,20 +22,12 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-11
+residualTol = 1.0E-9
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-11
+residualTol = 1.0E-9
 residualProj = no
 density = 1.0
 viscosity = -50.0
-
-#[TEMPERATURE]
-#solver = helm
-#residualTol = 1.0E-11
-#residualProj = yes
-#writeToFieldFile = yes
-#conductivity = -40.0
-#rhoCp = 1.0

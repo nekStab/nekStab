@@ -47,7 +47,7 @@ if __name__ == '__main__':
     plt.yscale('log');plt.xlabel(r'$t$')
     
     plt.axhline(y=1e-9, lw=0.1, c='k', ls='dotted')
-    plot_rs(plt, 'residu.dat',   0.2, 'm', r'Re=50 boost')
+    plot_rs(plt, 'residu.dat',   0.2, 'm', r'Re=50 SFD dynamic')
 
     plt.legend(loc='best',fontsize=6);
     fname='residu.'+formt
