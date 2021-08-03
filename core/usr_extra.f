@@ -22,6 +22,7 @@ c-----------------------------------------------------------------------
       ifldbf = .true.           ! load base flow for stability
       ifbf2D = .false.          ! force 2D solution
       ifstorebase = .false.     ! store base flow for Floquet
+      ifdyntol = .false.        ! dynamical tolerances
 
       ifseed_nois = .true.      ! noise as initial seed
       ifseed_symm = .false.     ! symmetry initial seed
@@ -55,6 +56,7 @@ c-----------------------------------------------------------------------
       call bcast(ifldbf  , lsize)
       call bcast(ifbf2D  , lsize)
       call bcast(ifstorebase  , lsize)
+      call bcast(ifdyntol  , lsize)
 
       return
       end subroutine nekStab_setDefault
@@ -162,40 +164,29 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-
-         if(uparam(1).ge.1)then !compose forcings to fcx,fcy,fcz
-
-            if(uparam(3).eq.1)then
-               call SFD
-            elseif(uparam(3).eq.2)then
-               call BoostConv
-            elseif(uparam(3).eq.3)then
-!     --> Copy initial guess into newton-krylov array.
-               call nopcopy(qx, qy, qz, qp, qt, vx, vy, vz, pr, t)
-!     --> Newton-Krylov solver.
-               call newton_krylov(qx, qy, qz, qp, qt)
-!     --> Outpost solution.
-               call outpost(qx, qy, qz, qp, qt, "BF_")
-               call nek_end
-            endif
-
+         if(uparam(1).eq.1)then
+            call SFD
+         elseif(uparam(1).eq.2)then
+            call BoostConv
          endif
          if(ifbfcv)call nek_end
 
-      case(2)                   ! limit cycle computation
+      case(2)                   ! Newton-Krylov solver
 
-         write(6,*) 'NOT IMPLEMENTED'; call nek_end
+         call newton_krylov
+         call nek_end
 
       case(3)                   ! eigenvalue problem
 
          if(uparam(3).eq.3)then
-            if(nid.eq.0)write(6,*) 'forcing uparam(3) to ZERO!!!!! OTHERWISE CRASH'
+            if(nid.eq.0)write(6,*) 'forcing uparam(3) to ZERO!'
             uparam(3)=0; call bcast(uparam, 1*wdsize)
          endif
          call Krylov_Schur
          call nek_end
 
       case(4)                   ! in postprocessing.f
+
 !     -----> Direct mode kinetic energy budget.
          if(uparam(01) .eq. 4.0) call stability_energy_budget
 
@@ -206,9 +197,7 @@ c-----------------------------------------------------------------------
          if(uparam(01) .eq. 4.2) call BF_sensitivity
 
 !     -----> Sensitivity to steady force.
-         if( (uparam(01) .eq. 4.31) .or. (uparam(01) .eq. 4.32) ) then
-            call ts_steady_force_sensitivity()
-         end if
+         if( (uparam(01) .eq. 4.31) .or. (uparam(01) .eq. 4.32) ) call ts_steady_force_sensitivity()
 
          call nek_end
 
