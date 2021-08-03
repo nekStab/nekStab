@@ -177,7 +177,6 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       real glmin,glmax,deltax
-      real left_sponge,right_sponge
       integer n
 
       n = nx1*ny1*nz1*nelv
@@ -200,12 +199,10 @@ c-----------------------------------------------------------------------
       if(IF3D)spng_dr(3)=(acc_spg)*zRspg
 
       if(nid.eq.0)then
-         write(6,*)' Left sponge width: ',left_sponge
-         write(6,*)' Right sponge width: ',right_sponge
-         write(6,*)' Sponge left section width: ',spng_wl
-         write(6,*)' Sponge right section width: ',spng_wr
-         write(6,*)' Sponge left drop/rise section width: ',spng_dl
-         write(6,*)' Sponge right drop/rise section width: ',spng_dr
+         write(6,*)' Spg left  section width:',spng_wl
+         write(6,*)' Spg right section width:',spng_wr
+         write(6,*)' Spg left  drop/rise section width:',spng_dl
+         write(6,*)' Spg right drop/rise section width:',spng_dr
       endif
 
 !     save reference field -> sponge value reference

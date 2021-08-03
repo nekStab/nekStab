@@ -7,20 +7,16 @@ c-----------------------------------------------------------------------
 
       integer, parameter :: lt=lx1*ly1*lz1*lelt
 
-      real, dimension(lt), save   :: qxo,qyo,qzo,
-     $     vxo,vyo,vzo,
-     $     uta,vta,wta,
-     $     utb,vtb,wtb,
-     $     utc,vtc,wtc
-
-      real, dimension(lt)         :: do1,do2,do3,
-     $     utmp,vtmp,wtmp
-
-      real adt,bdt,cdt
+      real, dimension(lt), save :: qxo,qyo,qzo,vxo,vyo,vzo,uta,vta,wta,utb,vtb,wtb,utc,vtc,wtc
+      real, dimension(lt) :: do1,do2,do3,utmp,vtmp,wtmp
+      real adt,bdt,cdt,desired_tolerance
       real residu,h1,l2,semi,linf,rate,residu0,cutoff,gain,frq,sig,umax
       real glmin,glmax,glsum,glsc3,tol
       integer n,i
-      save n,residu0
+      save n,residu0,desired_tolerance
+      logical, save :: tic,toc
+      data             tic /.true./
+      data             toc /.true./
 
       if(uparam(4).gt.0. OR. uparam(5).gt.0) then
 
@@ -50,6 +46,7 @@ c-----------------------------------------------------------------------
             if(nid.eq.0)open(unit=10,file='residu.dat')
             call opcopy(qxo,qyo,qzo,vx,vy,vz)
             call opcopy(vxo,vyo,vzo,vx,vy,vz)
+            desired_tolerance = max(param(21),param(22))
 
          else
             
@@ -81,8 +78,11 @@ c-----------------------------------------------------------------------
          call opcmult(do1,do2,do3, gain) !f=fc*-chi
          call opadd2 (fcx,fcy,fcz, do1,do2,do3) !FORCE HERE DO NOT COPY, ADD!
       else
-         if(nid.eq.0)open(unit=10,file='residu.dat')
-         if(nid.eq.0)write(6,*)' SFD in continuation mode'
+         if(nid.eq.0)then
+           open(unit=10,file='residu.dat')
+           write(6,*)' SFD in continuation mode'
+         endif
+         if(istep.eq.0)desired_tolerance = max(param(21),param(22))
       endif
 
       if(istep.ge.1)then
@@ -92,15 +92,18 @@ c-----------------------------------------------------------------------
          residu = l2; rate = (residu-residu0); residu0 = residu
          call opcopy(vxo,vyo,vzo,vx,vy,vz)
 
+         tol = 0.0d0
          if(nid.eq.0)then
-            write(10,"(3E15.7)")time,residu,rate
-            write(6,"(A,2E15.7)")' SFD AB3 residu =',residu,rate
+            write(10,"(4E15.7)")time,residu,rate,param(21)
+            write(6,"(A,3E15.7)")' SFD AB3 residu =',residu,rate
             write(6,*)
+            tol = residu
          endif
+            if (mod(istep,20)==0) call set_solv_tole(abs(tol)/20)           
 
-         if( istep.gt.100 .and. residu .lt. max(param(21), param(22)) )then !save to disk and change flag
-         if(nid.eq.0)write(6,*)' Converged base flow to:',max(param(21), param(22))
+         if( istep.gt.100 .and. residu .lt. desired_tolerance )then !save to disk and change flag
 
+            if(nid.eq.0)write(6,*)' Converged base flow to:',desired_tolerance
          ifbfcv = .true.
          call bcast(ifbfcv  , lsize)
          param(63) = 1          ! Enforce 64-bit output
@@ -114,6 +117,44 @@ c-----------------------------------------------------------------------
       endif
       return
       end subroutine SFD
+c-----------------------------------------------------------------------c
+      subroutine spec_tole_sfd(i)
+            ! Subroutine to progressively tight tolerances to maximise computational time
+            implicit none
+            include 'SIZE'
+            include 'TOTAL'
+            integer :: i
+            real, save :: desired_tolerance
+            logical, save :: init
+            data             init /.false./
+
+            if(.not.init)then ! save user specified tolerance
+                  desired_tolerance = max(param(21),param(22))
+                  init = .true.
+            endif
+            ! if restarting we need to move i previous iteration to match the tolerances of the previous case!
+            if (uparam(2).gt.0)i = i + 1
+            if     (i == 1 .and. desired_tolerance.le.1e-6) then
+                  call set_solv_tole(1e-6)
+            elseif (i == 2 .and. desired_tolerance.le.1e-7) then
+                  call set_solv_tole(1e-7)
+            elseif (i == 3 .and. desired_tolerance.le.1e-8) then
+                  call set_solv_tole(1e-8)
+            elseif (i == 4 .and. desired_tolerance.le.1e-9) then
+                  call set_solv_tole(1e-9)
+            elseif (i == 5 .and. desired_tolerance.le.1e-10) then
+                  call set_solv_tole(1e-10)
+            elseif (i == 6 .and. desired_tolerance.le.1e-11) then
+                  call set_solv_tole(1e-11)
+            elseif (i == 7 .and. desired_tolerance.le.1e-12) then
+                  call set_solv_tole(1e-12)
+            elseif (i == 8 .and. desired_tolerance.le.1e-13) then
+                  call set_solv_tole(1e-13)
+            else
+                  call set_solv_tole(desired_tolerance)
+            endif
+            return
+      end subroutine spec_tole_SFD
 c-----------------------------------------------------------------------c
       subroutine BoostConv
 !     boostconv core subroutine
