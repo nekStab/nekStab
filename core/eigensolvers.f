@@ -49,7 +49,6 @@
 
       n = nx1 * ny1 * nz1 * nelt
 
-      bm1s = bm1
       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
       if (if3d) alpha = alpha + glsc3(pz, bm1s, qz, n)
       if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, n)
@@ -464,76 +463,6 @@ c----------------------------------------------------------------------
 
 
 
-      subroutine prepare_baseflow
-!     preparing for Floquet upgrade
-
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-      integer n,i
-      character(len=30) filename
-      logical ifto_sav, ifpo_sav
-      n  = nx1*ny1*nz1*nelt
-
-      if(    uparam(3).eq.0.1)then !steady prescribe
-
-!     if(nid.eq.0)write(6,*)'Copying base flow!'
-         call opcopy(vx,vy,vz,ubase,vbase,wbase)
-         if(ifheat) call copy(t(1,1,1,1,1), tbase, n)
-
-!     ----- Save baseflow to disk (recommended) -----
-         call opcopy(ubase,vbase,wbase,vx,vy,vz)
-         if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
-         ifto_sav=ifto;ifpo_sav=ifpo
-         ifto=.true.;ifpo=.true.
-         call outpost(vx,vy,vz,pr,t,'BFL') !outpost for sanity check
-         ifto=ifto_sav;ifpo=ifpo_sav
-
-      elseif(uparam(3).eq.0.2)then !steady load
-
-
-!     if(.not.iffloq .and. (.not. ifbfcv .or. ifldbf))then
-         write(filename,'(a,a,a)')'BF_',trim(SESSION),'0.f00001'
-         if(nid.eq.0)write(*,*)'Loading base flow: ',filename
-         call load_fld(filename)
-
-!     ----- Save baseflow to disk (recommended) -----
-         call opcopy(ubase,vbase,wbase,vx,vy,vz)
-         if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
-         ifto_sav=ifto;ifpo_sav=ifpo
-         ifto=.true.;ifpo=.true.
-         call outpost(vx,vy,vz,pr,t,'BFL') !outpost for sanity check
-         ifto=ifto_sav;ifpo=ifpo_sav
-
-
-      elseif(uparam(3).eq.0.3)then !steady compute
-
-         ifbase = .true.
-         if(nid.eq.0)write(6,*)'Running DNS alongside stability!'
-
-      elseif(uparam(3).eq.1.1)then !periodic prescribe
-
-         if(nid.eq.0)write(6,*)'Prescribed periodic baseflow!'
-
-      elseif(uparam(3).eq.1.2)then !periodic reconstruct
-
-      elseif(uparam(3).eq.1.21)then !periodic load all
-
-      elseif(uparam(3).eq.1.3)then !periodic compute
-
-         ifbase = .true.
-         if(nid.eq.0)write(6,*)'Running DNS alongside stability!'
-
-      endif
-
-
-      return
-      end subroutine prepare_baseflow
-
-
-
-c----------------------------------------------------------------------
-
       subroutine krylov_schur_prepare
 
 !     This
@@ -933,7 +862,11 @@ c-----------------------------------------------------------------------
       endif
 
 !     --> Outpost the latest Krylov vector.
-      call whereyouwant("KRY", k+1)
+      !if(uparam(1).gt.3)then
+       call whereyouwant("KRY", k+1) ! skipping one due to the initial condition
+      !else
+      ! call whereyouwant("KRY", k) ! for restart of newton solver
+      !endif
       time = time * k           !order in ParaView
       call outpost(f_xr, f_yr, f_zr, f_pr, f_tr, "KRY")
 
