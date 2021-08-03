@@ -722,9 +722,12 @@ c----------------------------------------------------------------------
 !     #####
 
 !     --> Compute the production terms.
-      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 1, energy_budget(:, 1), energy_budget(:, 2), energy_budget(:, 3))
-      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 2, energy_budget(:, 4), energy_budget(:, 5), energy_budget(:, 6))
-      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 3, energy_budget(:, 7), energy_budget(:, 8), energy_budget(:, 9))
+      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 1, 
+     $ energy_budget(:, 1), energy_budget(:, 2), energy_budget(:, 3))
+      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 2,
+     $ energy_budget(:, 4), energy_budget(:, 5), energy_budget(:, 6))
+      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 3,
+     $ energy_budget(:, 7), energy_budget(:, 8), energy_budget(:, 9))
 
 !     --> Compute the dissipation term.
       call compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, energy_budget(:, 10))
@@ -883,3 +886,4 @@ c----------------------------------------------------------------------
 
       return
       end subroutine compute_laplacian
+c----------------------------------------------------------------------
