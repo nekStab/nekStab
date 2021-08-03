@@ -40,13 +40,12 @@
       real, dimension(lt2) :: dqp
 
 !     ----- Miscellaneous
-      real :: tol, residual
+      real :: residual
       integer :: maxiter_newton, maxiter_gmres
       integer :: i, j, k, n     !, n2
 
       n = nx1*ny1*nz1*nelt      !; n2 = nx2*ny2*nz2*nelt
       maxiter_newton = 30 ; maxiter_gmres = 60
-      tol = max(param(21), param(22))
       if(istep.eq.0.and.nid.eq.0)then
          open(unit=887,file='residu_newton.dat',status='replace')
          open(unit=888,file='residu_gmres.dat',status='replace');close(888)
@@ -62,6 +61,8 @@
 !     --> Setup/Update the nek-parameters for the Newton solver.
       call newton_krylov_prepare
 
+!     --> Variable tolerances for speed up!
+      call spec_tole(i)
 !     --> Outpost current estimate of the solution
       time = i ; call outpost(qx, qy, qz, qp, qt, "nwt")
 
@@ -74,7 +75,7 @@
       if(nid.eq.0)write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
       write(887,"(I6,1E15.7)")i,residual
 
-      if(residual .lt. tol) exit newton
+      if(residual .lt. max(param(21), param(22))) exit newton
 
       if(nid.eq.0)write(6,*)'LINEAR SOLVER'
 !     --> Solve the linear system.
@@ -159,7 +160,7 @@
       real :: beta, tol
 
 !     Initialize arrays.
-      tol = max(param(21), param(22))
+      tol = param(22) !max(param(21), param(22))
 
 !     ----- Allocate arrays -----
       allocate(qx(lt, ksize+1), qy(lt, ksize+1), qz(lt, ksize+1), qt(lt, ksize+1), qp(lt2, ksize+1))
@@ -182,6 +183,30 @@
       qp(:, 2:k_dim+1) = 0.0D+00 ; qt(:, 2:k_dim+1) = 0.0D+00
 
       arnoldi : do k = 1, k_dim
+      !!restarting arnoldi
+      !k_start = 1
+      !if(i==1.and.uparam(2).gt.0)then
+      ! k_start = int(uparam(2))
+      ! if(nid.eq.0)then
+      !  write(6,*)'Restarting LIN Newton from:',k_start
+      ! write(6,'(a,a,i4.4)')' Loading Hessenberg matrix: HES',trim(SESSION),k_start
+      !  write(filename,'(a,a,i4.4)')'HES',trim(SESSION),k_start
+      !  open(67, file=trim(filename), status='unknown', form='formatted')
+      !  if (k_dim.lt.k_start) then !subsampling
+      !   do l = 1,k_dim+1
+      !   do m = 1,k_start
+      !    if (m.le.k_dim)read(67,"(1E15.7)") H(l,m)
+      !   enddo
+      !   enddo
+      !  else
+      !   read(67,*)((H(l,m), m=1, k_start ), l = 1, k_start+1 )
+      !   endif
+      !   close(67)
+      !  endif !nid.eq.0
+      !call bcast(H,(k_dim+1)*k_dim*wdsize); k_start=k_start+1 
+      !call load_files(qx, qy, qz, qp, qt, k_start, k_dim+1, 'KRY')
+      !endif 
+      !arnoldi : do k = k_start, k_dim
 
 !     --> Arnoldi factorization.
       call arnoldi_factorization(qx, qy, qz, qp, qt, H, k, k, ksize)
@@ -404,3 +429,64 @@
 
       return
       end subroutine newton_krylov_prepare
+      subroutine set_solv_tole(tole)
+      ! Subroutine to set velocity, pressure and scalar tolerances
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      real, intent(in) :: tole
+     
+      if(nid.eq.0)write(6,*)'TOLERANCES changed from',param(21),'to',abs(tole)
+ 
+      param(21) = abs(tole)
+      param(22) = abs(tole)
+      call bcast(param,200*wdsize)
+
+      TOLPDF = param(21); call bcast(TOLPDF,wdsize)
+      TOLHDF = param(22); call bcast(TOLHDF,wdsize)
+
+      restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
+      atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
+
+      return
+      end subroutine set_solv_tole
+
+
+      subroutine spec_tole(i)
+            ! Subroutine to progressively tight tolerances to maximise computational time
+            implicit none
+            include 'SIZE'
+            include 'TOTAL'
+            integer :: i
+            real, save :: desired_tolerance
+            logical, save :: init
+            data             init /.false./
+
+            if(.not.init)then ! save user specified tolerance
+                  desired_tolerance = max(param(21),param(22))
+                  init = .true.
+            endif
+            ! if restarting we need to move i previous iteration to match the tolerances of the previous case!
+            if (uparam(2).gt.0)i = i + 1 
+
+            if     (i == 1 .and. desired_tolerance.le.1e-6) then
+                  call set_solv_tole(1e-6)
+            elseif (i == 2 .and. desired_tolerance.le.1e-7) then
+                  call set_solv_tole(1e-7)
+            elseif (i == 3 .and. desired_tolerance.le.1e-8) then
+                  call set_solv_tole(1e-8)
+            elseif (i == 4 .and. desired_tolerance.le.1e-9) then
+                  call set_solv_tole(1e-9)
+            elseif (i == 5 .and. desired_tolerance.le.1e-10) then
+                  call set_solv_tole(1e-10)
+            elseif (i == 6 .and. desired_tolerance.le.1e-11) then
+                  call set_solv_tole(1e-11)
+            elseif (i == 7 .and. desired_tolerance.le.1e-12) then
+                  call set_solv_tole(1e-12)
+            elseif (i == 8 .and. desired_tolerance.le.1e-13) then
+                  call set_solv_tole(1e-13)
+            else
+                  call set_solv_tole(desired_tolerance)
+            endif
+            return
+      end subroutine spec_tole  
