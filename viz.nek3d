@@ -1,5 +1,0 @@
-NEK5000
-version:1.0
-filetemplate: Rev1cyl%d.f%05d
-firsttimestep: 001
-numtimesteps: 001
