@@ -100,14 +100,19 @@
 !     --> Standard setup for the linearized solver.
       call prepare_linearized_solver()
 
+      !     --> Linearized forward map for the Newton-Krylov solver.
+      if (floor(uparam(01)) .eq. 2) then
+            call newton_linearized_map(f, q)
+         endif
+
 !     --> Direct solver only steady and periodic!
-      if (uparam(01) .ge. 3.0 .or. uparam(01) .lt. 3.2 ) then
+      if (uparam(01) .ge. 3.0 .and. uparam(01) .lt. 3.2 ) then
          evop = 'd'
          call forward_linearized_map(f, q)
       endif
 
 !     --> Adjoint solver only steady and periodic!
-      if (uparam(01) .ge. 3.2 .or. uparam(01) .lt. 3.3 ) then
+      if (uparam(01) .ge. 3.2 .and. uparam(01) .lt. 3.3 ) then
          evop = 'a'
          call adjoint_linearized_map(f, q)
       endif
@@ -118,12 +123,7 @@
          call transient_growth_map(f, q)
       endif
 
-!     --> Linearized forward map for the Newton-Krylov solver.
-      if (floor(uparam(01)) .eq. 1) then
-         call newton_linearized_map(f, q)
-      endif
-
-!     --> Adjoint solver for the steady force sensitivity analysis.
+      !     --> Adjoint solver for the steady force sensitivity analysis.
       if (floor(uparam(01)) .eq. 4) then
          call ts_force_sensitivity_map(f, q)
       end if
