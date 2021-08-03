@@ -183,8 +183,7 @@ if __name__ == "__main__":
             c_pf(pf,pf,{'GENERAL':{'startFrom':'1cyl0.f00002'}})
             c_pf(pf,pf,{'GENERAL':{'endTime':'20000'}})
             c_pf(pf,pf,{'GENERAL':{'writeInterval':'20000'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'1'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam03':'1'}})
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'1.1'}})
             c_pf(pf,pf,{'GENERAL':{'userParam04':str(St)}})
             c_pf(pf,pf,{'GENERAL':{'userParam05':'0.05'}})
             c_pf(pf,pf,{'GENERAL':{'variableDt':'yes'}})
@@ -198,7 +197,7 @@ if __name__ == "__main__":
             c_pf(pf,pf,{'TEMPERATURE':{'conductivity':'-'+str(Pe)}})
             c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
             c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'no'}})
-            #rnek(folder,cn,True,log_suffix="_1b_sfd",n_procs=nps)
+            rnek(folder,cn,True,log_suffix="_1b_sfd",n_procs=nps)
             shutil.copyfile(folder+'BF_'+cn+'0.f00001',folder+'BF_sfd_'+cn+'0.f00001')
             ccall(('visnek BF_sfd_'+cn).split(), cwd=folder)
 
@@ -206,8 +205,7 @@ if __name__ == "__main__":
             c_pf(pf,pf,{'GENERAL':{'startFrom':'1cyl0.f00002'}})
             c_pf(pf,pf,{'GENERAL':{'endTime':'20000'}})
             c_pf(pf,pf,{'GENERAL':{'writeInterval':'20000'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'1'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam03':'2'}})
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'1.2'}})
             c_pf(pf,pf,{'GENERAL':{'variableDt':'no'}})
             c_pf(pf,pf,{'GENERAL':{'targetCFL':'0.5'}})
             c_pf(pf,pf,{'GENERAL':{'extrapolation':'standard'}})
@@ -219,7 +217,7 @@ if __name__ == "__main__":
             c_pf(pf,pf,{'TEMPERATURE':{'conductivity':'-'+str(Pe)}})
             c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
             c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'no'}})
-            #rnek(folder,cn,True,log_suffix="_1b_bcv",n_procs=nps)
+            rnek(folder,cn,True,log_suffix="_1b_bcv",n_procs=nps)
             shutil.copyfile(folder+'BF_'+cn+'0.f00001',folder+'BF_bcv_'+cn+'0.f00001')
             ccall(('visnek BF_bcv_'+cn).split(), cwd=folder)
 
@@ -227,8 +225,7 @@ if __name__ == "__main__":
             c_pf(pf,pf,{'GENERAL':{'startFrom':'1cyl0.f00002'}})
             c_pf(pf,pf,{'GENERAL':{'endTime':str(Tau)}})
             c_pf(pf,pf,{'GENERAL':{'writeInterval':'20000'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'1'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam03':'3'}})
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'2'}})
             c_pf(pf,pf,{'GENERAL':{'userParam07':'128'}})
             c_pf(pf,pf,{'GENERAL':{'variableDt':'no'}})
             c_pf(pf,pf,{'GENERAL':{'targetCFL':'0.5'}})
@@ -241,14 +238,14 @@ if __name__ == "__main__":
             c_pf(pf,pf,{'TEMPERATURE':{'conductivity':'-'+str(Pe)}})
             c_pf(pf,pf,{'TEMPERATURE':{'residualtol':tole}})
             c_pf(pf,pf,{'TEMPERATURE':{'residualproj':'no'}})
-            #rnek(folder,cn,True,log_suffix="_1b_nwt",n_procs=nps)
+            rnek(folder,cn,True,log_suffix="_1b_nwt",n_procs=nps)
             shutil.copyfile(folder+'BF_'+cn+'0.f00001',folder+'BF_nwt_'+cn+'0.f00001')
             ccall(('visnek BF_nwt_'+cn).split(), cwd=folder)
 
             # DIRECT 
             tole = '1.0E-7' ; tolep = '1.0E-5'
             c_pf(pf,pf,{'GENERAL':{'endTime':str(Tau)}})
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'3'}})
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'3.1'}})
             c_pf(pf,pf,{'GENERAL':{'userParam03':'0'}})
             c_pf(pf,pf,{'GENERAL':{'userParam07':'150'}})
             c_pf(pf,pf,{'GENERAL':{'userParam08':'0'}})
@@ -272,9 +269,6 @@ if __name__ == "__main__":
             # ADJOINT
             c_pf(pf,pf,{'GENERAL':{'userParam01':'3.2'}})
             c_pf(pf,pf,{'GENERAL':{'userParam07':'150'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam08':'0'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam09':'0'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam10':'0'}})
             rnek(folder,cn,True,log_suffix="_3a",n_procs=nps)
             ccall(('visnek aRe'+cn).split(), cwd=folder)
             ccall(('visnek aIm'+cn).split(), cwd=folder)
@@ -284,21 +278,22 @@ if __name__ == "__main__":
             c_pf(pf,pf,{'GENERAL':{'endTime':str(Tau)}})
             c_pf(pf,pf,{'GENERAL':{'userParam01':'3.3'}})
             c_pf(pf,pf,{'GENERAL':{'userParam07':'64'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam08':'0'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam09':'0'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam10':'0'}})
             rnek(folder,cn,True,log_suffix="_3s",n_procs=nps)
             ccall(('visnek sRe'+cn).split(), cwd=folder)
             ccall(('visnek sIm'+cn).split(), cwd=folder)
 
+            # BUDGET
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.0'}})
+            rnek(folder,cn,True,log_suffix="_4b",n_procs=nps)
+            
             # WAVEMAKER
             c_pf(pf,pf,{'GENERAL':{'userParam01':'4.1'}})
-            rnek(folder,cn,True,log_suffix="_4w",n_procs=nps)
+            rnek(folder,cn,True,log_suffix="_5w",n_procs=nps)
             ccall(('visnek wm_'+cn).split(), cwd=folder)
             
             # BF SENSITIVITY
             c_pf(pf,pf,{'GENERAL':{'userParam01':'4.2'}})
-            rnek(folder,cn,True,log_suffix="_5s",n_procs=nps)
+            rnek(folder,cn,True,log_suffix="_6s",n_procs=nps)
             ccall(('visnek tr_'+cn).split(), cwd=folder)
             ccall(('visnek ti_'+cn).split(), cwd=folder)
             ccall(('visnek pr_'+cn).split(), cwd=folder)
@@ -307,12 +302,9 @@ if __name__ == "__main__":
             ccall(('visnek si_'+cn).split(), cwd=folder)
 
             # FORCING SENSITIVITY
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.31'}})
-            rnek(folder,cn,True,log_suffix="_6fR",n_procs=nps)
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.3'}})
+            rnek(folder,cn,True,log_suffix="_7fR",n_procs=nps)
             ccall(('visnek fsr'+cn).split(), cwd=folder)
-
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'4.32'}})
-            rnek(folder,cn,True,log_suffix="_6fI",n_procs=nps)
             ccall(('visnek fsi'+cn).split(), cwd=folder)
 
             ctoc = time.perf_counter(); cttime=ctoc-ctic

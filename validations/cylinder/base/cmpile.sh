@@ -15,7 +15,8 @@ echo $NEK_SOURCE_ROOT
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc.sh
 #source $NEKSTAB_SOURCE_ROOT/core/compiler_gcc_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel.sh
-source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel_tb.sh
+#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel_tb.sh
+source ${NEKSTAB_SOURCE_ROOT}/core/compiler_oneap_tb.sh
 #source ${NEKSTAB_SOURCE_ROOT}/core/compiler_pgi.sh
 
 if [ $#  -ne 1 ] ; then
