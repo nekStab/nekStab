@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 2
-userParam07 = 128 # k_dim
+userParam07 = 90 # k_dim
 
 dt = 0
 variableDt = no
@@ -29,6 +29,6 @@ writeToFieldFile = yes
 
 [VELOCITY]
 residualTol = 1.0E-9
-residualProj = no
+residualProj = yes
 density = 1.0
 viscosity = -50.0

@@ -38,8 +38,7 @@
       type(krylov_vector) :: dq
 
 !     ----- Miscellaneous
-      real :: residual
-      real,save :: tol
+      real :: residual,tol
       integer :: maxiter_newton, maxiter_gmres
       integer :: i, j, k, n
 
@@ -70,11 +69,9 @@
       call newton_krylov_prepare
 
 !     --> Variable tolerances for speed up!
-      if(ifdyntol) then 
-            call spec_tole(i)
-            tol = max(param(21), param(22))
-      endif
-
+      if(ifdyntol) call spec_tole(i)
+      tol = max(param(21), param(22))
+      
 !     --> Outpost current estimate of the solution
       time = q%time ; call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "nwt")
 
@@ -83,7 +80,6 @@
 
 !     --> Check residual || f(q) ||
       call krylov_norm(residual, f) ; residual = residual ** 2
-      write(*, *) "RESIDUAL ", residual
 
       if(nid.eq.0)write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
       write(887,"(I6,1E15.7)")i,residual
@@ -98,9 +94,9 @@
       call krylov_sub2(q, dq)
 
       enddo newton
-      if(nid.eq.0)close(887)
 
-      if (residual.lt.tol) call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "BF_")
+      if(nid.eq.0)close(887)
+      if(residual.lt.tol) call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "BF_")
 
       return
       end subroutine newton_krylov

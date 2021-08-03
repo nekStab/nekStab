@@ -74,20 +74,14 @@ jobs:
           ./cmpile.sh all
           cd ../../../../
           
-      - name: Compiling examples/cylinder/sensitivity/
+      - name: Compiling examples/cylinder/postprocessing
         shell: bash
         run: |
-          cd examples/cylinder/sensitivity/wavemaker
+          cd examples/cylnder/postprocessing/energy_budget/
+          ./cmpile.sh all
+          cd ../wavemaker/
           ./cmpile.sh all
           cd ../baseflow_sensitivity
           ./cmpile.sh all
           cd ../steady_force_sensitivity
           ./cmpile.sh all
-          cd ../../../../
-          
-      - name: Compiling examples/cylinder/energy_budget/
-        shell: bash
-        run: |
-          cd examples/cylinder/energy_budget/
-          ./cmpile.sh all
-          cd ../../../

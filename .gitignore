@@ -39,3 +39,5 @@ examples/tpjet/baseflow/tpjet.f
 examples/cylinder/baseflow/boostconv/BF_1cyl0.f00001
 examples/cylinder/baseflow/newton_dyn/BF_1cyl0.f00001
 examples/cylinder/baseflow/sfd_dyn/BF_1cyl0.f00001
+examples/cylinder/baseflow/newton/BF_1cyl0.f00001
+examples/cylinder/baseflow/newton/BF_1cyl0.f00001
