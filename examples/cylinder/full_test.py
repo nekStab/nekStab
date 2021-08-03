@@ -24,10 +24,10 @@ def rnek(cwd, par_file, ifmpi, log_suffix="", n_procs=1, step_limit=None, verbos
     print('    Using command "{0}"'.format(" ".join(command)))
     print('    Using working directory "{0}"'.format(cwd))
     print('    Using file "{0}"'.format(par_file))
-    p_file = os.path.join(cwd,par_file+'.par')
-    bp_file = p_file+'.{0}{1}'.format(n_procs, log_suffix)
-    shutil.copyfile(p_file,bp_file)
-    print('    Backup to file "{0}"'.format(bp_file))
+    #p_file = os.path.join(cwd,par_file+'.par')
+    #bp_file = p_file+'.{0}{1}'.format(n_procs, log_suffix)
+    #shutil.copyfile(p_file,bp_file)
+    #print('    Backup to file "{0}"'.format(bp_file))
     print()
     print(' tail -f',logfile)
     try:
@@ -89,10 +89,10 @@ if __name__ == "__main__":
     #rnek(root+'/baseflow/boostconv',cn,True,n_procs=nps)
 
     # NEWTON dynamic
-    rnek(root+'/baseflow/newton_dyn',cn,True,n_procs=nps)
+    #rnek(root+'/baseflow/newton_dyn',cn,True,n_procs=nps)
     
     # NEWTON
-    rnek(root+'/baseflow/newton',cn,True,n_procs=nps)
+    #rnek(root+'/baseflow/newton',cn,True,n_procs=nps)
 
     # DIRECT 
     rnek(root+'/stability/direct',cn,True,n_procs=nps)
@@ -100,17 +100,17 @@ if __name__ == "__main__":
     # ADJOINT
     rnek(root+'/stability/adjoint',cn,True,n_procs=nps)
 
-    # WAVEMAKER
-    rnek(root+'/postprocessing/wavemaker',cn,True,n_procs=nps)
+    # # WAVEMAKER
+    # rnek(root+'/postprocessing/wavemaker',cn,True,n_procs=nps)
 
-    # BUDGET
-    rnek(root+'/postprocessing/energy_budget',cn,True,n_procs=nps)
+    # # BUDGET
+    # rnek(root+'/postprocessing/energy_budget',cn,True,n_procs=nps)
         
-    # BF SENSITIVITY
-    rnek(root+'/postprocessing/baseflow_sensitivity',cn,True,n_procs=nps)
+    # # BF SENSITIVITY
+    # rnek(root+'/postprocessing/baseflow_sensitivity',cn,True,n_procs=nps)
 
-    # FORCING SENSITIVITY
-    rnek(root+'/postprocessing/steady_force_sensitivity',cn,True,n_procs=nps)
+    # # FORCING SENSITIVITY
+    # rnek(root+'/postprocessing/steady_force_sensitivity',cn,True,n_procs=nps)
 
     toc = time.perf_counter(); ttime=toc-tic
     print(f"Script finished in in {ttime:0.2f} seconds")

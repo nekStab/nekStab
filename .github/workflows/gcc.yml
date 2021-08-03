@@ -40,7 +40,10 @@ jobs:
         run: |
           lscpu
           export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
-          
+          export NEKSTAB_SOURCE_ROOT="../../../" #--> path to nekStab
+          export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
+          export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+
       - name: Compile nektools
         shell: bash
         run: |
