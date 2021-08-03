@@ -6,7 +6,8 @@ set -e
 #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 #export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
-export USR="matvec.o \
+export USR="krylov_subspace.o\
+    matvec.o \
     krylov_decomposition.o \
     eigensolvers.o \
     lapack_wrapper.o \

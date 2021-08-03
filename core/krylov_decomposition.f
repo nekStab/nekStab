@@ -4,7 +4,7 @@
 
 
 
-      subroutine arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, mend, ksize)
+      subroutine arnoldi_factorization(Q, H, mstart, mend, ksize)
 
 !     This function implements the k-step Arnoldi factorization of the linearized
 !     Navier-Stokes operator. The rank k of the Arnoldi factorization is set as a user
@@ -39,12 +39,10 @@
 !     Navier-Stokes operator.
 !     
 !     Last edit : April 3rd 2020 by JC Loiseau.
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
 !     ----- Miscellaneous -----
       real                               :: alpha
@@ -56,12 +54,10 @@
       real   :: telapsed,tmiss,dnekclock
 
 !     ----- Orthogonal residual f = w - (Q,w)*Q -----
-      real, dimension(lt)                :: f_xr, f_yr, f_zr, f_tr
-      real, dimension(lt2)               :: f_pr
-c     
+      type(krylov_vector) :: f
+
 !     ----- Krylov basis V for the projection MQ = QH -----
-      real, dimension(lt,ksize+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,ksize+1)       :: qp
+      type(krylov_vector), dimension(ksize+1) :: Q
 
 !     ----- Upper Hessenberg matrix -----
       real, dimension(ksize+1, ksize)    :: H
@@ -69,8 +65,7 @@ c
       n  = nx1*ny1*nz1*nelt
 
 !     --> Initialize arrays.
-      call noprzero(f_xr, f_yr, f_zr, f_pr, f_tr)
-      alpha = 0.0d0
+      call krylov_zero(f) ; alpha = 0.0d0
 
 !     --> Arnoldi factorization.
       do mstep = mstart, mend
@@ -80,23 +75,22 @@ c
          eetime0=dnekclock()
 
 !     --> Matrix-vector product f = M * v (e.g. calling the linearized Navier-Stokes solver).
-         call matvec(f_xr, f_yr, f_zr, f_pr, f_tr, qx(:,mstep), qy(:,mstep), qz(:,mstep), qp(:,mstep), qt(:,mstep))
+         call matvec(f, Q(mstep))
 
 !     --> Update Hessenberg matrix and compute the orthogonal residual f.
-         call update_hessenberg_matrix(H(1:mstep, 1:mstep), f_xr, f_yr, f_zr, f_pr, f_tr, 
-     $        qx(:, 1:mstep), qy(:, 1:mstep), qz(:, 1:mstep), qp(:, 1:mstep), qt(:, 1:mstep), mstep)
+         call update_hessenberg_matrix(H(1:mstep, 1:mstep), f, Q(1:mstep), mstep)
 
 !     --> Normalise the residual vector.
-         call normalize(f_xr, f_yr, f_zr, f_pr, f_tr, alpha)
+         call krylov_normalize(f, alpha)
 
 !     --> Update the Hessenberg matrix.
          H(mstep+1, mstep) = alpha
 
 !     --> Add the residual vector as the new Krylov vector.
-         call nopcopy(qx(:,mstep+1),qy(:,mstep+1),qz(:,mstep+1),qp(:,mstep+1),qt(:,mstep+1),  f_xr,f_yr,f_zr,f_pr,f_tr)
+         call krylov_copy(Q(mstep+1), f)
 
 !     --> Save checkpoint for restarting/run-time analysis.
-         if(ifres) call arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H(1:mstep+1, 1:mstep), mstep)
+         if(ifres) call arnoldi_checkpoint(f%vx, f%vy, f%vz, f%pr, f%theta, H(1:mstep+1, 1:mstep), mstep)
 
 !     --> Output timing statistics
          eetime1=dnekclock() ; telapsed = (eetime1-eetime0)/3600.0d0 ; tmiss = telapsed*(ksize-mstep)
@@ -123,7 +117,7 @@ c
 
 
 
-      subroutine update_hessenberg_matrix(H, f_xr, f_yr, f_zr, f_pr, f_tr, qx, qy, qz, qp, qt, k)
+      subroutine update_hessenberg_matrix(H, f, Q, k)
 
 !     This function orthonormalizes the latest Krylov vector f w.r.t. all of the
 !     previous ones and updates the entries of the Hessenberg matrix accordingly.
@@ -153,27 +147,20 @@ c
 !     
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
+      use krylov_subspace
       implicit none
       include "SIZE"
       include "TOTAL"
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
       integer, intent(in) :: k
       real, dimension(k, k), intent(inout) :: H
 
-      real, dimension(lt, k), intent(in) :: qx, qy, qz, qt
-      real, dimension(lt2, k), intent(in) :: qp
-
-      real, dimension(lt), intent(inout) :: f_xr, f_yr, f_zr, f_tr
-      real, dimension(lt2), intent(inout) :: f_pr
+      type(krylov_vector), dimension(k) :: Q
+      type(krylov_vector) :: f, wrk
 
       integer i, n
       real alpha
 
-      real, dimension(lt) :: wk1, wk2, wk3, wkt
-      real, dimension(lt2) :: wkp
       real, dimension(k) :: h_vec
 
       n = nx1*ny1*nz1*nelt
@@ -185,12 +172,12 @@ c
       do i = 1, k
 
 !     --> Copy the i-th Krylov vector to the working arrays.
-         call nopcopy(wk1,wk2,wk3,wkp,wkt, qx(:,i),qy(:,i),qz(:,i),qp(:,i),qt(:,i))
+         call krylov_copy(wrk, Q(i))
 
 !     --> Orthogonalize f w.r.t. to q_i.
-         call inner_product(alpha, f_xr, f_yr, f_zr, f_pr, f_tr, wk1, wk2, wk3, wkp, wkt)
-         call nopcmult(wk1, wk2, wk3, wkp, wkt, alpha)
-         call nopsub2(f_xr,f_yr,f_zr,f_pr,f_tr, wk1,wk2,wk3,wkp,wkt)
+         call krylov_inner_product(alpha, f, wrk)
+         call krylov_cmult(wrk, alpha)
+         call krylov_sub2(f, wrk)
 
 !     --> Update the corresponding entry in the Hessenberg matrix.
          H(i, k) = alpha

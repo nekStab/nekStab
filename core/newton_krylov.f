@@ -4,7 +4,7 @@
 
 
 
-      subroutine newton_krylov(qx, qy, qz, qp, qt)
+      subroutine newton_krylov()
 
 !     Implementation of a simple Newton-Krylov solver for fixed point
 !     computation using a time-stepper formulation. The resolution of
@@ -20,6 +20,7 @@
 !     
 !     Last edited : March 26th by JC Loiseau.
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -28,64 +29,79 @@
       integer, parameter :: lt2 = lx2*ly2*lz2*lelt
 
 !     ----- Right-hand side vector for Newton solver.
-      real, dimension(lt) :: f_x, f_y, f_z, f_t
-      real, dimension(lt2) :: f_p
+      type(krylov_vector) :: f
 
 !     ----- Current estimate of the solution.
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
+      type(krylov_vector) :: q
 
 !     ----- Newton correction obtained from GMRES.
-      real, dimension(lt) :: dqx, dqy, dqz, dqt
-      real, dimension(lt2) :: dqp
+      type(krylov_vector) :: dq
 
 !     ----- Miscellaneous
       real :: residual
+      real,save :: tol
       integer :: maxiter_newton, maxiter_gmres
-      integer :: i, j, k, n     !, n2
+      integer :: i, j, k, n
 
-      n = nx1*ny1*nz1*nelt      !; n2 = nx2*ny2*nz2*nelt
+      n = nx1*ny1*nz1*nelt
       maxiter_newton = 30 ; maxiter_gmres = 60
       if(istep.eq.0.and.nid.eq.0)then
+         tol = max(param(21), param(22))  
          open(unit=887,file='residu_newton.dat',status='replace')
          open(unit=888,file='residu_gmres.dat',status='replace');close(888)
          open(unit=889,file='residu_arnoldi.dat',status='replace');close(889)
       endif
 
 !     --> Initialize arrays.
-      call noprzero(f_x, f_y, f_z, f_p, f_t)
+      call krylov_zero(f) ; call krylov_zero(dq)
+
+!     --> Copy initial condition.
+      call nopcopy(q%vx, q%vy, q%vz, q%pr, q%theta, vx, vy, vz, pr, t)
+      q%time = param(10)
+      write(*, *) "Q%TIME = ", q%time
 
 !     --> Newton iteration.
       newton : do i = 1, maxiter_newton
+
+!     --> Set time.
+      param(10) = q%time
 
 !     --> Setup/Update the nek-parameters for the Newton solver.
       call newton_krylov_prepare
 
 !     --> Variable tolerances for speed up!
-      call spec_tole(i)
+      if(ifdyntol) then 
+            call spec_tole(i)
+            tol = max(param(21), param(22))
+      endif
+
 !     --> Outpost current estimate of the solution
-      time = i ; call outpost(qx, qy, qz, qp, qt, "nwt")
+      time = q%time ; call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "nwt")
 
 !     --> Compute rhs of Newton iteration f(q).
-      call forward_map(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
+      call forward_map(f, q)
 
 !     --> Check residual || f(q) ||
-      call norm(f_x, f_y, f_z, f_p, f_t, residual) ; residual = residual ** 2
+      call krylov_norm(residual, f) ; residual = residual ** 2
+      write(*, *) "RESIDUAL ", residual
 
       if(nid.eq.0)write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
       write(887,"(I6,1E15.7)")i,residual
 
-      if(residual .lt. max(param(21), param(22))) exit newton
+      if(residual .lt. tol) exit newton
 
       if(nid.eq.0)write(6,*)'LINEAR SOLVER'
 !     --> Solve the linear system.
-      call ts_gmres(f_x, f_y, f_z, f_p, f_t, dqx, dqy, dqz, dqp, dqt, maxiter_gmres, k_dim)
+      call ts_gmres(f, dq, maxiter_gmres, k_dim)
 
 !     --> Update Newton solution.
-      call nopsub2(qx, qy, qz, qp, qt, dqx, dqy, dqz, dqp, dqt)
+      call krylov_sub2(q, dq)
 
       enddo newton
       if(nid.eq.0)close(887)
+
+      if (residual.lt.tol) call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "BF_")
+
       return
       end subroutine newton_krylov
 
@@ -94,7 +110,7 @@
 
 
 
-      subroutine ts_gmres(rhs_x, rhs_y, rhs_z, rhs_p, rhs_t, sol_x, sol_y, sol_z, sol_p, sol_t, maxiter, ksize)
+      subroutine ts_gmres(rhs, sol, maxiter, ksize)
 
 !     Implementation of simple GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
@@ -130,6 +146,7 @@
 !     Last Edit : March 26th 2021 by JC Loiseau.
 !     
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -140,16 +157,13 @@
       integer :: ksize
 
 !     ----- Right-hand side vector of A x = b -----
-      real, dimension(lt) :: rhs_x, rhs_y, rhs_z, rhs_t
-      real, dimension(lt2) :: rhs_p
+      type(krylov_vector) :: rhs
 
 !     ----- GMRES solution vector.
-      real, dimension(lt) :: sol_x, sol_y, sol_z, sol_t
-      real, dimension(lt2) :: sol_p
+      type(krylov_vector) :: sol, dq
 
 !     ----- Krylov basis for the Arnoldi factorization.
-      real, allocatable, dimension(:, :) :: qx, qy, qz, qt
-      real, allocatable, dimension(:, :) :: qp
+      type(krylov_vector), dimension(:), allocatable :: Q
 
 !     ----- Upper Hessenberg matrix.
       real, allocatable, dimension(:, :) :: H
@@ -160,18 +174,19 @@
       real :: beta, tol
 
 !     Initialize arrays.
-      tol = param(22) !max(param(21), param(22))
+      tol = max(param(21), param(22))
 
 !     ----- Allocate arrays -----
-      allocate(qx(lt, ksize+1), qy(lt, ksize+1), qz(lt, ksize+1), qt(lt, ksize+1), qp(lt2, ksize+1))
-      allocate(H(ksize+1, ksize), yvec(ksize), evec(ksize+1))
+      allocate(Q(ksize+1)) ; allocate(H(ksize+1, ksize), yvec(ksize), evec(ksize+1))
 
-      qx = 0.0D+00 ; qy = 0.0D+00 ; qz = 0.0D+00 ; qp = 0.0D+00 ; qt = 0.0D+00
-      sol_x = 0.0D+00 ; sol_y = 0.0D+00 ; sol_z = 0.0D+00 ; sol_p = 0.0D+00 ; sol_t = 0.0D+00
+      call krylov_zero(sol)
       H = 0.0D+00 ; yvec = 0.0D+00 ; evec = 0.0D+00
+      do i = 1, ksize+1
+         call krylov_zero(Q(i))
+      end do
 
-      call nopcopy(qx(:, 1),qy(:, 1),qz(:, 1),qp(:, 1),qt(:, 1), rhs_x,rhs_y,rhs_z,rhs_p,rhs_t)
-      call normalize(qx(:, 1), qy(:, 1), qz(:, 1), qp(:, 1), qt(:, 1), beta)
+      call krylov_copy(Q(1), rhs)
+      call krylov_normalize(Q(1), beta)
 
       gmres : do i = 1, maxiter
 
@@ -179,8 +194,9 @@
       H = 0.0D+00 ; yvec = 0.0D+00
       evec = 0.0D+00 ; evec(1) = beta
 
-      qx(:, 2:k_dim+1) = 0.0D+00 ; qy(:, 2:k_dim+1) = 0.0D+00 ; qz(:, 2:k_dim+1) = 0.0D+00
-      qp(:, 2:k_dim+1) = 0.0D+00 ; qt(:, 2:k_dim+1) = 0.0D+00
+      do k = 2, ksize+1
+         call krylov_zero(Q(k))
+      end do
 
       arnoldi : do k = 1, k_dim
       !!restarting arnoldi
@@ -209,7 +225,7 @@
       !arnoldi : do k = k_start, k_dim
 
 !     --> Arnoldi factorization.
-      call arnoldi_factorization(qx, qy, qz, qp, qt, H, k, k, ksize)
+      call arnoldi_factorization(Q, H, k, k, ksize)
 
 !     --> Least-squares problem.
       call lstsq(H(1:k+1, 1:k), evec(1:k+1), yvec(1:k), k+1, k)
@@ -229,16 +245,13 @@
       enddo arnoldi
 
 !     --> Update solution.
-      sol_x = sol_x + matmul(qx(:, 1:k), yvec(1:k))
-      sol_y = sol_y + matmul(qy(:, 1:k), yvec(1:k))
-      if (if3d)   sol_z = sol_z + matmul(qz(:, 1:k), yvec(1:k))
-      if (ifpo)   sol_p = sol_p + matmul(qp(:, 1:k), yvec(1:k))
-      if (ifheat) sol_t = sol_t + matmul(qt(:, 1:k), yvec(1:k))
+      call krylov_matmul(dq, Q(1:k), yvec(1:k), k)
+      call krylov_add2(sol, dq)
 
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
 
-      call nopcopy(qx(:, 1),qy(:, 1),qz(:, 1),qp(:, 1),qt(:, 1), sol_x,sol_y,sol_z,sol_p,sol_t)
-      call initialize_gmres_vector(beta, qx(:, 1), qy(:, 1), qz(:, 1), qp(:, 1), qt(:, 1), rhs_x, rhs_y, rhs_z, rhs_p, rhs_t)
+      call krylov_copy(Q(1), sol)
+      call initialize_gmres_vector(beta, Q(1), rhs)
 
       if(nid.eq.0)then
          open(888,file='residu_gmres.dat',action='write',position='append')
@@ -247,12 +260,13 @@
          close(888)
       endif
 
+      call krylov_zero(dq)
       if (beta**2 .lt. tol) exit gmres
 
       enddo gmres
 
 !     ----- Deallocate arrays -----
-      deallocate(qx, qy, qz, qt, qp)
+      deallocate(Q)
       deallocate(H, yvec, evec)
 
       return
@@ -267,8 +281,9 @@
 
 
 
-      subroutine initialize_gmres_vector(beta, qx, qy, qz, qp, qt, rhs_x, rhs_y, rhs_z, rhs_p, rhs_t)
+      subroutine initialize_gmres_vector(beta, q, rhs)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -277,22 +292,22 @@
       integer, parameter :: lt2 = lx2*ly2*lz2*lelv
 
 !     ----- Right-hand side vector of A x = b (input) -----
-      real, dimension(lt) :: rhs_x, rhs_y, rhs_z, rhs_t
-      real, dimension(lt2) :: rhs_p
+      type(krylov_vector) :: rhs
 
 !     ----- Seed for the GMRES Krylov subspace (output) -----
-      real, dimension(lt) :: qx, qy, qz, qt, f_x, f_y, f_z, f_t
-      real, dimension(lt2) :: qp, f_p
+      type(krylov_vector) :: q
       real :: beta
+!     -----
+      type(krylov_vector) :: f
 
 !     --> Initial Krylov vector.
-      call matvec(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
-      call nopsub2(f_x,f_y,f_z,f_p,f_t, rhs_x,rhs_y,rhs_z,rhs_p,rhs_t)
-      call nopchsign(f_x,f_y,f_z,f_p,f_t)
+      call matvec(f, q)
+      call krylov_sub2(f, rhs)
+      call krylov_cmult(f, -1.0D+00)
 
 !     --> Normalize the starting vector.
-      call normalize(f_x, f_y, f_z, f_p, f_t, beta)
-      call nopcopy(qx,qy,qz,qp,qt, f_x,f_y,f_z,f_p,f_t)
+      call krylov_normalize(f, beta)
+      call krylov_copy(q, f)
 
       return
       end subroutine initialize_gmres_vector
@@ -302,8 +317,9 @@
 
 
 !-----------------------------------------------------------------------
-      subroutine forward_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      subroutine forward_map(f, q)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -312,23 +328,22 @@
       integer, parameter :: lt2 = lx2*ly2*lz2*lelv
 
 !     ----- Initial condition for the forward simulation.
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
+      type(krylov_vector) :: q
 
 !     ----- Right-hand side of the Newton.
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
+      type(krylov_vector) :: f
 
 !     --> Fixed point/UPO computation.
-      if (uparam(01) .eq. 1) call nonlinear_forward_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      if ( floor( uparam(01) ) .eq. 2 ) call nonlinear_forward_map(f, q)
 
       return
       end subroutine forward_map
 
 
 
-      subroutine nonlinear_forward_map(f_x, f_y, f_z, f_p, f_t, qx, qy, qz, qp, qt)
+      subroutine nonlinear_forward_map(f, q)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -337,19 +352,18 @@
       integer, parameter :: lt2 = lx2*ly2*lz2*lelv
 
 !     ----- Initial condition for the forward simulation.
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
+      type(krylov_vector) :: q
 
 !     ----- Right-hand side of the Newton.
-      real, dimension(lt) :: f_x, f_y, f_z, f_t
-      real, dimension(lt2) :: f_p
+      type(krylov_vector) :: f
 
       integer n
 
       n = nx1*ny1*nz1*nelt
 
 !     --> Copy the initial condition to Nek.
-      call nopcopy(vx, vy, vz, pr, t(1,1,1,1,1), qx, qy, qz, qp, qt)
+      call krylov_copy(ic_nwt, q)
+      call nopcopy(vx, vy, vz, pr, t, q%vx, q%vy, q%vz, q%pr, q%theta)
 
 !     --> Turn-off the linearized solver.
       ifpert = .false. ; call bcast(ifpert, lsize)
@@ -362,12 +376,13 @@
       enddo
 
 !     --> Compute the right hand side of the time-stepper Newton.
-      call nopcopy(f_x,f_y,f_z,f_p,f_t, vx,vy,vz,pr,t(1,1,1,1,1))
-      call nopsub2(f_x,f_y,f_z,f_p,f_t, qx,qy,qz,qp,qt)
-      call nopchsign(f_x,f_y,f_z,f_p,f_t)
+      call nopcopy(f%vx, f%vy, f%vz, f%pr, f%theta, vx, vy, vz, pr, t)
+      call krylov_copy(fc_nwt, f)
+      call krylov_sub2(f, q)
+      f%time = 0.0D+00
 
 !     --> Pass current guess as base flow for the linearized calculation.
-      call opcopy(ubase, vbase, wbase, qx, qy, qz) ; call copy(tbase, qt, n)
+      call opcopy(ubase, vbase, wbase, q%vx, q%vy, q%vz) ; call copy(tbase, q%theta, n)
 
       return
       end subroutine nonlinear_forward_map

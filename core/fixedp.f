@@ -99,19 +99,18 @@ c-----------------------------------------------------------------------
             write(6,*)
             tol = residu
          endif
-            if (mod(istep,20)==0) call set_solv_tole(abs(tol)/20)           
+         if ( ifdyntol .and. mod(istep,20)==0 ) call set_solv_tole(abs(tol)/20)           
 
          if( istep.gt.100 .and. residu .lt. desired_tolerance )then !save to disk and change flag
-
             if(nid.eq.0)write(6,*)' Converged base flow to:',desired_tolerance
-         ifbfcv = .true.
-         call bcast(ifbfcv  , lsize)
-         param(63) = 1          ! Enforce 64-bit output
-         call bcast(param,200*wdsize)
-         call outpost(vx,vy,vz,pr,t,'BF_')
-         param(63) = 0          ! Enforce 32-bit output
-         call bcast(param,200*wdsize)
-      endif
+            ifbfcv = .true.
+            call bcast(ifbfcv  , lsize)
+            param(63) = 1 ! Enforce 64-bit output
+            call bcast(param,200*wdsize)
+            call outpost(vx,vy,vz,pr,t,'BF_')
+            param(63) = 0 ! Enforce 32-bit output
+            call bcast(param,200*wdsize)
+         endif
 
       if(istep.eq.nsteps)close(10)
       endif

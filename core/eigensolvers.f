@@ -138,7 +138,7 @@
 
 
       subroutine krylov_schur
-!     use KS
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -147,8 +147,7 @@
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
 !     -----Krylov basis V for the projection M*V = V*H -----
-      real, allocatable,dimension(:,:) :: qx, qy, qz, qt
-      real, allocatable,dimension(:,:) :: qp
+      type(krylov_vector), allocatable, dimension(:) :: Q
 
 !     ----- Upper Hessenberg matrix -----
       real, allocatable,dimension(:,:) :: H
@@ -161,18 +160,16 @@
       real, allocatable, dimension(:) :: residual
 
 !     ----- Miscellaneous -----
-      real wo1(lt),wo2(lt),wo3(lt)
-      common /ugrad/ wo1,wo2,wo3
+      type(krylov_vector) :: wrk
 
       integer :: mstart, cnt
-!     real, dimension(k_dim)             :: residual
       real                               :: alpha, beta, glsc3
       logical                            :: converged
       integer                            :: n, i, j
       character(len=30)                  :: filename
 
 !     ----- Allocate arrays -----
-      allocate(qx(lt,k_dim+1), qy(lt,k_dim+1), qz(lt,k_dim+1), qt(lt,k_dim+1),qp(lt2,k_dim+1))
+      allocate(Q(k_dim+1))
       allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
 
       n      = nx1*ny1*nz1*nelt
@@ -181,9 +178,8 @@
       b_vec  = 0.0d0
       residual = 0.0d0
 
-      call oprzero(wo1, wo2, wo3)
       do i = 1, k_dim+1
-         call noprzero(qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, i))
+         call krylov_zero(Q(i))
       enddo
 
 !     ----- Loading baseflow from disk (optional) -----
@@ -197,7 +193,6 @@
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
       if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
-!     call outpost(vx,vy,vz,pr,t,'BF_') !outpost for sanity check
 
 !     ----- Prepare stability parameters -----
 
@@ -215,16 +210,15 @@
 
             if(nid.eq.0)write(6,*)'Filling fields with noise...'
             call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
-            call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
-!     call outpost(vxp,vyp,vzp,pr,tp,'SS_') !outpost for sanity check
-            call matvec(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),
-     $           vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
+            wrk%vx = vxp(:, 1) ; wrk%vy = vyp(:, 1) ; wrk%vz = vzp(:, 1)
+            wrk%pr = prp(:, 1) ; wrk%theta = tp(:, 1, 1)
+            call krylov_normalize(wrk, alpha)
+            call matvec(wrk, wrk)
 
          elseif(ifseed_symm)then ! symmetry initial seed
 
             if(nid.eq.0)write(6,*)'Enforcing symmetric seed perturb...'
             call add_symmetric_seed(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
-!     call outpost(vxp,vyp,vzp,pr,t,'SS_') !outpost for sanity check
 
          elseif(ifseed_load)then ! loading initial seed (e.g. Re_ )
 
@@ -242,15 +236,17 @@
 
 !     ----- Normalized to unit-norm -----
 
-         call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
+         wrk%vx = vxp(:, 1) ; wrk%vy = vyp(:, 1) ; wrk%vz = vzp(:, 1)
+         wrk%pr = prp(:, 1) ; wrk%theta = tp(:, 1, 1)
+         call krylov_normalize(wrk, alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
 
-         call nopcopy(qx(:,1),qy(:,1),qz(:,1),qp(:,1),qt(:,1), vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1))
+         call krylov_copy(Q(1), wrk)
 
          call whereyouwant('KRY',1)
          time = 0.0d0
-         call outpost(qx(:,1), qy(:,1), qz(:,1), qp(:,1), qt(:,1), 'KRY')
+         call outpost(Q%vx(1), Q%vy(1), Q%vz(1), Q%pr(1), Q%theta(1), 'KRY')
 
       elseif(uparam(2).gt.0)then
 
@@ -290,8 +286,7 @@
 !     endif
 
          mstart=mstart+1        !careful here!
-         call load_files(qx, qy, qz, qp, qt, mstart, k_dim+1, 'KRY')
-!     k_dim+1 is the dim of V_x
+         call load_files(Q, mstart, k_dim+1, 'KRY')
          if(nid.eq.0) write(6,*)'Restart fields loaded to memory!'
 
       endif
@@ -306,7 +301,7 @@
       converged = .false.
       do while ( .not. converged )
 !     --> Arnoldi factorization.
-         call arnoldi_factorization(qx, qy, qz, qp, qt, H, mstart, k_dim, k_dim)
+         call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
 
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
@@ -331,7 +326,7 @@
             else                ! Apply Schur condensation before restarting the factorization.
                schur_cnt = schur_cnt + 1
                if (nid .eq. 0) write(6, *) 'Starting Schur condensation phase.',schur_cnt
-               call schur_condensation(mstart, H, qx, qy, qz, qp, qt, k_dim)
+               call schur_condensation(mstart, H, Q, k_dim)
             endif
 
          end select
@@ -341,13 +336,13 @@
 !     ----- Output all the spectrums and converged eigenmodes -----
       if(nid.eq.0)write(6,*)'Exporting modes...'
       if(nid.eq.0)print *,''
-      call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
+      call outpost_ks(vals, vecs, Q, residual)
 
       if(nid.eq.0)write(6,*)'converged eigenmodes:',cnt
       if(nid.eq.0)write(6,*)'Eigenproblem solver finished.'
 
 !     --> Deallocation.
-      deallocate(qx, qy, qz, qt, qp)
+      deallocate(Q)
       deallocate(H, b_vec, vals, vecs)
 
       return
@@ -366,49 +361,51 @@
 
 
 
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
 
 
 
 
-      subroutine schur_condensation(mstart, H, qx, qy, qz, qp, qt, ksize)
+      subroutine schur_condensation(mstart, H, Q, ksize)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-c     =================================================
-c     =====                                       =====
-c     ===== Declaration of the required variables =====
-c     =====                                       =====
-c     =================================================
+!     =================================================
+!     =====                                       =====
+!     ===== Declaration of the required variables =====
+!     =====                                       =====
+!     =================================================
 
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
       integer :: ksize
 
-c     ----- Krylov basis V for the projection M*V = V*H -----
+!     ----- Krylov basis V for the projection M*V = V*H -----
 
+      type(krylov_vector), dimension(ksize+1) :: Q
       real, dimension(lt,ksize+1)        :: qx, qy, qz, qt
       real, dimension(lt2,ksize+1)       :: qp
 
-c     ----- Upper Hessenberg matrix -----
+!     ----- Upper Hessenberg matrix -----
 
       real, dimension(ksize+1, ksize)     :: H
       real, dimension(ksize)           :: b_vec
 
-c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
       complex*16, dimension(ksize)       :: vals
 
-c     ----- Miscellaneous -----
+!     ----- Miscellaneous -----
 
-      integer :: mstart,n
+      integer :: mstart, n, i, j, k
       logical, dimension(ksize)          :: selected
 
-c     ----- Schur and Hessenberg decomposition -----
+!     ----- Schur and Hessenberg decomposition -----
 
       real, dimension(ksize, ksize)       :: vecs
 
@@ -433,6 +430,13 @@ c     ----- Schur and Hessenberg decomposition -----
       H(mstart+1:ksize+1, :)     = 0.0D0
 
 !     --> Re-order the Krylov basis accordingly.
+      do i = 1, k_dim+1
+         qx(:, i) = Q(i)%vx
+         qy(:, i) = Q(i)%vy
+         qz(:, i) = Q(i)%vz
+         qp(:, i) = Q(i)%pr
+         qt(:, i) = Q(i)%theta
+      enddo
       qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
       qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
       if (if3d) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
@@ -449,6 +453,13 @@ c     ----- Schur and Hessenberg decomposition -----
 
       call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart),
      $     qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,ksize+1))
+      do i = 1, k_dim+1
+         Q(i)%vx = qx(:, i)
+         Q(i)%vy = qy(:, i)
+         Q(i)%vz = qz(:, i)
+         Q(i)%pr = qp(:, i)
+         Q(i)%theta = qt(:, i)
+      enddo
 
       return
       end subroutine schur_condensation
@@ -457,7 +468,7 @@ c     ----- Schur and Hessenberg decomposition -----
 
 
 
-c----------------------------------------------------------------------
+!----------------------------------------------------------------------
 
 
 
@@ -533,13 +544,14 @@ c----------------------------------------------------------------------
 
 
 
-c----------------------------------------------------------------------
+!----------------------------------------------------------------------
 
 
 
 
-      subroutine outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
+      subroutine outpost_ks(vals, vecs, Q, residual)
 !     outposting vectors
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -547,23 +559,24 @@ c----------------------------------------------------------------------
       integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
       integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
-c     ----- Krylov basis V for the projection M*V = V*H -----
+!     ----- Krylov basis V for the projection M*V = V*H -----
 
       real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
+      type(krylov_vector), dimension(k_dim+1) :: Q
       real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
       real, dimension(lt2,k_dim+1)       :: qp
 
-c     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
       complex*16, dimension(k_dim)       :: vals
       complex*16, dimension(k_dim,k_dim) :: vecs
 
-c     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
+!     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
 
       complex*16, dimension(lt)          :: fp_cx, fp_cy, fp_cz, fp_ct
       complex*16, dimension(lt2)         :: fp_cp
 
-c     ----- Miscellaneous -----
+!     ----- Miscellaneous -----
       integer :: n, i
 
       real                               :: sampling_period
@@ -580,7 +593,15 @@ c     ----- Miscellaneous -----
       sampling_period = dt*nsteps
       n = nx1*ny1*nz1*nelt
 
-c     ----- Output all the spectrums and converged eigenmodes -----
+!     ----- Output all the spectrums and converged eigenmodes -----
+
+      do i = 1, k_dim
+         qx(:, i) = Q(i)%vx
+         qy(:, i) = Q(i)%vy
+         qz(:, i) = Q(i)%vz
+         qp(:, i) = Q(i)%pr
+         qt(:, i) = Q(i)%theta
+      enddo
 
 !     evop defined in matrix_vector_product
 
@@ -622,32 +643,32 @@ c     ----- Output all the spectrums and converged eigenmodes -----
          if(nid.eq.0)write(30, "(2E15.7)") real(log_transform(vals(i))) / sampling_period,
      $        aimag(log_transform(vals(i))) / sampling_period
 
-c     ----- Computation of the corresponding eigenmode -----
+!     ----- Computation of the corresponding eigenmode -----
          fp_cx = matmul(qx(:, 1:k_dim), vecs(:, i))
          fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
          if (if3d) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
          if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
          if (ifheat) fp_ct = matmul(qt(:, 1:k_dim), vecs(:, i))
 
-c     ----- Normalization to be unit-norm -----
-c     Note: volume integral of FP*conj(FP) = 1.
+!     ----- Normalization to be unit-norm -----
+!     Note: volume integral of FP*conj(FP) = 1.
          call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
          call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), alpha_i)
          alpha = alpha_r**2 + alpha_i**2
          beta = 1.0d0/sqrt(alpha)
 
-c     ----- Output the real part -----
+!     ----- Output the real part -----
          call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
          call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
          call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nRe)
 
-c     ----- Output the imaginary part -----
+!     ----- Output the imaginary part -----
          call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
          call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
          call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
 
          if(ifvor)then
-c     ----- Output vorticity from real part -----
+!     ----- Output vorticity from real part -----
             call oprzero(wo1, wo2, wo3)
             call comp_vort3(vort, wo1, wo2, vx, vy, vz)
 
@@ -723,7 +744,7 @@ c     ----- Output vorticity from real part -----
 
 
 
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
 
 
@@ -855,7 +876,6 @@ c-----------------------------------------------------------------------
       character(len=80) filename
       complex :: log_transform
 
-!     -->
       if(nid .eq. 0) then
          write(6, *)
          write(6, *) 'Outposting Krylov vector to'
@@ -863,10 +883,11 @@ c-----------------------------------------------------------------------
 
 !     --> Outpost the latest Krylov vector.
       !if(uparam(1).gt.3)then
-       call whereyouwant("KRY", k+1) ! skipping one due to the initial condition
+      call whereyouwant("KRY", k+1) ! skipping one due to the initial condition
       !else
       ! call whereyouwant("KRY", k) ! for restart of newton solver
       !endif
+      
       time = time * k           !order in ParaView
       call outpost(f_xr, f_yr, f_zr, f_pr, f_tr, "KRY")
 
@@ -878,6 +899,7 @@ c-----------------------------------------------------------------------
       cnt = count(residual .lt. eigen_tol)
 
       if (nid.eq.0) then
+
 !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
 !     write(filename, '(a, i4.4)') "H", k
 
@@ -890,6 +912,7 @@ c-----------------------------------------------------------------------
 
 !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
 !     write(filename, '(a, i4.4)') "S", k
+
          write(filename, '(A,A,A)') 'Spectre_NS',evop,'.dat'
          write(6, *) 'Outposting eigenspectrum of current log-transform spectrum matrix to : ', filename
 
@@ -923,16 +946,15 @@ c-----------------------------------------------------------------------
       end subroutine arnoldi_checkpoint
 
 !     ------------------------------------------------------------------------------------
-      function log_transform(x)
-      implicit none
 
-      complex :: log_transform,x
+      function log_transform(x)
+      complex :: log_transform
+      complex,intent(in) :: x
       log_transform = log(x)
       if (aimag(x) .eq. 0) log_transform = real(log_transform)
-
-      return
       end function log_transform
 
+!     ------------------------------------------------------------------------------------
 
       subroutine power_iteration
 

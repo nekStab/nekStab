@@ -55,7 +55,7 @@
 
 
 
-      subroutine matvec(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      subroutine matvec(f, q)
 
 !     Dispatch the correct matrix-vector product to the Arnoldi factorization.
 !     All subroutines need to have the same interface.
@@ -82,18 +82,12 @@
 !     Final pressure component.
 !     
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
-
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
+      type(krylov_vector) :: q, f
 
       integer :: n
 
@@ -107,31 +101,31 @@
       call prepare_linearized_solver()
 
 !     --> Direct solver only steady and periodic!
-      if (uparam(01) .eq. 3 .or. uparam(01).eq.3.1) then
+      if (uparam(01) .ge. 3.0 .or. uparam(01) .lt. 3.2 ) then
          evop = 'd'
-         call forward_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+         call forward_linearized_map(f, q)
       endif
 
 !     --> Adjoint solver only steady and periodic!
-      if (uparam(01) .eq. 3.2 .or. uparam(01).eq.3.21) then
+      if (uparam(01) .ge. 3.2 .or. uparam(01) .lt. 3.3 ) then
          evop = 'a'
-         call adjoint_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+         call adjoint_linearized_map(f, q)
       endif
 
 !     --> Direct-Adjoint for optimal transient growth steady only.
       if (uparam(01) .eq. 3.3) then
          evop="p"
-         call transient_growth_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+         call transient_growth_map(f, q)
       endif
 
 !     --> Linearized forward map for the Newton-Krylov solver.
       if (floor(uparam(01)) .eq. 1) then
-         call newton_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+         call newton_linearized_map(f, q)
       endif
 
 !     --> Adjoint solver for the steady force sensitivity analysis.
       if (floor(uparam(01)) .eq. 4) then
-         call ts_force_sensitivity_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+         call ts_force_sensitivity_map(f, q)
       end if
 
       return
@@ -147,7 +141,7 @@
 
 
 
-      subroutine forward_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      subroutine forward_linearized_map(f, q)
 
 !     Integrate forward in time the linearized Navier-Stokes equations.
 !     Denoting by L the Jacobian of the Navier-Stokes equations, the corresponding
@@ -158,19 +152,15 @@
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
       include 'ADJOINT'
 
+      type(krylov_vector) :: q, f
+
       integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
-
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
       real, save, allocatable, dimension(:, :) :: uor,vor,wor
 
       logical, save :: init
@@ -182,7 +172,7 @@
 
 !     --> Turning-off the base flow side-by-side computation. Need to change for Floquet.
       ifbase = .false.
-      if(uparam(01) .eq. 3.1)ifbase=.true. ! activate floquet
+      if(uparam(01) .eq. 3.11)ifbase=.true. ! activate floquet
       if(ifstorebase.and.init)ifbase=.false.
 
       if(ifstorebase .and.ifbase.and..not.init)then
@@ -191,7 +181,7 @@
       endif
 
 !     --> Pass the initial condition for the perturbation.
-      call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1), qx, qy, qz, qp, qt)
+      call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1), q%vx, q%vy, q%vz, q%pr, q%theta)
 
       time = 0.0D+00
       do istep = 1, nsteps
@@ -213,7 +203,7 @@
       endif
 
 !     --> Copy the solution.
-      call nopcopy(fx, fy, fz, fp, ft, vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1))
+      call nopcopy(f%vx, f%vy, f%vz, f%pr, f%theta, vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1))
 
       return
       end subroutine forward_linearized_map
@@ -228,7 +218,7 @@
 
 
 
-      subroutine adjoint_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      subroutine adjoint_linearized_map(f, q)
 
 !     Integrate forward in time the adjoint Navier-Stokes equations.
 !     Denoting by L adjoint Navier-Stokes operator, the corresponding
@@ -239,20 +229,15 @@
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
       include 'ADJOINT'
 
+      type(krylov_vector) :: q, f
+
       integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
-
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
-
       real, save, allocatable, dimension(:, :) :: uor,vor,wor
 
       logical, save :: init
@@ -272,7 +257,7 @@
       endif
 
 !     --> Pass the initial condition for the perturbation.
-      call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1), qx, qy, qz, qp, qt)
+      call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1), q%vx, q%vy, q%vz, q%pr, q%theta)
 
       time = 0.0D+00
       do istep = 1, nsteps
@@ -294,7 +279,7 @@
       endif
 
 !     --> Copy the solution.
-      call nopcopy(fx, fy, fz, fp, ft, vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1))
+      call nopcopy(f%vx, f%vy, f%vz, f%pr, f%theta, vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, 1, 1))
 
       return
       end subroutine adjoint_linearized_map
@@ -309,8 +294,9 @@
 
 
 
-      subroutine newton_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      subroutine newton_linearized_map(f, q)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -318,23 +304,81 @@
       integer, parameter :: lt = lx1*ly1*lz1*lelt
       integer, parameter :: lt2 = lx2*ly2*lz2*lelt
 
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
+      type(krylov_vector) :: f, q
+      type(krylov_vector) :: bvec, btvec
 
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
+!     ----------------------------------
+!     -----     REGULAR NEWTON     -----
+!     ----------------------------------
 
 !     --> Evaluate exp(t*L) * q0.
-      call forward_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      call forward_linearized_map(f, q)
 
-!     --> Evaluate (I - exp(t*L)) * q0.
-      call nopsub2(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
-      call nopchsign(fx, fy, fz, fp, ft)
+!     --> Evaluate (exp(t*L) - I) * q0.
+      call krylov_sub2(f, q)
+
+!     ----------------------------------
+!     -----     NEWTON FOR UPO     -----
+!     ----------------------------------
+
+      if ( uparam(3) .eq. 3.1 ) then
+
+         call krylov_zero(bvec)
+         call krylov_zero(btvec)
+
+         call compute_bvec(bvec, fc_nwt)
+         call krylov_cmult(bvec, q%time)
+         call krylov_add2(f, bvec)
+
+         call compute_bvec(btvec, ic_nwt)
+         call krylov_inner_product(f%time, btvec, q)
+      else
+         f%time = 0.0D+00
+      end if
 
       return
       end subroutine newton_linearized_map
 
 
+      subroutine compute_bvec(bvec, qbase)
+      use krylov_subspace
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'ADJOINT'
+
+      type(krylov_vector) :: bvec, qbase
+      type(krylov_vector) :: wrk1, wrk2
+
+!     --> Setup the paramtemers for the solver.
+      ifpert = .false. ; ifadj = .false.
+      call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
+
+      ifbase = .false.
+      call bcast(ifbase, lsize)
+
+!     --> Pass the initial condition.
+      call nopcopy(vx, vy, vz, pr, t, qbase%vx, qbase%vy, qbase%vz, qbase%pr, qbase%theta)
+      param(10) = qbase%time
+      call newton_krylov_prepare()
+      call krylov_copy(wrk1, qbase)
+
+!     --> Single time-step to approximate the time-derivative.
+      time = 0.0D+00
+      do istep = 1, 1
+         call nekStab_usrchk()
+         call nek_advance()
+      enddo
+      call nopcopy(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%theta, vx, vy, vz, pr, t)
+
+!     --> Approximate the time-derivative.
+      call krylov_sub2(wrk2, wrk1)
+      call krylov_copy(bvec, wrk2)
+      call krylov_cmult(bvec, 1.0/dt)
+      bvec%time = 0.0D+00
+
+      return
+      end subroutine compute_bvec
 
 
 
@@ -344,28 +388,22 @@
 
 
 
-      subroutine ts_force_sensitivity_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      subroutine ts_force_sensitivity_map(f, q)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
       include 'ADJOINT'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
-
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
+      type(krylov_vector) :: f, q
 
 !     --> Evaluate exp(t*L) * q0.
-      call adjoint_linearized_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      call adjoint_linearized_map(f, q)
 
 !     --> Evaluate (I - exp(t*L)) * q0.
-      call nopsub2(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
-      call nopchsign(fx, fy, fz, fp, ft)
+      call krylov_sub2(f, q)
+      call krylov_cmult(f, -1.0D+00)
 
       return
       end subroutine ts_force_sensitivity_map
@@ -378,30 +416,21 @@
 
 
 
-      subroutine transient_growth_map(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
+      subroutine transient_growth_map(f, q)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
       include 'ADJOINT'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
-
-      real, dimension(lt) :: workx, worky, workz, workt
-      real, dimension(lt2) :: workp
-
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
+      type(krylov_vector) :: f, q, wrk
 
 !     --> Evaluate the forward map.
-      call forward_linearized_map(workx, worky, workz, workp, workt, qx, qy, qz, qp, qt)
+      call forward_linearized_map(wrk, q)
 
 !     --> Evaluate the adjoint map.
-      call adjoint_linearized_map(fx, fy, fz, fp, ft, workx, worky, workz, workp, workt)
+      call adjoint_linearized_map(f, wrk)
 
       return
       end subroutine transient_growth_map
