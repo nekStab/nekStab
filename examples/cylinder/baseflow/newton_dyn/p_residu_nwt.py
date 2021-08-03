@@ -51,38 +51,49 @@ def plot_rs(ax, filename, sized = 0, color='gray', label=None):
 if __name__ == '__main__':
 
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
-    plt.yscale('log');#plt.xlabel(r'$n$')
-    plt.xscale('log');plt.title(r'$Cylinder, Re=50$')
-    plt.axhline(y=1e-13, lw=0.1, c='k', ls='dotted')
-
-    f = res1('residu_newton.dat')
-    plt.plot(f.r,c='m',lw=0.5,ls='--', marker='d',markersize=0.8,label=r'NEWTON')
-    try:
-        for i in range(len(f.i)):
-            print(i+1,f.r[i],f.i[i])
-            plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="m", fontsize=2)
-    except:
-        pass
-    
-    f = res1('residu_gmres.dat')
-    plt.plot(f.r,c='g',lw=0.5,ls=':', marker='s',markersize=0.5,label=r'GMRES')
-    for i in range(len(f.i)):
-        print(i+1,f.r[i],f.i[i])
-        if f.i[i] == 1.0:
-            plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="k", fontsize=4)
-        else:
-            plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="g", fontsize=2)
+    plt.yscale('log');plt.xlabel(r'$i$');plt.ylabel(r'$\epsilon$')
+    #plt.xscale('log');
+    plt.title(r'$Re=50$',fontsize=8)
+    plt.axhline(y=1e-9, lw=0.1, c='k', ls='dotted')
 
     f = res1('residu_arnoldi.dat')
-    plt.plot(f.r,c='b',lw=0.5,ls='-', marker='o',markersize=0.6,label=r'ARNOLDI')
-    for i in range(len(f.i)):
-        print(i+1,f.r[i],f.i[i])
-        if f.i[i] == 1.0:
-            plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="k", fontsize=4)
-        else:
-            plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="b", fontsize=2)
+    plt.plot(f.i,f.r,c='b',lw=0.0,ls='--', marker='o',markersize=0.4,label=r'ARNOLDI')
+    # for i in range(len(f.i)):
+    #     print(i+1,f.r[i],f.i[i])
+    #     if i> 1 and f.i[i] == 1.0:
+    #         print()
+    #         #plt.text(float(i), f.r[i], str(int(f.i[i])), color="k", fontsize=3)
+    #         #plt.text(float(i-1), f.r[i-1], str(int(f.i[i-1])), color="k", fontsize=3)
+    #     #else:
+    #     #    plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="b", fontsize=2)
 
-    plt.legend(loc='best',fontsize=6)
+    try:
+        f = res1('residu_gmres.dat')
+        plt.plot(f.i+1,f.r,c='g',lw=0.5,ls=':', marker='s',markersize=0.5,label=r'GMRES')
+        # for i in range(len(f.i)):
+        #     print(i,f.r[i],f.i[i])
+        #     if i> 1 and f.i[i] == 1.0:
+        #         print()
+        #         #plt.text(float(i), f.r[i], str(int(f.i[i])), color="k", fontsize=3)
+        #         #plt.text(float(i-1), f.r[i-1], str(int(f.i[i-1])), color="k", fontsize=3)
+        #     # plt.text(float(i), f.r[i], str(int(f.i[i])), color="k", fontsize=3)
+        #     #else:
+        #     #    plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="g", fontsize=2)
+    except:
+        print('Skipping residu_gmres.dat')
+        pass
+
+    try:
+        f = res1('residu_newton.dat')
+        plt.plot(f.i,f.r,c='m',lw=0.5,ls='--', marker='d',markersize=0.8,label=r'NEWTON')
+        # for i in range(len(f.i)):
+        #     print(i+1,f.r[i],f.i[i])
+        #     plt.text(float(i+1), f.r[i], str(int(f.i[i])), color="m", fontsize=2)
+    except:
+        print('Skipping residu_newton.dat')
+        pass
+
+    plt.legend(loc='upper right',fontsize=6)
     fname='residu_newton.'+formt
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')
