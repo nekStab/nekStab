@@ -4,6 +4,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
+      !if(istep.eq.0) time=0.0d0
 
       call nekStab
       call hpts
@@ -17,15 +18,18 @@ c-----------------------------------------------------------------------
 
       if(istep.eq.0)then !change defaults
 
-        xLspg = uparam(8); call bcast(xLspg , wdsize)
-        xRspg = uparam(9); call bcast(xRspg , wdsize)
+        !xLspg = uparam(8); call bcast(xLspg , wdsize)
+        !xRspg = uparam(9); call bcast(xRspg , wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
+
+        !ifdyntol = .false. ; call bcast(ifdyntol,lsize)
+        !ifstorebf = .false. ; call bcast(ifstorebf,lsize)
 
       endif
 
@@ -105,7 +109,6 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine usrdat
-      return
       end
 c-----------------------------------------------------------------------
       subroutine usrdat2
