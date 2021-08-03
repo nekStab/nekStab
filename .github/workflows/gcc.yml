@@ -53,35 +53,36 @@ jobs:
         run: |
           cd examples/cylinder/dns/
           ./cmpile.sh all
-          cd ../../../
+          nekmpi 1cyl 2
+      #    cd ../../../
 
-      - name: Compiling examples/cylinder/baseflow/
-        shell: bash
-        run: |
-          cd examples/cylinder/baseflow/sfd
-          ./cmpile.sh all
-          cd ../newton
-          ./cmpile.sh all
-          cd ../boostconv
-          cd ../../../../
+      # - name: Compiling examples/cylinder/baseflow/
+      #   shell: bash
+      #   run: |
+      #     cd examples/cylinder/baseflow/sfd
+      #     ./cmpile.sh all
+      #     cd ../newton
+      #     ./cmpile.sh all
+      #     cd ../boostconv
+      #     cd ../../../../
   
-      - name: Compiling examples/cylinder/stability/
-        shell: bash
-        run: |
-          cd examples/cylinder/stability/direct
-          ./cmpile.sh all
-          cd ../adjoint
-          ./cmpile.sh all
-          cd ../../../../
+      # - name: Compiling examples/cylinder/stability/
+      #   shell: bash
+      #   run: |
+      #     cd examples/cylinder/stability/direct
+      #     ./cmpile.sh all
+      #     cd ../adjoint
+      #     ./cmpile.sh all
+      #     cd ../../../../
           
-      - name: Compiling examples/cylinder/postprocessing
-        shell: bash
-        run: |
-          cd examples/cylnder/postprocessing/energy_budget/
-          ./cmpile.sh all
-          cd ../wavemaker/
-          ./cmpile.sh all
-          cd ../baseflow_sensitivity
-          ./cmpile.sh all
-          cd ../steady_force_sensitivity
-          ./cmpile.sh all
+      # - name: Compiling examples/cylinder/postprocessing
+      #   shell: bash
+      #   run: |
+      #     cd examples/cylnder/postprocessing/energy_budget/
+      #     ./cmpile.sh all
+      #     cd ../wavemaker/
+      #     ./cmpile.sh all
+      #     cd ../baseflow_sensitivity
+      #     ./cmpile.sh all
+      #     cd ../steady_force_sensitivity
+      #     ./cmpile.sh all

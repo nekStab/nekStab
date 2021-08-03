@@ -2,7 +2,7 @@
 startFrom = rstcyl0.f00001
 
 stopAt = endTime
-endTime = 50
+endTime = 10
 
 userParam01 = 0 # DNS mode
 
