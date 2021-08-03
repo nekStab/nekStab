@@ -11,6 +11,7 @@ c-----------------------------------------------------------------------
       eigen_tol = 1.0e-6        !
       schur_del = 0.10d0        !
       maxmodes = 20             ! max modes to outpost
+      glob_skip = 20            ! global energy computation skip frequency
 
       bst_skp = 10              ! boostconv skip
       bst_snp = 6               ! bootsconv matrix size
@@ -20,6 +21,7 @@ c-----------------------------------------------------------------------
       ifvox  = .false.          ! outpost vortex
       ifldbf = .true.           ! load base flow for stability
       ifbf2D = .false.          ! force 2D solution
+      ifstorebase = .false.     ! store base flow for Floquet
 
       ifseed_nois = .true.      ! noise as initial seed
       ifseed_symm = .false.     ! symmetry initial seed
@@ -42,6 +44,7 @@ c-----------------------------------------------------------------------
       call bcast(k_dim, isize)
       call bcast(bst_skp, isize)
       call bcast(bst_snp, isize)
+      call bcast(glob_skip, isize)
 
       call bcast(ifres   , lsize) !lsize for boolean
       call bcast(ifvor   , lsize)
@@ -51,7 +54,7 @@ c-----------------------------------------------------------------------
       call bcast(ifseed_load  , lsize)
       call bcast(ifldbf  , lsize)
       call bcast(ifbf2D  , lsize)
-!     call bcast(ifnewton  , lsize)
+      call bcast(ifstorebase  , lsize)
 
       return
       end subroutine nekStab_setDefault
@@ -115,7 +118,7 @@ c-----------------------------------------------------------------------
 
       endif
 
-      ifbfcv = .false.          !
+      ifbfcv = .false.
 
       return
       end subroutine nekStab_init
@@ -153,7 +156,7 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-         call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',20)
+         call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',glob_skip)
 
       case(1)                   ! fixed points computation
 
@@ -193,6 +196,8 @@ c-----------------------------------------------------------------------
          call nek_end
 
       case(4)                   ! in postprocessing.f
+!     -----> Direct mode kinetic energy budget.
+         if(uparam(01) .eq. 4.0) call stability_energy_budget
 
 !     -----> Wavemaker computation.
          if(uparam(01) .eq. 4.1) call wave_maker
