@@ -26,6 +26,9 @@ c-----------------------------------------------------------------------
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
+        
+        glob_skip = 1 ; call bcast(glob_skip,isize)
+        
 
       endif
 

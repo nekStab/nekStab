@@ -2,7 +2,7 @@
 startFrom = rstcyl0.f00001
 
 stopAt = endTime
-endTime = 10
+endTime = 250
 
 userParam01 = 0 # DNS mode
 
@@ -12,7 +12,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 50.
+writeInterval = 250.
 writeDoublePrecision = no
 
 dealiasing = yes
