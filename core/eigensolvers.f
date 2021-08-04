@@ -948,6 +948,7 @@
 !     ------------------------------------------------------------------------------------
 
       function log_transform(x)
+      implicit none
       complex :: log_transform
       complex,intent(in) :: x
       log_transform = log(x)
