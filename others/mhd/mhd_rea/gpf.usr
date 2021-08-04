@@ -1,0 +1,290 @@
+C-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+     
+      if((istep.eq.0).OR.ifoutfld)call outpost(bx,by,bz,pm,t,'mag') !for B-field
+      !if (ifxyo.and.istep.gt.istep) ifxyo = .false.
+
+      c      n = nx1*ny1*nz1*nelfld(ifldmhd)		! Magnetic energy !?nelb
+c      energy0 = energy
+c      energy  = glsc3(bx,bm1,bx,n)
+c     $        + glsc3(by,bm1,by,n) 
+c     $        + glsc3(bz,bm1,bz,n) 
+c      energy  = 0.5*energy/volfld(ifldmhd)
+c 
+c      if (istep.gt.1) then
+c         ratio  = energy/energy0
+c         growth = 0.5*log(ratio)/dt		! 1/2 of magnetic energy growth rate
+c         if (nid.eq.0) write(6,1) istep,time,growth,energy
+c    1    format(i8,1p3e15.6,' growth')
+c 
+c         !nstepag = param(120)			! p121 < t_avg < p120
+c         !nstepsa = param(121)
+c         !if (istep.lt.nstepag) call runtimeavg(Emga,growth,1,nstepsa,1,'gr_Em')	! avg. growth
+c      endif
+ 
+      !if(istep.eq.0) time=0.0d0
+      !call nekStab
+      !call hpts
+   
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+      if(istep.eq.0)then !change defaults
+
+        xLspg = uparam(8); call bcast(xLspg , wdsize)
+        xRspg = uparam(9); call bcast(xRspg , wdsize)
+
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        maxmodes = 2 ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
+        
+        glob_skip = 1 ; call bcast(glob_skip,isize)
+
+      endif
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf  (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer ip, iel
+
+      real rtmp
+ 
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      if(ifheat.and.uparam(06).gt.0)then
+      iel = gllel(ieg)
+      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
+      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+      ffy=rtmp*uparam(06)
+      endif
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      if (ifield.eq.1) then	! velocity
+      
+         omega = 1.
+         st  = sin(omega*time)
+         ct  = cos(omega*time)
+
+         argxc = x + ct
+         argyc = y + ct
+         argxs = x + st
+         argys = y + st
+         
+         visc = param(2)
+         s    = 3./2.
+         s    = sqrt(s)
+
+         cxc = s*cos(argxc)
+         cyc = s*cos(argyc)
+         cxs = s*cos(argxs)
+         cys = s*cos(argys)
+         sxc = s*sin(argxc)
+         syc = s*sin(argyc)
+         sxs = s*sin(argxs)
+         sys = s*sin(argys)         
+
+         ffx = -omega*cys*ct            - visc*sys
+         ffy = -omega*sxc*st            - visc*cxc
+         ffz = -omega*(cxc*st + sys*ct) + visc*(sxc + cys)
+         
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (ifield.eq.1) then		! velocity
+
+         omega = 1
+         st  = sin(omega*time)
+         ct  = cos(omega*time)
+c
+         argxc = x + ct
+         argyc = y + ct
+         argxs = x + st
+         argys = y + st
+c
+         visc = param(2)
+         s    = 3./2.
+         s    = sqrt(s)
+c        
+         cxc = s*cos(argxc)
+         cys = s*cos(argys)
+         sxc = s*sin(argxc)
+         sys = s*sin(argys)
+
+      !if (JP.eq.0) then         ! velocity
+         ux=-sys
+         uy=-cxc
+         uz=sxc+cys
+         temp=0.0d0
+      !else                      ! perturbation
+      !   ux = 0.0d0
+      !   uy = 0.0d0
+      !   uz = 0.0d0
+      !   temp = 0.0d0
+      !endif
+       
+      elseif (ifield.eq.ifldmhd) then	! B-field
+      
+         eps = 1.e-6
+         ux  = eps*sin(y)*sin(0.57*z)	! change to ran1?
+         uy  = 0.
+         uz  = 0.
+
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      ux = 0.0d0
+      uy = 0.0d0
+      uz = 0.0d0
+      temp = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      include 'SIZE'
+      include 'TOTAL'
+      
+      !if(param(2) .lt.0.0) param(2)  = -1.0/param(2)
+      !if(param(8) .lt.0.0) param(8)  = -1.0/param(8)
+      !if(param(29).lt.0.0) param(29) = -1.0/param(29)
+
+
+      ifmhd = .true. ; call bcast(ifmhd   , lsize)
+      if (ifmhd) then
+
+      param(29) = param(2)
+
+      ifessr = .true.
+      ifchar = .false.
+      
+      npscl1 = npscl1 + 1
+      nfldt = 2+npscal+1
+
+      ifldmhd = npscal + 3
+      cpfld(ifldmhd,1) = param(29)  ! magnetic viscosity
+      cpfld(ifldmhd,2) = param( 1)  ! magnetic rho same as for fluid
+
+      endif   
+      	
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2   ! Modify geometry here
+      include 'SIZE'
+      include 'TOTAL'
+c
+c     Rescale x,y, and z.
+c
+      one   = 1.
+      pi    = 4.*atan(one)
+      twopi = 2.*pi
+      zleng = twopi / 0.57	! dominant wavelenth & wavenumber
+c
+      call rescale_x(xm1,0.,twopi)
+      call rescale_x(ym1,0.,twopi)
+      call rescale_x(zm1,0.,zleng)
+
+      param(66) = 4		! .fld -- comment out for .f
+      param(67) = 4		! .fld -- comment out for .f
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine runtimeavg(ay,y,j,istep1,ipostep,s5)
+c
+c     Computes, stores and for ipostep!=0 prints runtime averages
+c     of j-quantity y (along w/ y itself unless ipostep<0)
+c     with j + 'rtavg_' + (unique) s5 every ipostep for istep>=istep1
+c
+      include 'SIZE'			! for nid & TSTEP
+      include 'TSTEP'			! for istep & time (or TOTAL)
+      parameter (lymax=99)		! max of averages to store
+      character*5  s5			! unique string to append to 'rtavg_'
+      character*14 s14			! i3 + 'rtavg_' + s5
+      real         a  (lymax)		! run time average
+      character*5  as5(lymax)		! j's strings s5
+      save         a,             as5
+      data         a  /lymax*0./, as5 /lymax*'     '/
+
+      if (nid.eq.0.and.istep.ge.istep1) then	! otherwsie skip istep
+c---
+      if (istep1.lt.0) then
+         istep1 = 0
+         write(6,*) 'Warning:  istep1<0 in runtimeavg -- resetting to 0'
+      endif
+      if (as5(j).ne.s5.and.as5(j).ne.'     ') then	! check for unique j & s5
+         write(6,10) j,s5,as5(j)
+         call exitt
+      endif
+
+      iistep = istep - istep1 + 1
+      if (iistep.gt.1) then			! a_ii = (1-1/ii)*a_ii-1 + 1/ii*y_ii
+         wy = 1./iistep
+         wa = 1. - wy
+         ay = wy*y + wa*a(j)			! runtime average a_ii
+      else if (iistep.eq.1) then		! skip istep<istep1
+         ay = y
+         as5(j) = s5				! check for uniqueness
+      endif
+      a(j) = ay
+
+      if (ipostep.ne.0.and.mod(istep,iabs(ipostep)).eq.0) then		! printout
+         if (ipostep.lt.0) then 
+            write (6,20) istep,time,ay,  j,s5
+         else
+            write (6,30) istep,time,ay,y,j,s5
+         endif
+      endif
+      endif
+
+   10 format('Wrong j or s5 in runtimeavg : ',i3,x,a5,x,a5)
+   20 format(i8,1p2e16.8,i3,' rtavg_',a5)
+   30 format(i8,1p3e16.8,i3,' rtavg_',a5)
+c
+      return
+      end
+c-----------------------------------------------------------------------
+      function gvec3(a,b,c,mult,n)
+C
+C     Compute a weighted sum of magnitude of a vector (a,b,c)
+C
+      real a(1),b(1),c(1),mult(1)
+      real tmp,tmp1,work(1)
+C
+      tmp = 0.0
+      do 10 i=1,n
+         tmp1 = a(i)*a(i) + b(i)*b(i) + c(i)*c(i)
+	 tmp1 = sqrt(tmp1)
+         tmp  = tmp + mult(i)*tmp1
+ 10   continue
+      call gop(tmp,work,'+  ',1)
+      gvec3 = tmp
+      return
+      end
+c-----------------------------------------------------------------------
