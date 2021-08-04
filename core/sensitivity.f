@@ -55,12 +55,12 @@
       call opcopy(vx_dIm, vy_dIm, vz_dIm, vx, vy, vz)
 
 !     --> Load real part of the adjoint mode
-      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
+      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
       call load_fld(filename)
       call opcopy(vx_aRe, vy_aRe, vz_aRe, vx, vy, vz)
 
 !     --> Load imaginary part of the adjoint mode
-      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
+      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00001'
       call load_fld(filename)
       call opcopy(vx_aIm, vy_aIm, vz_aIm, vx, vy, vz)
 
@@ -167,12 +167,12 @@
       call opcopy(vx_dIm,vy_dIm,vz_dIm,vx,vy,vz)
 
 !     load real part of the adjoint mode
-      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
+      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
       call load_fld(filename)
       call opcopy(vx_aRe,vy_aRe,vz_aRe,vx,vy,vz)
 
 !     load imaginary part of the adjoint mode
-      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
+      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00001'
       call load_fld(filename)
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 

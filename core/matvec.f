@@ -16,10 +16,10 @@
       ifchar = .false. ; call bcast(ifchar, lsize)
 
 !     --> Encore CFL target for EXTk
-      if (param(26) .gt. 0.5) then
-         if (nid .eq. 0) write(6, *) "Force the maximum CFL to 0.5 for practical reasons."
-         param(26) = 0.5D+00 ; ctarg = param(26)
-      endif
+      !if (param(26) .gt. 0.5) then
+      !   if (nid .eq. 0) write(6, *) "Force the maximum CFL to 0.5 for practical reasons."
+      !   param(26) = 0.5D+00 ; ctarg = param(26)
+      !endif
 
 !     --> Set nsteps/endTime accordingly.
       if (param(10) .gt. 0) then
@@ -321,7 +321,7 @@
 !     -----     NEWTON FOR UPO     -----
 !     ----------------------------------
 
-      if ( uparam(3) .eq. 3.1 ) then
+      if ( uparam(1) .eq. 2.1 ) then
 
          call krylov_zero(bvec)
          call krylov_zero(btvec)
@@ -332,6 +332,9 @@
 
          call compute_bvec(btvec, ic_nwt)
          call krylov_inner_product(f%time, btvec, q)
+
+         if(nid .eq. 0) write(6,*)'Newton period correction:',f%time
+
       else
          f%time = 0.0D+00
       end if
