@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = 0
+
+stopAt = endTime
+endTime = 250
+
+userParam01 = 0 # DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-06
+residualProj = no
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-06
+residualProj = no
+density = 1.0
+viscosity = -100.0

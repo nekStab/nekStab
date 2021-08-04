@@ -1,0 +1,8 @@
+genbox << EOF
+gpf.box
+EOF
+#
+genmap << EOF
+gpf
+.01
+EOF
