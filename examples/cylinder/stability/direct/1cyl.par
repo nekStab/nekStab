@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3  # Direct
-userParam07 = 90 # k_dim
+userParam07 = 128 # k_dim
 
 dt = 0
 variableDt = no

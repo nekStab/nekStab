@@ -4,16 +4,7 @@ startFrom = 0
 stopAt = numSteps
 numSteps = 0
 
-userParam01 = 0  # 0:dns,1:stabilization,3:stability
-userParam02 = 0  # krylov snapshot to load
-userParam03 = 3  # stabilization technique: 1:sfd
-userParam04 = 0.1200 # freq (Strouhal leading mode)
-userParam05 = 0.2 # gain (twice growth rate leading mode)
-userParam06 = 0   #
-userParam07 = 128 # k_dim
-userParam08 = 0   # sponge lenght left
-userParam09 = 0   # sponge lenght right
-userParam10 = 0 # sponge strenght
+userParam01 = 4
 
 dt = 0
 variableDt = no
