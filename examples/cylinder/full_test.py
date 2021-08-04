@@ -74,25 +74,25 @@ if __name__ == "__main__":
     nps = 6
     
     # DNS
-    #rnek(root+'/dns/',cn,True,n_procs=nps)
+    rnek(root+'/dns/',cn,True,n_procs=nps)
 
     #SFD
-    #rnek(root+'/baseflow/sfd',cn,True,n_procs=nps)
+    rnek(root+'/baseflow/sfd',cn,True,n_procs=nps)
 
     #SFD OIFS 
-    #rnek(root+'/baseflow/sfd_oifs',cn,True,n_procs=nps)
+    rnek(root+'/baseflow/sfd_oifs',cn,True,n_procs=nps)
     
     #SFD OIFS + adaptive
-    #rnek(root+'/baseflow/sfd_dyn',cn,True,n_procs=nps)
+    rnek(root+'/baseflow/sfd_dyn',cn,True,n_procs=nps)
 
     # BOOSTCONV
-    #rnek(root+'/baseflow/boostconv',cn,True,n_procs=nps)
+    rnek(root+'/baseflow/boostconv',cn,True,n_procs=nps)
 
     # NEWTON dynamic
-    #rnek(root+'/baseflow/newton_dyn',cn,True,n_procs=nps)
+    rnek(root+'/baseflow/newton_dyn',cn,True,n_procs=nps)
     
     # NEWTON
-    #rnek(root+'/baseflow/newton',cn,True,n_procs=nps)
+    rnek(root+'/baseflow/newton',cn,True,n_procs=nps)
 
     # DIRECT 
     rnek(root+'/stability/direct',cn,True,n_procs=nps)
@@ -100,17 +100,17 @@ if __name__ == "__main__":
     # ADJOINT
     rnek(root+'/stability/adjoint',cn,True,n_procs=nps)
 
-    # # WAVEMAKER
-    # rnek(root+'/postprocessing/wavemaker',cn,True,n_procs=nps)
+    # WAVEMAKER
+    rnek(root+'/postprocessing/wavemaker',cn,True,n_procs=nps)
 
-    # # BUDGET
-    # rnek(root+'/postprocessing/energy_budget',cn,True,n_procs=nps)
+    # BUDGET
+    rnek(root+'/postprocessing/energy_budget',cn,True,n_procs=nps)
         
-    # # BF SENSITIVITY
-    # rnek(root+'/postprocessing/baseflow_sensitivity',cn,True,n_procs=nps)
+    # BF SENSITIVITY
+    rnek(root+'/postprocessing/baseflow_sensitivity',cn,True,n_procs=nps)
 
-    # # FORCING SENSITIVITY
-    # rnek(root+'/postprocessing/steady_force_sensitivity',cn,True,n_procs=nps)
+    # FORCING SENSITIVITY
+    rnek(root+'/postprocessing/steady_force_sensitivity',cn,True,n_procs=nps)
 
     toc = time.perf_counter(); ttime=toc-tic
     print(f"Script finished in in {ttime:0.2f} seconds")
