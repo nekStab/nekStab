@@ -13,9 +13,9 @@ Both of them work at [DynFluid](http://dynfluid.ensam.eu/), a fluid dynamics lab
 
 ### News
 
-- **February 2022:** The first release of `nekStab` is available online!
+- **February 2022:** The first official release of `nekStab` is available online!
 It is released under the [???]() licence.
-Do not hesitate to get in touch with us or check the [documentation]() if you want to know more.
+Do not hesitate to get in touch with us, check the [documentation]() or read the [release notes]() if you want to know more.
 
 ## Getting started
 
