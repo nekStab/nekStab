@@ -1,6 +1,6 @@
 [![GCC](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml/badge.svg?branch=master)](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml)
 [![Intel](https://github.com/ricardofrantz/nekStab/actions/workflows/intel.yml/badge.svg?branch=master)](https://github.com/ricardofrantz/nekStab/actions/workflows/intel.yml)
-[![Documentation Status](https://ricardofrantz.github.io/nekStabDoc/en/master/)](http://ansicolortags.readthedocs.io/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](https://ricardofrantz.github.io/nekStabDoc/en/master/)
 
 | --- | --- |
 | [Website](https://nekstab.github.io/) | [Documentation]() |
