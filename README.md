@@ -52,15 +52,19 @@ cd ~/nekStab/examples/cylinder/1_2baseflow/newton
 nekbmpi 1cyl 4
 ```
 
-More information about compiling the code on Mac OS or optional packages is available in the [**Documentation**](https://ricardofrantz.github.io/nekStabDoc/en/master/index.html).
+More information about compiling the code on Mac OS or optional packages is available in the [**Documentation**](https://ricardofrantz.github.io/nekStabDoc/en/master/index.html**.
 
 ## Development
 
-TBA
+**nekStab** is primarily being developed by Jean-Christophe Loiseau and Ricardo Frantz.
+We however welcome contributors of all experience levels.
+If you are planning a large contribution, we encourage you to discuss the concept here on GitHub and interact with us frequently to ensure that your effort is well-directed.
 
 ## Help and Support
 
-TBA
+Although **nekStab** relies on Nek5000, none of us are active developers of it.
+For any question regarding Nek5000, please refer to the dedicated [GitHub repo](https://github.com/Nek5000/Nek5000)
+ and [documentation](http://nek5000.github.io/NekDoc/index.html)
 
 ### Documentation
 
