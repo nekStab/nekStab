@@ -52,7 +52,7 @@ cd ~/nekStab/examples/cylinder/1_2baseflow/newton
 nekbmpi 1cyl 4
 ```
 
-More information about compiling the code on Mac OS or optional packages is available in the [**Documentation**](https://ricardofrantz.github.io/nekStabDoc/en/master/index.html**.
+More information about compiling the code on Mac OS or optional packages is available in the [**Documentation**](https://ricardofrantz.github.io/nekStabDoc/en/master/index.htm).
 
 ## Development
 
