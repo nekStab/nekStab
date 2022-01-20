@@ -18,19 +18,14 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelv
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelv
-      integer                            :: kd,mstart,n,n2,i,j
-
 !     ----- Krylov basis V for the projection M*V = V*H -----
       type(krylov_vector), dimension(kd) :: Q
+
+      integer                            :: kd,mstart,i,j
       character*3  fname
       character*60  filename
       character(len=7)   :: tl
       character(len=20)  :: fmt
-
-      n     = nx1*ny1*nz1*nelv
-      n2    = nx2*ny2*nz2*nelv
 
 c     ----- Upload the snapshots -----
 
@@ -57,8 +52,8 @@ c     ----- Upload the snapshots -----
 
          call load_fld(filename)
          call opcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, vx, vy, vz)
-         if(ifpo)call copy(Q(i)%pr,pr,n2)
-         if(ifto)call copy(Q(i)%theta,t(1,1,1,1,1),n)
+         if(ifpo)call copy(Q(i)%pr,pr,nx2*ny2*nz2*nelt)
+         if(ifto)call copy(Q(i)%theta,t(1,1,1,1,1),nx1*ny1*nz1*nelt)
 
       enddo
       return
