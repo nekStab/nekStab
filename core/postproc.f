@@ -528,6 +528,7 @@ c-------------------------------------------------------------------
       end
 c-------------------------------------------------------------------
       subroutine nekStab_avg(ifstatis)
+
       include 'SIZE'
       include 'TOTAL'
       include 'AVG'
@@ -657,18 +658,15 @@ c----------------------------------------------------------------------
 
 
       subroutine stability_energy_budget()
-
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
 !     ----- Arrays to store the instability mode real and imaginary parts.
       real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
       real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
-      real, dimension(lt2) :: pr_dRe, pr_dIm
+      real, dimension(lp) :: pr_dRe, pr_dIm
 
 !     ----- Energy budget terms.
       real, dimension(lt, 10) :: energy_budget
@@ -676,7 +674,7 @@ c----------------------------------------------------------------------
 
 !     ----- Miscellaneous.
       real :: alpha, beta, glsc2
-      integer :: i, j, k, n
+      integer :: i, j, k
       character(len=80) :: filename
 
       n = nx1*ny1*nz1*nelt
@@ -711,10 +709,6 @@ c----------------------------------------------------------------------
       call nopcmult(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
       call nopcmult(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, alpha)
 
-
-
-
-
 !     #####
 !     #####
 !     #####     COMPUTE THE ENERGY BUDGET
@@ -723,11 +717,11 @@ c----------------------------------------------------------------------
 
 !     --> Compute the production terms.
       call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 1, 
-     $ energy_budget(:, 1), energy_budget(:, 2), energy_budget(:, 3))
+     $     energy_budget(:, 1), energy_budget(:, 2), energy_budget(:, 3))
       call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 2,
-     $ energy_budget(:, 4), energy_budget(:, 5), energy_budget(:, 6))
+     $     energy_budget(:, 4), energy_budget(:, 5), energy_budget(:, 6))
       call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 3,
-     $ energy_budget(:, 7), energy_budget(:, 8), energy_budget(:, 9))
+     $     energy_budget(:, 7), energy_budget(:, 8), energy_budget(:, 9))
 
 !     --> Compute the dissipation term.
       call compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, energy_budget(:, 10))
@@ -756,11 +750,10 @@ c----------------------------------------------------------------------
 
 
       subroutine compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, dissipation)
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
 
       real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
       real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
@@ -801,12 +794,10 @@ c----------------------------------------------------------------------
 
 
       subroutine compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, component, prod_x, prod_y, prod_z)
-
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
 
       real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
       real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
@@ -844,12 +835,10 @@ c----------------------------------------------------------------------
 
 
       subroutine compute_gradients(u, dudx, dudy, dudz)
-
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
 
       real, dimension(lt) :: u
       real, dimension(lt) :: dudx, dudy, dudz
@@ -865,12 +854,10 @@ c----------------------------------------------------------------------
 
 
       subroutine compute_laplacian(a, Lap_a)
-
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
 
       real, dimension(lt) :: a
       real, dimension(lt) :: dadx, dady, dadz

@@ -47,7 +47,6 @@
 !     ----- Miscellaneous -----
       real                               :: alpha
       integer                            :: mstart, mend, ksize !, mstep moved to NEKSTAB.inc
-      integer                            :: n
 
 !     ----- Timer -----
       real*8 :: eetime0,eetime1
@@ -55,14 +54,11 @@
 
 !     ----- Orthogonal residual f = w - (Q,w)*Q -----
       type(krylov_vector) :: f
-
 !     ----- Krylov basis V for the projection MQ = QH -----
       type(krylov_vector), dimension(ksize+1) :: Q
 
 !     ----- Upper Hessenberg matrix -----
       real, dimension(ksize+1, ksize)    :: H
-
-      n  = nx1*ny1*nz1*nelt
 
 !     --> Initialize arrays.
       call krylov_zero(f) ; alpha = 0.0d0
@@ -117,7 +113,7 @@
 
 
 
-      subroutine update_hessenberg_matrix(H, f, Q, k)
+      subroutine update_hessenberg_matrix(H, f, q, k)
 
 !     This function orthonormalizes the latest Krylov vector f w.r.t. all of the
 !     previous ones and updates the entries of the Hessenberg matrix accordingly.
@@ -133,13 +129,13 @@
 !     When returned, it has been orthonormalized w.r.t. to all previous
 !     Krylov vectors.
 !     
-!     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt.
+!     f_pr : nek array of size lp = lx2*ly2*lz2*lelt.
 !     Pressure component of the latest Krylov vector.
 !     
 !     qx, qy, qz : nek arrays of size (lt, k)
 !     Velocity components of the Krylov basis.
 !     
-!     qp : nek array of size (lt2, k).
+!     qp : nek array of size (lp, k).
 !     Pressure component of the Krylov basis.
 !     
 !     H : k x k real matrix.
@@ -155,15 +151,13 @@
       integer, intent(in) :: k
       real, dimension(k, k), intent(inout) :: H
 
-      type(krylov_vector), dimension(k) :: Q
+      type(krylov_vector), dimension(k) :: q
       type(krylov_vector) :: f, wrk
 
-      integer i, n
+      integer i
       real alpha
 
       real, dimension(k) :: h_vec
-
-      n = nx1*ny1*nz1*nelt
 
 !     --> Initialize array.
       call rzero(h_vec, k)
@@ -172,7 +166,7 @@
       do i = 1, k
 
 !     --> Copy the i-th Krylov vector to the working arrays.
-         call krylov_copy(wrk, Q(i))
+         call krylov_copy(wrk, q(i))
 
 !     --> Orthogonalize f w.r.t. to q_i.
          call krylov_inner_product(alpha, f, wrk)
