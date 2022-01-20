@@ -12,16 +12,16 @@
 !     INPUTS
 !     ------
 !     
-!     px, py, pz : nek arrays of size lt = lx1*ly1*lz1*lelt.
+!     px, py, pz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the first vector.
 !     
-!     pp : nek array of size lt2 = lx2*ly2*lz2*lelt
+!     pp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the first vector.
 !     
-!     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
+!     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the second vector.
 !     
-!     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
+!     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the second vector.
 !     
 !     RETURN
@@ -32,26 +32,25 @@
 !     
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
+      use krylov_subspace
       implicit none
       include "SIZE"
       include "TOTAL"
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt), intent(in) :: px, py, pz, pt
-      real, dimension(lt), intent(in) :: qx, qy, qz, qt
-      real, dimension(lt2), intent(in) :: pp, qp !not used
+      real, dimension(lv), intent(in) :: px, py, pz
+      real, dimension(lv), intent(in) :: qx, qy, qz
+      real, dimension(lp), intent(in) :: pp, qp !not used
+      real, dimension(lt), intent(in) :: pt, qt
 
       real, intent(out) :: alpha
       real :: glsc3
-      integer :: n
 
-      n = nx1 * ny1 * nz1 * nelt
+      n = nx1 * ny1 * nz1 * nelv
+      nt = nx1 * ny1 * nz1 * nelt
 
       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
-      if (if3d) alpha = alpha + glsc3(pz, bm1s, qz, n)
-      if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, n)
+      if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
+      if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, nt)
 
       return
       end subroutine inner_product
@@ -67,14 +66,14 @@
 
 
       subroutine norm(qx, qy, qz, qp, qt, alpha) ! Compute vector norm
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter               :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter               :: lt2 = lx2*ly2*lz2*lelt
-      real, intent(in), dimension(lt)  :: qx, qy, qz, qt
-      real, intent(in), dimension(lt2) :: qp
+      real, intent(in), dimension(lv) :: qx, qy, qz
+      real, intent(in), dimension(lp) :: qp
+      real, intent(in), dimension(lt) :: qt
       real, intent(out)                :: alpha
 
       call inner_product(alpha, qx,qy,qz,qp,qt, qx,qy,qz,qp,qt)
@@ -102,10 +101,10 @@
 !     INPUTS / OUTPUTS
 !     ----------------
 !     
-!     qx, qy, qz : nek arrays of size lt = lx1*ly1*lz1*lelt.
+!     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays storing the velocity components.
 !     
-!     qp : nek array of size lt2 = lx2*ly2*lz2*lelt
+!     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array storing the corresponding pressure field.
 !     
 !     alpha : real
@@ -113,14 +112,14 @@
 !     
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter                  :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                  :: lt2 = lx2*ly2*lz2*lelt
-      real, dimension(lt), intent(inout)  :: qx, qy, qz, qt
-      real, dimension(lt2), intent(inout) :: qp
+      real, dimension(lv), intent(inout) :: qx, qy, qz
+      real, dimension(lp), intent(inout) :: qp
+      real, dimension(lt), intent(inout) :: qt
       real, intent(out)                   :: alpha
       real                                :: beta
 
@@ -143,9 +142,6 @@
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-
 !     -----Krylov basis V for the projection M*V = V*H -----
       type(krylov_vector), allocatable, dimension(:) :: Q
 
@@ -165,22 +161,17 @@
       integer :: mstart, cnt
       real                               :: alpha, beta, glsc3
       logical                            :: converged
-      integer                            :: n, i, j
+      integer                            :: i, j
       character(len=30)                  :: filename
 
 !     ----- Allocate arrays -----
       allocate(Q(k_dim+1))
       allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
 
-      n      = nx1*ny1*nz1*nelt
+      nt      = nx1*ny1*nz1*nelt
       time   = 0.0d0
-      H(:,:)  = 0.0d0
-      b_vec  = 0.0d0
-      residual = 0.0d0
-
-      do i = 1, k_dim+1
-         call krylov_zero(Q(i))
-      enddo
+      H(:,:)  = 0.0d0; b_vec  = 0.0d0 ; residual = 0.0d0
+      call krylov_zero(Q(1:k_dim+1))
 
 !     ----- Loading baseflow from disk (optional) -----
 
@@ -192,7 +183,7 @@
 
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
-      if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
+      if(ifheat) call copy(tbase,t(1,1,1,1,1),nt)
 
 !     ----- Prepare stability parameters -----
 
@@ -209,35 +200,41 @@
          if(ifseed_nois)then    ! noise as initial seed
 
             if(nid.eq.0)write(6,*)'Filling fields with noise...'
-            call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
-            wrk%vx = vxp(:, 1) ; wrk%vy = vyp(:, 1) ; wrk%vz = vzp(:, 1)
-            wrk%pr = prp(:, 1) ; wrk%theta = tp(:, 1, 1)
+            call add_noise(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
+            wrk%vx = vxp(1, 1) ; wrk%vy = vyp(1, 1) ; wrk%vz = vzp(1, 1)
+            wrk%pr = prp(1, 1) ; wrk%theta = tp(1, 1, 1)
             call krylov_normalize(wrk, alpha)
             call matvec(wrk, wrk)
 
          elseif(ifseed_symm)then ! symmetry initial seed
 
             if(nid.eq.0)write(6,*)'Enforcing symmetric seed perturb...'
-            call add_symmetric_seed(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
+            call add_symmetric_seed(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
 
          elseif(ifseed_load)then ! loading initial seed (e.g. Re_ )
 
-            write(filename,'(a,a,a)')'Re_',trim(SESSION),'0.f00001'
-            if(nid.eq.0)write(*,*)'Load real part of leading mode as seed: ',filename
+            if (uparam(01) .ge. 3.0 .and. uparam(01) .lt. 3.2 ) then
+               write(filename,'(a,a,a)')'dRe',trim(SESSION),'0.f00001'
+               
+            elseif(uparam(01) .ge. 3.2 .and. uparam(01) .lt. 3.3 ) then
+               write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
+            endif
+
+            if(nid.eq.0)write(*,*)'Load real part of mode 1 as seed: ',filename
             call load_fld(filename)
-            call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
+            call nopcopy(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
 
          else
 
-            call opcopy(vxp(:,1),vyp(:,1),vzp(:,1),ubase,vbase,wbase)
-            if(ifheat) call copy(tp(:,1,1),tbase,n)
+            call opcopy(vxp(1,1),vyp(1,1),vzp(1,1),ubase,vbase,wbase)
+            if(ifheat) call copy(tp(1,1,1),tbase,nt)
 
          endif
 
 !     ----- Normalized to unit-norm -----
 
-         wrk%vx = vxp(:, 1) ; wrk%vy = vyp(:, 1) ; wrk%vz = vzp(:, 1)
-         wrk%pr = prp(:, 1) ; wrk%theta = tp(:, 1, 1)
+         wrk%vx = vxp(1, 1) ; wrk%vy = vyp(1, 1) ; wrk%vz = vzp(1, 1)
+         wrk%pr = prp(1, 1) ; wrk%theta = tp(1, 1, 1)
          call krylov_normalize(wrk, alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
@@ -246,7 +243,7 @@
 
          call whereyouwant('KRY',1)
          time = 0.0d0
-         call outpost(Q%vx(1), Q%vy(1), Q%vz(1), Q%pr(1), Q%theta(1), 'KRY')
+         call outpost(Q(1)%vx, Q(1)%vy, Q(1)%vz, Q(1)%pr, Q(1)%theta, 'KRY')
 
       elseif(uparam(2).gt.0)then
 
@@ -285,7 +282,7 @@
 !     close(67)
 !     endif
 
-         mstart=mstart+1        !careful here!
+         mstart=mstart+1 !careful here!
          call load_files(Q, mstart, k_dim+1, 'KRY')
          if(nid.eq.0) write(6,*)'Restart fields loaded to memory!'
 
@@ -350,21 +347,7 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 !-----------------------------------------------------------------------
-
-
-
 
 
       subroutine schur_condensation(mstart, H, Q, ksize)
@@ -380,16 +363,15 @@
 !     =====                                       =====
 !     =================================================
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
 
       integer :: ksize
 
 !     ----- Krylov basis V for the projection M*V = V*H -----
 
       type(krylov_vector), dimension(ksize+1) :: Q
-      real, dimension(lt,ksize+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,ksize+1)       :: qp
+      real, dimension(lv,ksize+1)       :: qx, qy, qz
+      real, dimension(lp,ksize+1)       :: qp
+      real, dimension(lt,ksize+1)       :: qt
 
 !     ----- Upper Hessenberg matrix -----
 
@@ -402,14 +384,12 @@
 
 !     ----- Miscellaneous -----
 
-      integer :: mstart, n, i, j, k
+      integer :: mstart, i, j, k
       logical, dimension(ksize)          :: selected
 
 !     ----- Schur and Hessenberg decomposition -----
 
       real, dimension(ksize, ksize)       :: vecs
-
-      n  = nx1*ny1*nz1*nelt
 
 !     --> Initialize arrays.
       b_vec = 0.0D0 ; b_vec(ksize) = H(ksize+1, ksize)
@@ -433,13 +413,13 @@
       do i = 1, k_dim+1
          qx(:, i) = Q(i)%vx
          qy(:, i) = Q(i)%vy
-         qz(:, i) = Q(i)%vz
-         qp(:, i) = Q(i)%pr
-         qt(:, i) = Q(i)%theta
+         if (if3D) qz(:, i) = Q(i)%vz
+         if (ifpo) qp(:, i) = Q(i)%pr
+         if (ifheat) qt(:, i) = Q(i)%theta
       enddo
       qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
       qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
-      if (if3d) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
+      if (if3D) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
       if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
       if (ifheat) qt(:, 1:ksize) = matmul(qt(:, 1:ksize), vecs)
 
@@ -456,9 +436,9 @@
       do i = 1, k_dim+1
          Q(i)%vx = qx(:, i)
          Q(i)%vy = qy(:, i)
-         Q(i)%vz = qz(:, i)
-         Q(i)%pr = qp(:, i)
-         Q(i)%theta = qt(:, i)
+         if (if3D) Q(i)%vz = qz(:, i)
+         if (ifpo) Q(i)%pr = qp(:, i)
+         if (ifheat) Q(i)%theta = qt(:, i)
       enddo
 
       return
@@ -467,86 +447,29 @@
 
 
 
-
 !----------------------------------------------------------------------
 
-
-
-
-
       subroutine krylov_schur_prepare
-
-!     This
-!     
-!     INPUT
-!     -----
-!     
-!     RETURNS
-!     -------
-!     
-!     Last edit : March 26th 2021 by RAS Frantz.
 
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      include 'ADJOINT'
 
-!     forcing npert to unity
-      if(param(31).gt.1)then
-         write(6,*)'nekStab not ready for npert>1 -- jp loops NOT implemented! STOPPING!'
-         call nek_end
+      if( istep.eq.0 .and. (uparam(1).eq.3.11 .or. uparam(1).eq.3.22) )then
+      param(10)=time            ! upo period in field
+      if(nid.eq.0)write(6,*)'adjusting period from file: endTime=',param(10)
       endif
-      param(31) = 1 ; npert = param(31)
+      call bcast(param(10), wdsize)
 
-!     force OIFS deactivation
-      if(ifchar.and.nid.eq.0)write(6,*)'OIFS not working with linearized and adjoint -> turning OFF!'
-      ifchar = .false.
-      call bcast(ifchar, lsize)
-
-!     enforce CFL target for EXTk
-      if( param(26).gt.0.5 )then
-         if(nid.eq.0)write(6,*)'reducing target CFL to 0.5!'
-         param(26)=0.50d0 ; ctarg = param(26)
-      endif
-
-      if(param(10).gt.0)then
-!     if param(10)=endTime=0 -> param(11) = numSteps
-         call compute_cfl(dt,vx,vy,vz,1.0) ! dt=1 ! vx at this point is base flow
-         dt = ctarg/dt
-         nsteps = ceiling(param(10)/dt)
-         dt = param(10)/nsteps
-         if(nid.eq.0)write(6,*)'endTime specified! computing CFL from BASE FLOW!'
-         if(nid.eq.0)write(6,*)' computing timeStep dt=',dt
-         if(nid.eq.0)write(6,*)' computing numSteps=',nsteps
-         if(nid.eq.0)write(6,*)' sampling period =',nsteps*dt
-         param(12) = dt
-      endif
-
-!     deactivate variable time step! !freeze dt
-      param(12) = -abs(param(12))
-
-!     broadcast all parameters to processors
-      call bcast(param,200*wdsize)
-
+      call prepare_linearized_solver ! in matvec.f
       return
       end subroutine krylov_schur_prepare
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 !----------------------------------------------------------------------
 
-
+      
 
 
       subroutine outpost_ks(vals, vecs, Q, residual)
@@ -556,15 +479,16 @@
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter                 :: lt  = lx1*ly1*lz1*lelt
-      integer, parameter                 :: lt2 = lx2*ly2*lz2*lelt
-
 !     ----- Krylov basis V for the projection M*V = V*H -----
 
-      real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
+      real wo1(lv),wo2(lv),wo3(lv),vort(lv,3)
+
       type(krylov_vector), dimension(k_dim+1) :: Q
-      real, dimension(lt,k_dim+1)        :: qx, qy, qz, qt
-      real, dimension(lt2,k_dim+1)       :: qp
+      type(krylov_vector) :: qq, ff
+
+      real, dimension(lv,k_dim+1)        :: qx, qy, qz
+      real, dimension(lp,k_dim+1)        :: qp
+      real, dimension(lt,k_dim+1)        :: qt
 
 !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
@@ -573,15 +497,15 @@
 
 !     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
 
-      complex*16, dimension(lt)          :: fp_cx, fp_cy, fp_cz, fp_ct
-      complex*16, dimension(lt2)         :: fp_cp
-
+      complex*16, dimension(lv)          :: fp_cx, fp_cy, fp_cz
+      complex*16, dimension(lp)          :: fp_cp
+      complex*16, dimension(lt)          :: fp_ct
 !     ----- Miscellaneous -----
-      integer :: n, i
+      integer :: i
 
       real                               :: sampling_period
       real, dimension(k_dim)             :: residual
-      real                               :: alpha, alpha_r, alpha_i, beta
+      real                               :: alpha, alpha_r, alpha_i, beta, old_uparam1
       complex :: log_transform
       logical ifto_sav, ifpo_sav
 
@@ -594,13 +518,12 @@
       n = nx1*ny1*nz1*nelt
 
 !     ----- Output all the spectrums and converged eigenmodes -----
-
       do i = 1, k_dim
          qx(:, i) = Q(i)%vx
          qy(:, i) = Q(i)%vy
-         qz(:, i) = Q(i)%vz
-         qp(:, i) = Q(i)%pr
-         qt(:, i) = Q(i)%theta
+         if (if3D) qz(:, i) = Q(i)%vz
+         if (ifpo) qp(:, i) = Q(i)%pr
+         if (ifheat)qt(:, i) = Q(i)%theta
       enddo
 
 !     evop defined in matrix_vector_product
@@ -646,7 +569,7 @@
 !     ----- Computation of the corresponding eigenmode -----
          fp_cx = matmul(qx(:, 1:k_dim), vecs(:, i))
          fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
-         if (if3d) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
+         if (if3D) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
          if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
          if (ifheat) fp_ct = matmul(qt(:, 1:k_dim), vecs(:, i))
 
@@ -662,11 +585,6 @@
          call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
          call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nRe)
 
-!     ----- Output the imaginary part -----
-         call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
-         call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
-         call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
-
          if(ifvor)then
 !     ----- Output vorticity from real part -----
             call oprzero(wo1, wo2, wo3)
@@ -677,6 +595,27 @@
             ifto = ifto_sav ; ifpo = ifpo_sav
          endif
 
+!     ----- Output the imaginary part -----
+         call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
+         call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
+         call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
+
+!computing and outposting optimal response from real part ! works with Floquet!
+         if((uparam(1).eq.3.3.or.uparam(1).eq.3.31))then
+            old_uparam1 = uparam(1)
+            if(uparam(1).eq.3.3)uparam(1)=3.1 ! changing to linearized solver !
+            if(uparam(1).eq.3.31)uparam(1)=3.11 ! changing to linearized solver in Floquet
+            call bcast(uparam(1),wdsize)
+            call nopcopy(ff%vx, ff%vy, ff%vz, ff%pr, ff%theta, real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
+            call matvec(qq,ff)  ! baseflow already in ubase
+            call outpost(qq%vx, qq%vy, qq%vz, qq%pr, qq%theta, 'ore')
+            call comp_vort3(vort, wo1, wo2, qq%vx, qq%vy, qq%vz)
+            ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
+            call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, 'orv')
+            ifto = ifto_sav ; ifpo = ifpo_sav
+            uparam(1) = old_uparam1
+            call bcast(uparam(1),wdsize)
+         endif
       endif
 
       enddo
@@ -742,11 +681,7 @@
 
 
 
-
-
 !-----------------------------------------------------------------------
-
-
 
 
 
@@ -820,17 +755,7 @@
 
 
 
-
-
-
-
-
-
-
 !     ------------------------------------------------------------------------------------
-
-
-
 
 
       subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
@@ -841,10 +766,10 @@
 !     INPUTS
 !     ------
 !     
-!     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt
+!     f_xr, f_yr, f_zr : nek arrays of size lv = lx1*ly1*lz1*lelv
 !     Velocity components of the latest Krylov vector.
 !     
-!     f_pr : nek array of size lt2 = lx2*ly2*lz2*lelt
+!     f_pr : nek array of size lp = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
 !     
 !     H : k+1 x k real matrix.
@@ -855,15 +780,14 @@
 !     
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt), intent(in) :: f_xr, f_yr, f_zr, f_tr
-      real, dimension(lt2), intent(in) :: f_pr
+      real, dimension(lv), intent(in) :: f_xr, f_yr, f_zr
+      real, dimension(lp), intent(in) :: f_pr
+      real, dimension(lv), intent(in) :: f_tr
 
       integer, intent(in) :: k
       real, dimension(k+1,k), intent(in) :: H
@@ -882,12 +806,11 @@
       endif
 
 !     --> Outpost the latest Krylov vector.
-      !if(uparam(1).gt.3)then
+!if(uparam(1).gt.3)then
       call whereyouwant("KRY", k+1) ! skipping one due to the initial condition
-      !else
-      ! call whereyouwant("KRY", k) ! for restart of newton solver
-      !endif
-      
+!else
+! call whereyouwant("KRY", k) ! for restart of newton solver
+!endif
       time = time * k           !order in ParaView
       call outpost(f_xr, f_yr, f_zr, f_pr, f_tr, "KRY")
 
@@ -899,7 +822,6 @@
       cnt = count(residual .lt. eigen_tol)
 
       if (nid.eq.0) then
-
 !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
 !     write(filename, '(a, i4.4)') "H", k
 
@@ -912,7 +834,6 @@
 
 !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
 !     write(filename, '(a, i4.4)') "S", k
-
          write(filename, '(A,A,A)') 'Spectre_NS',evop,'.dat'
          write(6, *) 'Outposting eigenspectrum of current log-transform spectrum matrix to : ', filename
 
@@ -935,20 +856,20 @@
       endif
 
 
-!     if(cnt.ge.schur_tgt)then
-!     if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
-!     !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
-!     call nek_end
-!     endif
+       if(cnt.ge.schur_tgt)then
+            if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
+            !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
+            call nek_end
+       endif
 
 
       return
       end subroutine arnoldi_checkpoint
 
 !     ------------------------------------------------------------------------------------
-
       function log_transform(x)
       implicit none
+
       complex :: log_transform
       complex,intent(in) :: x
       log_transform = log(x)
@@ -959,26 +880,27 @@
 
       subroutine power_iteration
 
+      use krylov_subspace
+
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+! -->
+      real, dimension(lv) :: qx, qy, qz
+      real, dimension(lp) :: qp
+      real, dimension(lt) :: qt
 
-!     -->
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
-
-!     -->
-      real, dimension(lt) :: fx, fy, fz, ft
-      real, dimension(lt2) :: fp
+! -->
+      real, dimension(lv) :: fx, fy, fz
+      real, dimension(lp) :: fp
+      real, dimension(lt) :: ft
 
       real :: alpha, beta
-      integer :: n, i, j
+      integer :: i, j
       character(len=80) :: filename
 
-      n = nx1 * ny1 * nz1 * nelt
+      n = nx1 * ny1 * nz1 * nelv
 
       write(filename,'(a,a,a)')'BF_',trim(SESSION),'0.f00001'
       if(nid.eq.0)write(*,*)'Loading base flow: ',filename
@@ -988,9 +910,9 @@
 
       call krylov_schur_prepare
 
-      call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
-      call normalize(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),alpha)
-      call nopcopy(qx, qy, qz, qp, qt, vxp(:,1), vyp(:,1), vzp(:,1), prp(:,1), tp(:,1,1))
+      call add_noise(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
+      call normalize(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1),alpha)
+      call nopcopy(qx, qy, qz, qp, qt, vxp(1,1), vyp(1,1), vzp(1,1), prp(1,1), tp(1,1,1))
 
       call outpost(qx, qy, qz, qp, qt, "PRT")
 
