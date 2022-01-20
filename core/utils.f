@@ -288,10 +288,10 @@ c-----------------------------------------------------------------------
       endif                     ! spng_w(il).gt.0.0
       enddo
 
-      ltmp = ifto; ltmp2 = ifpo
-      ifto = .true.; ifpo= .false.
-      call outpost2(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
-      ifto = ltmp; ifpo = ltmp2
+      !ltmp = ifto; ltmp2 = ifpo
+      !ifto = .true.; ifpo= .false.
+      !call outpost2(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
+      !ifto = ltmp; ifpo = ltmp2
 
       return
       end subroutine spng_set
