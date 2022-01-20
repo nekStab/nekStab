@@ -3,17 +3,25 @@
       include 'SIZE'
 
       private
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
+
+      integer, public, parameter :: lv = lx1*ly1*lz1*lelv
+      integer, public, parameter :: lp = lx2*ly2*lz2*lelt
+      integer, public, parameter :: lt = lx1*ly1*lz1*lelt
+      integer, save, public :: n,n2,nt
+
+!n = nx1*ny1*nz1*nelv
+!n2 = nx2*ny2*nz2*nelt
+!nt = nx1*ny1*nz1*nelt
 
       type, public :: krylov_vector
-      real, dimension(lt) :: vx, vy, vz
-      real, dimension(lt2) :: pr
+      real, dimension(lv) :: vx, vy, vz
+      real, dimension(lp) :: pr
       real, dimension(lt) :: theta
       real :: time
       end type krylov_vector
 
-      type(krylov_vector), public :: ic_nwt, fc_nwt
+      type(krylov_vector), save, public :: ic_nwt, fc_nwt
+      real,save,allocatable,dimension(:, :),public ::uor,vor,wor,tor
 
       contains
       end module krylov_subspace
@@ -24,22 +32,22 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      type(krylov_vector) :: p, q
-      real :: alpha
+      type(krylov_vector), intent(in) :: p, q
+      real, intent(out) :: alpha
       real :: glsc3
-      integer :: n
 
-      n = nx1*ny1*nz1*nelt
-
+      n = nx1*ny1*nz1*nelv
+      nt = nx1*ny1*nz1*nelt
+      
 !     --> Kinetic energy.
       alpha = glsc3(p%vx, bm1s, q%vx, n) + glsc3(p%vy, bm1s, q%vy, n)
       if (if3d) alpha = alpha + glsc3(p%vz, bm1s, q%vz, n)
 
 !     --> Potential energy.
-      if (ifheat) alpha = alpha + glsc3(p%theta, bm1s, q%theta, n)
+      if (ifheat) alpha = alpha + glsc3(p%theta, bm1s, q%theta, nt)
 
 !     --> Time component.
-      if ( uparam(3) .eq. 3.1 ) then
+      if ( uparam(1) .eq. 2.1 ) then
          alpha = alpha + p%time * q%time
       end if
 
@@ -51,8 +59,8 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      type(krylov_vector) :: p, q
-      real :: alpha
+      type(krylov_vector), intent(in) :: p
+      real, intent(out) :: alpha
 
       call krylov_inner_product(alpha, p, p)
       alpha = dsqrt(alpha)
@@ -64,8 +72,9 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      type(krylov_vector) :: p
-      real :: alpha, inv_alpha
+      type(krylov_vector),intent(inout) :: p
+      real, intent(out) :: alpha
+      real :: inv_alpha
 
 !     --> Compute the user-defined norm.
       call krylov_norm(alpha, p)
@@ -85,11 +94,15 @@
       type(krylov_vector) :: p
       real alpha
 
-      p%vx = p%vx * alpha
-      p%vy = p%vy * alpha
-      p%pr = p%pr * alpha
-      if (if3d) p%vz = p%vz * alpha
-      if (ifheat) p%theta = p%theta * alpha
+      n = nx1*ny1*nz1*nelv
+      n2 = nx2*ny2*nz2*nelt
+      nt = nx1*ny1*nz1*nelt
+
+      call cmult(p%vx,alpha,n)
+      call cmult(p%vy,alpha,n)
+      call cmult(p%pr,alpha,n2)
+      if (if3d) call cmult(p%vz,alpha,n)
+      if (ifheat) call cmult(p%theta,alpha,nt)
       p%time = p%time * alpha
 
       return
@@ -102,13 +115,15 @@
       include 'TOTAL'
       type(krylov_vector) :: p, q
 
-      p%vx = p%vx + q%vx
-      p%vy = p%vy + q%vy
-      p%pr = p%pr + q%pr
+      n = nx1*ny1*nz1*nelv
+      n2 = nx2*ny2*nz2*nelt
+      nt = nx1*ny1*nz1*nelt
 
-      if (if3d) p%vz = p%vz + q%vz
-      if (ifheat) p%theta = p%theta + q%theta
-
+      call add2(p%vx,q%vx,n)
+      call add2(p%vy,q%vy,n)
+      call add2(p%pr,q%pr,n2)
+      if (if3d) call add2(p%vz,q%vz,n)
+      if (ifheat) call add2(p%theta,q%theta,nt)
       p%time = p%time + q%time
 
       return
@@ -121,14 +136,15 @@
       include 'SIZE'
       include 'TOTAL'
       type(krylov_vector) :: p, q
+      n = nx1*ny1*nz1*nelv
+      n2 = nx2*ny2*nz2*nelt
+      nt = nx1*ny1*nz1*nelt
 
-      p%vx = p%vx - q%vx
-      p%vy = p%vy - q%vy
-      p%pr = p%pr - q%pr
-
-      if (if3d) p%vz = p%vz - q%vz
-      if (ifheat) p%theta = p%theta - q%theta
-
+      call sub2(p%vx,q%vx,n)
+      call sub2(p%vy,q%vy,n)
+      call sub2(p%pr,q%pr,n2)
+      if (if3d) call sub2(p%vz,q%vz,n)
+      if (ifheat) call sub2(p%theta,q%theta,nt)
       p%time = p%time - q%time
 
       return
@@ -141,13 +157,15 @@
       include 'TOTAL'
       type(krylov_vector) :: p
 
-      p%vx = 0.0D+00
-      p%vy = 0.0D+00
-      p%pr = 0.0D+00
+      n = nx1*ny1*nz1*nelv
+      n2 = nx2*ny2*nz2*nelt
+      nt = nx1*ny1*nz1*nelt
 
-      if (if3D) p%vz = 0.0D+00
-      if (ifheat) p%theta = 0.0D+00
-
+      call rzero(p%vx,n)
+      call rzero(p%vy,n)
+      call rzero(p%pr,n2)
+      if (if3d) call rzero(p%vz,n)
+      if (ifheat) call rzero(p%theta,nt)
       p%time = 0.0D+00
 
       return
@@ -159,14 +177,15 @@
       include 'SIZE'
       include 'TOTAL'
       type(krylov_vector) :: p, q
+      n = nx1*ny1*nz1*nelv
+      n2 = nx2*ny2*nz2*nelt
+      nt = nx1*ny1*nz1*nelt
 
-      p%vx = q%vx
-      p%vy = q%vy
-      p%pr = q%pr
-
-      if (if3D) p%vz = q%vz
-      if (ifheat) p%theta = q%theta
-
+      call copy(p%vx,q%vx,n)
+      call copy(p%vy,q%vy,n)
+      call copy(p%pr,q%pr,n2)
+      if (if3d) call copy(p%vz,q%vz,n)
+      if (ifheat) call copy(p%theta,q%theta,nt)
       p%time = q%time
 
       return
@@ -178,33 +197,34 @@
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      integer :: i, j, k
+      integer :: i, k
       type(krylov_vector) :: dq
       type(krylov_vector), dimension(k) :: Q
       real, dimension(k) :: yvec
 
-      real, dimension(lt, k) :: qx, qy, qz, qt
-      real, dimension(lt2, k) :: qp
+      real, dimension(lv, k) :: qx, qy, qz
+      real, dimension(lp, k) :: qp
+      real, dimension(lt, k) :: qt
+
       real, dimension(k) :: time_comp
 
       do i = 1, k
          qx(:, i) = Q(i)%vx
          qy(:, i) = Q(i)%vy
-         if (if3D) qz(:, i) = Q(i)%vz
          qp(:, i) = Q(i)%pr
+         if (if3d) qz(:, i) = Q(i)%vz
          if (ifheat) qt(:, i) = Q(i)%theta
          time_comp(i) = Q(i)%time
       enddo
 
-      dq%vx = matmul(qx, yvec)
-      dq%vy = matmul(qy, yvec)
-      dq%vz = matmul(qy, yvec)
-      dq%pr = matmul(qp, yvec)
-      dq%theta = matmul(qt, yvec)
-      dq%time = dot_product(time_comp, yvec)
+      call krylov_zero(dq)
+
+      dq%vx = matmul(qx(:,:), yvec(:))
+      dq%vy = matmul(qy(:,:), yvec(:))
+      dq%pr = matmul(qp(:,:), yvec(:))
+      if(if3d)dq%vz = matmul(qz(:,:), yvec(:))
+      if(ifheat)dq%theta = matmul(qt(:,:), yvec(:))
+      dq%time = dot_product(time_comp(:), yvec(:))
 
       return
       end subroutine krylov_matmul
