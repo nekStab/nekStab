@@ -26,19 +26,18 @@
 !     NOTE : This implementation does not apply to cases involving temperature
 !     or any other scalar.
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt  = lx1*ly1*lz1*lelt
+      real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe
+      real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm
 
-      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
-      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
+      real, dimension(lv) :: vx_aRe, vy_aRe, vz_aRe
+      real, dimension(lv) :: vx_aIm, vy_aIm, vz_aIm
 
-      real, dimension(lt) :: vx_aRe, vy_aRe, vz_aRe
-      real, dimension(lt) :: vx_aIm, vy_aIm, vz_aIm
-
-      real, dimension(lt) :: wavemaker, work1, work2
+      real, dimension(lv) :: wavemaker, work1, work2
 
       character(len=80)   :: filename
 
@@ -105,11 +104,10 @@
 !     
 !     [1]
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-
-      integer, parameter :: lt  = lx1*ly1*lz1*lelt
 
       real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
       real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
@@ -321,9 +319,6 @@
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
 !     ----- Right-hand side : baseflow sensitivity
       type(krylov_vector) :: rhs
 
@@ -357,13 +352,13 @@
 !     --> Recast rhs into time-stepper/discrete-time framework.
       call initialize_rhs_ts_steady_force_sensitivity(rhs)
 
-!     --> Normalize right-hand side for simplicity in gmres.
+! --> Normalize right-hand side for simplicity in gmres.
       call krylov_normalize(rhs, alpha)
 
 !     --> Solve the linear system.
       call ts_gmres(rhs, sol, 10, k_dim)
 
-!     -->
+! -->
       call krylov_cmult(sol, alpha)
 
 !     --> Outpost solution.
@@ -389,22 +384,15 @@
       include 'TOTAL'
       include 'ADJOINT'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
       type(krylov_vector) :: rhs
-
-      integer :: n
-
-      n = nx1*ny1*nz1*nelt
 
 !     --> Setup the parameters for the linearized solver.
       ifpert = .true. ; ifadj = .true.
       call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
 
-!     -->
+! -->
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
-      if (ifheat) call copy(t, tbase, n)
+      if (ifheat) call copy(t, tbase, nx1*ny1*nz1*nelt)
 
 !     --> General initialization of the linear solver.
       call prepare_linearized_solver()
@@ -426,7 +414,7 @@
       enddo
 
 !     --> Copy the final solution as the new rhs for the time-stepper formulation.
-      call opcopy(rhs%vx, rhs%vy, rhs%vz, vxp(:, 1), vyp(:, 1), vzp(:, 1))
+      call opcopy(rhs%vx, rhs%vy, rhs%vz, vxp(1, 1), vyp(1, 1), vzp(1, 1))
       call oprzero(fcx, fcy, fcz)
 
       return
@@ -441,35 +429,33 @@
      $     vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, 
      $     vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm)
 
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
 !     ----- Real part of the direct mode.
       real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
-      real, dimension(lt2) :: pr_dRe
+      real, dimension(lp) :: pr_dRe
 
 !     ----- Imaginary part of the direct mode.
       real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
-      real, dimension(lt2) :: pr_dIm
+      real, dimension(lp) :: pr_dIm
 
 !     ----- Real part of the adjoint mode.
       real, dimension(lt) :: vx_aRe, vy_aRe, vz_aRe, t_aRe
-      real, dimension(lt2) :: pr_aRe
+      real, dimension(lp) :: pr_aRe
 
 !     ----- Imaginary part of the adjoint mode.
       real, dimension(lt) :: vx_aIm, vy_aIm, vz_aIm, t_aIm
-      real, dimension(lt2) :: pr_aIm
+      real, dimension(lp) :: pr_aIm
 
 !     ----- Temporary arrays.
       real, dimension(lt) :: work1_vx, work1_vy, work1_vz, work1_t
-      real, dimension(lt2) :: work1_pr
+      real, dimension(lp) :: work1_pr
 
       real, dimension(lt) :: work2_vx, work2_vy, work2_vz, work2_t
-      real, dimension(lt2) :: work2_pr
+      real, dimension(lp) :: work2_pr
 
       real :: alpha, beta, gamma, delta
 

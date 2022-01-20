@@ -328,6 +328,10 @@
 
       write(6,*) "Least-Squares solver :", info
 
+      if(info.ne.0)then         ! some error occured
+         write(6,*) "Least-Squares solver UNsuccessful. CHECK!"
+!http://www.netlib.org/lapack/explore-html/d7/d3b/group__double_g_esolve_ga225c8efde208eaf246882df48e590eac.html
+      endif
 !     --> Return solution.
       x = b_tilde(1:n)
 

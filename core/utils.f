@@ -581,7 +581,7 @@ c-----------------------------------------------------------------------
       real ub(1),theta_0
       theta_0=0.0250d0
       do i=1,nx1*ny1*nz1*nelv
-         x = xm1(i,1,1,1)
+        !x = xm1(i,1,1,1)
          y = ym1(i,1,1,1)
          ub(i)=0.50d0*(1.0d0-tanh((1.0d0/(4.0d0*theta_0))*(y-(1.0d0/(4.0d0*y)))))
       enddo
@@ -616,16 +616,14 @@ c-----------------------------------------------------------------------
       end subroutine compute_sb
 c-----------------------------------------------------------------------
       subroutine outpost_blayer_pert
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter   :: lt=lx1*ly1*lz1*lelv
       real, dimension(lt)  :: do1,do2,do3
       real ampx, ampy, glamax
-      integer n
       logical ifto_sav, ifpo_sav
-
       n = nx1*ny1*nz1*nelv
 
       if((istep.eq.0).OR.ifoutfld)then
