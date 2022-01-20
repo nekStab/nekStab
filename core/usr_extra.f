@@ -1,6 +1,6 @@
 c-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-!     specifying default values for nekStab
+! specifying default values for nekStab
 
       implicit none
       include 'SIZE'
@@ -9,19 +9,19 @@ c-----------------------------------------------------------------------
       k_dim = 100               ! standard value, increas  in .usr 
       schur_tgt = 2             ! schur target for schur step factorizaiton
       eigen_tol = 1.0e-6        ! tolerance for eigenmodes convergence
-      schur_del = 0.10d0        ! 
+      schur_del = 0.10d0        !
       maxmodes = 20             ! max number of converged modes to disk
-      glob_skip = 20            ! global energy computation skip frequency
+      glob_skip = 10            ! global energy computation skip frequency
 
-      bst_skp = 10              ! boostconv skip iterations
-      bst_snp = 6               ! bootsconv residual subspace matrix size 
+      bst_skp = 10             ! boostconv skip iterations
+      bst_snp = 10              ! bootsconv residual subspace matrix size
 
-      ifres  = .false.          ! outpost restart files (KRY* HES*)
+      ifres  = .false.          ! outpost restart files (KRY*, HES*)
       ifvor  = .false.          ! outpost vorticity (vor* omega_x,omega_y,omega_z components)
       ifvox  = .false.          ! outpost vortex (vox*: q,lambda2,omega criterions)
       ifldbf = .true.           ! load base flow for stability computations
       ifbf2D = .false.          ! force 2D base flow solution
-      ifstorebase = .false.     ! store base flow for Floquet analysis (dynamic allocated)
+      ifstorebase = .true.      ! store base flow for Floquet analysis (dynamic allocated)
       ifdyntol = .false.        ! dynamical tolerances for SFD and Newton (potential speed-up)
 
       ifseed_nois = .true.      ! noise as initial seed
@@ -35,8 +35,7 @@ c-----------------------------------------------------------------------
       yRspg   = 0.0d0; call bcast(yRspg, wdsize)
       zLspg   = 0.0d0; call bcast(zLspg, wdsize)
       zRspg   = 0.0d0; call bcast(zRspg, wdsize)
-
-      ! percentage for the acceleration phase in the sponge (e.g. 1/3)
+! percentage for the acceleration phase in the sponge (e.g. 1/3)
       acc_spg = 0.333d0; call bcast(acc_spg, wdsize)
 
 !     !Broadcast all defaults !
@@ -64,13 +63,14 @@ c-----------------------------------------------------------------------
       end subroutine nekStab_setDefault
 c-----------------------------------------------------------------------
       subroutine nekStab_init
+      use krylov_subspace
 !     initialize arrays and variables defaults
       implicit none
       include 'SIZE'
       include 'TOTAL'
       logical ifto_sav, ifpo_sav
       real glmin,glmax
-      integer n,i
+      integer i
       n = nx1*ny1*nz1*nelv
 
       call nekStab_setDefault
@@ -90,12 +90,12 @@ c-----------------------------------------------------------------------
          print *,'COPYRIGHT (c) 2020-2021 DynFluid Laboratoire Paris ',NSVERSION
          print *,'Nek5000 ', NVERSION
          print *,''
-!     print *,'==================================================='
-!     print *,'== nekStab ========================================'
-!     print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
-!     print *,'==================================================='
-!     write(6,'(A,A)')' Nek5000 version        : ', NVERSION
-!     write(6,'(A,A)')' NekStab version        : ', NSVERSION
+! print *,'==================================================='
+! print *,'== nekStab ========================================'
+! print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
+! print *,'==================================================='
+! write(6,'(A,A)')' Nek5000 version        : ', NVERSION
+! write(6,'(A,A)')' NekStab version        : ', NSVERSION
       endif
 
       call copy(bm1s, bm1, n)   ! never comment this !
@@ -109,19 +109,17 @@ c-----------------------------------------------------------------------
          spng_str = uparam(10)
          call spng_init
 
-!     applying sponge to the BM1 matrix to remove the sponge zone from eigensolver
+! applying sponge to the BM1 matrix to remove the sponge zone from eigensolver
          do i=1,n
             if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
          enddo
 
-!     outposting BM1s to disk for check
-!     ifto_sav = ifto; ifpo_sav = ifpo
-!     ifvo=.false.; ifpo = .false.; ifto = .true.
-!     call outpost(vx,vy,vz,pr,bm1s,'BMS')
-!     ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
-
+!outposting BM1s to disk for check
+! ifto_sav = ifto; ifpo_sav = ifpo
+! ifvo=.false.; ifpo = .false.; ifto = .true.
+! call outpost(vx,vy,vz,pr,bm1s,'BMS')
+! ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
       endif
-
       ifbfcv = .false.
 
       return
@@ -133,26 +131,10 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt = lx1*ly1*lz1*lelt
-      integer, parameter :: lt2 = lx2*ly2*lz2*lelt
-
-      real, dimension(lt) :: qx, qy, qz, qt
-      real, dimension(lt2) :: qp
-
-      integer n
-
-      n = nx1*ny1*nz1*nelv
-
       if(istep.eq.0)call nekStab_init
 
       call oprzero(fcx,fcy,fcz) ! never comment this!
-      call rzero(fct,n)
-
-!     think on a better place for this part!
-      if(if3d .AND. ifbf2d)then
-         if(nid.eq.0)write(6,*)' Forcing vz = 0'
-         call rzero(vz,nx1*ny1*nz1*nelv)
-      endif
+      call rzero(fct,nx1*ny1*nz1*nelt)
 
       select case (floor(uparam(1)))
 
@@ -160,7 +142,7 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-         call nekStab_energy(vx,vy,vz,t(1,1,1,1,1),'global_energy.dat',glob_skip)
+         call nekStab_energy(vx,vy,vz,t,'global_energy.dat',glob_skip)
 
       case(1)                   ! fixed points computation
 
@@ -168,40 +150,78 @@ c-----------------------------------------------------------------------
          call nekStab_comment   ! print comments
 
          if( uparam(1) .eq. 1.1)then
+            if(nid.eq.0)write(6,*)'SFD'
             call SFD
          elseif( uparam(1) .eq. 1.2)then
+            if(nid.eq.0)write(6,*)'BOOSTCONV'
             call BoostConv
+         elseif( uparam(1) .eq. 1.3)then
+            if(nid.eq.0)write(6,*)'DMT'
+            if(nid.eq.0)write(6,*)'stopping ! not yet ported to this version'; call nek_end
+            ! call DMT
+         elseif( uparam(1) .eq. 1.4)then
+            if(nid.eq.0)write(6,*)'TDF'
+            call TDF
          endif
 
          if(ifbfcv)call nek_end
 
       case(2)                   ! Newton-Krylov solver
 
+!sanity check
+         if(uparam(1).eq.2.0)then
+            if(nid.eq.0)write(6,*)'Newton-Krylov for fixed points...'
+         elseif(uparam(1).eq.2.1)then
+            if(nid.eq.0)write(6,*)'Newton-Krylov for UPOs...'
+         elseif(uparam(1).eq.2.2)then
+            if(nid.eq.0)write(6,*)'Newton-Krylov for forced UPOs...'
+         else
+            if(nid.eq.0)write(6,*)'NEWTON MODE NOT CORRECTLY SPECIFIED!'
+            call nek_end
+         endif
          call newton_krylov
          call nek_end
 
       case(3)                   ! eigenvalue problem
 
-         if(uparam(3).eq.3)then
-            if(nid.eq.0)write(6,*) 'forcing uparam(3) to ZERO!'
-            uparam(3)=0; call bcast(uparam, 1*wdsize)
+!sanity check
+         if    (uparam(1).eq.3.1)then
+            if(nid.eq.0)write(6,*)'Krylov-Schur for direct LNSE...'
+         elseif(uparam(1).eq.3.11)then
+            if(nid.eq.0)write(6,*)'Krylov-Schur for direct LNSE in Floquet...'
+         elseif(uparam(1).eq.3.2)then
+            if(nid.eq.0)write(6,*)'Krylov-Schur for adjoint LNSE...'
+         elseif(uparam(1).eq.3.21)then
+            if(nid.eq.0)write(6,*)'Krylov-Schur for adjoint LNSE in Floquet...'           
+         elseif(uparam(1).eq.3.3)then
+            if(nid.eq.0)write(6,*)'Krylov-Schur for transient growth...'
+         elseif(uparam(1).eq.3.31)then
+            if(nid.eq.0)write(6,*)'Krylov-Schur for transient growth in Floquet...'
+         else
+            if(nid.eq.0)write(6,*)'Krylov-Schur MODE NOT CORRECTLY SPECIFIED!'
+            call nek_end
          endif
-         call Krylov_Schur
+         call krylov_schur
          call nek_end
 
       case(4)                   ! in postprocessing.f
 
+         if(uparam(01) .eq. 4.0) then ! all
+          call stability_energy_budget
+          call wave_maker
+          call bf_sensitivity
+         endif
 !     -----> Direct mode kinetic energy budget.
-         if(uparam(01) .eq. 4.0) call stability_energy_budget
+         if(uparam(01) .eq. 4.1) call stability_energy_budget
 
 !     -----> Wavemaker computation.
-         if(uparam(01) .eq. 4.1) call wave_maker
+         if(uparam(01) .eq. 4.2) call wave_maker
 
 !     -----> Baseflow sensitivity.
-         if(uparam(01) .eq. 4.2) call bf_sensitivity
+         if(uparam(01) .eq. 4.3) call bf_sensitivity
 
 !     -----> Sensitivity to steady force.
-         if(uparam(01) .eq. 4.3) call ts_steady_force_sensitivity
+         if(uparam(01) .eq. 4.4) call ts_steady_force_sensitivity
 
          call nek_end
 
@@ -212,13 +232,13 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine nekStab_outpost
 !     nekStab custom outpost routine
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
 
-      real wo1(lt),wo2(lt),wo3(lt),vort(lt,3)
-      common /ugrad/ wo1,wo2,wo3,vort
+      real vort(lv,3),wo1(lv),wo2(lv)
+      common /ugrad/ vort,wo1,wo2
 
       logical ifto_sav, ifpo_sav
 
@@ -229,8 +249,7 @@ c-----------------------------------------------------------------------
 
 !---  > Compute and oupost vorticity.
          if(ifvor)then
-            call oprzero(wo1,wo2,wo3)
-            call oprzero(vort(:,1),vort(:,2),vort(:,3))
+            call oprzero(vort(1,1),vort(1,2),vort(1,3))
             call comp_vort3(vort,wo1,wo2,vx,vy,vz)
             call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t, 'vor')
          endif
@@ -373,17 +392,15 @@ c-----------------------------------------------------------------------
       end subroutine nekStab_printNEKParams
 c-----------------------------------------------------------------------
       subroutine nekStab_energy(px, py, pz, pt, fname, skip)
-!     
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
-      real, dimension(lt), intent(in) :: px, py, pz, pt
+      real, dimension(lv), intent(in) :: px, py, pz, pt
       integer, intent(in) :: skip
       character(len=20), intent(in) :: fname
       real glsc3,uek,vek,wek,eek,pot
-      integer n
-      save eek,n
+      save eek
       logical, save :: initialized
       data             initialized /.FALSE./
       n = nx1*ny1*nz1*nelv
