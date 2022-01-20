@@ -1,43 +1,159 @@
+c-----------------------------------------------------------------------c
+      subroutine tdf !Time-delayed Feedback
+      use krylov_subspace
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      
+      real, dimension(lv) :: do1,do2,do3
+      real                :: h1,semi,l2,linf,rate,tol
+      real, save          :: residu0, gain, porbit
+      integer, save       :: i,norbit
+
+      real vort(lv,3),wo1(lv),wo2(lv) ! to outpost vorticity BFV
+      common /ugrad/ vort,wo1,wo2
+      
+      logical, save :: init
+      data             init /.FALSE./
+
+      if (.not.init) then
+      
+         if(nid.eq.0)write(6,*)'   Target frequency specified in uparam(5)=',uparam(5)
+         porbit = 1.0d0/uparam(5) ! user input from .usr -> also used on the inflow BC
+         
+         call compute_cfl(ctarg, vx, vy, vz, 1.0d0) ! ctarg contains the sum ( ux_i / dx_i )
+         dt = param(26) / ctarg ! dt given target CFL
+         norbit = ceiling(porbit / dt) ! computing a safe value of norbit
+         if(nid.eq.0)write(6,*)' Computing norbit=',norbit    
+              
+         dt = porbit / norbit ! reducing dt to match forced orbit to machine accuracy   
+         param(12) = dt
+
+         if(nid.eq.0)write(6,*)' Adjusting timeStep dt=',dt
+         call compute_cfl(ctarg, vx, vy, vz, dt) ! C=sum(ux_i/dx_i)*dt
+         if(nid.eq.0)write(6,*)' veryfing current CFL and target=',ctarg,param(26)
+         param(12) = -abs(param(12))       
+         
+         gain = -0.04432D0*8*atan(1.0D0)/porbit ! Theoretical optimal feedback parameter see reference
+                
+         if(nid .eq. 0) write(6,*) 'Allocating TDF orbit with nsteps:',norbit,norbit*dt
+         allocate(uor(lv, norbit), vor(lv, norbit))
+         if(if3d)then
+            allocate(wor(lv,norbit))
+         else
+            allocate(wor(1,1))
+         endif
+         call oprzero(uor(:,:), vor(:,:), wor(:,:))
+         
+         if(ifheat)then
+            allocate(tor(lt,norbit))
+            tor(:,:)=0.0d0
+         endif
+         
+         rate = 0.0d0; residu0 = 0.0d0
+         open(unit=10,file='residu.dat')
+   
+	init = .true.
+	
+      else
+
+      if(istep.le.norbit)then !t<T->save solutions
+        
+        if(nid.eq.0)write(6,*)' Storing initial solution in memory:',istep,'/',norbit
+        call opcopy(uor(:,istep),vor(:,istep),wor(:,istep),vx,vy,vz)
+        !if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+
+      else !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
+
+         call opsub3 (do1,do2,do3, vx,vy,vz, uor(:,1),vor(:,1),wor(:,1))!ub=v-vold
+         if(istep.gt.norbit+1) call normvc(h1,semi,l2,linf,do1,do2,do3); rate=(l2-residu0); residu0=l2
+                  
+         call opcmult(do1,do2,do3, gain) !f=fc*-chi
+         call opadd2 (fcx,fcy,fcz, do1,do2,do3) !FORCE HERE DO NOT COPY, ADD!
+
+         do i=1,norbit-1 !discard the i=1 solution
+          uor(:,i)=uor(:,i+1)
+          vor(:,i)=vor(:,i+1)
+          if (if3d) wor(:,i)=wor(:,i+1)
+          !if (ifheat) tor(:,i)=tor(:,i+1)
+         enddo !store the last one
+         call opcopy(uor(1,norbit),vor(1,norbit),wor(1,norbit),vx,vy,vz)!store solution
+         !if (ifheat)call copy(tor(1,norbit),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+         
+         if(nid.eq.0)then
+            write(10,"(3E15.7)")time,l2,rate
+            write(6,"(' TDF residu=',1pE11.4,' rate of change= ',1pE11.4)")l2,rate
+            write(6,*)' '
+         endif
+         
+         tol =  max(param(21), param(22))
+         if(l2 .gt. 0.0d0 .and. l2 .lt. tol)then
+            if(nid.eq.0)write(6,*)' Converged base flow to:',tol
+            ifbfcv = .true.
+            call bcast(ifbfcv  , lsize)
+            param(63) = 1 ! Enforce 64-bit output
+            call bcast(param,200*wdsize)
+            call outpost(vx,vy,vz,pr,t,'BF_')
+            param(63) = 0 ! Enforce 32-bit output
+            call bcast(param,200*wdsize)
+            
+            if(ifvor)then ! outpost vorticity
+             call comp_vort3(vort,wo1,wo2,vx,vy,vz);ifto=.false.;ifpo=.false.
+             call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t,'BFV')
+            endif
+         endif
+         
+       endif ! else
+      endif ! not init
+
+      return
+      end subroutine TDF
 c-----------------------------------------------------------------------
       subroutine SFD
 !     SFD with higher-order temporal scheme and variable time-step
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
-
-      real, dimension(lt), save :: qxo,qyo,qzo,vxo,vyo,vzo,uta,vta,wta,utb,vtb,wtb,utc,vtc,wtc
-      real, dimension(lt) :: do1,do2,do3,utmp,vtmp,wtmp
+      real, dimension(lv), save :: qxo,qyo,qzo,vxo,vyo,vzo,uta,vta,wta,utb,vtb,wtb,utc,vtc,wtc
+      real, dimension(lv) :: do1,do2,do3,utmp,vtmp,wtmp
       real adt,bdt,cdt,desired_tolerance
-      real residu,h1,l2,semi,linf,rate,residu0,cutoff,gain,frq,sig,umax
+      real residu,h1,l2,semi,linf,residu0,cutoff,gain,frq,sig,umax,rate
       real glmin,glmax,glsum,glsc3,tol
-      integer n,i
-      save n,residu0,desired_tolerance
+      integer i
+      real vort(lv,3),wo1(lv),wo2(lv) ! to outpost vorticity BFV
+      common /ugrad/ vort,wo1,wo2
+
+      save residu0,desired_tolerance
       logical, save :: tic,toc
       data             tic /.true./
       data             toc /.true./
 
-      if(uparam(4).gt.0. OR. uparam(5).gt.0) then
-
-!     cutoff = uparam(04)
-!     gain = -uparam(05)
+      if(uparam(5).gt.0) then
          
-         frq = uparam(04)*8*atan(1.0D0) ! transform St to omega
-         sig = uparam(05)
+         frq = abs(uparam(04))*8*atan(1.0d0) ! transform St to omega
+         sig = abs(uparam(05))
 
-!     Akervik 2006
-!     cutoff = 0.5*frq
-!     gain = -2*sig
+       if(uparam(4).gt.0)then ! Akervik 2006
+         
+         cutoff = 0.5*frq
+         gain  = -2*sig
+         if(nid.eq.0)write(6,*)' Akervik  cutoff,gain:',cutoff,gain
 
-!     Casacuberta 2018 JCP 375:481-497
+       else ! Casacuberta 2018 JCP 375:481-497
+ 
          cutoff = 0.5*(sqrt(frq**2+sig**2)-sig)
-         gain = -0.5*(sqrt(frq**2+sig**2)+sig)
-         tol = max(param(21), param(22))
+         gain  = -0.5*(sqrt(frq**2+sig**2)+sig)
+         if(nid.eq.0)write(6,*)' Casacub. cutoff,gain:',cutoff,gain
+       
+       endif
 
+         tol = max(param(21), param(22))
          if(istep.eq.0)then
 
-            n = nx1*ny1*nz1*nelt
+            n = nx1*ny1*nz1*nelv
+      
             call oprzero(utmp,vtmp,wtmp)
             call oprzero(uta,vta,wta)
             call oprzero(utb,vtb,wtb)
@@ -79,8 +195,8 @@ c-----------------------------------------------------------------------
          call opadd2 (fcx,fcy,fcz, do1,do2,do3) !FORCE HERE DO NOT COPY, ADD!
       else
          if(nid.eq.0)then
-           open(unit=10,file='residu.dat')
-           write(6,*)' SFD in continuation mode'
+            open(unit=10,file='residu.dat')
+            write(6,*)' SFD in continuation mode'
          endif
          if(istep.eq.0)desired_tolerance = max(param(21),param(22))
       endif
@@ -89,7 +205,7 @@ c-----------------------------------------------------------------------
 
          call opsub2(vxo,vyo,vzo,vx,vy,vz)
          call normvc(h1,semi,l2,linf,vxo,vyo,vzo)
-         residu = l2; rate = (residu-residu0); residu0 = residu
+         residu = l2; rate = (residu-residu0)/dt; residu0 = residu
          call opcopy(vxo,vyo,vzo,vx,vy,vz)
 
          tol = 0.0d0
@@ -110,58 +226,65 @@ c-----------------------------------------------------------------------
             call outpost(vx,vy,vz,pr,t,'BF_')
             param(63) = 0 ! Enforce 32-bit output
             call bcast(param,200*wdsize)
+            
+          if(ifvor)then ! outpost vorticity
+            call comp_vort3(vort,wo1,wo2,vx,vy,vz);ifto=.false.;ifpo=.false.
+            call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t,'BFV')
+          endif
+                  
          endif
 
-      if(istep.eq.nsteps)close(10)
+         if(istep.eq.nsteps)close(10)
       endif
       return
       end subroutine SFD
 c-----------------------------------------------------------------------c
       subroutine spec_tole_sfd(i)
-            ! Subroutine to progressively tight tolerances to maximise computational time
-            implicit none
-            include 'SIZE'
-            include 'TOTAL'
-            integer :: i
-            real, save :: desired_tolerance
-            logical, save :: init
-            data             init /.false./
+! Subroutine to progressively tight tolerances to maximise computational time
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      integer :: i
+      real, save :: desired_tolerance
+      logical, save :: init
+      data             init /.false./
 
-            if(.not.init)then ! save user specified tolerance
-                  desired_tolerance = max(param(21),param(22))
-                  init = .true.
-            endif
-            ! if restarting we need to move i previous iteration to match the tolerances of the previous case!
-            if (uparam(2).gt.0)i = i + 1
-            if     (i == 1 .and. desired_tolerance.le.1e-6) then
-                  call set_solv_tole(1e-6)
-            elseif (i == 2 .and. desired_tolerance.le.1e-7) then
-                  call set_solv_tole(1e-7)
-            elseif (i == 3 .and. desired_tolerance.le.1e-8) then
-                  call set_solv_tole(1e-8)
-            elseif (i == 4 .and. desired_tolerance.le.1e-9) then
-                  call set_solv_tole(1e-9)
-            elseif (i == 5 .and. desired_tolerance.le.1e-10) then
-                  call set_solv_tole(1e-10)
-            elseif (i == 6 .and. desired_tolerance.le.1e-11) then
-                  call set_solv_tole(1e-11)
-            elseif (i == 7 .and. desired_tolerance.le.1e-12) then
-                  call set_solv_tole(1e-12)
-            elseif (i == 8 .and. desired_tolerance.le.1e-13) then
-                  call set_solv_tole(1e-13)
-            else
-                  call set_solv_tole(desired_tolerance)
-            endif
-            return
+      if(.not.init)then         ! save user specified tolerance
+         desired_tolerance = max(param(21),param(22))
+         init = .true.
+      endif
+! if restarting we need to move i previous iteration to match the tolerances of the previous case!
+      if (uparam(2).gt.0)i = i + 1
+      if     (i == 1 .and. desired_tolerance.le.1e-6) then
+         call set_solv_tole(1e-6)
+      elseif (i == 2 .and. desired_tolerance.le.1e-7) then
+         call set_solv_tole(1e-7)
+      elseif (i == 3 .and. desired_tolerance.le.1e-8) then
+         call set_solv_tole(1e-8)
+      elseif (i == 4 .and. desired_tolerance.le.1e-9) then
+         call set_solv_tole(1e-9)
+      elseif (i == 5 .and. desired_tolerance.le.1e-10) then
+         call set_solv_tole(1e-10)
+      elseif (i == 6 .and. desired_tolerance.le.1e-11) then
+         call set_solv_tole(1e-11)
+      elseif (i == 7 .and. desired_tolerance.le.1e-12) then
+         call set_solv_tole(1e-12)
+      elseif (i == 8 .and. desired_tolerance.le.1e-13) then
+         call set_solv_tole(1e-13)
+      else
+         call set_solv_tole(desired_tolerance)
+      endif
+      return
       end subroutine spec_tole_SFD
 c-----------------------------------------------------------------------c
       subroutine BoostConv
 !     boostconv core subroutine
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
       
-      real, dimension(lx1*ly1*lz1*lelt) ::  dvx,dvy,dvz
+      real, dimension(lv) ::  dvx,dvy,dvz
       real                              ::  residu,h1,semi,linf,rate,tol
       real, save                        ::  residu0
       logical, save :: init
@@ -176,7 +299,7 @@ c-----------------------------------------------------------------------c
          endif
 
          call opsub3(dvx,dvy,dvz,vx,vy,vz,vxlag(1,1,1,1,1),vylag(1,1,1,1,1),vzlag(1,1,1,1,1)) !dv=v-vold
-         call normvc(h1,semi,residu,linf,dvx,dvy,dvz); rate = (residu-residu0); residu0 = residu
+         call normvc(h1,semi,residu,linf,dvx,dvy,dvz); rate = (residu-residu0)/dt; residu0 = residu
          call boostconv_core(dvx,dvy,dvz)
          call opadd3(vx,vy,vz,vxlag(1,1,1,1,1),vylag(1,1,1,1,1),vzlag(1,1,1,1,1),dvx,dvy,dvz) !v=vold+dv
 
@@ -204,12 +327,12 @@ c-----------------------------------------------------------------------c
       end subroutine BoostConv
 c-----------------------------------------------------------------------
       subroutine boostconv_core (rbx, rby, rbz)
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter   :: lt  = lx1*ly1*lz1*lelt
-      integer, save        :: rot, n
+      integer, save        :: rot
       integer              :: j
 
       logical, save :: init
@@ -220,16 +343,20 @@ c-----------------------------------------------------------------------
       real, allocatable, save, dimension(:, :) :: q_x, q_y, q_z
       real, allocatable, save, dimension(:, :) :: x_x, x_y, x_z, y_x, y_y, y_z
 
-      real, dimension(lt) :: rbx,rby,rbz,dumx,dumy,dumz
+      real, dimension(lv) :: rbx,rby,rbz,dumx,dumy,dumz
 
       real :: glsc3
-      n = nx1*ny1*nz1*nelt
+      n = nx1*ny1*nz1*nelv
 
       if (.not.init) then
+
          allocate(cc(bst_snp),ccb(bst_snp),dd(bst_snp, bst_snp))
-         allocate(q_x(lt,bst_snp),q_y(lt,bst_snp),q_z(lt,bst_snp))
-         allocate(x_x(lt,bst_snp),x_y(lt,bst_snp),x_z(lt,bst_snp))
-         allocate(y_x(lt,bst_snp),y_y(lt,bst_snp),y_z(lt,bst_snp))
+         allocate(q_x(lv,bst_snp),q_y(lv,bst_snp),q_z(lv,bst_snp))
+         allocate(x_x(lv,bst_snp),x_y(lv,bst_snp),x_z(lv,bst_snp))
+         allocate(y_x(lv,bst_snp),y_y(lv,bst_snp),y_z(lv,bst_snp))
+         
+         if(nid.eq.0)write(6,*)'Allocating BoostConv variables with:',bst_snp
+         if(nid.eq.0)write(6,*)'                     skipping every:',bst_skp
 
          call oprzero(x_x(:,:), x_y(:,:), x_z(:,:))
          call oprzero(y_x(:,:), y_y(:,:), y_z(:,:))
@@ -264,17 +391,17 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine qr_dec (rr,q_x,q_y,q_z,x_x,x_y,x_z)
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      integer,parameter :: lt=lx1*ly1*lz1*lelt
-      integer i, j, n
-      real, dimension(lt,bst_snp) :: x_x,x_y,x_z,q_x,q_y,q_z !res subspaces
-      real, dimension(lt)         :: dum_x1,dum_y1,dum_z1,dum_x,dum_y,dum_z
+      integer i, j
+      real, dimension(lv,bst_snp) :: x_x,x_y,x_z,q_x,q_y,q_z !res subspaces
+      real, dimension(lv)         :: dum_x1,dum_y1,dum_z1,dum_x,dum_y,dum_z
       real, dimension(bst_snp,bst_snp) ::  rr
       real norma,glsc3
 
-      n = nx1*ny1*nz1*nelt
+      n = nx1*ny1*nz1*nelv
       rr = 0.0d0; norma = 0.0d0
       call oprzero(Q_x(:,:), Q_y(:,:), Q_z(:,:))
 
