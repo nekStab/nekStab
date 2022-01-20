@@ -142,7 +142,8 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-         call nekStab_energy(vx,vy,vz,t,'global_energy.dat',glob_skip)
+         call nekStab_energy  (vx,vy,vz,t,'global_energy.dat'   ,glob_skip)
+         call nekStab_enstrophy(vx,vy,vz,t,'global_enstrophy.dat',glob_skip)
 
       case(1)                   ! fixed points computation
 
@@ -417,9 +418,46 @@ c-----------------------------------------------------------------------
          vek = glsc3(py,bm1,py,n)
          if(if3d)wek = glsc3(pz,bm1,pz,n)
          if(ifheat)pot = glsc3(pt,bm1,ym1,n)
-         if(nid.eq.0)write(730,"(6E15.7)")time,uek,vek,wek,(uek+vek+wek)*eek,pot*eek
+         if(nid.eq.0)write(730,"(6E15.7)")time,uek*eek,vek*eek,wek*eek,(uek+vek+wek)*eek,pot*eek
       endif
 
       return
       end subroutine nekStab_energy
+c-----------------------------------------------------------------------
+      subroutine nekStab_enstrophy(px, py, pz, pt, fname, skip)
+      use krylov_subspace
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      real, dimension(lv), intent(in) :: px, py, pz, pt
+      integer, intent(in) :: skip
+      character(len=20), intent(in) :: fname
+      real vort(lv,3),wo1(lv),wo2(lv)
+      common /ugrad/ vort,wo1,wo2
+      real glsc3,uek,vek,wek,eek
+      save eek
+      logical, save :: initialized
+      data             initialized /.FALSE./
+      n = nx1*ny1*nz1*nelv
+      eek = 0.50d0/volvm1
+      uek = 0.0d0; vek = 0.0d0; wek = 0.0d0
+
+      if (.not. initialized) then
+         if(nid.eq.0)open (736,file=fname,action='write',status='replace')
+         initialized = .true.
+      endif
+
+      if (mod(istep,skip).eq.0) then
+
+         call comp_vort3(vort,wo1,wo2,px,py,pz)
+
+         uek = glsc3(vort(1,1),bm1,vort(1,1),n)
+         vek = glsc3(vort(1,2),bm1,vort(1,2),n)
+         if(if3d)wek = glsc3(vort(1,3),bm1,vort(1,3),n)
+         if(nid.eq.0)write(736,"(5E15.7)")time,uek*eek,vek*eek,wek*eek,(uek+vek+wek)*eek
+
+      endif
+
+      return
+      end subroutine nekStab_enstrophy
 c-----------------------------------------------------------------------
