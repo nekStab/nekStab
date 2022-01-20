@@ -856,11 +856,11 @@
       endif
 
 
-       if(cnt.ge.schur_tgt)then
-            if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
-            !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
-            call nek_end
-       endif
+      !if(cnt.ge.schur_tgt)then
+      !  if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
+      !  !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
+      !  call nek_end
+      !endif
 
 
       return
