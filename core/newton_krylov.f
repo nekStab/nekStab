@@ -408,12 +408,31 @@
       real,intent(in) :: residual,dtol
       real :: nwtol
       nwtol = 10**(log10(residual)-1) ! always a decade smaller
-      if(nid.eq.0)write(6,*)'residual,new tolerance, desired:',residual,nwtol,dtol
-      if (nwtol .le. dtol) then
-         call set_solv_tole(dtol)
+
+      if(nid.eq.0)write(6,*)'current residual:',residual
+      if(nid.eq.0)write(6,*)'new    tolerance:',nwtol
+      if(nid.eq.0)write(6,*)'target tolerance:',dtol
+
+       if (nwtol .le. dtol) then
+
+         call set_solv_tole (dtol)
          write(6,*)'Forcing user specified tolerance:',dtol
-      else
-         call set_solv_tole(nwtol)
-      endif
+
+       else
+
+         call set_solv_tole (nwtol)
+
+         if(nwtol > 1e-4)then
+          nwtol=1e-4
+          if(nid.eq.0)write(6,*)'Forcing minimal tolerances:',nwtol
+         endif
+         
+         !if(nwtol > max(param(21), param(22)))then
+         ! nwtol=max(param(21), param(22))
+         ! if(nid.eq.0)write(6,*)'Keeping current tolerances:',nwtol
+         !endif
+
+       endif
+
       return
       end subroutine spec_tole
