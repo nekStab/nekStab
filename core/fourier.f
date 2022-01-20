@@ -1,19 +1,19 @@
 c-----------------------------------------------------------------------
       subroutine fourier_reconstruction
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      integer, parameter  :: lt = lx1*ly1*lz1*lelt
-      real, dimension(lt) :: d_x, d_y, d_z
+      real, dimension(lv) :: d_x, d_y, d_z
       integer i
 
       call oprzero(vx,vy,vz)
       call oprzero(d_x,d_y,d_z)
       do i = 1,f_modes
-         call add3s2(d_x,ubr(:,i),ubi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
-         call add3s2(d_y,vbr(:,i),vbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
+         call add3s2(d_x,ubr(:,i),ubi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lv)
+         call add3s2(d_y,vbr(:,i),vbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lv)
          if(if3D)
-     $        call add3s2(d_z,wbr(:,i),wbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lt)
+     $        call add3s2(d_z,wbr(:,i),wbi(:,i),amplr(i)*cos(om(i)*time),ampli(i)*sin(OM(i)*time),lv)
          call opadd2(vx, vy, vz, d_x, d_y, d_z)
       enddo
 !     call outpost(vx,vy,vz,pr,t,'MFR')!debug only
@@ -21,22 +21,22 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine fourier_decomposition (vx_in, vy_in, vz_in, time_in)
+      use krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
       integer n,i,jj
 
-      real,    dimension(lt,norbit)  :: vx_in, vy_in, vz_in
+      real,    dimension(lv,norbit)  :: vx_in, vy_in, vz_in
       real,    dimension(   norbit)  :: time_in
 
-      real,    dimension(lt,norbit/2)  :: v_xr, v_yr, v_zr
-      real,    dimension(lt,norbit/2)  :: v_xi, v_yi, v_zi
+      real,    dimension(lv,norbit/2)  :: v_xr, v_yr, v_zr
+      real,    dimension(lv,norbit/2)  :: v_xi, v_yi, v_zi
       real,    dimension(   norbit/2)  :: ff, ampl, amp_real, amp_img
       integer, dimension(   norbit/2)  :: ord
-      real,    dimension(lt,mxfourier)      :: rex, rey, rez
-      real,    dimension(lt,mxfourier)      :: imx, imy, imz
+      real,    dimension(lv,mxfourier)      :: rex, rey, rez
+      real,    dimension(lv,mxfourier)      :: imx, imy, imz
       real                             :: energy, glsum, glsc3
 
       if(nid.eq.0)write(6,*)' starting fourier decomposition...'
@@ -44,10 +44,10 @@ c-----------------------------------------------------------------------
 
       energy = 0.0d0
       do i = 1,norbit/2
-         amp_real(i) = + glsc3(v_xr(:,i),bm1,v_xr(:,i),lt) + glsc3(v_yr(:,i),bm1,v_yr(:,i),lt)
-         if (if3d) amp_real(i) = amp_real(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lt)
-         amp_img(i) = + glsc3(v_xi(:,i),bm1,v_xi(:,i),lt) + glsc3(v_yi(:,i),bm1,v_yi(:,i),lt)
-         if (if3d) amp_img(i) = amp_img(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lt)
+         amp_real(i) = + glsc3(v_xr(:,i),bm1,v_xr(:,i),lv) + glsc3(v_yr(:,i),bm1,v_yr(:,i),lv)
+         if (if3d) amp_real(i) = amp_real(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lv)
+         amp_img(i) = + glsc3(v_xi(:,i),bm1,v_xi(:,i),lv) + glsc3(v_yi(:,i),bm1,v_yi(:,i),lv)
+         if (if3d) amp_img(i) = amp_img(i) + glsc3(v_zi(:,i),bm1,v_zi(:,i),lv)
          amp_real(i) = sqrt(amp_real(i))
          amp_img(i) = sqrt(amp_img(i))
          ampl(i) = sqrt(amp_real(i)**2+amp_img(i)**2)
@@ -118,26 +118,26 @@ c     c1,c2  = real and imag part of fft(a2)
 c     d1,d2  = real and imag part of fft(a3)
 c     OM     = pulsation discretization
       subroutine opfft3 (sz,a1,a2,a3,b1,b2,c1,c2,d1,d2,time,ff)
+      use krylov_subspace
       implicit none
       include 'SIZE'
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
       integer            :: sz
-      real, dimension(lt,sz)   :: a1,a2,a3
-      real, dimension(lt,sz/2) :: b1,c1,d1,b2,c2,d2
+      real, dimension(lv,sz)   :: a1,a2,a3
+      real, dimension(lv,sz/2) :: b1,c1,d1,b2,c2,d2
       real, dimension(   sz)      :: time,ff
-      call fftd_3d (sz,a1,time,b1,b2,ff,lt)
-      call fftd_3d (sz,a2,time,c1,c2,ff,lt)
-      if(ndim.eq.3)call fftd_3d (sz,a3,time,d1,d2,ff,lt)
+      call fftd_3d (sz,a1,time,b1,b2,ff,lv)
+      call fftd_3d (sz,a2,time,c1,c2,ff,lv)
+      if(ndim.eq.3)call fftd_3d (sz,a3,time,d1,d2,ff,lv)
       return
       end
 c----------------------------------------------------------------------
-      subroutine fftd_3d (snap,a1,time,b1,b2,om,lt)
+      subroutine fftd_3d (snap,a1,time,b1,b2,om,lv)
       implicit none
-      integer snap, i, lt
-      real, dimension(lt,snap)   :: a1
-      real, dimension(lt,snap/2) :: b1,b2,om
+      integer snap, i, lv
+      real, dimension(lv,snap)   :: a1
+      real, dimension(lv,snap/2) :: b1,b2,om
       real, dimension(snap)      :: time
-      do i = 1,lt
+      do i = 1,lv
          call fftd(snap,a1(i,:),time,b1(i,:),b2(i,:),om)
       enddo
       return
