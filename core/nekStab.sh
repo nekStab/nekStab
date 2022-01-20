@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+echo 'Compiling Nek5000 and nekStab with:'
+x=($(which $FC; echo $FFLAGS $USR_LFLAGS))
+echo "${x[@]}"
+
 #add to .bashrc
 #export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
 #export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
