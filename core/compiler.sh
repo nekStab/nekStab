@@ -56,7 +56,6 @@ case $(uname -s) in
             ;;
         esac
         ;;
-;;
 esac
 
 source ${NEKSTAB_SOURCE_ROOT}/core/nekStab.sh
