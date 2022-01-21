@@ -9,9 +9,9 @@
       integer, public, parameter :: lt = lx1*ly1*lz1*lelt
       integer, save, public :: n,n2,nt
 
-!n = nx1*ny1*nz1*nelv
-!n2 = nx2*ny2*nz2*nelt
-!nt = nx1*ny1*nz1*nelt
+!     n = nx1*ny1*nz1*nelv
+!     n2 = nx2*ny2*nz2*nelt
+!     nt = nx1*ny1*nz1*nelt
 
       type, public :: krylov_vector
       real, dimension(lv) :: vx, vy, vz

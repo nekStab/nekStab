@@ -288,10 +288,10 @@ c-----------------------------------------------------------------------
       endif                     ! spng_w(il).gt.0.0
       enddo
 
-      !ltmp = ifto; ltmp2 = ifpo
-      !ifto = .true.; ifpo= .false.
-      !call outpost2(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
-      !ifto = ltmp; ifpo = ltmp2
+!     ltmp = ifto; ltmp2 = ifpo
+!     ifto = .true.; ifpo= .false.
+!     call outpost2(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
+!     ifto = ltmp; ifpo = ltmp2
 
       return
       end subroutine spng_set
@@ -547,7 +547,7 @@ c-----------------------------------------------------------------------
       real ub(1),theta_0
       theta_0=0.0250d0
       do i=1,nx1*ny1*nz1*nelv
-        !x = xm1(i,1,1,1)
+!     x = xm1(i,1,1,1)
          y = ym1(i,1,1,1)
          ub(i)=0.50d0*(1.0d0-tanh((1.0d0/(4.0d0*theta_0))*(y-(1.0d0/(4.0d0*y)))))
       enddo

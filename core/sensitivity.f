@@ -352,13 +352,13 @@
 !     --> Recast rhs into time-stepper/discrete-time framework.
       call initialize_rhs_ts_steady_force_sensitivity(rhs)
 
-! --> Normalize right-hand side for simplicity in gmres.
+!     --> Normalize right-hand side for simplicity in gmres.
       call krylov_normalize(rhs, alpha)
 
 !     --> Solve the linear system.
       call ts_gmres(rhs, sol, 10, k_dim)
 
-! -->
+!     -->
       call krylov_cmult(sol, alpha)
 
 !     --> Outpost solution.
@@ -390,7 +390,7 @@
       ifpert = .true. ; ifadj = .true.
       call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
 
-! -->
+!     -->
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
       if (ifheat) call copy(t, tbase, nx1*ny1*nz1*nelt)
 
