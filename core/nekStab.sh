@@ -25,7 +25,7 @@ export USR="krylov_subspace.o\
     "
 
 echo "include ${NEKSTAB_SOURCE_ROOT}/core/makefile_nekStab" > makefile_usr.inc
-cp --verbose ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB NEKSTAB.inc
+cp -v ${NEKSTAB_SOURCE_ROOT}/core/NEKSTAB NEKSTAB.inc
 export SOURCE_ROOT=$NEK_SOURCE_ROOT
 export N_VERSION=$(cd $NEK_SOURCE_ROOT && git describe --tag --long --always)
 echo 'Nek5000 version: '$N_VERSION
