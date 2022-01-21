@@ -1,5 +1,5 @@
 c-----------------------------------------------------------------------c
-      subroutine tdf !Time-delayed Feedback
+      subroutine tdf            !Time-delayed Feedback
       use krylov_subspace
       implicit none
       include 'SIZE'
@@ -17,7 +17,7 @@ c-----------------------------------------------------------------------c
       data             init /.FALSE./
 
       if (.not.init) then
-      
+         
          if(nid.eq.0)write(6,*)'   Target frequency specified in uparam(5)=',uparam(5)
          porbit = 1.0d0/uparam(5) ! user input from .usr -> also used on the inflow BC
          
@@ -25,8 +25,8 @@ c-----------------------------------------------------------------------c
          dt = param(26) / ctarg ! dt given target CFL
          norbit = ceiling(porbit / dt) ! computing a safe value of norbit
          if(nid.eq.0)write(6,*)' Computing norbit=',norbit    
-              
-         dt = porbit / norbit ! reducing dt to match forced orbit to machine accuracy   
+         
+         dt = porbit / norbit   ! reducing dt to match forced orbit to machine accuracy   
          param(12) = dt
 
          if(nid.eq.0)write(6,*)' Adjusting timeStep dt=',dt
@@ -35,7 +35,7 @@ c-----------------------------------------------------------------------c
          param(12) = -abs(param(12))       
          
          gain = -0.04432D0*8*atan(1.0D0)/porbit ! Theoretical optimal feedback parameter see reference
-                
+         
          if(nid .eq. 0) write(6,*) 'Allocating TDF orbit with nsteps:',norbit,norbit*dt
          allocate(uor(lv, norbit), vor(lv, norbit))
          if(if3d)then
@@ -52,59 +52,59 @@ c-----------------------------------------------------------------------c
          
          rate = 0.0d0; residu0 = 0.0d0
          open(unit=10,file='residu.dat')
-   
-	init = .true.
-	
+         
+         init = .true.
+         
       else
 
-      if(istep.le.norbit)then !t<T->save solutions
-        
-        if(nid.eq.0)write(6,*)' Storing initial solution in memory:',istep,'/',norbit
-        call opcopy(uor(:,istep),vor(:,istep),wor(:,istep),vx,vy,vz)
-        !if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
-
-      else !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
-
-         call opsub3 (do1,do2,do3, vx,vy,vz, uor(:,1),vor(:,1),wor(:,1))!ub=v-vold
-         if(istep.gt.norbit+1) call normvc(h1,semi,l2,linf,do1,do2,do3); rate=(l2-residu0); residu0=l2
-                  
-         call opcmult(do1,do2,do3, gain) !f=fc*-chi
-         call opadd2 (fcx,fcy,fcz, do1,do2,do3) !FORCE HERE DO NOT COPY, ADD!
-
-         do i=1,norbit-1 !discard the i=1 solution
-          uor(:,i)=uor(:,i+1)
-          vor(:,i)=vor(:,i+1)
-          if (if3d) wor(:,i)=wor(:,i+1)
-          !if (ifheat) tor(:,i)=tor(:,i+1)
-         enddo !store the last one
-         call opcopy(uor(1,norbit),vor(1,norbit),wor(1,norbit),vx,vy,vz)!store solution
-         !if (ifheat)call copy(tor(1,norbit),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
-         
-         if(nid.eq.0)then
-            write(10,"(3E15.7)")time,l2,rate
-            write(6,"(' TDF residu=',1pE11.4,' rate of change= ',1pE11.4)")l2,rate
-            write(6,*)' '
-         endif
-         
-         tol =  max(param(21), param(22))
-         if(l2 .gt. 0.0d0 .and. l2 .lt. tol)then
-            if(nid.eq.0)write(6,*)' Converged base flow to:',tol
-            ifbfcv = .true.
-            call bcast(ifbfcv  , lsize)
-            param(63) = 1 ! Enforce 64-bit output
-            call bcast(param,200*wdsize)
-            call outpost(vx,vy,vz,pr,t,'BF_')
-            param(63) = 0 ! Enforce 32-bit output
-            call bcast(param,200*wdsize)
+         if(istep.le.norbit)then !t<T->save solutions
             
-            if(ifvor)then ! outpost vorticity
-             call comp_vort3(vort,wo1,wo2,vx,vy,vz);ifto=.false.;ifpo=.false.
-             call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t,'BFV')
+            if(nid.eq.0)write(6,*)' Storing initial solution in memory:',istep,'/',norbit
+            call opcopy(uor(:,istep),vor(:,istep),wor(:,istep),vx,vy,vz)
+!     if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+
+         else                   !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
+
+            call opsub3 (do1,do2,do3, vx,vy,vz, uor(:,1),vor(:,1),wor(:,1)) !ub=v-vold
+            if(istep.gt.norbit+1) call normvc(h1,semi,l2,linf,do1,do2,do3); rate=(l2-residu0); residu0=l2
+            
+            call opcmult(do1,do2,do3, gain) !f=fc*-chi
+            call opadd2 (fcx,fcy,fcz, do1,do2,do3) !FORCE HERE DO NOT COPY, ADD!
+
+            do i=1,norbit-1     !discard the i=1 solution
+               uor(:,i)=uor(:,i+1)
+               vor(:,i)=vor(:,i+1)
+               if (if3d) wor(:,i)=wor(:,i+1)
+!     if (ifheat) tor(:,i)=tor(:,i+1)
+            enddo               !store the last one
+            call opcopy(uor(1,norbit),vor(1,norbit),wor(1,norbit),vx,vy,vz) !store solution
+!     if (ifheat)call copy(tor(1,norbit),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+            
+            if(nid.eq.0)then
+               write(10,"(3E15.7)")time,l2,rate
+               write(6,"(' TDF residu=',1pE11.4,' rate of change= ',1pE11.4)")l2,rate
+               write(6,*)' '
             endif
-         endif
-         
-       endif ! else
-      endif ! not init
+            
+            tol =  max(param(21), param(22))
+            if(l2 .gt. 0.0d0 .and. l2 .lt. tol)then
+               if(nid.eq.0)write(6,*)' Converged base flow to:',tol
+               ifbfcv = .true.
+               call bcast(ifbfcv  , lsize)
+               param(63) = 1    ! Enforce 64-bit output
+               call bcast(param,200*wdsize)
+               call outpost(vx,vy,vz,pr,t,'BF_')
+               param(63) = 0    ! Enforce 32-bit output
+               call bcast(param,200*wdsize)
+               
+               if(ifvor)then    ! outpost vorticity
+                  call comp_vort3(vort,wo1,wo2,vx,vy,vz);ifto=.false.;ifpo=.false.
+                  call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t,'BFV')
+               endif
+            endif
+            
+         endif                  ! else
+      endif                     ! not init
 
       return
       end subroutine TDF
@@ -135,25 +135,25 @@ c-----------------------------------------------------------------------
          frq = abs(uparam(04))*8*atan(1.0d0) ! transform St to omega
          sig = abs(uparam(05))
 
-       if(uparam(4).gt.0)then ! Akervik 2006
-         
-         cutoff = 0.5*frq
-         gain  = -2*sig
-         if(nid.eq.0)write(6,*)' Akervik  cutoff,gain:',cutoff,gain
+         if(uparam(4).gt.0)then ! Akervik 2006
+            
+            cutoff = 0.5*frq
+            gain  = -2*sig
+            if(nid.eq.0)write(6,*)' Akervik  cutoff,gain:',cutoff,gain
 
-       else ! Casacuberta 2018 JCP 375:481-497
- 
-         cutoff = 0.5*(sqrt(frq**2+sig**2)-sig)
-         gain  = -0.5*(sqrt(frq**2+sig**2)+sig)
-         if(nid.eq.0)write(6,*)' Casacub. cutoff,gain:',cutoff,gain
-       
-       endif
+         else                   ! Casacuberta 2018 JCP 375:481-497
+            
+            cutoff = 0.5*(sqrt(frq**2+sig**2)-sig)
+            gain  = -0.5*(sqrt(frq**2+sig**2)+sig)
+            if(nid.eq.0)write(6,*)' Casacub. cutoff,gain:',cutoff,gain
+            
+         endif
 
          tol = max(param(21), param(22))
          if(istep.eq.0)then
 
             n = nx1*ny1*nz1*nelv
-      
+            
             call oprzero(utmp,vtmp,wtmp)
             call oprzero(uta,vta,wta)
             call oprzero(utb,vtb,wtb)
@@ -221,17 +221,17 @@ c-----------------------------------------------------------------------
             if(nid.eq.0)write(6,*)' Converged base flow to:',desired_tolerance
             ifbfcv = .true.
             call bcast(ifbfcv  , lsize)
-            param(63) = 1 ! Enforce 64-bit output
+            param(63) = 1       ! Enforce 64-bit output
             call bcast(param,200*wdsize)
             call outpost(vx,vy,vz,pr,t,'BF_')
-            param(63) = 0 ! Enforce 32-bit output
+            param(63) = 0       ! Enforce 32-bit output
             call bcast(param,200*wdsize)
             
-          if(ifvor)then ! outpost vorticity
-            call comp_vort3(vort,wo1,wo2,vx,vy,vz);ifto=.false.;ifpo=.false.
-            call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t,'BFV')
-          endif
-                  
+            if(ifvor)then       ! outpost vorticity
+               call comp_vort3(vort,wo1,wo2,vx,vy,vz);ifto=.false.;ifpo=.false.
+               call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t,'BFV')
+            endif
+            
          endif
 
          if(istep.eq.nsteps)close(10)
@@ -240,7 +240,7 @@ c-----------------------------------------------------------------------
       end subroutine SFD
 c-----------------------------------------------------------------------c
       subroutine spec_tole_sfd(i)
-! Subroutine to progressively tight tolerances to maximise computational time
+!     Subroutine to progressively tight tolerances to maximise computational time
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -253,7 +253,7 @@ c-----------------------------------------------------------------------c
          desired_tolerance = max(param(21),param(22))
          init = .true.
       endif
-! if restarting we need to move i previous iteration to match the tolerances of the previous case!
+!     if restarting we need to move i previous iteration to match the tolerances of the previous case!
       if (uparam(2).gt.0)i = i + 1
       if     (i == 1 .and. desired_tolerance.le.1e-6) then
          call set_solv_tole(1e-6)

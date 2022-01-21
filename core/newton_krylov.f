@@ -95,7 +95,7 @@
 
 !     --> Check residual || f(q) ||
       call krylov_norm(residual, f) ; residual = residual ** 2
-      !write(*, *) "RESIDUAL ", residual
+!     write(*, *) "RESIDUAL ", residual
 
       if(nid.eq.0)then
          write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
@@ -117,10 +117,10 @@
       call krylov_sub2(q, dq)
 
 !     --> Deallocate nonlinear solution variable!
-       if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
+      if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
          deallocate(uor,vor,wor)
          if(ifheat)deallocate(tor)
-       endif
+      endif
       
       enddo newton
       
@@ -138,15 +138,15 @@
                write(6,*)'NEWTON for forced UPO finished successfully',i,'iterations.'
                write(6,*)' period found:',time,1.0d0/time
             endif
-         if(ifdyntol)write(6,*)'ifdyntol active!'
+            if(ifdyntol)write(6,*)'ifdyntol active!'
          endif
       endif
       if(residual.lt.dtol)then
-      
-         param(63) = 1       ! Enforce 64-bit output
+         
+         param(63) = 1          ! Enforce 64-bit output
          call bcast(param,200*wdsize)
          call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "BF_")
-         param(63) = 0       ! Enforce 32-bit output
+         param(63) = 0          ! Enforce 32-bit output
          call bcast(param,200*wdsize) 
          
          if(ifvor)then          ! outpost vorticity
@@ -239,42 +239,42 @@
 !     --> Zero-out stuff.
       H = 0.0D+00 ; yvec = 0.0D+00; evec = 0.0D+00 ; evec(1) = beta; call krylov_zero(Q(2:ksize+1))
 
-       arnoldi : do k = 1, k_dim
+      arnoldi : do k = 1, k_dim
 
-         call arnoldi_factorization(Q, H, k, k, ksize)
+      call arnoldi_factorization(Q, H, k, k, ksize)
 
 !     --> Least-squares problem.
-         call lstsq(H(1:k+1, 1:k), evec(1:k+1), yvec(1:k), k+1, k)
+      call lstsq(H(1:k+1, 1:k), evec(1:k+1), yvec(1:k), k+1, k)
 
 !     --> Compute residual.
-         beta = norm2(evec(1:k+1) - matmul(H(1:k+1, 1:k), yvec(1:k)))
+      beta = norm2(evec(1:k+1) - matmul(H(1:k+1, 1:k), yvec(1:k)))
 
-         if(nid.eq.0)then
-          open(889,file='residu_arnoldi.dat',action='write',position='append')
-          write(6,"(' ARNOLDI --- Iteration:',I5,'/',I5,' residual:',E15.7)")k,ksize,beta**2
-          write(889,"(I6,1E15.7)")k,beta**2; close(889)
-         endif
-         if (beta**2 .lt. tol) exit arnoldi
+      if(nid.eq.0)then
+         open(889,file='residu_arnoldi.dat',action='write',position='append')
+         write(6,"(' ARNOLDI --- Iteration:',I5,'/',I5,' residual:',E15.7)")k,ksize,beta**2
+         write(889,"(I6,1E15.7)")k,beta**2; close(889)
+      endif
+      if (beta**2 .lt. tol) exit arnoldi
 
-        enddo arnoldi
+      enddo arnoldi
 
 !     --> Update solution.
-       call krylov_matmul(dq, Q(1:k), yvec(1:k), k)
-       call krylov_add2(sol, dq)
+      call krylov_matmul(dq, Q(1:k), yvec(1:k), k)
+      call krylov_add2(sol, dq)
 
       
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
 
-       call krylov_copy(Q(1), sol)
-       call initialize_gmres_vector(beta, Q(1), rhs)
+      call krylov_copy(Q(1), sol)
+      call initialize_gmres_vector(beta, Q(1), rhs)
 
-       if(nid.eq.0)then
+      if(nid.eq.0)then
          open(888,file='residu_gmres.dat',action='write',position='append')
          write(6,"(' GMRES   -- Iteration:',I4,'/',I4,' residual:',E15.7)")i,maxiter,beta**2
          write(888,"(I6,1E15.7)")i,beta**2 ;close(888)
-       endif
+      endif
 
-       if (beta**2 .lt. tol) exit gmres
+      if (beta**2 .lt. tol) exit gmres
       enddo gmres
 
 
@@ -375,7 +375,7 @@
 
 
       subroutine set_solv_tole(tole)
-      ! Subroutine to set tolerances on the fly
+!     Subroutine to set tolerances on the fly
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -401,7 +401,7 @@
 
 
       subroutine spec_tole(residual,dtol)
-      ! progressively tight tolerances to minimize computational time
+!     progressively tight tolerances to minimize computational time
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -413,26 +413,26 @@
       if(nid.eq.0)write(6,*)'new    tolerance:',nwtol
       if(nid.eq.0)write(6,*)'target tolerance:',dtol
 
-       if (nwtol .le. dtol) then
+      if (nwtol .le. dtol) then
 
          call set_solv_tole (dtol)
          write(6,*)'Forcing user specified tolerance:',dtol
 
-       else
+      else
 
          call set_solv_tole (nwtol)
 
          if(nwtol > 1e-4)then
-          nwtol=1e-4
-          if(nid.eq.0)write(6,*)'Forcing minimal tolerances:',nwtol
+            nwtol=1e-4
+            if(nid.eq.0)write(6,*)'Forcing minimal tolerances:',nwtol
          endif
          
-         !if(nwtol > max(param(21), param(22)))then
-         ! nwtol=max(param(21), param(22))
-         ! if(nid.eq.0)write(6,*)'Keeping current tolerances:',nwtol
-         !endif
+!     if(nwtol > max(param(21), param(22)))then
+!     nwtol=max(param(21), param(22))
+!     if(nid.eq.0)write(6,*)'Keeping current tolerances:',nwtol
+!     endif
 
-       endif
+      endif
 
       return
       end subroutine spec_tole

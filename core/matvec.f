@@ -38,7 +38,7 @@
          param(12) = dt
          call compute_cfl(ctarg, vx, vy, vz, dt) ! C=sum(ux_i/dx_i)*dt
          if(nid.eq.0)write(6,*)' current CFL and target=',ctarg,param(26)
-!FINTIM = nsteps*dt
+!     FINTIM = nsteps*dt
       endif
 
 !     --> Force constant time step.
