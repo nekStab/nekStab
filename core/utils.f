@@ -517,18 +517,6 @@ c-----------------------------------------------------------------------
       return
       end subroutine noprzero
 c-----------------------------------------------------------------------
-      subroutine opadd2 (a1,a2,a3,b1,b2,b3)
-      implicit none
-      include 'SIZE'
-      integer ntot1
-      real a1(1),a2(1),a3(1),b1(1),b2(1),b3(1)
-      ntot1=nx1*ny1*nz1*nelv
-      call add2(a1,b1,ntot1)
-      call add2(a2,b2,ntot1)
-      if (ndim.eq.3) call add2(a3,b3,ntot1)
-      return
-      end subroutine opadd2
-c-----------------------------------------------------------------------
       subroutine opadd3 (a1,a2,a3,b1,b2,b3,c1,c2,c3)
       implicit none
       include 'SIZE'
@@ -552,28 +540,6 @@ c-----------------------------------------------------------------------
       if (ndim.eq.3) call addcol3(a3,b3,c3,ntot1)
       return
       end subroutine opaddcol3
-c-----------------------------------------------------------------------
-      subroutine add4(a,b,c,d,n)
-      implicit none
-      include 'SIZE'
-      integer i,n
-      real a(1),b(1),c(1),d(1)
-      do i=1,n
-         a(i)=b(i)+c(i)+d(i)
-      enddo
-      return
-      end subroutine add4
-c-----------------------------------------------------------------------
-      subroutine addcol3(a,b,c,n)
-      implicit none
-      include 'SIZE'
-      integer i,n
-      real a(1),b(1),c(1)
-      do i=1,n
-         a(i)=a(i)+b(i)*c(i)
-      enddo
-      return
-      end subroutine addcol3
 c-----------------------------------------------------------------------
       subroutine set_rjet(ub)   !round jet profile for axissymetric jet
       include 'SIZE'
