@@ -43,3 +43,4 @@ examples/cylinder/baseflow/newton/BF_1cyl0.f00001
 examples/cylinder/baseflow/newton/BF_1cyl0.f00001
 examples/cylinder/postprocessing/steady_force_sensitivity/V
 examples/cylinder/postprocessing/steady_force_sensitivity/U
+.DS_Store
