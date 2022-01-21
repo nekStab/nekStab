@@ -1,6 +1,6 @@
 c-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-! specifying default values for nekStab
+!     specifying default values for nekStab
 
       implicit none
       include 'SIZE'
@@ -13,7 +13,7 @@ c-----------------------------------------------------------------------
       maxmodes = 20             ! max number of converged modes to disk
       glob_skip = 10            ! global energy computation skip frequency
 
-      bst_skp = 10             ! boostconv skip iterations
+      bst_skp = 10              ! boostconv skip iterations
       bst_snp = 10              ! bootsconv residual subspace matrix size
 
       ifres  = .false.          ! outpost restart files (KRY*, HES*)
@@ -35,7 +35,7 @@ c-----------------------------------------------------------------------
       yRspg   = 0.0d0; call bcast(yRspg, wdsize)
       zLspg   = 0.0d0; call bcast(zLspg, wdsize)
       zRspg   = 0.0d0; call bcast(zRspg, wdsize)
-! percentage for the acceleration phase in the sponge (e.g. 1/3)
+!     percentage for the acceleration phase in the sponge (e.g. 1/3)
       acc_spg = 0.333d0; call bcast(acc_spg, wdsize)
 
 !     !Broadcast all defaults !
@@ -90,12 +90,12 @@ c-----------------------------------------------------------------------
          print *,'COPYRIGHT (c) 2020-2021 DynFluid Laboratoire Paris ',NSVERSION
          print *,'Nek5000 ', NVERSION
          print *,''
-! print *,'==================================================='
-! print *,'== nekStab ========================================'
-! print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
-! print *,'==================================================='
-! write(6,'(A,A)')' Nek5000 version        : ', NVERSION
-! write(6,'(A,A)')' NekStab version        : ', NSVERSION
+!     print *,'==================================================='
+!     print *,'== nekStab ========================================'
+!     print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
+!     print *,'==================================================='
+!     write(6,'(A,A)')' Nek5000 version        : ', NVERSION
+!     write(6,'(A,A)')' NekStab version        : ', NSVERSION
       endif
 
       call copy(bm1s, bm1, n)   ! never comment this !
@@ -109,16 +109,16 @@ c-----------------------------------------------------------------------
          spng_str = uparam(10)
          call spng_init
 
-! applying sponge to the BM1 matrix to remove the sponge zone from eigensolver
+!     applying sponge to the BM1 matrix to remove the sponge zone from eigensolver
          do i=1,n
             if( spng_fun( i ) .gt. 0 ) bm1s( i,1,1,1 )=0.0d0
          enddo
 
-!outposting BM1s to disk for check
-! ifto_sav = ifto; ifpo_sav = ifpo
-! ifvo=.false.; ifpo = .false.; ifto = .true.
-! call outpost(vx,vy,vz,pr,bm1s,'BMS')
-! ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
+!     outposting BM1s to disk for check
+!     ifto_sav = ifto; ifpo_sav = ifpo
+!     ifvo=.false.; ifpo = .false.; ifto = .true.
+!     call outpost(vx,vy,vz,pr,bm1s,'BMS')
+!     ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
       endif
       ifbfcv = .false.
 
@@ -169,7 +169,7 @@ c-----------------------------------------------------------------------
 
       case(2)                   ! Newton-Krylov solver
 
-!sanity check
+!     sanity check
          if(uparam(1).eq.2.0)then
             if(nid.eq.0)write(6,*)'Newton-Krylov for fixed points...'
          elseif(uparam(1).eq.2.1)then
@@ -185,7 +185,7 @@ c-----------------------------------------------------------------------
 
       case(3)                   ! eigenvalue problem
 
-!sanity check
+!     sanity check
          if    (uparam(1).eq.3.1)then
             if(nid.eq.0)write(6,*)'Krylov-Schur for direct LNSE...'
          elseif(uparam(1).eq.3.11)then
@@ -208,9 +208,9 @@ c-----------------------------------------------------------------------
       case(4)                   ! in postprocessing.f
 
          if(uparam(01) .eq. 4.0) then ! all
-          call stability_energy_budget
-          call wave_maker
-          call bf_sensitivity
+            call stability_energy_budget
+            call wave_maker
+            call bf_sensitivity
          endif
 !     -----> Direct mode kinetic energy budget.
          if(uparam(01) .eq. 4.1) call stability_energy_budget

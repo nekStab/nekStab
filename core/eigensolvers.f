@@ -282,7 +282,7 @@
 !     close(67)
 !     endif
 
-         mstart=mstart+1 !careful here!
+         mstart=mstart+1        !careful here!
          call load_files(Q, mstart, k_dim+1, 'KRY')
          if(nid.eq.0) write(6,*)'Restart fields loaded to memory!'
 
@@ -600,7 +600,7 @@
          call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
          call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
 
-!computing and outposting optimal response from real part ! works with Floquet!
+!     computing and outposting optimal response from real part ! works with Floquet!
          if((uparam(1).eq.3.3.or.uparam(1).eq.3.31))then
             old_uparam1 = uparam(1)
             if(uparam(1).eq.3.3)uparam(1)=3.1 ! changing to linearized solver !
@@ -806,11 +806,11 @@
       endif
 
 !     --> Outpost the latest Krylov vector.
-!if(uparam(1).gt.3)then
+!     if(uparam(1).gt.3)then
       call whereyouwant("KRY", k+1) ! skipping one due to the initial condition
-!else
-! call whereyouwant("KRY", k) ! for restart of newton solver
-!endif
+!     else
+!     call whereyouwant("KRY", k) ! for restart of newton solver
+!     endif
       time = time * k           !order in ParaView
       call outpost(f_xr, f_yr, f_zr, f_pr, f_tr, "KRY")
 
@@ -856,11 +856,11 @@
       endif
 
 
-      !if(cnt.ge.schur_tgt)then
-      !  if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
-      !  !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
-      !  call nek_end
-      !endif
+!     if(cnt.ge.schur_tgt)then
+!     if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
+!     !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
+!     call nek_end
+!     endif
 
 
       return
@@ -886,12 +886,12 @@
       include 'SIZE'
       include 'TOTAL'
 
-! -->
+!     -->
       real, dimension(lv) :: qx, qy, qz
       real, dimension(lp) :: qp
       real, dimension(lt) :: qt
 
-! -->
+!     -->
       real, dimension(lv) :: fx, fy, fz
       real, dimension(lp) :: fp
       real, dimension(lt) :: ft
