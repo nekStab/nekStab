@@ -1,4 +1,4 @@
-name: GCC
+name: GCC+MPICH
 
 on:
   # allows us to run workflows manually
