@@ -2,15 +2,12 @@
 
 
 
-
-
       subroutine newton_krylov()
 
 !     Implementation of a simple Newton-Krylov solver for fixed point
 !     computation using a time-stepper formulation. The resolution of
 !     the linear system for each Newton iteration is sovled by means
 !     of GMRES.
-!     
 
       use krylov_subspace
       implicit none
@@ -29,12 +26,14 @@
 !     ----- Miscellaneous
       real vort(lv,3),wo1(lv),wo2(lv) ! to outpost vorticity BFV
       common /ugrad/ vort,wo1,wo2
-      integer :: i, j, k, maxiter_newton, maxiter_gmres
+      integer :: i, j, k, maxiter_newton, maxiter_gmres, calls
       real :: tol, residual
 
-      logical, save :: dyntolinit
-      data             dyntolinit /.false./
+      integer, save :: calls_counter
+      data             calls_counter /0/
 
+      logical, save :: dyntolinit
+      
       real, save :: dtol
       data          dtol /0.0d0/
       if(dtol.eq.0.0d0)then
@@ -69,11 +68,11 @@
       call prepare_linearized_solver ! compute nsteps
 
 !     --> Outpost current estimate of the solution
-      time = q%time
+      time = q%time ! adjust
       if(uparam(1).eq.2.0)time = real(i) ! to ease visu in paraview
       if(uparam(1).eq.2.2)time = real(i)*q%time ! to ease visu in paraview
       call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "nwt")
-      time = q%time
+      time = q%time ! restore
 
 !     --> Allocate nonlinear solution variable!
       if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
@@ -92,6 +91,7 @@
 
 !     --> Compute rhs of Newton iteration f(q).
       call nonlinear_forward_map(f, q)
+      calls_counter = calls_counter + nsteps
 
 !     --> Check residual || f(q) ||
       call krylov_norm(residual, f) ; residual = residual ** 2
@@ -100,7 +100,7 @@
       if(nid.eq.0)then
          write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
          write(6,*)'           Tolerance target:',tol
-         write(887,"(I6,1E15.7)")i,residual
+         write(887,"(I6,1E15.7)")calls_counter,residual
       endif
 
       if(residual .lt. dtol) exit newton
@@ -111,7 +111,8 @@
       endif
 
 !     --> Solve the linear system.
-      call ts_gmres(f, dq, maxiter_gmres, k_dim)
+      call ts_gmres(f, dq, maxiter_gmres, k_dim, calls)
+      calls_counter = calls_counter + calls
 
 !     --> Update Newton solution.
       call krylov_sub2(q, dq)
@@ -164,7 +165,7 @@
 
 
 
-      subroutine ts_gmres(rhs, sol, maxiter, ksize)
+      subroutine ts_gmres(rhs, sol, maxiter, ksize, calls)
 
 !     Implementation of simple time-stepper GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
@@ -192,7 +193,9 @@
 !     
 !     sol_p : nek array of size (lp).
 !     Array containing the solution of the linear problem (pressure component).
-!     
+!
+!     calls : total number of calls to the linearized solver.
+!     Integer containing the total sum of nsteps*k necessary to converge the solution.     
 !     
 !     NOTE : This is a plain implementation of GMRES following the algorithm given in
 !     Y. Saad. Iterative methods for sparse linear systems. Section 6.5 GMRES, alg. 6.9
@@ -221,7 +224,7 @@
       real, allocatable, dimension(:) :: yvec, evec
 
 !     ----- Miscellaneous.
-      integer :: i, j, k, maxiter
+      integer :: i, j, k, maxiter, calls
       real :: beta, tol
 
       tol = max(param(21), param(22))
@@ -234,6 +237,7 @@
       call krylov_copy(Q(1), rhs)
       call krylov_normalize(Q(1), beta)
 
+      calls = 0
       gmres : do i = 1, maxiter
 
 !     --> Zero-out stuff.
@@ -254,17 +258,17 @@
          write(6,"(' ARNOLDI --- Iteration:',I5,'/',I5,' residual:',E15.7)")k,ksize,beta**2
          write(889,"(I6,1E15.7)")k,beta**2; close(889)
       endif
-      if (beta**2 .lt. tol) exit arnoldi
-
+      if (beta**2 .lt. tol) then ! count of calls to linearized solver
+            calls = calls + k*nsteps
+            exit arnoldi
+      endif
       enddo arnoldi
 
 !     --> Update solution.
       call krylov_matmul(dq, Q(1:k), yvec(1:k), k)
       call krylov_add2(sol, dq)
-
       
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
-
       call krylov_copy(Q(1), sol)
       call initialize_gmres_vector(beta, Q(1), rhs)
 
@@ -286,9 +290,7 @@
 
 
 
-
 !-----------------------------------------------------------------------
-
 
 
 
