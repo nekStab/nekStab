@@ -40,17 +40,16 @@
       real, dimension(lv), intent(in) :: px, py, pz
       real, dimension(lv), intent(in) :: qx, qy, qz
       real, dimension(lp), intent(in) :: pp, qp !not used
-      real, dimension(lt), intent(in) :: pt, qt
+      real, dimension(lv), intent(in) :: pt, qt
 
       real, intent(out) :: alpha
       real :: glsc3
 
       n = nx1 * ny1 * nz1 * nelv
-      nt = nx1 * ny1 * nz1 * nelt
 
       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
       if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
-      if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, nt)
+      if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, n)
 
       return
       end subroutine inner_product
@@ -73,7 +72,7 @@
 
       real, intent(in), dimension(lv) :: qx, qy, qz
       real, intent(in), dimension(lp) :: qp
-      real, intent(in), dimension(lt) :: qt
+      real, intent(in), dimension(lv) :: qt
       real, intent(out)                :: alpha
 
       call inner_product(alpha, qx,qy,qz,qp,qt, qx,qy,qz,qp,qt)
@@ -119,7 +118,7 @@
 
       real, dimension(lv), intent(inout) :: qx, qy, qz
       real, dimension(lp), intent(inout) :: qp
-      real, dimension(lt), intent(inout) :: qt
+      real, dimension(lv), intent(inout) :: qt
       real, intent(out)                   :: alpha
       real                                :: beta
 
@@ -168,7 +167,7 @@
       allocate(Q(k_dim+1))
       allocate(H(k_dim+1,k_dim),b_vec(1,k_dim),vals(k_dim),vecs(k_dim,k_dim),residual(k_dim))
 
-      nt      = nx1*ny1*nz1*nelt
+      n      = nx1*ny1*nz1*nelv
       time   = 0.0d0
       H(:,:)  = 0.0d0; b_vec  = 0.0d0 ; residual = 0.0d0
       call krylov_zero(Q(1:k_dim+1))
@@ -183,7 +182,7 @@
 
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
-      if(ifheat) call copy(tbase,t(1,1,1,1,1),nt)
+      if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
 
 !     ----- Prepare stability parameters -----
 
@@ -227,7 +226,7 @@
          else
 
             call opcopy(vxp(1,1),vyp(1,1),vzp(1,1),ubase,vbase,wbase)
-            if(ifheat) call copy(tp(1,1,1),tbase,nt)
+            if(ifheat) call copy(tp(1,1,1),tbase,n)
 
          endif
 
@@ -371,7 +370,7 @@
       type(krylov_vector), dimension(ksize+1) :: Q
       real, dimension(lv,ksize+1)       :: qx, qy, qz
       real, dimension(lp,ksize+1)       :: qp
-      real, dimension(lt,ksize+1)       :: qt
+      real, dimension(lv,ksize+1)       :: qt
 
 !     ----- Upper Hessenberg matrix -----
 
@@ -488,7 +487,7 @@
 
       real, dimension(lv,k_dim+1)        :: qx, qy, qz
       real, dimension(lp,k_dim+1)        :: qp
-      real, dimension(lt,k_dim+1)        :: qt
+      real, dimension(lv,k_dim+1)        :: qt
 
 !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
@@ -499,7 +498,7 @@
 
       complex*16, dimension(lv)          :: fp_cx, fp_cy, fp_cz
       complex*16, dimension(lp)          :: fp_cp
-      complex*16, dimension(lt)          :: fp_ct
+      complex*16, dimension(lv)          :: fp_ct
 !     ----- Miscellaneous -----
       integer :: i
 
@@ -515,7 +514,7 @@
       integer :: outposted
 
       sampling_period = dt*nsteps
-      n = nx1*ny1*nz1*nelt
+      n = nx1*ny1*nz1*nelv
 
 !     ----- Output all the spectrums and converged eigenmodes -----
       do i = 1, k_dim
@@ -889,12 +888,12 @@
 !     -->
       real, dimension(lv) :: qx, qy, qz
       real, dimension(lp) :: qp
-      real, dimension(lt) :: qt
+      real, dimension(lv) :: qt
 
 !     -->
       real, dimension(lv) :: fx, fy, fz
       real, dimension(lp) :: fp
-      real, dimension(lt) :: ft
+      real, dimension(lv) :: ft
 
       real :: alpha, beta
       integer :: i, j

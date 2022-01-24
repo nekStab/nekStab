@@ -71,7 +71,7 @@
 !     INPUTS
 !     ------
 !     
-!     qx, qy, qz, qt : nek-arrays of size lt
+!     qx, qy, qz, qt : nek-arrays of size lv
 !     Initial velocity and temperature components.
 !     
 !     qp : nek-array of size lp
@@ -80,7 +80,7 @@
 !     OUTPUTS
 !     -------
 !     
-!     fx, fy, fz, ft : nek-arrays of size lt
+!     fx, fy, fz, ft : nek-arrays of size lv
 !     Final velocity and temperature components.
 !     
 !     fp : nek-array of size lp
@@ -96,7 +96,7 @@
 
 !     --> Pass the baseflow to vx, vy, vz
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
-      if (ifheat) call copy(t(1,1,1,1,1), tbase,  nx1*ny1*nz1*nelt)
+      if (ifheat) call copy(t(1,1,1,1,1), tbase,  nx1*ny1*nz1*nelv)
 
       if(ifbf2d .and. if3d)then
          call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
@@ -169,7 +169,7 @@
 
       logical, save :: init
       data             init /.false./
-      nt = nx1*ny1*nz1*nelt
+      n = nx1*ny1*nz1*nelv
 
 !     --> Setup the parameters for the linearized solver.
       ifpert = .true. ; ifadj = .false.
@@ -193,7 +193,7 @@
          else                   ! 2D
             allocate(wor(1,1))
          endif
-         if(ifheat)allocate(tor(lt, nsteps))
+         if(ifheat)allocate(tor(lv, nsteps))
       endif
 
 !     --> Pass the initial condition for the perturbation.
@@ -212,11 +212,11 @@
          if    (ifstorebase .and.ifbase .and..not.  init)then !storing first time
             if(nid.eq.0)write(6,*)'storing first series:',istep,'/',nsteps
             call opcopy(uor(1,istep),vor(1,istep),wor(1,istep),vx,vy,vz)
-            if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nt)
+            if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),n)
          elseif(ifstorebase .and.init .and..not.ifbase)then !just moving in memory
             if(nid.eq.0)write(6,*)'using stored baseflow'
             call opcopy(vx,vy,vz,uor(1,istep),vor(1,istep),wor(1,istep))
-            if(ifheat)call copy(t(1,1,1,1,1),tor(1,istep),nt)
+            if(ifheat)call copy(t(1,1,1,1,1),tor(1,istep),n)
          endif
       end do
       if(ifstorebase .and..not.init.and.ifbase)then
@@ -261,7 +261,7 @@
 
       logical, save :: init
       data             init /.false./
-      nt = nx1*ny1*nz1*nelt
+      n = nx1*ny1*nz1*nelv
 
 !     --> Setup the parameters for the linearized solver.
       ifpert = .true. ; ifadj = .true.
@@ -280,7 +280,7 @@
          else                   ! 2D
             allocate(wor(1,1))
          endif
-         if(ifheat)allocate(tor(lt, nsteps))
+         if(ifheat)allocate(tor(lv, nsteps))
       endif
 
       if(uparam(01) .eq. 3.31)init=.true. ! activate Floquet for intracycle transient growth (base flow already computed)
@@ -301,11 +301,11 @@
          if    (ifstorebase .and.ifbase .and..not.  init)then !storing first time
             if(nid.eq.0)write(6,*)'storing first series:',istep,'/',nsteps
             call opcopy(uor(1,istep),vor(1,istep),wor(1,istep),vx,vy,vz)
-            if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nt)
+            if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),n)
          elseif(ifstorebase .and.init   .and..not.ifbase)then !just moving in memory
             if(nid.eq.0)write(6,*)'using stored baseflow'
             call opcopy(vx,vy,vz,uor(1,istep),vor(1,istep),wor(1,istep))
-            if(ifheat)call copy(t(1,1,1,1,1),tor(1,istep),nt)
+            if(ifheat)call copy(t(1,1,1,1,1),tor(1,istep),n)
          endif
 
       end do

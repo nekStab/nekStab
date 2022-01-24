@@ -46,7 +46,7 @@ c-----------------------------------------------------------------------c
          call oprzero(uor(:,:), vor(:,:), wor(:,:))
          
          if(ifheat)then
-            allocate(tor(lt,norbit))
+            allocate(tor(lv,norbit))
             tor(:,:)=0.0d0
          endif
          
@@ -61,7 +61,7 @@ c-----------------------------------------------------------------------c
             
             if(nid.eq.0)write(6,*)' Storing initial solution in memory:',istep,'/',norbit
             call opcopy(uor(:,istep),vor(:,istep),wor(:,istep),vx,vy,vz)
-!     if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+!     if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelv)
 
          else                   !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
 
@@ -78,7 +78,7 @@ c-----------------------------------------------------------------------c
 !     if (ifheat) tor(:,i)=tor(:,i+1)
             enddo               !store the last one
             call opcopy(uor(1,norbit),vor(1,norbit),wor(1,norbit),vx,vy,vz) !store solution
-!     if (ifheat)call copy(tor(1,norbit),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+!     if (ifheat)call copy(tor(1,norbit),t(1,1,1,1,1),nx1*ny1*nz1*nelv)
             
             if(nid.eq.0)then
                write(10,"(3E15.7)")time,l2,rate

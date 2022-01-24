@@ -109,34 +109,34 @@
       include 'SIZE'
       include 'TOTAL'
 
-      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
-      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
-      real, dimension(lt) :: vx_aRe, vy_aRe, vz_aRe
-      real, dimension(lt) :: vx_aIm, vy_aIm, vz_aIm
-      real, dimension(lt) :: vx_aRet, vy_aRet, vz_aRet
-      real, dimension(lt) :: vx_aImt, vy_aImt, vz_aImt
+      real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe
+      real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm
+      real, dimension(lv) :: vx_aRe, vy_aRe, vz_aRe
+      real, dimension(lv) :: vx_aIm, vy_aIm, vz_aIm
+      real, dimension(lv) :: vx_aRet, vy_aRet, vz_aRet
+      real, dimension(lv) :: vx_aImt, vy_aImt, vz_aImt
 
-      real, dimension(lt) :: dudx_dRe, dudy_dRe, dudz_dRe
-      real, dimension(lt) :: dvdx_dRe, dvdy_dRe, dvdz_dRe
-      real, dimension(lt) :: dwdx_dRe, dwdy_dRe, dwdz_dRe
+      real, dimension(lv) :: dudx_dRe, dudy_dRe, dudz_dRe
+      real, dimension(lv) :: dvdx_dRe, dvdy_dRe, dvdz_dRe
+      real, dimension(lv) :: dwdx_dRe, dwdy_dRe, dwdz_dRe
 
-      real, dimension(lt) :: dudx_dIm, dudy_dIm, dudz_dIm
-      real, dimension(lt) :: dvdx_dIm, dvdy_dIm, dvdz_dIm
-      real, dimension(lt) :: dwdx_dIm, dwdy_dIm, dwdz_dIm
+      real, dimension(lv) :: dudx_dIm, dudy_dIm, dudz_dIm
+      real, dimension(lv) :: dvdx_dIm, dvdy_dIm, dvdz_dIm
+      real, dimension(lv) :: dwdx_dIm, dwdy_dIm, dwdz_dIm
 
-      real, dimension(lt) :: dudx_aRe, dudy_aRe, dudz_aRe
-      real, dimension(lt) :: dvdx_aRe, dvdy_aRe, dvdz_aRe
-      real, dimension(lt) :: dwdx_aRe, dwdy_aRe, dwdz_aRe
+      real, dimension(lv) :: dudx_aRe, dudy_aRe, dudz_aRe
+      real, dimension(lv) :: dvdx_aRe, dvdy_aRe, dvdz_aRe
+      real, dimension(lv) :: dwdx_aRe, dwdy_aRe, dwdz_aRe
 
-      real, dimension(lt) :: dudx_aIm, dudy_aIm, dudz_aIm
-      real, dimension(lt) :: dvdx_aIm, dvdy_aIm, dvdz_aIm
-      real, dimension(lt) :: dwdx_aIm, dwdy_aIm, dwdz_aIm
+      real, dimension(lv) :: dudx_aIm, dudy_aIm, dudz_aIm
+      real, dimension(lv) :: dvdx_aIm, dvdy_aIm, dvdz_aIm
+      real, dimension(lv) :: dwdx_aIm, dwdy_aIm, dwdz_aIm
 
-      real, dimension(lt) :: vx_tr,vy_tr,vz_tr
-      real, dimension(lt) :: vx_ti,vy_ti,vz_ti
-      real, dimension(lt) :: vx_pr,vy_pr,vz_pr
-      real, dimension(lt) :: vx_pi,vy_pi,vz_pi
-      real, dimension(lt) :: vx_sr,vy_sr,vz_sr
+      real, dimension(lv) :: vx_tr,vy_tr,vz_tr
+      real, dimension(lv) :: vx_ti,vy_ti,vz_ti
+      real, dimension(lv) :: vx_pr,vy_pr,vz_pr
+      real, dimension(lv) :: vx_pi,vy_pi,vz_pi
+      real, dimension(lv) :: vx_sr,vy_sr,vz_sr
 
       character(len=80)   :: filename
 
@@ -392,7 +392,7 @@
 
 !     -->
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
-      if (ifheat) call copy(t, tbase, nx1*ny1*nz1*nelt)
+      if (ifheat) call copy(t, tbase, nx1*ny1*nz1*nelv)
 
 !     --> General initialization of the linear solver.
       call prepare_linearized_solver()
@@ -435,26 +435,26 @@
       include 'TOTAL'
 
 !     ----- Real part of the direct mode.
-      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
+      real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
       real, dimension(lp) :: pr_dRe
 
 !     ----- Imaginary part of the direct mode.
-      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
+      real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
       real, dimension(lp) :: pr_dIm
 
 !     ----- Real part of the adjoint mode.
-      real, dimension(lt) :: vx_aRe, vy_aRe, vz_aRe, t_aRe
+      real, dimension(lv) :: vx_aRe, vy_aRe, vz_aRe, t_aRe
       real, dimension(lp) :: pr_aRe
 
 !     ----- Imaginary part of the adjoint mode.
-      real, dimension(lt) :: vx_aIm, vy_aIm, vz_aIm, t_aIm
+      real, dimension(lv) :: vx_aIm, vy_aIm, vz_aIm, t_aIm
       real, dimension(lp) :: pr_aIm
 
 !     ----- Temporary arrays.
-      real, dimension(lt) :: work1_vx, work1_vy, work1_vz, work1_t
+      real, dimension(lv) :: work1_vx, work1_vy, work1_vz, work1_t
       real, dimension(lp) :: work1_pr
 
-      real, dimension(lt) :: work2_vx, work2_vy, work2_vz, work2_t
+      real, dimension(lv) :: work2_vx, work2_vy, work2_vz, work2_t
       real, dimension(lp) :: work2_pr
 
       real :: alpha, beta, gamma, delta
