@@ -299,8 +299,8 @@
 !     this function computes the sensitivity of the flow to
 !     a steady force following the formulation by Marquet at al. [1].
 !     A time-stepper formulation of the problem is used and
-!     the linearized system is solved using GMRES. Set uparam(01) = 4.31
-!     to compute the real part and uparam(01) = 4.32 for the imaginary one.
+!     the linearized system is solved using GMRES. Set uparam(01) = 4.41
+!     to compute the real part and uparam(01) = 4.42 for the imaginary one.
 !     
 !     OUTPOST
 !     -------
@@ -336,10 +336,10 @@
       call opcopy(ubase, vbase, wbase, vx, vy, vz)
 
 !     --> Load the forcing term.
-      if (uparam(01) .eq. 4.31) then
+      if (uparam(01) .eq. 4.41) then
          write(filename, '(a, a, a)') 'sr_', trim(session), '0.f00001'
          prefix = 'fsr'
-      elseif (uparam(01) .eq. 4.32) then
+      elseif (uparam(01) .eq. 4.42) then
          write(filename, '(a, a, a)') 'si_', trim(session), '0.f00001'
          prefix = 'fsi'
       endif
