@@ -27,7 +27,7 @@
       real vort(lv,3),wo1(lv),wo2(lv) ! to outpost vorticity BFV
       common /ugrad/ vort,wo1,wo2
       integer :: i, j, k, maxiter_newton, maxiter_gmres, calls
-      real :: tol, residual
+      real :: tol, residual, tottime
 
       integer, save :: calls_counter
       data             calls_counter /0/
@@ -43,6 +43,7 @@
       maxiter_newton = 100 ; maxiter_gmres = 100
       tol = max(param(21), param(22))
       if(istep.eq.0.and.nid.eq.0)then
+         open(unit=886,file='residu.dat',status='replace')
          open(unit=887,file='residu_newton.dat',status='replace')
          open(unit=888,file='residu_gmres.dat',status='replace');close(888)
          open(unit=889,file='residu_arnoldi.dat',status='replace');close(889)
@@ -92,6 +93,7 @@
 !     --> Compute rhs of Newton iteration f(q).
       call nonlinear_forward_map(f, q)
       calls_counter = calls_counter + nsteps
+      tottime = tottime + nsteps*dt
 
 !     --> Check residual || f(q) ||
       call krylov_norm(residual, f) ; residual = residual ** 2
@@ -100,7 +102,8 @@
       if(nid.eq.0)then
          write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
          write(6,*)'           Tolerance target:',tol
-         write(887,"(I6,1E15.7)")calls_counter,residual
+         write(887,"(I6,1E15.7)")i,residual
+         write(886,"(I6,2E15.7)")calls_counter,tottime,residual
       endif
 
       if(residual .lt. dtol) exit newton
@@ -113,6 +116,7 @@
 !     --> Solve the linear system.
       call ts_gmres(f, dq, maxiter_gmres, k_dim, calls)
       calls_counter = calls_counter + calls
+      tottime = tottime + calls*dt
 
 !     --> Update Newton solution.
       call krylov_sub2(q, dq)
@@ -126,7 +130,7 @@
       enddo newton
       
       if(nid.eq.0.and.i.le.maxiter_newton)then
-         close(887)
+         close(887); close(886)
          if(i.eq.maxiter_newton)then
             write(6,*)'reached maxiter_newton! STOPPING! (verify convergence)'
          else

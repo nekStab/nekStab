@@ -329,6 +329,7 @@
       character(len=80) :: filename
       character(len=3) :: prefix
       real :: alpha
+      integer :: calls
 
 !     --> Load base flow.
       write(filename, '(a, a, a)') 'BF_', trim(session), '0.f00001'
@@ -356,7 +357,7 @@
       call krylov_normalize(rhs, alpha)
 
 !     --> Solve the linear system.
-      call ts_gmres(rhs, sol, 10, k_dim)
+      call ts_gmres(rhs, sol, 10, k_dim, calls)
 
 !     -->
       call krylov_cmult(sol, alpha)
