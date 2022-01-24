@@ -587,7 +587,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      real, dimension(lt)  :: do1,do2,do3
+      real, dimension(lv)  :: do1,do2,do3
       real ampx, ampy, glamax
       logical ifto_sav, ifpo_sav
       n = nx1*ny1*nz1*nelv

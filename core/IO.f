@@ -52,8 +52,8 @@ c     ----- Upload the snapshots -----
 
          call load_fld(filename)
          call opcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, vx, vy, vz)
-         if(ifpo)call copy(Q(i)%pr,pr,nx2*ny2*nz2*nelt)
-         if(ifto)call copy(Q(i)%theta,t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+         if(ifpo)call copy(Q(i)%pr,pr,nx2*ny2*nz2*nelv)
+         if(ifto)call copy(Q(i)%theta,t(1,1,1,1,1),nx1*ny1*nz1*nelv)
 
       enddo
       return
