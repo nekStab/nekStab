@@ -154,7 +154,7 @@ c     positive second invariant of velocity gradient tensor
 c     
       include 'SIZE'
       include 'TOTAL'
-      parameter (lt=lx1*ly1*lz1*lelt)
+
       parameter (lxyz=lx1*ly1*lz1)
       real l2(lx1,ly1,lz1,1)
       real mygi(lxyz,ldim,ldim)
@@ -183,7 +183,7 @@ c     complex eigenvalues of velocity gradient tensor
 c     
       include 'SIZE'
       include 'TOTAL'
-      parameter (lt=lx1*ly1*lz1*lelt)
+
       parameter (lxyz=lx1*ly1*lz1)
       real l2(lx1,ly1,lz1,1)
       real mygi(lxyz,ldim,ldim)
@@ -243,7 +243,6 @@ c
 c     
       include 'SIZE'
       include 'TOTAL'
-      parameter (lt=lx1*ly1*lz1*lelt)
       parameter (lxyz=lx1*ly1*lz1)
       real l2(lx1,ly1,lz1,1)
       real gije(lxyz,ldim,ldim),mygi(lxyz,ldim,ldim)
@@ -528,14 +527,13 @@ c-------------------------------------------------------------------
       end
 c-------------------------------------------------------------------
       subroutine nekStab_avg(ifstatis)
-
+      use krylov_subspace
       include 'SIZE'
       include 'TOTAL'
       include 'AVG'
 
       logical, intent(in) :: ifstatis
-      integer, parameter :: lt=lx1*ly1*lz1*lelt
-      real do1(lt),do2(lt),do3(lt)
+      real do1(lv),do2(lv),do3(lv)
 
       real,save :: x0(3)
       data x0 /0.0, 0.0, 0.0/
@@ -555,7 +553,6 @@ c-------------------------------------------------------------------
       endif
 
       ntot  = lx1*ly1*lz1*nelv
-      ntott = lx1*ly1*lz1*nelt
       nto2  = lx2*ly2*lz2*nelv
 
 !     initialization
@@ -664,12 +661,12 @@ c----------------------------------------------------------------------
       include 'TOTAL'
 
 !     ----- Arrays to store the instability mode real and imaginary parts.
-      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
-      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
+      real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
+      real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
       real, dimension(lp) :: pr_dRe, pr_dIm
 
 !     ----- Energy budget terms.
-      real, dimension(lt, 10) :: energy_budget
+      real, dimension(lv, 10) :: energy_budget
       real, dimension(10) :: integrals
 
 !     ----- Miscellaneous.
@@ -677,7 +674,7 @@ c----------------------------------------------------------------------
       integer :: i, j, k
       character(len=80) :: filename
 
-      n = nx1*ny1*nz1*nelt
+      n = nx1*ny1*nz1*nelv
       energy_budget = 0.0D+00
       integrals = 0.0D+00
 
@@ -755,13 +752,13 @@ c----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
-      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
+      real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe
+      real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm
 
-      real, dimension(lt) :: Laplacian_ax, Laplacian_ay, Laplacian_az
-      real, dimension(lt) :: Laplacian_bx, Laplacian_by, Laplacian_bz
+      real, dimension(lv) :: Laplacian_ax, Laplacian_ay, Laplacian_az
+      real, dimension(lv) :: Laplacian_bx, Laplacian_by, Laplacian_bz
 
-      real, dimension(lt) :: dissipation, dummy
+      real, dimension(lv) :: dissipation, dummy
 
 !     --> Compute Laplacians.
       call compute_laplacian(vx_dRe, Laplacian_ax)
@@ -799,10 +796,10 @@ c----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      real, dimension(lt) :: vx_dRe, vy_dRe, vz_dRe
-      real, dimension(lt) :: vx_dIm, vy_dIm, vz_dIm
-      real, dimension(lt) :: prod_x, prod_y, prod_z
-      real, dimension(lt) :: dcdx, dcdy, dcdz
+      real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe
+      real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm
+      real, dimension(lv) :: prod_x, prod_y, prod_z
+      real, dimension(lv) :: dcdx, dcdy, dcdz
       integer :: component
 
       if (component .eq. 1) then
@@ -840,8 +837,8 @@ c----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      real, dimension(lt) :: u
-      real, dimension(lt) :: dudx, dudy, dudz
+      real, dimension(lv) :: u
+      real, dimension(lv) :: dudx, dudy, dudz
 
       call gradm1(dudx, dudy, dudz, u)
       call dsavg(dudx) ; call dsavg(dudy) ; call dsavg(dudz)
@@ -859,10 +856,10 @@ c----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      real, dimension(lt) :: a
-      real, dimension(lt) :: dadx, dady, dadz
-      real, dimension(lt) :: d2adx2, d2ady2, d2adz2
-      real, dimension(lt) :: Lap_a, wrk1, wrk2
+      real, dimension(lv) :: a
+      real, dimension(lv) :: dadx, dady, dadz
+      real, dimension(lv) :: d2adx2, d2ady2, d2adz2
+      real, dimension(lv) :: Lap_a, wrk1, wrk2
 
       call compute_gradients(a, dadx, dady, dadz)
       call compute_gradients(dadx, d2adx2, wrk1, wrk2)

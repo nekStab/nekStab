@@ -84,7 +84,7 @@
          else
             allocate(wor(1,1))
          endif
-         if(ifheat)allocate(tor(lt,nsteps))
+         if(ifheat)allocate(tor(lv,nsteps))
       endif
 !     --> Variable tolerances for speed up!
       if(ifdyntol.and.dyntolinit) call spec_tole(residual,dtol) ! compute first nonlinear solution with target tol
@@ -172,7 +172,7 @@
 !     INPUT
 !     -----
 !     
-!     rhs_x, rhs_y, rhs_z, rhs_t : nek arrays of size (lt).
+!     rhs_x, rhs_y, rhs_z, rhs_t : nek arrays of size (lv).
 !     Arrays containing the right-hand side of the linear problem to be solved.
 !     
 !     rhs_p : nek array of size (lp)
@@ -187,7 +187,7 @@
 !     RETURNS
 !     -------
 !     
-!     sol_x, sol_y, sol_z, sol_t : nek arrays of size (lt).
+!     sol_x, sol_y, sol_z, sol_t : nek arrays of size (lv).
 !     Arrays containing the solution of the linear problem.
 !     
 !     sol_p : nek array of size (lp).
@@ -351,7 +351,7 @@
          if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
             if(nid.eq.0)write(6,*)'Storing nonlinear solution for GMRES:',istep,'/',nsteps
             call opcopy(uor(1,istep),vor(1,istep),wor(1,istep),vx,vy,vz)
-            if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelt)
+            if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelv)
          endif
       enddo
 
@@ -363,7 +363,7 @@
 
 !     --> Pass current guess as base flow for the linearized calculation.
       call opcopy(ubase, vbase, wbase, q%vx, q%vy, q%vz)
-      if(ifheat) call copy(tbase, q%theta, nx1*ny1*nz1*nelt)
+      if(ifheat) call copy(tbase, q%theta, nx1*ny1*nz1*nelv)
 
       return
       end subroutine nonlinear_forward_map

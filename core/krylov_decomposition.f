@@ -132,7 +132,7 @@
 !     f_pr : nek array of size lp = lx2*ly2*lz2*lelt.
 !     Pressure component of the latest Krylov vector.
 !     
-!     qx, qy, qz : nek arrays of size (lt, k)
+!     qx, qy, qz : nek arrays of size (lv, k)
 !     Velocity components of the Krylov basis.
 !     
 !     qp : nek array of size (lp, k).

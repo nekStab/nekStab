@@ -87,7 +87,7 @@ c-----------------------------------------------------------------------
          print *,'  / __ \ / _ \ / //_/\__ \ / __// __ `// __ \'
          print *,' / / / //  __// ,<  ___/ // /_ / /_/ // /_/ /'
          print *,'/_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/ '  
-         print *,'COPYRIGHT (c) 2020-2021 DynFluid Laboratoire Paris ',NSVERSION
+         print *,'COPYRIGHT (c) 2020-2022 DynFluid Laboratoire Paris ',NSVERSION
          print *,'Nek5000 ', NVERSION
          print *,''
 !     print *,'==================================================='
@@ -134,7 +134,7 @@ c-----------------------------------------------------------------------
       if(istep.eq.0)call nekStab_init
 
       call oprzero(fcx,fcy,fcz) ! never comment this!
-      call rzero(fct,nx1*ny1*nz1*nelt)
+      call rzero(fct,nx1*ny1*nz1*nelv)
 
       select case (floor(uparam(1)))
 
@@ -142,7 +142,7 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-         call nekStab_energy  (vx,vy,vz,t,'global_energy.dat'   ,glob_skip)
+         call nekStab_energy   (vx,vy,vz,t,'global_energy.dat'   ,glob_skip)
          call nekStab_enstrophy(vx,vy,vz,t,'global_enstrophy.dat',glob_skip)
 
       case(1)                   ! fixed points computation
@@ -373,8 +373,7 @@ c-----------------------------------------------------------------------
          write(6,*)'P101=',param(101),'no additional modes'
          write(6,*)'P103=',param(103),'filter weight'
          write(6,*)
-         write(6,*)'uparam1=',uparam(1)
-         write(6,*)'uparam01=',uparam(01)
+         write(6,*)'uparam01=',uparam(1)
          write(6,*)'uparam02=',uparam(02)
          write(6,*)'uparam03=',uparam(03)
          write(6,*)'uparam04=',uparam(04)
