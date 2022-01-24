@@ -222,7 +222,7 @@ c-----------------------------------------------------------------------
          if(uparam(01) .eq. 4.3) call bf_sensitivity
 
 !     -----> Sensitivity to steady force.
-         if(uparam(01) .eq. 4.4) call ts_steady_force_sensitivity
+         if(uparam(01) .ge. 4.4) call ts_steady_force_sensitivity
 
          call nek_end
 
