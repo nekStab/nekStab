@@ -54,12 +54,12 @@
       call opcopy(vx_dIm, vy_dIm, vz_dIm, vx, vy, vz)
 
 !     --> Load real part of the adjoint mode
-      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aRe, vy_aRe, vz_aRe, vx, vy, vz)
 
 !     --> Load imaginary part of the adjoint mode
-      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aIm, vy_aIm, vz_aIm, vx, vy, vz)
 
@@ -165,12 +165,12 @@
       call opcopy(vx_dIm,vy_dIm,vz_dIm,vx,vy,vz)
 
 !     load real part of the adjoint mode
-      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aRe,vy_aRe,vz_aRe,vx,vy,vz)
 
 !     load imaginary part of the adjoint mode
-      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00001'
+      write(filename,'(a,a,a)')'aIm',trim(SESSION),'0.f00002'
       call load_fld(filename)
       call opcopy(vx_aIm,vy_aIm,vz_aIm,vx,vy,vz)
 
@@ -502,3 +502,68 @@
 
       return
       end subroutine biorthogonalize
+c-----------------------------------------------------------------------
+      subroutine delta_forcing
+
+      !     Provided the base flow and the steady force sensitivity have been computed,
+      !     this function computes the variations of a leading eigenvalue induced 
+      !     by a steady pointwise force according to eq. (5.1) by Marquet et al. [1].
+      !
+      !     OUTPOST
+      !     -------
+      !
+      !     dfr_blah0.f00001 : Eigenvalue variations (x_comp -> delta_lambda/alpha)
+      !                                              (y_comp -> delta_omega /alpha).        
+      !
+      !     References
+      !     ----------
+      !
+      !     [1] Marquet O., Sipp D. and Jacquin L.
+      !     Sensitivity analysis and passive control of cylinder flow
+      !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
+            use krylov_subspace
+            implicit none
+            include 'SIZE'            !
+            include 'INPUT'           ! IF3D
+            include 'PARALLEL'        ! GLLEL
+            include 'SOLN'            ! JP
+           
+            real, dimension(lv)  :: vx_bf, vy_bf, vz_bf
+            real, dimension(lv)  :: fsrx, fsry, fsrz
+            real, dimension(lv)  :: fsix, fsiy, fsiz
+            real, dimension(lv)  :: work, workr, worki
+            real, dimension(lv)  :: delta_lambda, delta_omega
+      
+      !     ----- Misc.
+            character(len=80) :: filename
+            real :: alpha
+      
+            alpha   = 1.0d0
+      !     load base flow 
+            write(filename,'(a,a,a)')'BF_',trim(SESSION),'0.f00001'
+            call load_fld(filename)
+            call opcopy(vx_bf, vy_bf, vz_bf, vx, vy, vz)
+            
+      !     load growth rate sensitivity
+            write(filename, '(a, a, a)') 'fsr', trim(session), '0.f00001'
+            call load_fld(filename)
+            call opcopy(fsrx, fsry, fsrz, vx, vy, vz)
+            
+      !     load frequency sensitivity
+            write(filename, '(a, a, a)') 'fsi', trim(session), '0.f00001'
+            call load_fld(filename)
+            call opcopy(fsix, fsiy, fsiz, vx, vy, vz)
+            
+            work  = sqrt(vx_bf**2 + vy_bf**2 + vz_bf**2)
+            workr = fsrx * vx_bf + fsry * vy_bf + fsrz * vz_bf
+            worki = fsix * vx_bf + fsiy * vy_bf + fsiz * vz_bf
+         
+            delta_lambda = - alpha * work * workr
+            delta_omega  =   alpha * work * worki
+      
+            ifvo=.true.; ifpo=.false.; ifto=.false.
+            call outpost(delta_lambda, delta_omega, t, pr, t, 'dfr')
+      
+            return
+      end subroutine delta_forcing 
+c-----------------------------------------------------------------------
