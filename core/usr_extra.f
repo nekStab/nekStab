@@ -212,6 +212,7 @@ c-----------------------------------------------------------------------
             call wave_maker
             call bf_sensitivity
          endif
+
 !     -----> Direct mode kinetic energy budget.
          if(uparam(01) .eq. 4.1) call stability_energy_budget
 
@@ -222,7 +223,9 @@ c-----------------------------------------------------------------------
          if(uparam(01) .eq. 4.3) call bf_sensitivity
 
 !     -----> Sensitivity to steady force.
-         if(uparam(01) .ge. 4.4) call ts_steady_force_sensitivity
+         if(uparam(01) .eq. 4.41 .or. 
+     $       uparam(01) .eq. 4.42) call ts_steady_force_sensitivity
+         if(uparam(01) .eq. 4.43) call delta_forcing
 
          call nek_end
 

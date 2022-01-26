@@ -56,9 +56,16 @@ def rnek(cwd, par_file, ifmpi, log_suffix="", n_procs=1, step_limit=None, verbos
 
     except Exception as E:
         # TODO: Change to warnings.warn()
-        print("Could not successfully run nek5000! Caught error: {0}".format(E))
+        print(" ###### Error: {0}".format(E))
+        print()
+        print()
+        print()
+        print()
     else:
-        print("Finished running nek5000!")
+        print("Finished!")
+        print('OK')
+        print('OK')
+        print('OK')
 
 ###############################################################
 if __name__ == "__main__":
@@ -74,16 +81,16 @@ if __name__ == "__main__":
     nps = 6
     
     # DNS
-    rnek(root+'/0dns/',cn,True,n_procs=nps)
+    ##rnek(root+'/0dns/',cn,True,n_procs=nps)
 
-    #SFD
+    #SFD AKERVIK
     rnek(root+'/1_2baseflow/sfd',cn,True,n_procs=nps)
-
-    #SFD OIFS 
+    
+    #SFD AKERVIK + OIFS 
     rnek(root+'/1_2baseflow/sfd_oifs',cn,True,n_procs=nps)
     
-    #SFD OIFS + adaptive
-    rnek(root+'/1_2baseflow/sfd_dyn',cn,True,n_procs=nps)
+    #SFD AKERVICK + OIFS + adaptive
+    rnek(root+'/1_2baseflow/sfd_oifs_dyn',cn,True,n_procs=nps)
 
     # BOOSTCONV
     rnek(root+'/1_2baseflow/boostconv',cn,True,n_procs=nps)
@@ -100,14 +107,20 @@ if __name__ == "__main__":
     # ADJOINT
     rnek(root+'/3stability/adjoint',cn,True,n_procs=nps)
 
-    # WAVEMAKER
-    rnek(root+'/4postprocessing/wavemaker',cn,True,n_procs=nps)
+    shutil.copyfile(root+'/3stability/direct/dRe1cyl0.f00001',
+                    root+'/4postprocessing/sensitivity/dRe1cyl0.f00001')
 
-    # BUDGET
-    rnek(root+'/4postprocessing/energy_budget',cn,True,n_procs=nps)
-        
-    # BF SENSITIVITY
-    rnek(root+'/4postprocessing/baseflow_sensitivity',cn,True,n_procs=nps)
+    shutil.copyfile(root+'/3stability/direct/dIm1cyl0.f00001',
+                    root+'/4postprocessing/sensitivity/dIm1cyl0.f00001')
+
+    shutil.copyfile(root+'/3stability/adjoint/aRe1cyl0.f00002',
+                    root+'/4postprocessing/sensitivity/aRe1cyl0.f00002')
+
+    shutil.copyfile(root+'/3stability/adjoint/aIm1cyl0.f00002',
+                    root+'/4postprocessing/sensitivity/aIm1cyl0.f00002')
+
+    # BUDGET,WAVEMAKER,BASEFLOW SENSITIVITY
+    rnek(root+'/4postprocessing/sensitivity',cn,True,n_procs=nps)
 
     # FORCING SENSITIVITY
     rnek(root+'/4postprocessing/steady_force_sensitivity',cn,True,n_procs=nps)
