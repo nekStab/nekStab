@@ -4,7 +4,7 @@ startFrom = 0
 stopAt = endTime
 endTime = 1.0
 
-userParam01 = 3  # Direct
+userParam01 = 3.1 # Direct
 userParam07 = 128 # k_dim
 
 dt = 0
