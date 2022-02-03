@@ -44,6 +44,9 @@
          alpha = alpha + p%time * q%time
       end if
 
+!     --> Check integrity.
+      if ( isnan(alpha) ) call nek_end
+
       return
       end subroutine krylov_inner_product
 
