@@ -38,6 +38,8 @@ c-----------------------------------------------------------------------
 !     percentage for the acceleration phase in the sponge (e.g. 1/3)
       acc_spg = 0.333d0; call bcast(acc_spg, wdsize)
 
+      evop = '_'
+
 !     !Broadcast all defaults !
       call bcast(schur_tgt, isize) ! isize for integer
       call bcast(eigen_tol, wdsize) ! wdsize for real
