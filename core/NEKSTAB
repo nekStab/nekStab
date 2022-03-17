@@ -3,7 +3,8 @@
 
       character(len=1),parameter :: nxtl=char(10) !new line character
 
-      character(len=1) :: evop = '_'
+      character(len=1) :: evop
+       != '_'
       common /nStab_char/ evop
 
       logical                ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,
