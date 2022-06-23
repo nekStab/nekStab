@@ -8,28 +8,28 @@
 
 !     This function provides the user-defined inner product to be used throughout
 !     the computation.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     px, py, pz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the first vector.
-!     
+!
 !     pp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the first vector.
-!     
+!
 !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the second vector.
-!     
+!
 !     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the second vector.
-!     
+!
 !     RETURN
 !     ------
-!     
+!
 !     alpha : real
 !     Value of the inner-product alpha = <p, q>.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       use krylov_subspace
@@ -96,19 +96,19 @@
 !     This function normalizes the state vector [qx, qy, qz, qp]^T where
 !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
 !     components while qp is the corresponding pressure field.
-!     
+!
 !     INPUTS / OUTPUTS
 !     ----------------
-!     
+!
 !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays storing the velocity components.
-!     
+!
 !     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array storing the corresponding pressure field.
-!     
+!
 !     alpha : real
 !     Norm of the vector.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       use krylov_subspace
@@ -155,7 +155,7 @@
       real, allocatable, dimension(:) :: residual
 
 !     ----- Miscellaneous -----
-      type(krylov_vector) :: wrk
+      type(krylov_vector) :: wrk, wrk2
 
       integer :: mstart, cnt
       real                               :: alpha, beta, glsc3
@@ -199,11 +199,11 @@
          if(ifseed_nois)then    ! noise as initial seed
 
             if(nid.eq.0)write(6,*)'Filling fields with noise...'
-            call add_noise(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
-            wrk%vx = vxp(1, 1) ; wrk%vy = vyp(1, 1) ; wrk%vz = vzp(1, 1)
-            wrk%pr = prp(1, 1) ; wrk%theta = tp(1, 1, 1)
-            call krylov_normalize(wrk, alpha)
-            call matvec(wrk, wrk)
+            call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
+            wrk2%vx = vxp(:, 1) ; wrk2%vy = vyp(:, 1) ; wrk2%vz = vzp(:, 1)
+            wrk2%pr = prp(:, 1) ; wrk2%theta = tp(:, 1, 1)
+            call krylov_normalize(wrk2, alpha)
+            call matvec(wrk, wrk2)
 
          elseif(ifseed_symm)then ! symmetry initial seed
 
@@ -214,26 +214,26 @@
 
             if (uparam(01) .ge. 3.0 .and. uparam(01) .lt. 3.2 ) then
                write(filename,'(a,a,a)')'dRe',trim(SESSION),'0.f00001'
-               
+
             elseif(uparam(01) .ge. 3.2 .and. uparam(01) .lt. 3.3 ) then
                write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
             endif
 
             if(nid.eq.0)write(*,*)'Load real part of mode 1 as seed: ',filename
             call load_fld(filename)
-            call nopcopy(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
+            call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
 
          else
 
-            call opcopy(vxp(1,1),vyp(1,1),vzp(1,1),ubase,vbase,wbase)
-            if(ifheat) call copy(tp(1,1,1),tbase,n)
+            call opcopy(vxp(:,1), vyp(:,1), vzp(:, 1), ubase, vbase, wbase)
+            if(ifheat) call copy(tp(1,1,1), tbase,n)
 
          endif
 
 !     ----- Normalized to unit-norm -----
 
-         wrk%vx = vxp(1, 1) ; wrk%vy = vyp(1, 1) ; wrk%vz = vzp(1, 1)
-         wrk%pr = prp(1, 1) ; wrk%theta = tp(1, 1, 1)
+         wrk%vx = vxp(:, 1) ; wrk%vy = vyp(:, 1) ; wrk%vz = vzp(:, 1)
+         wrk%pr = prp(:, 1) ; wrk%theta = tp(:, 1, 1)
          call krylov_normalize(wrk, alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
@@ -298,7 +298,11 @@
       do while ( .not. converged )
 !     --> Arnoldi factorization.
          call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
-
+         if(nid.eq.0) then
+             open(unit=12345, file="Hessenberg_matrix.dat")
+             write(12345, *) H(1:k_dim, 1:k_dim)
+             close(12345)
+         endif
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
 
@@ -468,7 +472,7 @@
 
 !----------------------------------------------------------------------
 
-      
+
 
 
       subroutine outpost_ks(vals, vecs, Q, residual)
@@ -622,13 +626,13 @@
       if (nid .eq. 0) then
 
          close(10) ; close(20) ;  close(30)
-!     
+!
          write(fmt2,'("(A,I16)")')
          write(fmt3,'("(A,F16.4)")')
          write(fmt4,'("(A,F16.12)")')
          write(fmt5,'("(A,E15.7)")') ! max precision
          write(fmt6,'("(A,E13.4)")') ! same as hmhlz
-!     
+!
          write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
 !     write(filename,"(',I7.7,'.info')") itime/ioutput
          open (844,file=filename,action='write',status='replace')
@@ -688,32 +692,32 @@
 
 !     This function selects the eigenvalues to be placed in the upper left corner
 !     during the Schur condensation phase.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
 
 !     delta : real
 !     All eigenvalues outside the circle of radius 1-delta will be selected.
-!     
+!
 !     nev : integer
 !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
 !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-!     
+!
 !     n : integer
 !     Total number of eigenvalues.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     selected : n-dimensional logical array.
 !     Array indicating which eigenvalue has been selected (.true.).
-!     
+!
 !     cnt : integer
 !     Number of selected eigenvalues. cnt >= nev + 4.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -761,22 +765,22 @@
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lv = lx1*ly1*lz1*lelv
 !     Velocity components of the latest Krylov vector.
-!     
+!
 !     f_pr : nek array of size lp = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
-!     
+!
 !     H : k+1 x k real matrix.
 !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-!     
+!
 !     k : int
 !     Current iteration of the Arnoldi factorization.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       use krylov_subspace
@@ -911,7 +915,7 @@
 
       call add_noise(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
       call normalize(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1),alpha)
-      call nopcopy(qx, qy, qz, qp, qt, vxp(1,1), vyp(1,1), vzp(1,1), prp(1,1), tp(1,1,1))
+      call nopcopy(qx, qy, qz, qp, qt, vxp(:,1), vyp(:,1), vzp(:,1), prp(:,1), tp(:,:,1))
 
       call outpost(qx, qy, qz, qp, qt, "PRT")
 
