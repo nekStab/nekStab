@@ -64,28 +64,28 @@
 
 !     Dispatch the correct matrix-vector product to the Arnoldi factorization.
 !     All subroutines need to have the same interface.
-!     
+!
 !     NOTE : The baseflow needs to be pass to (ubase, vbase, wbase, tbase)
 !     before this function is called.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     qx, qy, qz, qt : nek-arrays of size lv
 !     Initial velocity and temperature components.
-!     
+!
 !     qp : nek-array of size lp
 !     Initial pressure component.
-!     
+!
 !     OUTPUTS
 !     -------
-!     
+!
 !     fx, fy, fz, ft : nek-arrays of size lv
 !     Final velocity and temperature components.
-!     
+!
 !     fp : nek-array of size lp
 !     Final pressure component.
-!     
+!
 
       use krylov_subspace
       implicit none
@@ -153,9 +153,9 @@
 !     Integrate forward in time the linearized Navier-Stokes equations.
 !     Denoting by L the Jacobian of the Navier-Stokes equations, the corresponding
 !     matrix vector product is thus
-!     
+!
 !     x(t) = exp(t * L) * x(0)
-!     
+!
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -197,7 +197,7 @@
       endif
 
 !     --> Pass the initial condition for the perturbation.
-      call nopcopy(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1),
+      call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,:,1),
      $     q%vx, q%vy, q%vz, q%pr, q%theta)
 
       time = 0.0D+00
@@ -225,7 +225,7 @@
 
 !     --> Copy the solution.
       call nopcopy(f%vx,f%vy,f%vz,f%pr,f%theta,
-     $     vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1))
+     $     vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:, :,1))
 
       return
       end subroutine forward_linearized_map
@@ -245,9 +245,9 @@
 !     Integrate forward in time the adjoint Navier-Stokes equations.
 !     Denoting by L adjoint Navier-Stokes operator, the corresponding
 !     matrix vector product is thus
-!     
+!
 !     x(t) = exp(t * L) * x(0)
-!     
+!
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -286,7 +286,7 @@
       if(uparam(01) .eq. 3.31)init=.true. ! activate Floquet for intracycle transient growth (base flow already computed)
 
 !     --> Pass the initial condition for the perturbation.
-      call nopcopy(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1),
+      call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),
      $     q%vx,    q%vy,    q%vz,    q%pr,    q%theta)
 
       time = 0.0D+00
@@ -316,7 +316,7 @@
 
 !     --> Copy the solution.
       call nopcopy(f%vx,f%vy,f%vz,f%pr,f%theta,
-     $     vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1))
+     $     vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,:,1))
 
       return
       end subroutine adjoint_linearized_map
