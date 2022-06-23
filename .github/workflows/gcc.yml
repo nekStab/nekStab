@@ -51,10 +51,10 @@ jobs:
           ./maketools genmap genbox
           cd ../..
           
-      - name: Compiling examples/cylinder/dns/
+      - name: Compiling examples/cylinder/0dns/
         shell: bash
         run: |
-          cd examples/cylinder/dns/
+          cd examples/cylinder/0dns/
           ./cmpile.sh all
           nekmpi 1cyl 2
       #    cd ../../../
