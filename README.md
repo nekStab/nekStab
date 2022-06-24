@@ -3,7 +3,7 @@
 [![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](https://ricardofrantz.github.io/nekStabDoc/en/master/)
 
 **nekStab** is a toolbox to conduct bifurcation analyses using the spectral element CFD solver [Nek5000](https://github.com/Nek5000/Nek5000).
-It is released under the ??? licence.
+It is released under the  BSD-3-Clause license.
 
 The project started in 2010 with the PhD thesis of [Jean-Christophe Loiseau](https://loiseaujc.github.io/) and is build on top of the work of former PhD students of our group such as Frédéric Alizard, Stefania Cherubini, Alessandro Bucci, Mirko Farano, Francesco Picella and [Ricardo Frantz](https://github.com/ricardofrantz).
 Ricardo is the one responsible for having brought together all the previous contributions into a single toolbox.
@@ -14,7 +14,7 @@ Both of them work at [DynFluid](http://dynfluid.ensam.eu/), a fluid dynamics lab
 ### News
 
 - **February 2022:** The first official release of `nekStab` is available online!
-It is released under the [???]() licence.
+It is released under the BSD-3-Clause license.
 Do not hesitate to get in touch with us, check the [documentation]() or read the [release notes](https://github.com/ricardofrantz/nekStab/blob/master/RELEASE.md) if you want to know more.
 
 ## Getting started
