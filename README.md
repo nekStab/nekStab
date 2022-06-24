@@ -1,6 +1,6 @@
 [![GCC](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml/badge.svg?branch=master)](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml)
 [![Intel](https://github.com/ricardofrantz/nekStab/actions/workflows/intel.yml/badge.svg?branch=master)](https://github.com/ricardofrantz/nekStab/actions/workflows/intel.yml)
-[![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](https://ricardofrantz.github.io/nekStabDoc/en/master/)
+[![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](https://nekstab.github.io/nekStabDoc/en/master/)
 
 **nekStab** is a toolbox to conduct bifurcation analyses using the spectral element CFD solver [Nek5000](https://github.com/Nek5000/Nek5000).
 It is released under the  BSD-3-Clause license.
@@ -15,7 +15,7 @@ Both of them work at [DynFluid](http://dynfluid.ensam.eu/), a fluid dynamics lab
 
 - **February 2022:** The first official release of `nekStab` is available online!
 It is released under the BSD-3-Clause license.
-Do not hesitate to get in touch with us, check the [documentation]() or read the [release notes](https://github.com/ricardofrantz/nekStab/blob/master/RELEASE.md) if you want to know more.
+Do not hesitate to get in touch with us, check the [documentation](https://nekstab.github.io/nekStabDoc/en/master/) or read the [release notes](https://github.com/ricardofrantz/nekStab/blob/master/RELEASE.md) if you want to know more.
 
 ## Getting started
 
@@ -52,7 +52,7 @@ cd ~/nekStab/examples/cylinder/1_2baseflow/newton
 nekbmpi 1cyl 4
 ```
 
-More information about compiling the code on Mac OS or optional packages is available in the [**Documentation**](https://ricardofrantz.github.io/nekStabDoc/en/master/index.htm).
+More information about compiling the code on Mac OS or optional packages is available in the [**Documentation**](https://nekstab.github.io/nekStabDoc/en/master/).
 
 ## Development
 
@@ -64,11 +64,11 @@ If you are planning a large contribution, we encourage you to discuss the concep
 
 Although **nekStab** relies on Nek5000, none of us are active developers of it.
 For any question regarding Nek5000, please refer to the dedicated [GitHub repo](https://github.com/Nek5000/Nek5000)
- and [documentation](http://nek5000.github.io/NekDoc/index.html)
+ and [documentation](https://nekstab.github.io/nekStabDoc/en/master/)
 
 ### Documentation
 
-- HTML documentation (stable realse): https://ricardofrantz.github.io/nekStabDoc/en/master/
+- HTML documentation (stable realse): https://nekstab.github.io/nekStabDoc/en/master/
 
 ### Communication
 
