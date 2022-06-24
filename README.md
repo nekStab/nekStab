@@ -31,7 +31,7 @@ sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4
 **Cloning the repository**
 
 ```bash
-git clone --depth=50 --branch=master https://github.com/ricardofrantz/nekStab.git
+git clone --depth=50 --branch=master https://github.com/nekStab/nekStab.git
 cd nekStab
 git submodule update --init --recursive
 ```
