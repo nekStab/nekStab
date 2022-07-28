@@ -1,21 +1,13 @@
 [GENERAL]
-startFrom = 0 # BF_tsyphon0.f00001
-stopAt = numSteps
-numSteps = 2000
-
-#stopAt = endTime
-#endTime = 0.016 
+startFrom = BF_Ra400_tsyphon0.f00001
+stopAt = endTime
+endTime = 0.016 
 
 userParam01 = 0  #
-userParam02 = 0  # krylov snapshot to load
 userParam03 = 1   
 userParam04 = 7.66  # 
 userParam05 = 1     # 
 userParam06 = 16200.0   #  Rayleigh number 
-userParam07 = 0   #
-userParam08 = 0   # 
-userParam09 = 0   #
-userParam10 = 0   #
 
 dt = 0
 variableDt = yes
@@ -34,19 +26,19 @@ dealiasing = no #yes
 
 [VELOCITY] #PR is positive here!
 viscosity = 5.0 # Prandtl number directily # param(2)
-residualTol = 1.0E-9
+residualTol = 1.0E-7
 residualProj = no
 density = 1.0
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-9
+residualTol = 1.0E-7
 residualProj = no
 writeToFieldFile = yes
 
 [TEMPERATURE]
 solver = helm
-residualTol = 1.0E-9
+residualTol = 1.0E-7
 residualProj = no
 writeToFieldFile = yes
 conductivity = 1.0
