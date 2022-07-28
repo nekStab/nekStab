@@ -69,11 +69,11 @@
       call prepare_linearized_solver ! compute nsteps
 
 !     --> Outpost current estimate of the solution
-      time = q%time ! adjust
+      time = q%time             ! adjust
       if(uparam(1).eq.2.0)time = real(i) ! to ease visu in paraview
       if(uparam(1).eq.2.2)time = real(i)*q%time ! to ease visu in paraview
       call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "nwt")
-      time = q%time ! restore
+      time = q%time             ! restore
 
 !     --> Allocate nonlinear solution variable!
       if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
@@ -197,7 +197,7 @@
 !     
 !     sol_p : nek array of size (lp).
 !     Array containing the solution of the linear problem (pressure component).
-!
+!     
 !     calls : total number of calls to the linearized solver.
 !     Integer containing the total sum of nsteps*k necessary to converge the solution.     
 !     
@@ -263,8 +263,8 @@
          write(889,"(I6,1E15.7)")k,beta**2; close(889)
       endif
       if (beta**2 .lt. tol) then ! count of calls to linearized solver
-            calls = calls + k*nsteps
-            exit arnoldi
+         calls = calls + k*nsteps
+         exit arnoldi
       endif
       enddo arnoldi
 

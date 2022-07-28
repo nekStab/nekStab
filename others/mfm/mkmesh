@@ -1,9 +1,0 @@
-genbox << EOF
-mfm.box
-EOF
-genmap << EOF
-box
-.0001
-EOF
-mv box.re2 mfm.re2
-mv box.ma2 mfm.ma2
