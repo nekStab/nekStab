@@ -226,7 +226,7 @@ c-----------------------------------------------------------------------
 
 !     -----> Sensitivity to steady force.
          if(uparam(01) .eq. 4.41 .or. 
-     $       uparam(01) .eq. 4.42) call ts_steady_force_sensitivity
+     $        uparam(01) .eq. 4.42) call ts_steady_force_sensitivity
          if(uparam(01) .eq. 4.43) call delta_forcing
 
          call nek_end
