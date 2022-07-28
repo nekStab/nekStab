@@ -1,17 +1,14 @@
 #!/bin/bash
-export CASE="2cyl" #--> case name goes here
+
+export CASE="tsyphon" #--> case name goes here
 
 #add to .bashrc
-export NEKSTAB_SOURCE_ROOT="../../../.." #--> path to nekStab
+export NEKSTAB_SOURCE_ROOT="../../.." #--> path to nekStab
 export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
 #uncomment the deisred compiler
-#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc.sh
-#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_gcc_tb.sh
-#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_intel.sh
-source ${NEKSTAB_SOURCE_ROOT}/core/compiler_oneap_tb.sh
-#source ${NEKSTAB_SOURCE_ROOT}/core/compiler_pgi.sh
+source ${NEKSTAB_SOURCE_ROOT}/core/compiler.sh
 
 args=("$@")
 argsnr=$#

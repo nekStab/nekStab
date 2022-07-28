@@ -1,6 +1,5 @@
 #!/bin/bash
-
-export CASE="tpjet" #--> case name goes here
+export CASE="2cyl" #--> case name goes here
 
 #add to .bashrc
 export NEKSTAB_SOURCE_ROOT="../../.." #--> path to nekStab

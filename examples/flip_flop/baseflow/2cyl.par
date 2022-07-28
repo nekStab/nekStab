@@ -1,18 +1,10 @@
 [GENERAL]
-startFrom = 0
+startFrom = BF_Re61_2cyl0.f00001
 stopAt = endTime
-endTime = 1000. #9.02608538677
+endTime = 9.02608538677
 
 userParam01 = 0    # 
-userParam02 = 0    # krylov snapshot to load
-userParam03 = 0    #
-userParam04 = 0    # frequency
-userParam05 = 0    # gain
-userParam06 = 0    # 
 userParam07 = 128  # k_dim
-userParam08 = 0    # 
-userParam09 = 0    #
-userParam10 = 0    # sponge strenght
 
 dt = 0
 variableDt = yes
@@ -29,12 +21,12 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-6
+residualTol = 1.0E-7
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-9
+residualTol = 1.0E-7
 residualProj = yes
 density = 1.0
 viscosity = -61.0
