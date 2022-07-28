@@ -1,9 +1,0 @@
-genbox << EOF
-square_p.box
-EOF
-mv box.re2 square_p.re2
-#
-genmap << EOF
-square_p
-.01
-EOF
