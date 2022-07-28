@@ -28,7 +28,7 @@ else
     # if [[ $(gfortran -dumpversion | cut -f1 -d.) -gt 10 ]]; then
     #     export FFLAGS+=" -fallow-argument-mismatch"
     # fi
-    #export FFLAGS+=" -g -fbacktrace" # tracer
+    export FFLAGS+=" -g -fbacktrace" # tracer
     #export FFLAGS+=" -Og -Wextra -Warray-bounds -Warray-temporaries"
     #export FFLAGS+=" -Wconversion -Wno-argument-mismatch -fcheck=all"
     #export FFLAGS+=" -ffpe-trap=invalid,zero,overflow,underflow -finit-real=nan -ggdb -fsanitize=leak -fsanitize=address"

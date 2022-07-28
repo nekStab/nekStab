@@ -5,10 +5,8 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       real flow_rate
 
-      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
-      !if(istep.eq.0) time = 0.0d0
+      if(istep.eq.0) time = 0.0d0
       call nekStab
-      !call nekStab_avg(.false.) !  Compute mean flow.
       call compute_flow_rate(flow_rate)
 
       return
@@ -25,6 +23,7 @@ c-----------------------------------------------------------------------
         ifres = .true. ; call bcast(ifres,lsize)
         ifvor = .true. ; call bcast(ifvor,lsize)
         ifvox = .true. ; call bcast(ifvox,lsize)
+        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
       endif
       return
       end
