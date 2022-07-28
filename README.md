@@ -1,5 +1,4 @@
 [![GCC](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml/badge.svg?branch=master)](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml)
-[![Intel](https://github.com/ricardofrantz/nekStab/actions/workflows/intel.yml/badge.svg?branch=master)](https://github.com/ricardofrantz/nekStab/actions/workflows/intel.yml)
 [![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](https://nekstab.github.io/nekStabDoc/en/master/)
 
 **nekStab** is a toolbox to conduct bifurcation analyses using the spectral element CFD solver [Nek5000](https://github.com/Nek5000/Nek5000).
