@@ -28,8 +28,8 @@ c-----------------------------------------------------------------------
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
 
-        !ifdyntol = .false. ; call bcast(ifdyntol,lsize)
-        !ifstorebf = .false. ; call bcast(ifstorebf,lsize)
+        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+        ifstorebf = .true. ; call bcast(ifstorebf,lsize)
 
       endif
 

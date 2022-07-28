@@ -1,9 +1,9 @@
 [GENERAL]
-startFrom = BF_Re61_2cyl0.f00001
+startFrom = BF_Re62_2cyl0.f00001
 stopAt = endTime
-endTime = 9.02608538677
+endTime = 8.733564341058
 
-userParam01 = 0    # 
+userParam01 = 2.1  # Newton-GMRES for UPOs 
 userParam07 = 128  # k_dim
 
 dt = 0
@@ -29,4 +29,4 @@ writeToFieldFile = yes
 residualTol = 1.0E-7
 residualProj = yes
 density = 1.0
-viscosity = -61.0
+viscosity = -63.0

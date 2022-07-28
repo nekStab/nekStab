@@ -1,45 +1,42 @@
 [GENERAL]
-startFrom = BF_Ra400_tsyphon0.f00001
-stopAt = endTime
-endTime = 0.016 
+startfrom = BF_Ra500_tsyphon0.f00001
+stopat = endTime
+endtime = 1.0
 
-userParam01 = 0  #
-userParam03 = 1   
-userParam04 = 7.66  # 
-userParam05 = 1     # 
-userParam06 = 16200.0   #  Rayleigh number 
+userparam01 = 2.0 #
+userparam06 = 500.0 # Ra
+userparam07 = 110  # k_dim
 
 dt = 0
-variableDt = yes
-timeStepper = bdf3
-#extrapolation = OIFS
-targetCFL = 5
+variabledt = yes
+timestepper = bdf3
+targetcfl = 0.5
 
-writeControl = runTime #timestep
-writeInterval = 10
-writeDoublePrecision = no
+writecontrol = runTime #timestep
+writeinterval = 10.
+writedoubleprecision = no
 
-dealiasing = no #yes
+dealiasing = yes
 #filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
+#filterweight = 0.01
+#filtercutoffratio = 0.84
 
-[VELOCITY] #PR is positive here!
+[VELOCITY]
 viscosity = 5.0 # Prandtl number directily # param(2)
-residualTol = 1.0E-7
-residualProj = no
+residualtol = 1.0E-8
+residualproj = yes
 density = 1.0
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-7
-residualProj = no
-writeToFieldFile = yes
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
 
 [TEMPERATURE]
 solver = helm
-residualTol = 1.0E-7
-residualProj = no
-writeToFieldFile = yes
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
 conductivity = 1.0
-rhoCp = 1.0
+rhocp = 1.0

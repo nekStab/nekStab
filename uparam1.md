@@ -1,0 +1,23 @@
+0   'DNS'
+1.1 'Selective Frequency Damping (SFD)'
+1.2 'BoostConv'
+1.3 'Dynamic Mode Tracking (DMT)'
+1.4 'Time Delayed Feedback (TDF)'
+#
+2.0 'Newton-GMRES for fixed points'
+2.1 'Newton-GMRES for UPOs'
+2.2 'Newton-GMRES for forced UPOs'
+#
+3.1  'Krylov-Schur for direct LNSE'
+3.11 'Krylov-Schur for direct LNSE in Floquet'
+3.2  'Krylov-Schur for adjoint LNSE'
+3.21 'Krylov-Schur for adjoint LNSE in Floquet'
+3.3  'Krylov-Schur for transient growth'
+3.31 'Krylov-Schur for transient growth in Floquet'
+#
+4.0 'All: Budget, Wavemaker, Sensitivity BF'
+4.1       'Budget'
+4.2       'Wavemaker'
+4.3       'Sensitivity to base flow'
+4.41/4.42 'Sensitivity to steady force'
+4.43      'Delta forcing'
