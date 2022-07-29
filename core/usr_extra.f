@@ -42,13 +42,6 @@ c-----------------------------------------------------------------------
       acc_spg = 0.333d0; call bcast(acc_spg, wdsize) !percentage for the acceleration phase in the sponge (e.g. 1/3)
       spng_str = 0.0d0;  call bcast(spng_str, wdsize)
 
-      fst_numk = 20                  ; call bcast(fst_numk, isize)
-      fst_nmodes = 10                ; call bcast(fst_nmodes, isize)
-      fst_okini = 0.230d0            ; call bcast(fst_okini, wdsize)
-      fst_okfin = 1.09d0             ; call bcast(fst_okfin, wdsize)
-      fst_length = 1.80d0/fst_okfin  ; call bcast(fst_length, wdsize) 
-      fst_tu = 0.010d0               ; call bcast(fst_tu, wdsize)
-
       evop = '_'
 
 !     !Broadcast all defaults !
