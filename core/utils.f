@@ -1,4 +1,33 @@
-
+c-----------------------------------------------------------------------
+!     function to check the velocity value in a node
+!     posiz   = position in the velocity vector of the good grid point
+!     procmin = processor that contains the good grid point
+      subroutine pointcheck(posiz,procmin)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      integer, parameter :: lt=lx1*ly1*lz1*lelt
+      integer e,eg,m,n,procmin,posiz
+      real chk(lt),chkmin,glmin,glell
+      n = nx1*ny1*nz1*nelt
+      e = gllel(eg)
+      procmin = 0
+      if(nid.eq.0)write(6,*)'Evaluating probe at:',xck,yck,zck
+      do m = 1,n
+         chk(m)=(xm1(m,1,1,1)-xck)**2+  (ym1(m,1,1,1)-yck)**2
+         if(if3d)      chk(m)= chk(m) + (zm1(m,1,1,1)-zck)**2
+      enddo
+      chkmin = glmin(chk,n)
+      do m = 1,n
+         if (chkmin.eq.chk(m)) then
+            procmin = 1
+            posiz = m
+            print *, 'Point found: ',m
+         endif
+      enddo
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine quicksort2(n, arr, idx)
       implicit none
       integer n, m, nstack
@@ -102,7 +131,6 @@
          idx(l+1) = idx(j)
          idx(j) = b
          jstack = jstack + 2
-
          if (jstack .gt. nstack) pause "..." !'NSTACK too small in quicksort2'
 
          if (ir-i+1 .ge. j-1) then
@@ -119,6 +147,7 @@
       end subroutine quicksort2
 c-----------------------------------------------------------------------
       subroutine nekStab_forcing (ffx,ffy,ffz,ix,iy,iz,ieg)
+! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
       implicit none
       include 'SIZE'            !
       include 'INPUT'           ! IF3D
@@ -132,8 +161,9 @@ c-----------------------------------------------------------------------
       ffy = ffy + fcy(ix,iy,iz,iel)
       if (if3d) ffz = ffz + fcz(ix,iy,iz,iel)
 
-      if (spng_str.gt.0) then
+      if (spng_str.ne.0) then
          ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+
          if (jp.eq.0) then
 !     dns
             ffx = ffx + spng_fun(ip)*(spng_vr(ip,1) - vx(ix,iy,iz,iel))*spng_str
@@ -141,9 +171,9 @@ c-----------------------------------------------------------------------
             if (if3d) ffz = ffz + spng_fun(ip)*(spng_vr(ip,ndim) - vz(ix,iy,iz,iel))*spng_str
          else
 !     perturbation
-            ffx = ffx - spng_fun(ip)*vxp(ip,jp)
-            ffy = ffy - spng_fun(ip)*vyp(ip,jp)
-            if(if3d) ffz = ffz - spng_fun(ip)*vzp(ip,jp)
+            ffx = ffx - spng_fun(ip)*vxp(ip,jp) ! spng_str alaways = 1
+            ffy = ffy - spng_fun(ip)*vyp(ip,jp) ! spng_str alaways = 1
+            if(if3d) ffz = ffz - spng_fun(ip)*vzp(ip,jp) ! spng_str alaways = 1
          endif
       endif
       return
@@ -161,7 +191,7 @@ c-----------------------------------------------------------------------
       iel=gllel(ieg)            !SUM HERE NEKSTAB CUSTOM TEMP FORCING
       if (jp.eq.0) temp  = temp + fct(ix,iy,iz,iel)
 
-      if (spng_str.gt.0) then   !!!HERE SPONGE STRENGHT ALWAYS UNITY!
+      if (spng_str.ne.0) then   !!!HERE SPONGE STRENGHT ALWAYS UNITY!
          ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
          if (jp.eq.0) then      ! dns ! t(1,1,1,1,ifield-1)
             temp = temp + spng_fun(ip)*(spng_vt(ip) - t(ix,iy,iz,iel,1))
@@ -173,6 +203,7 @@ c-----------------------------------------------------------------------
       end subroutine nekStab_forcing_temp
 c-----------------------------------------------------------------------
       subroutine spng_init
+! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -199,10 +230,10 @@ c-----------------------------------------------------------------------
       if(IF3D)spng_dr(3)=(acc_spg)*zRspg
 
       if(nid.eq.0)then
-         write(6,*)' Spg left  section width:',spng_wl
-         write(6,*)' Spg right section width:',spng_wr
-         write(6,*)' Spg left  drop/rise section width:',spng_dl
-         write(6,*)' Spg right drop/rise section width:',spng_dr
+         write(6,*)'  Left  section width x y z:',spng_wl
+         write(6,*)'  Right section width x y z:',spng_wr
+         write(6,*)'  Left  drop/rise width x y z:',spng_dl
+         write(6,*)'  Right drop/rise width x y z:',spng_dr
       endif
 
 !     save reference field -> sponge value reference
@@ -214,6 +245,7 @@ c-----------------------------------------------------------------------
       end subroutine spng_init
 c-----------------------------------------------------------------------
       subroutine spng_set
+! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
 !     set sponge function and refernece fields
       implicit none
       include 'SIZE'
@@ -269,7 +301,7 @@ c-----------------------------------------------------------------------
             do jl=1,ntot
                rtmp = lcoord(jl)
                if(rtmp.le.xxmin_c) then ! constant; xmin
-                  rtmp=1.0d0    !spng_str
+                  rtmp=1.0d0
                elseif(rtmp.lt.xxmin) then ! fall; xmin
                   arg = (xxmin-rtmp)/spng_wl(il)
                   rtmp = mth_stepf(arg)
@@ -279,24 +311,23 @@ c-----------------------------------------------------------------------
                   arg = (rtmp-xxmax)/spng_wr(il)
                   rtmp = mth_stepf(arg)
                else             ! constant
-                  rtmp = 1.0d0  !spng_str
+                  rtmp = 1.0d0
                endif
                spng_fun(jl)=max(spng_fun(jl),rtmp)
             enddo
-
          endif                  ! xxmax.le.xxmin
       endif                     ! spng_w(il).gt.0.0
       enddo
 
-!     ltmp = ifto; ltmp2 = ifpo
-!     ifto = .true.; ifpo= .false.
-!     call outpost2(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
-!     ifto = ltmp; ifpo = ltmp2
+      ltmp = ifto; ltmp2 = ifpo
+      ifto = .true.; ifpo= .false.
+      call outpost2(spng_vr(1,1),spng_vr(1,2),spng_vr(1,NDIM),spng_fun,spng_fun,1,'SPG')
+      ifto = ltmp; ifpo = ltmp2
 
       return
       end subroutine spng_set
 c-----------------------------------------------------------------------
-      real function mth_stepf(x)
+      real function mth_stepf(x) ! credits to KTH Toolbox
 !     compute sponge function
       implicit none
       real x, xdmin, xdmax
@@ -363,6 +394,7 @@ c-----------------------------------------------------------------------
       call dsavg(qx)
       call dsavg(qy)
       if(if3D) call dsavg(qz)
+! V?MASK removes pointsa at the wall and inflow
       call bcdirVC(qx, qy, qz,v1mask,v2mask,v3mask)
 
       if(ifheat)then
