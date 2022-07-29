@@ -102,8 +102,8 @@
       if(nid.eq.0)then
          write(6,"(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)")i,maxiter_newton,residual
          write(6,*)'           Tolerance target:',tol
-         write(887,"(I6,1E15.7)")i,residual
-         write(886,"(I6,2E15.7)")calls_counter,tottime,residual
+         write(886,"(I6,2E15.7)")calls_counter,tottime,residual ! 'residu.dat'
+         write(887,"(I6,1E15.7)")i,residual ! 'residu_newton.dat'
       endif
 
       if(residual .lt. dtol) exit newton
@@ -130,7 +130,7 @@
       enddo newton
       
       if(nid.eq.0.and.i.le.maxiter_newton)then
-         close(887); close(886)
+         close(886); close(887)
          if(i.eq.maxiter_newton)then
             write(6,*)'reached maxiter_newton! STOPPING! (verify convergence)'
          else
