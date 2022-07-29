@@ -38,7 +38,8 @@
          param(12) = dt
          call compute_cfl(ctarg, vx, vy, vz, dt) ! C=sum(ux_i/dx_i)*dt
          if(nid.eq.0)write(6,*)' current CFL and target=',ctarg,param(26)
-!     FINTIM = nsteps*dt
+         lastep = 0             ! subs1.f:279 
+         fintim = nsteps*dt
       endif
 
 !     --> Force constant time step.
@@ -94,6 +95,9 @@
 
       type(krylov_vector) :: q, f
 
+      logical, save :: init
+      data init /.false./
+
 !     --> Pass the baseflow to vx, vy, vz
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
       if (ifheat) call copy(t(1,1,1,1,1), tbase,  nx1*ny1*nz1*nelv)
@@ -103,7 +107,13 @@
       endif
 
 !     --> Standard setup for the linearized solver.
-      call prepare_linearized_solver
+      if(.not.init) then 
+         call prepare_linearized_solver
+         init = .true.
+      endif
+
+      lastep = 0
+      fintim = param(10)
 
 !     --> Direct solver only steady and periodic!
       if (uparam(01) .ge. 3.0 .and. uparam(01) .lt. 3.2 ) then
@@ -128,18 +138,15 @@
          call ts_force_sensitivity_map(f, q)
       end if
 
-
 !     --> Linearized forward map for the Newton-Krylov solver.
       if (floor(uparam(01)) .eq. 2) then
          evop = 'n'
          call newton_linearized_map(f, q)
+         init = .false.
       endif
 
       return
       end subroutine matvec
-
-
-
 
 
 !-----------------------------------------------------------------------
@@ -231,13 +238,7 @@
       end subroutine forward_linearized_map
 
 
-
-
-
 !-----------------------------------------------------------------------
-
-
-
 
 
       subroutine adjoint_linearized_map(f, q)
@@ -270,6 +271,7 @@
 !     --> Turning-off the base flow side-by-side computation. Need to change for Floquet.
       ifbase=.false.
       if(uparam(01) .eq. 3.21)ifbase=.true. ! activate floquet
+
       if(ifstorebase.and.init)ifbase=.false.
 
       if(ifstorebase .and.ifbase.and..not.init)then
@@ -282,7 +284,6 @@
          endif
          if(ifheat)allocate(tor(lv, nsteps))
       endif
-
       if(uparam(01) .eq. 3.31)init=.true. ! activate Floquet for intracycle transient growth (base flow already computed)
 
 !     --> Pass the initial condition for the perturbation.
@@ -294,7 +295,7 @@
 !     --> Output current info to logfile.
          if(nid .eq. 0) write(6,"(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
 
-         ! --> Integrate forward in time.
+         ! --> Integrate backward in time.
          call nekstab_usrchk()
          call nek_advance()
 
@@ -302,14 +303,12 @@
             if(nid.eq.0)write(6,*)'storing first series:',istep,'/',nsteps
             call opcopy(uor(1,istep),vor(1,istep),wor(1,istep),vx,vy,vz)
             if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),n)
-         elseif(ifstorebase .and.init   .and..not.ifbase)then !just moving in memory
+         elseif(ifstorebase .and.init .and..not.ifbase)then !just moving in memory
             if(nid.eq.0)write(6,*)'using stored baseflow'
             call opcopy(vx,vy,vz,uor(1,istep),vor(1,istep),wor(1,istep))
             if(ifheat)call copy(t(1,1,1,1,1),tor(1,istep),n)
          endif
-
       end do
-
       if(ifstorebase .and..not.init.and.ifbase)then
          ifbase=.false.;init=.true.
       endif
@@ -322,9 +321,7 @@
       end subroutine adjoint_linearized_map
 
 
-
 !-----------------------------------------------------------------------
-
 
 
       subroutine transient_growth_map(f, q)
