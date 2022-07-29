@@ -152,8 +152,8 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-         call nekStab_energy   (vx,vy,vz,t,'global_energy.dat'   ,glob_skip)
-         call nekStab_enstrophy(vx,vy,vz,t,'global_enstrophy.dat',glob_skip)
+         call nekStab_energy   (vx,vy,vz,t,'total_energy.dat'   ,glob_skip)
+         call nekStab_enstrophy(vx,vy,vz,t,'total_enstrophy.dat',glob_skip)
 
       case(1)                   ! fixed points computation
 

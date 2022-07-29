@@ -143,7 +143,10 @@
                write(6,*)'NEWTON for forced UPO finished successfully',i,'iterations.'
                write(6,*)' period found:',time,1.0d0/time
             endif
-            if(ifdyntol)write(6,*)'ifdyntol active!'
+         
+         write(6,*)'calls to the linearized solver: ',calls_counter
+         write(6,*)'total nondimensional time:',tottime
+         if(ifdyntol)write(6,*)'ifdyntol active!'
          endif
       endif
       if(residual.lt.dtol)then
