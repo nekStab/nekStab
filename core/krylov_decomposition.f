@@ -60,6 +60,12 @@
 !     ----- Upper Hessenberg matrix -----
       real, dimension(ksize+1, ksize)    :: H
 
+!     ----- Check k_dim -----
+      if(ksize==0)then
+        if (nid.eq.0) write(6,*) 'Krylov base dimension == 0! Increase it.. STOP'
+        call nek_end
+      endif
+
 !     --> Initialize arrays.
       call krylov_zero(f) ; alpha = 0.0d0
 
