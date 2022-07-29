@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = rstcyl0.f00001
+
+stopAt = endTime
+endTime = 7.9
+userParam01 = 2.1 # Newton-GMRES for UPOs
+userParam07 = 100 # k_dim
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 250.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-11
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-11
+residualProj = no
+density = 1.0
+viscosity = -50.0
