@@ -4,7 +4,6 @@
       character(len=1),parameter :: nxtl=char(10) !new line character
 
       character(len=1) :: evop
-       != '_'
       common /nStab_char/ evop
 
       logical                ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,
@@ -20,6 +19,9 @@
 
       integer            mstep,schur_tgt,maxmodes,schur_cnt,glob_skip
       common /nStab_int/ mstep,schur_tgt,maxmodes,schur_cnt,glob_skip
+
+      real xck,yck,zck
+      common /nStab_zeroc/ xck,yck,zck
 
       real ubase(lx1,ly1,lz1,lelt)
      $    ,vbase(lx1,ly1,lz1,lelt)
