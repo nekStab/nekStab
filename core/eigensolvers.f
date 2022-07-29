@@ -186,7 +186,16 @@
 
 !     ----- Prepare stability parameters -----
 
-      call krylov_schur_prepare
+      if( istep.eq.0 .and. (
+     $     uparam(1).eq.3.11 .or. ! Floquet direct
+     $     uparam(1).eq.3.21 .or. ! Floquet adjoint
+     $     uparam(1).eq.3.31    ! Floquet direct-adjoint
+     $     ) )then
+         param(10)=time         ! upo period in field
+         if(nid.eq.0)write(6,*)'Floquet mode !!!'
+         if(nid.eq.0)write(6,*)' getting endTime from file: endTime=',param(10)
+      endif
+      call bcast(param(10), wdsize)
 
 !     ----- First vector (new from noise or restart) -----
 
@@ -451,27 +460,6 @@
 
 
 !----------------------------------------------------------------------
-
-      subroutine krylov_schur_prepare
-
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-      if( istep.eq.0 .and. (uparam(1).eq.3.11 .or. uparam(1).eq.3.22) )then
-      param(10)=time            ! upo period in field
-      if(nid.eq.0)write(6,*)'adjusting period from file: endTime=',param(10)
-      endif
-      call bcast(param(10), wdsize)
-
-      call prepare_linearized_solver ! in matvec.f
-      return
-      end subroutine krylov_schur_prepare
-
-
-
-!----------------------------------------------------------------------
-
 
 
 
@@ -826,9 +814,8 @@
 
       if (nid.eq.0) then
 !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
-!     write(filename, '(a, i4.4)') "H", k
-
-         write(filename, '(A,A,A)') 'Spectre_H',evop,'.dat'
+         write(filename, '(A,A,i4.4,A)') 'Spectre_H',evop,k,'.dat'
+!write(filename, '(A,A,A)') 'Spectre_H',evop,'.dat'
          write(6, *) 'Outposting eigenspectrum of current Hessenberg matrix to : ', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
@@ -836,8 +823,8 @@
          close(67)
 
 !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
-!     write(filename, '(a, i4.4)') "S", k
-         write(filename, '(A,A,A)') 'Spectre_NS',evop,'.dat'
+         write(filename, '(A,A,i4.4,A)') 'Spectre_NS',evop,k,'.dat'
+!write(filename, '(A,A,A)') 'Spectre_NS',evop,'.dat'
          write(6, *) 'Outposting eigenspectrum of current log-transform spectrum matrix to : ', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
@@ -861,7 +848,7 @@
 
 !     if(cnt.ge.schur_tgt)then
 !     if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
-!     !call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
+!     call outpost_ks(vals, vecs, qx, qy, qz, qp, qt, residual)
 !     call nek_end
 !     endif
 
@@ -911,7 +898,12 @@
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
       if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
 
-      call krylov_schur_prepare
+      if( istep.eq.0 .and. (uparam(1).eq.3.11 .or. uparam(1).eq.3.22) )then
+      param(10)=time            ! upo period in field
+      if(nid.eq.0)write(6,*)'adjusting period from file: endTime=',param(10)
+      endif
+      call bcast(param(10), wdsize)
+      call prepare_linearized_solver ! in matvec.f
 
       call add_noise(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
       call normalize(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1),alpha)
