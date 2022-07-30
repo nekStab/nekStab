@@ -4,11 +4,10 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       real flow_rate
-
-      if(istep.eq.0) time = 0.0d0
+      ifto = .true.
+      !if(istep.eq.0) time = 0.0d0
       call nekStab
-      call compute_flow_rate(flow_rate)
-
+      !call compute_flow_rate(flow_rate)
       return
       end
 c-----------------------------------------------------------------------
@@ -20,10 +19,10 @@ c-----------------------------------------------------------------------
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
         schur_tgt = 2 ; call bcast(schur_tgt,isize)
         maxmodes = 10 ; call bcast(maxmodes,isize)
-        ifres = .true. ; call bcast(ifres,lsize)
-        ifvor = .true. ; call bcast(ifvor,lsize)
-        ifvox = .true. ; call bcast(ifvox,lsize)
-        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
+        ifdyntol = .false. ; call bcast(ifdyntol,lsize)
       endif
       return
       end

@@ -1,14 +1,9 @@
 [GENERAL]
-startFrom = 0
+startFrom = BF_bfs0.f00001
 stopAt = endTime
-endTime = 10
+endTime = 5
 
 userParam01 = 3.3  # 0:dns,1:stabilization,3:stability
-userParam02 = 0  # krylov snapshot to load
-userParam03 = 3  # stabilization technique: 1:sfd
-userParam04 = 0  # freq (Strouhal leading mode)
-userParam05 = 0  # gain (twice growth rate leading mode)
-userParam06 = 0  #
 userParam07 = 64  #
 userParam08 = 5   # sponge lenght left
 userParam09 = 10  # sponge lenght right
@@ -17,7 +12,6 @@ userParam10 = 2   # sponge strenght
 dt = 0
 variableDt = no
 timeStepper = bdf3
-#extrapolation = OIFS
 targetCFL = 0.5
 
 writeControl = runTime
@@ -36,7 +30,7 @@ residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-10
+residualTol = 1.0E-08
 residualProj = no
 density = 1.0
 viscosity = -500.0

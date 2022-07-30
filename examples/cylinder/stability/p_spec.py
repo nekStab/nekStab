@@ -20,7 +20,7 @@ plt.style.use('seaborn-white')
 
 formt = 'png'
 ajust = 'tight'
-qual = 900
+qual = 500
 fig_width = 3.5
 fig_height = 2.45
 
@@ -29,9 +29,9 @@ class SpectreH(object):
         #data = np.transpose(np.loadtxt(filename))
         print('Reading '+filename)
         data = np.transpose(np.genfromtxt(filename))
-        self.vp_real  = data[0]
-        self.vp_imag  = data[1]
-        self.residu   = data[2]
+        self.vpr = data[0]
+        self.vpi = data[1]
+        self.r   = data[2]
         del data
 
 class SpectreNS(object):
@@ -39,47 +39,47 @@ class SpectreNS(object):
         print('Reading '+filename)
         #data = np.transpose(np.loadtxt(filename))
         data = np.transpose(np.genfromtxt(filename))
-        self.vp_real  = data[0]
-        self.vp_imag  = data[1]
+        self.vpr  = data[0]
+        self.vpi  = data[1]
         del data
 
-def plot_H(ax, vp_real, vp_imag, residu, sized = 0, color='gray',symb = 'o', label=None):
+def plot_H(ax, vpr, vpi, r, sized = 0, color='gray',symb = 'o', label=None):
     iflabel = False
     theta = np.linspace(0.0,2.*np.pi,400);ax.plot(np.cos(theta),np.sin(theta), lw=0.2, color='r', ls='-')
-    for k in range(len(vp_real)):
-        if residu[k] < tolerance:
-            mod = np.sqrt( (vp_real[k])**2 + (vp_imag[k])**2 )
+    for k in range(len(vpr)):
+        if r[k] < tolerance:
+            mod = np.sqrt( (vpr[k])**2 + (vpi[k])**2 )
             if mod == 1:
-                print('Time derivative of the baseflow found=',mod,vp_real[k],vp_imag[k])
-                plt.scatter(vp_real[k],vp_imag[k], s=8+sized, alpha=0.8,marker='x',facecolors=color,edgecolors=color,linewidth=0.55)
+                print('Time derivative of the baseflow found=',mod,vpr[k],vpi[k])
+                plt.scatter(vpr[k],vpi[k], s=8+sized, alpha=0.8,marker='x',facecolors=color,edgecolors=color,linewidth=0.55)
             elif mod > 1:
-                plt.scatter(vp_real[k],vp_imag[k], s=5+sized, alpha=0.8,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18)
+                plt.scatter(vpr[k],vpi[k], s=5+sized, alpha=0.8,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18)
         else:
             if iflabel == False:
-                plt.scatter(vp_real[k],vp_imag[k], s=5+sized, alpha=1,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18,label=label)
+                plt.scatter(vpr[k],vpi[k], s=5+sized, alpha=1,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18,label=label)
                 iflabel=True
             else:
-                plt.scatter(vp_real[k],vp_imag[k], s=5+sized, alpha=0.4,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18)
+                plt.scatter(vpr[k],vpi[k], s=5+sized, alpha=0.4,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18)
             
     ax.axhline(y=0., xmin=0, xmax=1, lw=0.2, color='k', ls=':')
     ax.axvline(x=0., ymin=0, ymax=1, lw=0.2, color='k', ls=':')
     return
 
-def plot_NS(ax, vp_real, vp_imag, freq=False, sized = 0, color='gray', symb = 'o', label=None):
+def plot_NS(ax, vpr, vpi, freq=False, sized = 0, color='gray', symb = 'o', label=None):
     b = 1; iflabel=False
     if freq:
         b = (2.*np.pi)
-    for k in range(len(file.vp_real)):
-        if file.vp_real[k] > 0:
-            print('Mode: ',(k+1),file.vp_real[k],file.vp_imag[k])
-            print('      f=',file.vp_imag[k]/b)
-            ax.scatter(file.vp_imag[k]/b,file.vp_real[k], alpha=1, s=7+sized,marker=symb, facecolors=color,edgecolors='k',linewidth=0.3)
+    for k in range(len(f.vpr)):
+        if f.vpr[k] > 0:
+            print('Mode: ',(k+1),f.vpr[k],f.vpi[k])
+            print('      f=',f.vpi[k]/b)
+            ax.scatter(f.vpi[k]/b,f.vpr[k], alpha=1, s=7+sized,marker=symb, facecolors=color,edgecolors='k',linewidth=0.3)
         else:
             if iflabel == False:
-                ax.scatter(file.vp_imag[k]/b,file.vp_real[k], s=5+sized, alpha=0.8,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18,label=label)
+                ax.scatter(f.vpi[k]/b,f.vpr[k], s=5+sized, alpha=0.8,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18,label=label)
                 iflabel = True
             else:
-                ax.scatter(file.vp_imag[k]/b,file.vp_real[k], s=5+sized, alpha=0.8,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18)
+                ax.scatter(f.vpi[k]/b,f.vpr[k], s=5+sized, alpha=0.8,marker=symb,facecolors=color,edgecolors='k',linewidth=0.18)
                 
     ax.axhline(y=0., xmin=0, xmax=1, lw=0.2, color='k', ls=':')
     ax.axvline(x=0., ymin=0, ymax=1, lw=0.2, color='k', ls=':')
@@ -95,10 +95,10 @@ if __name__ == '__main__':
     plt.xticks(xrz,xlabels);plt.xlim(-1.1,1.1);plt.xlabel(r'$\Re (\mu)$')
     plt.yticks(xrz,xlabels);plt.ylim(-1.1,1.1);plt.ylabel(r'$\Im (\mu)$')
 
-    file = SpectreH('direct/Spectre_Hd.dat')
-    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 6, 'k', 'o', r'$Re=150$')
-    file = SpectreH('adjoint/Spectre_Ha.dat')
-    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 0, 'r', 'o', r'$Re=150^{\dagger}$')
+    f = SpectreH('direct/Spectre_Hd.dat')
+    plot_H(plt, f.vpr, f.vpi, f.r, 8, 'k', 'o', r'$Re=50$')
+    f = SpectreH('adjoint/Spectre_Ha.dat')
+    plot_H(plt, f.vpr, f.vpi, f.r, 2, 'r', 'o', r'$Re=50^{\dagger}$')
     
     fname='Spectre_H.'+formt
     plt.legend(loc='best',fontsize=6)
@@ -109,10 +109,12 @@ if __name__ == '__main__':
     plt.xlabel(r'$\Re (\lambda)$');#plt.xlim(-1,1)
     plt.ylabel(r'$\Im (\lambda)$');# plt.ylim(-0.1,0.02)
 
-    file = SpectreNS('direct/Spectre_NSd_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 6, 'k', 'o', r'$Re=150$')
-    file = SpectreNS('adjoint/Spectre_NSa_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'r', 'o', r'$Re=150^{\dagger}$')
+    plt.scatter(0.73562,0.01264,s=4,marker='*',label=r'Marquet et al (2019)')
+    
+    f = SpectreNS('direct/Spectre_NSd_conv.dat')
+    plot_NS(plt, f.vpr, f.vpi, False, 8, 'k', 'o', r'$Re=50$')
+    f = SpectreNS('adjoint/Spectre_NSa_conv.dat')
+    plot_NS(plt, f.vpr, f.vpi, False, 2, 'r', 'o', r'$Re=50^{\dagger}$')
     
     fname='Spectre_NS.'+formt
     plt.legend(loc='best',fontsize=6)

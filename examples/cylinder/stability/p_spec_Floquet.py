@@ -20,7 +20,7 @@ plt.style.use('seaborn-white')
 
 formt = 'png'
 ajust = 'tight'
-qual = 900
+qual = 500
 fig_width = 3.5
 fig_height = 2.45
 
@@ -95,12 +95,12 @@ if __name__ == '__main__':
     plt.xticks(xrz,xlabels);plt.xlim(-1.1,1.1);plt.xlabel(r'$\Re (\mu)$')
     plt.yticks(xrz,xlabels);plt.ylim(-1.1,1.1);plt.ylabel(r'$\Im (\mu)$')
 
-    file = SpectreH('direct/Spectre_Hd.dat')
-    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 6, 'k', 'o', r'$Re=150$')
-    file = SpectreH('adjoint/Spectre_Ha.dat')
-    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 0, 'r', 'o', r'$Re=150^{\dagger}$')
+    file = SpectreH('direct_Floquet/Spectre_Hd.dat')
+    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 8, 'k', 'o', r'$Re=50$')
+    file = SpectreH('adjoint_Floquet/Spectre_Ha.dat')
+    plot_H(plt, file.vp_real, file.vp_imag, file.residu, 2, 'r', 'o', r'$Re=50^{\dagger}$')
     
-    fname='Spectre_H.'+formt
+    fname='Spectre_H_Floquet.'+formt
     plt.legend(loc='best',fontsize=6)
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')
@@ -109,12 +109,12 @@ if __name__ == '__main__':
     plt.xlabel(r'$\Re (\lambda)$');#plt.xlim(-1,1)
     plt.ylabel(r'$\Im (\lambda)$');# plt.ylim(-0.1,0.02)
 
-    file = SpectreNS('direct/Spectre_NSd_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 6, 'k', 'o', r'$Re=150$')
-    file = SpectreNS('adjoint/Spectre_NSa_conv.dat')
-    plot_NS(plt, file.vp_real, file.vp_imag, False, 0, 'r', 'o', r'$Re=150^{\dagger}$')
+    file = SpectreNS('direct_Floquet/Spectre_NSd_conv.dat')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 8, 'k', 'o', r'$Re=50$')
+    file = SpectreNS('adjoint_Floquet/Spectre_NSa_conv.dat')
+    plot_NS(plt, file.vp_real, file.vp_imag, False, 2, 'r', 'o', r'$Re=50^{\dagger}$')
     
-    fname='Spectre_NS.'+formt
+    fname='Spectre_NS_Floquet.'+formt
     plt.legend(loc='best',fontsize=6)
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')

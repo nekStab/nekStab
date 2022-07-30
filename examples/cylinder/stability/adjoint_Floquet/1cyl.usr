@@ -3,19 +3,12 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
-      if(uparam(1).eq.0.and.istep.eq.0)t=0.0d0
       call nekStab
-      call hpts
-
-      !call stat_avg
-      !call stats_3d_full
 
       return
       end
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
-      implicit none
       include 'SIZE'
       include 'TOTAL'
 
@@ -23,12 +16,14 @@ c-----------------------------------------------------------------------
 
         xLspg = uparam(8); call bcast(xLspg , wdsize)
         xRspg = uparam(9); call bcast(xRspg , wdsize)
+        spng_str = uparam(10);  call bcast(spng_str, wdsize)
 
-        schur_tgt = 4 ; call bcast(schur_tgt,isize)
-        maxmodes = 2 ; call bcast(maxmodes,isize)
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
+        maxmodes = k_dim ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
-        !ifvor = .true. ; call bcast(ifvor,lsize)
-        !ifvox = .true. ; call bcast(ifvox,lsize)
+        ifvor = .true. ; call bcast(ifvor,lsize)
+        ifvox = .true. ; call bcast(ifvox,lsize)
 
       endif
 
@@ -42,6 +37,7 @@ c-----------------------------------------------------------------------
 
       ffx = 0.0d0
       ffy = 0.0d0
+      !if(ifto)ffy = temp*0.15d0 !coupling the scalar field
       ffz = 0.0d0
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
@@ -79,10 +75,13 @@ c-----------------------------------------------------------------------
 
       if (JP.eq.0) then         ! velocity
          e  = gllel(ieg)
-         ux= ubb(ix,iy,iz,e)
+         ux = 1.0d0
          uy = 0.0d0
          uz = 0.0d0
          temp=0.0d0
+
+         if(x.gt.-1.and.x.lt.1)temp=1.0d0 !cylinder with T
+
       else                      ! perturbation
          ux = 0.0d0
          uy = 0.0d0
@@ -118,12 +117,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
-
-                 !ID, FIELD, BC
-      call setbc(4,1,'v  ')
-      call setbc(2,1,'O  ')
-      call setbc(3,1,'W  ')
-
+      
       !this mesh was generatd with genbox
       !with only BCs for velicity
       !here we chenge outflow to dirichlet if adjoint
@@ -137,23 +131,19 @@ c-----------------------------------------------------------------------
       enddo
       endif
 
-      call compute_inflow(ubb) !compute inflow profile to variables
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+
       return
       end
 c-----------------------------------------------------------------------
       subroutine usrdat3
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine compute_inflow(ubb1) !compute parabolic profile for jet in crossflow
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      real ubb1(1)
-      integer i
-      do i=1,nx1*ny1*nz1*nelv
-       ubb1(i)=4.0d0*ym1(i,1,1,1)*(1.0d0-ym1(i,1,1,1))
-      enddo
       return
       end
