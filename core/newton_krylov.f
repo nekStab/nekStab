@@ -72,7 +72,7 @@
       time = q%time             ! adjust
       if(uparam(1).eq.2.0)time = real(i) ! to ease visu in paraview
       if(uparam(1).eq.2.2)time = real(i)*q%time ! to ease visu in paraview
-      call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "nwt")
+      !call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, 'nwt')
       time = q%time             ! restore
 
 !     --> Allocate nonlinear solution variable only for natural or forced UPO!
