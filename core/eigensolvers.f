@@ -30,8 +30,6 @@
 !     alpha : real
 !     Value of the inner-product alpha = <p, q>.
 !     
-!     Last edit : April 2nd 2020 by JC Loiseau.
-
       use krylov_subspace
       implicit none
       include "SIZE"
@@ -40,16 +38,22 @@
       real, dimension(lv), intent(in) :: px, py, pz
       real, dimension(lv), intent(in) :: qx, qy, qz
       real, dimension(lp), intent(in) :: pp, qp !not used
-      real, dimension(lv), intent(in) :: pt, qt
+      real, dimension(lv,ldimt), intent(in) :: pt, qt
 
       real, intent(out) :: alpha
       real :: glsc3
+      integer i
 
       n = nx1 * ny1 * nz1 * nelv
 
       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
       if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
-      if (ifheat) alpha = alpha + glsc3(pt, bm1s, qt, n)
+      if (ifheat) alpha = alpha + glsc3(pt(:,1), bm1s, qt(:,1), n)
+      !if (ldimt.gt.1) then
+      !      do i = 2,ldimt
+      !            alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
+      !      enddo
+      !endif
 
       return
       end subroutine inner_product
@@ -72,7 +76,7 @@
 
       real, intent(in), dimension(lv) :: qx, qy, qz
       real, intent(in), dimension(lp) :: qp
-      real, intent(in), dimension(lv) :: qt
+      real, intent(in), dimension(lv,ldimt) :: qt
       real, intent(out)                :: alpha
 
       call inner_product(alpha, qx,qy,qz,qp,qt, qx,qy,qz,qp,qt)
@@ -118,7 +122,7 @@
 
       real, dimension(lv), intent(inout) :: qx, qy, qz
       real, dimension(lp), intent(inout) :: qp
-      real, dimension(lv), intent(inout) :: qt
+      real, dimension(lv,ldimt), intent(inout) :: qt
       real, intent(out)                   :: alpha
       real                                :: beta
 
@@ -157,7 +161,7 @@
 !     ----- Miscellaneous -----
       type(krylov_vector) :: wrk, wrk2
 
-      integer :: mstart, cnt
+      integer :: mstart, cnt, m
       real                               :: alpha, beta, glsc3
       logical                            :: converged
       integer                            :: i, j
@@ -180,9 +184,18 @@
          call load_fld(filename)
       endif
 
+      !t      (lx1,ly1,lz1,lelt,ldimt)
+      !tbase  (lx1,ly1,lz1,lelt,ldimt)
+      !tp     (lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
+
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
-      if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
+      if(ifheat) call copy(tbase(1,1,1,1,1),t(1,1,1,1,1),n)
+      if (ldimt.gt.1) then
+            do m = 2,ldimt
+               call copy(tbase(1,1,1,1,m),t(1,1,1,1,m),n)
+            enddo
+      endif
 
 !     ----- Prepare stability parameters -----
 
@@ -208,9 +221,15 @@
          if(ifseed_nois)then    ! noise as initial seed
 
             if(nid.eq.0)write(6,*)'Filling fields with noise...'
-            call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,1,1))
+            call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,:,1))
             wrk2%vx = vxp(:, 1) ; wrk2%vy = vyp(:, 1) ; wrk2%vz = vzp(:, 1)
-            wrk2%pr = prp(:, 1) ; wrk2%theta = tp(:, 1, 1)
+            wrk2%pr = prp(:, 1)
+            if(ifheat) wrk2%theta(:,1) = tp(:, 1, 1)
+            if (ldimt.gt.1) then
+                  do m = 2,ldimt
+                        wrk2%theta(:,m) = tp(:, m, 1)
+                  enddo
+            endif
             call krylov_normalize(wrk2, alpha)
             call matvec(wrk, wrk2)
 
@@ -230,19 +249,30 @@
 
             if(nid.eq.0)write(*,*)'Load real part of mode 1 as seed: ',filename
             call load_fld(filename)
-            call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1), vx,vy,vz,pr,t(1,1,1,1,1))
+            call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,:,1), vx,vy,vz,pr,t(1,1,1,1,1))
 
          else
 
             call opcopy(vxp(:,1), vyp(:,1), vzp(:, 1), ubase, vbase, wbase)
-            if(ifheat) call copy(tp(1,1,1), tbase,n)
+            if(ifheat) call copy(tp(:,1,1), tbase,n)
+            if (ldimt.gt.1) then
+                  do m = 2,ldimt
+                        call copy(tp(1,m,1),tbase(1,1,1,1,m),n)
+                  enddo
+            endif
 
          endif
 
 !     ----- Normalized to unit-norm -----
 
          wrk%vx = vxp(:, 1) ; wrk%vy = vyp(:, 1) ; wrk%vz = vzp(:, 1)
-         wrk%pr = prp(:, 1) ; wrk%theta = tp(:, 1, 1)
+         wrk%pr = prp(:, 1)
+         if(ifheat) wrk%theta(:,1) = tp(:, 1, 1)
+         if (ldimt.gt.1) then
+               do m = 2,ldimt
+                     wrk%theta(:,m) = tp(:, m, 1)
+               enddo
+         endif
          call krylov_normalize(wrk, alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
@@ -385,7 +415,7 @@
       type(krylov_vector), dimension(ksize+1) :: Q
       real, dimension(lv,ksize+1)       :: qx, qy, qz
       real, dimension(lp,ksize+1)       :: qp
-      real, dimension(lv,ksize+1)       :: qt
+      real, dimension(lv,ldimt,ksize+1) :: qt
 
 !     ----- Upper Hessenberg matrix -----
 
@@ -398,7 +428,7 @@
 
 !     ----- Miscellaneous -----
 
-      integer :: mstart, i, j, k
+      integer :: mstart, i, j, k, m, ksize
       logical, dimension(ksize)          :: selected
 
 !     ----- Schur and Hessenberg decomposition -----
@@ -429,13 +459,23 @@
          qy(:, i) = Q(i)%vy
          if (if3D) qz(:, i) = Q(i)%vz
          if (ifpo) qp(:, i) = Q(i)%pr
-         if (ifheat) qt(:, i) = Q(i)%theta
+         if (ifheat) qt(:, 1, i) = Q(i)%theta(:,1)
+            if (ldimt.gt.1) then
+            do m = 2,ldimt
+                  qt(:, 1, m) = Q(i)%theta(:,m)
+            enddo
+            endif
       enddo
       qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
       qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
       if (if3D) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
       if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
-      if (ifheat) qt(:, 1:ksize) = matmul(qt(:, 1:ksize), vecs)
+      if (ifheat) qt(:, 1, 1:ksize) = matmul(qt(:, 1 ,1:ksize), vecs)
+      if (ldimt.gt.1) then
+      do m = 2,ldimt
+            qt(:, m, 1:ksize) = matmul(qt(:, m ,1:ksize), vecs)
+      enddo
+      endif
 
 !     --> Update the Schur matrix with b.T @ Q corresponding to
 !     the residual beta in the new basis.
@@ -445,14 +485,19 @@
 !     --> Add the last generated Krylov vector as the new starting one.
       mstart = mstart + 1
 
-      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,mstart),
-     $     qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,ksize+1))
+      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,:,mstart),
+     $     qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,:,ksize+1))
       do i = 1, k_dim+1
          Q(i)%vx = qx(:, i)
          Q(i)%vy = qy(:, i)
          if (if3D) Q(i)%vz = qz(:, i)
          if (ifpo) Q(i)%pr = qp(:, i)
-         if (ifheat) Q(i)%theta = qt(:, i)
+         if (ifheat) Q(i)%theta(:,1) = qt(:, 1, i)
+         if (ldimt.gt.1) then
+            do m = 2,ldimt
+                  Q(i)%theta(:,m) = qt(:, m, i)
+            enddo
+      endif
       enddo
 
       return
@@ -481,7 +526,7 @@
 
       real, dimension(lv,k_dim+1)        :: qx, qy, qz
       real, dimension(lp,k_dim+1)        :: qp
-      real, dimension(lv,k_dim+1)        :: qt
+      real, dimension(lv,ldimt,k_dim+1)        :: qt
 
 !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
@@ -492,9 +537,9 @@
 
       complex*16, dimension(lv)          :: fp_cx, fp_cy, fp_cz
       complex*16, dimension(lp)          :: fp_cp
-      complex*16, dimension(lv)          :: fp_ct
+      complex*16, dimension(lv,ldimt)    :: fp_ct
 !     ----- Miscellaneous -----
-      integer :: i
+      integer :: i,m
 
       real                               :: sampling_period
       real, dimension(k_dim)             :: residual
@@ -516,7 +561,12 @@
          qy(:, i) = Q(i)%vy
          if (if3D) qz(:, i) = Q(i)%vz
          if (ifpo) qp(:, i) = Q(i)%pr
-         if (ifheat)qt(:, i) = Q(i)%theta
+         if (ifheat)qt(:, 1, i) = Q(i)%theta(:,1)
+         if (ldimt.gt.1) then
+            do m = 2,ldimt
+                  qt(:, 1, m) = Q(i)%theta(:,m)
+            enddo
+         endif
       enddo
 
 !     evop defined in matrix_vector_product
@@ -564,7 +614,12 @@
          fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
          if (if3D) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
          if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
-         if (ifheat) fp_ct = matmul(qt(:, 1:k_dim), vecs(:, i))
+         if (ifheat) fp_ct(:,1) = matmul(qt(:, 1, 1:k_dim), vecs(:, i))
+         if (ldimt.gt.1) then
+            do m = 2,ldimt
+                  fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))      
+            enddo
+         endif
 
 !     ----- Normalization to be unit-norm -----
 !     Note: volume integral of FP*conj(FP) = 1.
@@ -574,9 +629,9 @@
          beta = 1.0d0/sqrt(alpha)
 
 !     ----- Output the real part -----
-         call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
-         call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
-         call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nRe)
+         call nopcopy(vx,vy,vz,pr,t, real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
+         call nopcmult(vx,vy,vz,pr,t, beta)
+         call outpost(vx,vy,vz,pr,t, nRe)
 
          if(ifvor)then
 !     ----- Output vorticity from real part -----
@@ -589,9 +644,9 @@
          endif
 
 !     ----- Output the imaginary part -----
-         call nopcopy(vx,vy,vz,pr,t(1,1,1,1,1), aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
-         call nopcmult(vx,vy,vz,pr,t(1,1,1,1,1), beta)
-         call outpost(vx, vy, vz, pr, t(1,1,1,1,1), nIm)
+         call nopcopy(vx,vy,vz,pr,t, aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
+         call nopcmult(vx,vy,vz,pr,t, beta)
+         call outpost(vx,vy,vz,pr,t, nIm)
 
 !     computing and outposting optimal response from real part ! works with Floquet!
          if((uparam(1).eq.3.3.or.uparam(1).eq.3.31))then
