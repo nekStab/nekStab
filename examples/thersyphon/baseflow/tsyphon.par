@@ -1,16 +1,16 @@
 [GENERAL]
 startfrom = BF_Ra500_tsyphon0.f00001
-stopat = endTime
+stopAt = endTime
 endtime = 1.0
 
-userparam01 = 2.0 #
+userparam01 = 2 #
 userparam06 = 500.0 # Ra
 userparam07 = 110  # k_dim
 
 dt = 0
 variabledt = yes
 timestepper = bdf3
-targetcfl = 0.5
+targetcfl = 0.4
 
 writecontrol = runTime #timestep
 writeinterval = 10.

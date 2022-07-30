@@ -1,0 +1,37 @@
+[GENERAL]
+startFrom = BF_1cyl0.f00001 # here UPO file
+
+stopAt = endTime
+endTime = 1.0 # time will be adjusted from the UPO file
+
+userParam01 = 3.21  # Adjoint Floquet
+userParam07 = 200 # k_dim
+userParam08 = 5   # Sponge left side
+userParam09 = 5   # Sponge right side
+userParam10 = 1.7 # Sponge streght
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -50.0
