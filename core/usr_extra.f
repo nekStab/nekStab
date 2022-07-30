@@ -33,6 +33,7 @@ c-----------------------------------------------------------------------
       xck = 2.0D0  ; call bcast(xck, wdsize)
       yck = 0.0D0  ; call bcast(yck, wdsize)
       zck = 0.0D0  ; call bcast(zck, wdsize)
+
       xLspg   = 0.0d0; call bcast(xLspg, wdsize) ! x left
       xRspg   = 0.0d0; call bcast(xRspg, wdsize) ! x right
       yLspg   = 0.0d0; call bcast(yLspg, wdsize)
@@ -164,7 +165,7 @@ c-----------------------------------------------------------------------
          if( uparam(1) .eq. 1.1)then
             if(nid.eq.0)write(6,*)'SFD'
             call SFD
-            if(uparam(5).eq.0)call nekStab_energy(vx,vy,vz,t,'global_energy.dat',glob_skip)
+            if(uparam(5).eq.0)call nekStab_energy(vx,vy,vz,t,'total_energy.dat',glob_skip)
          elseif( uparam(1) .eq. 1.2)then
             if(nid.eq.0)write(6,*)'BOOSTCONV'
             call BoostConv
@@ -262,6 +263,19 @@ c-----------------------------------------------------------------------
 
          ifto_sav = ifto; ifpo_sav = ifpo
          ifto = .false.; ifpo = .false.
+
+         if(ifrans)then
+            ifvo = .false. ; ifto = .true.
+            ifpsco(:) = .true.
+
+            call outpost(vx,vy,vz,pr,t(1,1,1,1,:), 'RNS')
+
+            ifpsco(:) = .true.; ifto = .true.
+            call outpost(vx,vy,vz,pr,t(1,1,1,1,2), 'TKE')
+            call outpost(vx,vy,vz,pr,t(1,1,1,1,3), 'TAU')
+            call outpost(vx,vy,vz,pr,t(1,1,1,1,4), 'NUT')
+            ifvo = .true. ; ifto = .false.
+         endif
 
 !---  > Compute and oupost vorticity.
          if(ifvor)then
