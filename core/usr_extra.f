@@ -23,7 +23,7 @@ c-----------------------------------------------------------------------
       ifbf2D = .false.          ! force 2D base flow solution
       ifstorebase = .true.      ! store base flow for Floquet analysis (dynamic allocated)
       ifdyntol = .false.        ! dynamical tolerances for SFD and Newton (potential speed-up)
-
+      ifrans = .false.
       ifseed_nois = .true.      ! noise as initial seed
       ifseed_symm = .false.     ! symmetry initial seed
       ifseed_load = .false.     ! loading initial seed (e.g. Re_ )
@@ -55,7 +55,8 @@ c-----------------------------------------------------------------------
       call bcast(glob_skip, isize)
 
       call bcast(ifres   , lsize) !lsize for boolean
-      call bcast(ifvor   , lsize)
+      call bcast(ifvor   , lsize)    
+      call bcast(ifrans   , lsize) !lsize for boolean
       call bcast(ifvox   , lsize)
       call bcast(ifseed_nois  , lsize)
       call bcast(ifseed_symm  , lsize)

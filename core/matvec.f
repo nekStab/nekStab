@@ -97,11 +97,16 @@
 
       logical, save :: init
       data init /.false./
+      integer m
 
 !     --> Pass the baseflow to vx, vy, vz
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
-      if (ifheat) call copy(t(1,1,1,1,1), tbase,  nx1*ny1*nz1*nelv)
-
+      if (ifheat) call copy(t(1,1,1,1,1), tbase(1,1,1,1,1),  nx1*ny1*nz1*nelv)
+      if (ldimt.gt.1) then
+            do m = 2,ldimt
+                  call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+            enddo
+      endif
       if(ifbf2d .and. if3d)then
          call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
       endif
@@ -287,7 +292,7 @@
       if(uparam(01) .eq. 3.31)init=.true. ! activate Floquet for intracycle transient growth (base flow already computed)
 
 !     --> Pass the initial condition for the perturbation.
-      call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,1,1),
+      call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,:,1),
      $     q%vx,    q%vy,    q%vz,    q%pr,    q%theta)
 
       time = 0.0D+00
