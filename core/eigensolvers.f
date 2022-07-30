@@ -407,8 +407,8 @@
 !     =====                                       =====
 !     =================================================
 
-
-      integer :: ksize
+      integer,intent(inout) :: mstart
+      integer,intent(in) :: ksize
 
 !     ----- Krylov basis V for the projection M*V = V*H -----
 
@@ -428,7 +428,7 @@
 
 !     ----- Miscellaneous -----
 
-      integer :: mstart, i, j, k, m, ksize
+      integer :: i, j, k, m
       logical, dimension(ksize)          :: selected
 
 !     ----- Schur and Hessenberg decomposition -----
