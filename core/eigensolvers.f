@@ -254,7 +254,7 @@
          else
 
             call opcopy(vxp(:,1), vyp(:,1), vzp(:, 1), ubase, vbase, wbase)
-            if(ifheat) call copy(tp(:,1,1), tbase,n)
+            if(ifheat) call copy(tp(1,1,1),tbase(1,1,1,1,1),n)
             if (ldimt.gt.1) then
                   do m = 2,ldimt
                         call copy(tp(1,m,1),tbase(1,1,1,1,m),n)
