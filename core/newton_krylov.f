@@ -75,7 +75,7 @@
       call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "nwt")
       time = q%time             ! restore
 
-!     --> Allocate nonlinear solution variable!
+!     --> Allocate nonlinear solution variable only for natural or forced UPO!
       if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
          if(nid .eq. 0) write(6,*) 'ALLOCATING ORBIT FOR GMRES WITH NSTEPS:',nsteps
          allocate(uor(lv, nsteps), vor(lv, nsteps))

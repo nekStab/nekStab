@@ -26,12 +26,12 @@ axiSymmetry = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-7
+residualTol = 1.0E-8
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-7
+residualTol = 1.0E-8
 residualProj = yes
 density = 1.0
-viscosity = -1400.0
+viscosity = -1900.0

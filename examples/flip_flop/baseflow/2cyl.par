@@ -1,7 +1,7 @@
 [GENERAL]
-startFrom = BF_Re62_2cyl0.f00001
+startFrom = BF_Re60_2cyl0.f00001
 stopAt = endTime
-endTime = 8.733564341058
+endTime = 8.73356
 
 userParam01 = 2.1  # Newton-GMRES for UPOs 
 userParam07 = 128  # k_dim
@@ -21,12 +21,12 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-7
+residualTol = 1.0E-8
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-7
+residualTol = 1.0E-8
 residualProj = yes
 density = 1.0
 viscosity = -63.0

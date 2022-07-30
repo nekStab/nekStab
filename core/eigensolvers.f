@@ -307,11 +307,13 @@
       do while ( .not. converged )
 !     --> Arnoldi factorization.
          call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
-         if(nid.eq.0) then
-            open(unit=12345, file="Hessenberg_matrix.dat")
-            write(12345, *) H(1:k_dim, 1:k_dim)
-            close(12345)
-         endif
+
+         !if(nid.eq.0) then
+         !   open(unit=12345, file="Hessenberg_matrix.dat")
+         !   write(12345, *) H(1:k_dim, 1:k_dim)
+         !   close(12345)
+         !endif
+
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
 
@@ -815,7 +817,6 @@
       if (nid.eq.0) then
 !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
          write(filename, '(A,A,i4.4,A)') 'Spectre_H',evop,k,'.dat'
-!write(filename, '(A,A,A)') 'Spectre_H',evop,'.dat'
          write(6, *) 'Outposting eigenspectrum of current Hessenberg matrix to : ', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
@@ -824,7 +825,6 @@
 
 !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
          write(filename, '(A,A,i4.4,A)') 'Spectre_NS',evop,k,'.dat'
-!write(filename, '(A,A,A)') 'Spectre_NS',evop,'.dat'
          write(6, *) 'Outposting eigenspectrum of current log-transform spectrum matrix to : ', filename
 
          open(67, file=trim(filename), status='unknown', form='formatted')
