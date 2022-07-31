@@ -114,8 +114,8 @@ c-----------------------------------------------------------------------
          if(nid.eq.0)write(6,*)' Initializing sponge...'
          if(nid.eq.0)write(6,*)' Sponge strenght:',spng_str
          if(spng_str.lt.0)then
-            spng_str=abs(spng_str) 
-            if(nid.eq.0)write(6,*)' Forcing sponge strenght to positive:',spng_str
+           spng_str=abs(spng_str) 
+           if(nid.eq.0)write(6,*)' Ensure positive sponge strenght:',spng_str
          endif
          call spng_init
 

@@ -14,7 +14,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 100.
+writeInterval = 1.
 writeDoublePrecision = no
 
 dealiasing = yes
