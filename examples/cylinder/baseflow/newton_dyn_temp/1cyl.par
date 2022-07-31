@@ -1,0 +1,57 @@
+[GENERAL]
+startFrom = 0 # BFt_1cyl0.f00001
+
+stopAt = endTime
+endTime = 500
+
+userParam01 = 0
+userParam06 = 0.1
+userParam07 = 100 # k_dim
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -50.0
+
+[TEMPERATURE]
+solver = helm
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
+conductivity = -5.0 # Re*Pr 
+rhocp = 1.0
+
+[SCALAR01]
+solver = helm
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
+diffusivity = -50.0 # Re*Pr
+
+[SCALAR02]
+solver = helm
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
+diffusivity = -500.0 # Re*Pr
