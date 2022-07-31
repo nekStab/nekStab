@@ -7,7 +7,7 @@ from subprocess import call, PIPE, STDOUT, Popen
 from subprocess import check_call as ccall 
 
 def rnek(cwd, par_file, ifmpi, log_suffix="", n_procs=1, step_limit=None, verbose=False):
-    toc = time.perf_counter()
+    tic1 = time.perf_counter()
     try:
         nek5000 = os.path.join(cwd, "nek5000")
         logfile = os.path.join(cwd, 'logfile.{0}{1}'.format(n_procs, log_suffix))
@@ -64,15 +64,16 @@ def rnek(cwd, par_file, ifmpi, log_suffix="", n_procs=1, step_limit=None, verbos
             print()
             print()
         else:
-            toc = time.perf_counter(); ttime=toc-tic
-            print(f"Case finished in in {ttime:0.2f} seconds")
-            print(f"                      {ttime/60:0.1f} minutes")
-            print(f"                      {ttime/3600:0.2f} hours")
+            ttime1=time.perf_counter()-tic1
+            print(f"Case finished in in {ttime1:0.2f} seconds")
+            print(f"                      {ttime1/60:0.1f} minutes")
+            print(f"                      {ttime1/3600:0.2f} hours")
             print('OK')
             print('OK')
-            print('OK')
+            print('###############################################')
     except:
         pass
+
 ###############################################################
 if __name__ == "__main__":
     
@@ -96,7 +97,8 @@ if __name__ == "__main__":
     rnek(root+'/cylinder/baseflow/newton'    ,'1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/baseflow/newton_dyn','1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/baseflow/newton_upo','1cyl',True,n_procs=nps)
-
+    rnek(root+'/cylinder/baseflow/newton_dyn_temp','1cyl',True,n_procs=nps)
+    
     # STABILITY 
     rnek(root+'/cylinder/stability/direct'         ,'1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/stability/adjoint'        ,'1cyl',True,n_procs=nps)
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     # 2 CYLINDERS
     rnek(root+'/flip_flop/baseflow' ,'2cyl',True,n_procs=nps)
 
-    toc = time.perf_counter(); ttime=toc-tic
+    ttime=time.perf_counter()-tic
     print(f"Script finished in in {ttime:0.2f} seconds")
     print(f"                      {ttime/60:0.1f} minutes")
     print(f"                      {ttime/3600:0.2f} hours")

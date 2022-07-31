@@ -1,5 +1,5 @@
 [GENERAL]
-startFrom = BF_Re2000_tpjet0.f00001
+startFrom = BF_Re1900_tpjet0.f00001
 stopAt = endTime
 endTime = 1.666666666667
 
@@ -34,4 +34,4 @@ writeToFieldFile = yes
 residualTol = 1.0E-8
 residualProj = yes
 density = 1.0
-viscosity = -1900.0
+viscosity = -2000.0
