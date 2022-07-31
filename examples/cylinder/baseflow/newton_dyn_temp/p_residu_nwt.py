@@ -33,8 +33,18 @@ class res(object):
 class res1(object):
     def __init__(self, filename):
         print('Reading '+filename)
-        data = np.genfromtxt(filename)
-        self.r = data
+        data = np.transpose(np.genfromtxt(filename))
+        self.i  = data[0]
+        self.r  = data[1]
+        del data
+
+class resN(object):
+    def __init__(self, filename):
+        print('Reading '+filename)
+        data = np.transpose(np.genfromtxt(filename))
+        self.calls  = data[0]
+        self.ttime  = data[1]
+        self.r  = data[2]
         del data
 
 def plot_rs(ax, filename, sized = 0, color='gray', label=None):
@@ -50,36 +60,42 @@ def plot_rs(ax, filename, sized = 0, color='gray', label=None):
 if __name__ == '__main__':
 
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
-    plt.yscale('log');plt.xlabel(r'$t$')
-    plt.axhline(y=1e-02, lw=0.1, c='k', ls='dotted')
-    plt.axhline(y=1e-04, lw=0.1, c='k', ls='dotted')
-    plt.axhline(y=1e-06, lw=0.1, c='k', ls='dotted')
-    plt.axhline(y=1e-08, lw=0.1, c='k', ls='dotted')
-    plt.axhline(y=1e-10, lw=0.1, c='k', ls='dotted')
-    plt.axhline(y=1e-12, lw=0.1, c='k', ls='dotted')
-    plt.axhline(y=1e-13, lw=0.1, c='k', ls='dotted')
+    plt.yscale('log');plt.xlabel(r'$i$');plt.ylabel(r'$\epsilon$')
+    #plt.xscale('log');
+    plt.title(r'$Re=50$',fontsize=8)
+    plt.axhline(y=1e-11, lw=0.1, c='k', ls='dotted')
 
-    plot_rs(plt, 'residu.dat',   0.2, 'r', r'Ra=400')
+    f = res1('residu_arnoldi.dat')
+    plt.plot(f.i,f.r,c='b',lw=0.0,ls='--', marker='o',markersize=0.4,label=r'ARNOLDI')
+    try:
+        f = res1('residu_gmres.dat')
+        plt.plot(f.i+1,f.r,c='g',lw=0.5,ls=':', marker='s',markersize=0.5,label=r'GMRES')
+    except:
+        print('Skipping residu_gmres.dat')
+        pass
 
-    plt.legend(loc='best',fontsize=6);
-    fname='residu.'+formt
+    try:
+        f = res1('residu_newton.dat')
+        plt.plot(f.i,f.r,c='m',lw=0.5,ls='--', marker='d',markersize=0.8,label=r'NEWTON')
+    except:
+        print('Skipping residu_newton.dat')
+        pass
+
+    plt.legend(loc='upper right',fontsize=6)
+    fname='residu_newton_decomposed.'+formt
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')
-
-
+    
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
-    plt.yscale('log');plt.xlabel(r'$nsteps$')
-    plt.xscale('log')
-    plt.axhline(y=1e-9, lw=0.1, c='k', ls='dotted')
-
-    file = res1('residu_newton.dat')
-    plt.plot(file.r,c='m',lw=0.5,label=r'NEWTON Ra=400')
-    file = res1('residu_gmres.dat')
-    plt.plot(file.r,c='g',lw=0.5,label=r'GMRES Ra=400')
-    file = res1('residu_arnoldi.dat')
-    plt.plot(file.r,c='b',lw=0.5,label=r'ARNOLDI Ra=400')
-
-    plt.legend(loc='best',fontsize=6)
+    plt.yscale('log');plt.xlabel(r'linearized calls');plt.ylabel(r'residual')
+    plt.xscale('log');
+    plt.title(r'$Re=50$',fontsize=8)
+    try:
+        f = resN('residu.dat')
+        plt.plot(f.calls,f.r,c='b',lw=0.3,ls='--', marker='o',markersize=0.4)
+    except:
+        print('First Newton iteartion not finished!')
+        pass
     fname='residu_newton.'+formt
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')

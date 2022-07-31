@@ -29,11 +29,9 @@ else
     #     export FFLAGS+=" -fallow-argument-mismatch"
     # fi
     export FFLAGS+=" -g -fbacktrace" # tracer
-    export FFLAGS+=" -Og -Wextra -Warray-bounds -Warray-temporaries -ggdb" 
-    export FFLAGS+=" -finit-real=nan "
-    export FFLAGS+=" -ffpe-trap=invalid,zero " #,overflow,underflow"
-    export FFLAGS+=" -Wconversion -Wno-argument-mismatch"
-    export FFLAGS+=" -fsanitize=leak -fsanitize=address"
+    #export FFLAGS+=" -Og -ggdb -Wextra -Warray-bounds -Warray-temporaries -Wconversion -Wno-argument-mismatch" 
+    #export FFLAGS+=" -finit-real=nan -ffpe-trap=invalid,zero" #,overflow,underflow"
+    #export FFLAGS+=" -fsanitize=leak -fsanitize=address"
 fi
 
 case $(uname -s) in
