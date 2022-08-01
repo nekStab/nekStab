@@ -264,19 +264,6 @@ c-----------------------------------------------------------------------
          ifto_sav = ifto; ifpo_sav = ifpo
          ifto = .false.; ifpo = .false.
 
-         if(ifrans)then
-            ifvo = .false. ; ifto = .true.
-            ifpsco(:) = .true.
-
-            call outpost(vx,vy,vz,pr,t(1,1,1,1,:), 'RNS')
-
-            ifpsco(:) = .true.; ifto = .true.
-            call outpost(vx,vy,vz,pr,t(1,1,1,1,2), 'TKE')
-            call outpost(vx,vy,vz,pr,t(1,1,1,1,3), 'TAU')
-            call outpost(vx,vy,vz,pr,t(1,1,1,1,4), 'NUT')
-            ifvo = .true. ; ifto = .false.
-         endif
-
 !---  > Compute and oupost vorticity.
          if(ifvor)then
             call oprzero(vort(1,1),vort(1,2),vort(1,3))
@@ -303,7 +290,7 @@ c-----------------------------------------------------------------------
 
       endif
 !---  > Outpost initial condition.
-      if(istep.eq.0)call outpost(vx,vy,vz,pr,t,'   ')
+      !if(istep.eq.0)call outpost(vx,vy,vz,pr,t,'   ')
 
       return
       end subroutine nekStab_outpost
@@ -425,7 +412,9 @@ c-----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      real, dimension(lv), intent(in) :: px, py, pz, pt
+      real, dimension(lv), intent(in) :: px, py, pz
+      real, dimension(lv,ldimt), intent(in) :: pt
+      !real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
       integer, intent(in) :: skip
       character(len=20), intent(in) :: fname
       real glsc3,uek,vek,wek,eek,pot
@@ -445,7 +434,8 @@ c-----------------------------------------------------------------------
          uek = glsc3(px,bm1s,px,n)
          vek = glsc3(py,bm1s,py,n)
          if(if3d)wek = glsc3(pz,bm1s,pz,n)
-         if(ifheat)pot = glsc3(pt,bm1s,ym1,n)
+         if(ifheat)pot = glsc3(pt(:,1),bm1s,ym1,n)
+         !if(ifheat)pot = glsc3(pt(:,:,:,:,1),bm1s,ym1,n)
          if(nid.eq.0)write(730,"(6E15.7)")time,uek*eek,vek*eek,wek*eek,(uek+vek+wek)*eek,pot*eek
       endif
 
@@ -457,7 +447,9 @@ c-----------------------------------------------------------------------
       implicit none
       include 'SIZE'
       include 'TOTAL'
-      real, dimension(lv), intent(in) :: px, py, pz, pt
+      real, dimension(lv), intent(in) :: px, py, pz
+      real, dimension(lv,ldimt), intent(in) :: pt
+      !real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
       integer, intent(in) :: skip
       character(len=20), intent(in) :: fname
       real vort(lv,3),wo1(lv),wo2(lv)

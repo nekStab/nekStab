@@ -48,12 +48,11 @@
 
       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
       if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
-      if (ifheat) alpha = alpha + glsc3(pt(:,1), bm1s, qt(:,1), n)
-      !if (ldimt.gt.1) then
-      !      do i = 2,ldimt
-      !            alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
-      !      enddo
-      !endif
+      if (ldimt.gt.0) then
+       do i = 1,ldimt
+        alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
+       enddo
+      endif
 
       return
       end subroutine inner_product
@@ -190,11 +189,11 @@
 
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
-      if(ifheat) call copy(tbase(1,1,1,1,1),t(1,1,1,1,1),n)
-      if (ldimt.gt.1) then
-            do m = 2,ldimt
-               call copy(tbase(1,1,1,1,m),t(1,1,1,1,m),n)
-            enddo
+
+      if (ldimt.gt.0) then
+       do m = 1,ldimt
+        call copy(tbase(:,:,:,:,m),t(:,:,:,:,m),n)
+       enddo
       endif
 
 !     ----- Prepare stability parameters -----
@@ -222,13 +221,12 @@
 
             if(nid.eq.0)write(6,*)'Filling fields with noise...'
             call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,:,1))
-            wrk2%vx = vxp(:, 1) ; wrk2%vy = vyp(:, 1) ; wrk2%vz = vzp(:, 1)
-            wrk2%pr = prp(:, 1)
-            if(ifheat) wrk2%theta(:,1) = tp(:, 1, 1)
-            if (ldimt.gt.1) then
-                  do m = 2,ldimt
-                        wrk2%theta(:,m) = tp(:, m, 1)
-                  enddo
+            wrk2%vx(:) = vxp(:, 1) ; wrk2%vy(:) = vyp(:, 1) ; wrk2%vz(:) = vzp(:, 1)
+            wrk2%pr(:) = prp(:, 1)
+            if (ldimt.gt.0) then
+             do m = 1,ldimt
+              wrk2%theta(:,m) = tp(:, m, 1)
+             enddo
             endif
             call krylov_normalize(wrk2, alpha)
             call matvec(wrk, wrk2)
@@ -236,7 +234,7 @@
          elseif(ifseed_symm)then ! symmetry initial seed
 
             if(nid.eq.0)write(6,*)'Enforcing symmetric seed perturb...'
-            call add_symmetric_seed(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
+            call add_symmetric_seed(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,:,1))
 
          elseif(ifseed_load)then ! loading initial seed (e.g. Re_ )
 
@@ -249,29 +247,27 @@
 
             if(nid.eq.0)write(*,*)'Load real part of mode 1 as seed: ',filename
             call load_fld(filename)
-            call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,:,1), vx,vy,vz,pr,t(1,1,1,1,1))
+            call nopcopy(vxp(:,1),vyp(:,1),vzp(:,1),prp(:,1),tp(:,:,1), vx,vy,vz,pr,t(:,:,:,:,1))
 
          else
 
-            call opcopy(vxp(:,1), vyp(:,1), vzp(:, 1), ubase, vbase, wbase)
-            if(ifheat) call copy(tp(1,1,1),tbase(1,1,1,1,1),n)
-            if (ldimt.gt.1) then
-                  do m = 2,ldimt
-                        call copy(tp(1,m,1),tbase(1,1,1,1,m),n)
-                  enddo
+            call opcopy(vxp(:,1), vyp(:,1), vzp(:,1), ubase, vbase, wbase)
+            if (ldimt.gt.0) then
+             do m = 1,ldimt
+              call copy(tp(:,m,1),tbase(:,:,:,:,m),n)
+             enddo
             endif
 
          endif
 
 !     ----- Normalized to unit-norm -----
 
-         wrk%vx = vxp(:, 1) ; wrk%vy = vyp(:, 1) ; wrk%vz = vzp(:, 1)
-         wrk%pr = prp(:, 1)
-         if(ifheat) wrk%theta(:,1) = tp(:, 1, 1)
-         if (ldimt.gt.1) then
-               do m = 2,ldimt
-                     wrk%theta(:,m) = tp(:, m, 1)
-               enddo
+         wrk%vx(:) = vxp(:, 1) ; wrk%vy(:) = vyp(:, 1) ; wrk%vz(:) = vzp(:, 1)
+         wrk%pr(:) = prp(:, 1)
+         if (ldimt.gt.0) then
+          do m = 1,ldimt
+           wrk%theta(:,m) = tp(:, m, 1)
+          enddo
          endif
          call krylov_normalize(wrk, alpha)
 
@@ -455,26 +451,24 @@
 
 !     --> Re-order the Krylov basis accordingly.
       do i = 1, k_dim+1
-         qx(:, i) = Q(i)%vx
-         qy(:, i) = Q(i)%vy
-         if (if3D) qz(:, i) = Q(i)%vz
-         if (ifpo) qp(:, i) = Q(i)%pr
-         if (ifheat) qt(:, 1, i) = Q(i)%theta(:,1)
-            if (ldimt.gt.1) then
-            do m = 2,ldimt
-                  qt(:, 1, m) = Q(i)%theta(:,m)
-            enddo
-            endif
+                   qx(:, i) = Q(i)%vx(:)
+                   qy(:, i) = Q(i)%vy(:)
+         if (if3D) qz(:, i) = Q(i)%vz(:)
+         if (ifpo) qp(:, i) = Q(i)%pr(:)
+         if (ldimt.gt.0) then
+          do m = 1,ldimt
+                   qt(:, i, m) = Q(i)%theta(:,m)
+          enddo
+         endif
       enddo
-      qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
-      qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
+                qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
+                qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
       if (if3D) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
       if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
-      if (ifheat) qt(:, 1, 1:ksize) = matmul(qt(:, 1 ,1:ksize), vecs)
-      if (ldimt.gt.1) then
-      do m = 2,ldimt
-            qt(:, m, 1:ksize) = matmul(qt(:, m ,1:ksize), vecs)
-      enddo
+      if (ldimt.gt.0) then
+       do m = 1,ldimt
+             qt(:, m, 1:ksize) = matmul(qt(:, m ,1:ksize), vecs)
+       enddo
       endif
 
 !     --> Update the Schur matrix with b.T @ Q corresponding to
@@ -488,14 +482,13 @@
       call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,:,mstart),
      $     qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,:,ksize+1))
       do i = 1, k_dim+1
-         Q(i)%vx = qx(:, i)
-         Q(i)%vy = qy(:, i)
-         if (if3D) Q(i)%vz = qz(:, i)
-         if (ifpo) Q(i)%pr = qp(:, i)
-         if (ifheat) Q(i)%theta(:,1) = qt(:, 1, i)
-         if (ldimt.gt.1) then
-            do m = 2,ldimt
-                  Q(i)%theta(:,m) = qt(:, m, i)
+                   Q(i)%vx(:) = qx(:, i)
+                   Q(i)%vy(:) = qy(:, i)
+         if (if3D) Q(i)%vz(:) = qz(:, i)
+         if (ifpo) Q(i)%pr(:) = qp(:, i)
+         if (ldimt.gt.0) then
+            do m = 1,ldimt
+                   Q(i)%theta(:,m) = qt(:, m, i)
             enddo
       endif
       enddo
@@ -557,14 +550,13 @@
 
 !     ----- Output all the spectrums and converged eigenmodes -----
       do i = 1, k_dim
-         qx(:, i) = Q(i)%vx
-         qy(:, i) = Q(i)%vy
-         if (if3D) qz(:, i) = Q(i)%vz
-         if (ifpo) qp(:, i) = Q(i)%pr
-         if (ifheat)qt(:, 1, i) = Q(i)%theta(:,1)
-         if (ldimt.gt.1) then
-            do m = 2,ldimt
-                  qt(:, 1, m) = Q(i)%theta(:,m)
+                   qx(:, i) = Q(i)%vx(:)
+                   qy(:, i) = Q(i)%vy(:)
+         if (if3D) qz(:, i) = Q(i)%vz(:)
+         if (ifpo) qp(:, i) = Q(i)%pr(:)
+         if (ldimt.gt.0) then
+            do m = 1,ldimt
+                   qt(:, i, m) = Q(i)%theta(:,m)
             enddo
          endif
       enddo
@@ -610,15 +602,14 @@
      $        aimag(log_transform(vals(i))) / sampling_period
 
 !     ----- Computation of the corresponding eigenmode -----
-         fp_cx = matmul(qx(:, 1:k_dim), vecs(:, i))
-         fp_cy = matmul(qy(:, 1:k_dim), vecs(:, i))
-         if (if3D) fp_cz = matmul(qz(:, 1:k_dim), vecs(:, i))
-         if (ifpo) fp_cp = matmul(qp(:, 1:k_dim), vecs(:, i))
-         if (ifheat) fp_ct(:,1) = matmul(qt(:, 1, 1:k_dim), vecs(:, i))
-         if (ldimt.gt.1) then
-            do m = 2,ldimt
-                  fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))      
-            enddo
+                   fp_cx(:) = matmul(qx(:, 1:k_dim), vecs(:, i))
+                   fp_cy(:) = matmul(qy(:, 1:k_dim), vecs(:, i))
+         if (if3D) fp_cz(:) = matmul(qz(:, 1:k_dim), vecs(:, i))
+         if (ifpo) fp_cp(:) = matmul(qp(:, 1:k_dim), vecs(:, i))
+         if (ldimt.gt.0) then
+          do m = 1,ldimt
+                 fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))      
+          enddo
          endif
 
 !     ----- Normalization to be unit-norm -----
@@ -951,7 +942,7 @@
       if(nid.eq.0)write(*,*)'Loading base flow: ',filename
       call load_fld(filename)
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
-      if(ifheat) call copy(tbase,t(1,1,1,1,1),n)
+      if(ifheat) call copy(tbase,t(:,:,:,:,1),n)
 
       if( istep.eq.0 .and. (uparam(1).eq.3.11 .or. uparam(1).eq.3.22) )then
       param(10)=time            ! upo period in field

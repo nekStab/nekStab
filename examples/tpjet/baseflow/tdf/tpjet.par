@@ -1,0 +1,37 @@
+[GENERAL]
+startFrom = BF_Re1900_tpjet0.f00001
+stopAt = endTime
+endTime = 10000
+
+userParam01 = 1.4 # time delayed feedback
+userParam05 = 0.600000  #forced frequency (St_D)
+userParam07 = 1 # k_dim
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime #timeStep
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+axiSymmetry = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -2000.0
