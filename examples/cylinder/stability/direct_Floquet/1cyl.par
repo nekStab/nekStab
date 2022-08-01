@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0 # time will be adjusted from the UPO file
 
 userParam01 = 3.11 # Direct Floquet
-userParam07 = 200 # k_dim
+userParam07 = 100 # k_dim
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
 userParam10 = 1.7 # Sponge streght
