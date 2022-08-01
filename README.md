@@ -2,7 +2,7 @@
 [![Documentation status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](https://nekstab.github.io/nekStabDoc/en/master/)
 
 **nekStab** is a toolbox for performing bifurcation analysis using the spectral element CFD solver [Nek5000](https://github.com/Nek5000/Nek5000).
-It is released under the BSD 3 clause licence.
+It is released under the BSD-3-Clause license.
 
 The project started in 2010 with the PhD thesis of [Jean-Christophe Loiseau](https://loiseaujc.github.io/) and builds on the work of former PhD students of our group such as Frédéric Alizard, Stefania Cherubini, Alessandro Bucci, Mirko Farano, Francesco Picella and [Ricardo Frantz](https://github.com/ricardofrantz).
 Ricardo is the one who brought all the previous contributions together in a single toolbox.
@@ -13,7 +13,7 @@ Both of them work at [DynFluid](http://dynfluid.ensam.eu/), a fluid dynamics lab
 ### News
 
 - **February 2022:** The first official version of 'nekStab' is available online!
-It is released under the BSD-3-Clause licence.
+It is released under the BSD-3-Clause license.
 Do not hesitate to contact us, have a look at the [documentation](https://nekstab.github.io/nekStabDoc/en/master/) or read the [release notes](https://github.com/ricardofrantz/nekStab/blob/master/ RELEASE.md) if you want to know more.
 
 ## First Steps
@@ -29,7 +29,7 @@ sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4
 
 **Cloning the repository**
 
-'''bash 
+'''bash
 git clone --depth=50 --branch=master https://github.com/nekStab/nekStab.git
 cd nekStab
 ./Nek5000clone.sh
@@ -47,7 +47,7 @@ Computing the fixed point for the cylinder flow example using the Newton-Krylov 
 
 '''bash
 cd ~/nekStab/examples/cylinder/baseflow/newton
-./cmpile.sh all 
+./cmpile.sh all
 nekbmpi 1cyl 4
 '''
 
@@ -63,11 +63,7 @@ If you are planning a larger contribution, we encourage you to discuss the conce
 
 Although **nekStab** relies on Nek5000, none of us are active developers of Nek5000.
 If you have questions about Nek5000, please contact the dedicated [GitHub repo](https://github.com/Nek5000/Nek5000)
- and [documentation](https://nekstab.github.io/nekStabDoc/en/master/)
-
-### Documentation
-
-- HTML documentation (stable version): https://nekstab.github.io/nekStabDoc/en/master/
+ and [documentation](https://nek5000.github.io/NekDoc/)
 
 ### Communication
 
