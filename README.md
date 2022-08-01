@@ -36,7 +36,7 @@ cd nekStab
 ```
 
 
-Run 'vim $HOME/.bashrc' and add the following :
+Run **vim $HOME/.bashrc** and add the following :
 
 ```bash
 export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
@@ -73,7 +73,7 @@ If you have questions about Nek5000, please contact the dedicated [GitHub repo](
 
 ### Citation
 
-When using **nekStab**, please consider citing one of the following papers:
+When using **nekStab**, please consider citing one of the following papers :
 
 - [Loiseau et al. (2019)](https://arxiv.org/pdf/1804.03859.pdf) presents most of the theoretical framework underlying **nekStab**.
 ```bibtex
