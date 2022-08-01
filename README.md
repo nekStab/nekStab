@@ -14,7 +14,7 @@ Both of them work at [DynFluid](http://dynfluid.ensam.eu/), a fluid dynamics lab
 
 - **February 2022:** The first official version of 'nekStab' is available online!
 It is released under the BSD-3-Clause license.
-Do not hesitate to contact us, have a look at the [documentation](https://nekstab.github.io/nekStabDoc/en/master/) or read the [release notes](https://github.com/ricardofrantz/nekStab/blob/master/ RELEASE.md) if you want to know more.
+Do not hesitate to contact us, have a look at the [documentation](https://nekstab.github.io/nekStabDoc/en/master/) or read the [release notes](https://github.com/nekStab/nekStab/blob/master/RELEASE.md) if you want to know more.
 
 ## First Steps
 
