@@ -54,14 +54,13 @@ class SpectreNS(object):
 if __name__ == '__main__':
 
     fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
-    #plt.yscale('log')
     plt.xlabel(r'$t$')
     plt.ylabel(r'$E(t)/E(0)$')
 
-    f = res('ref_barkley2008_fig5.dat')
+    f = res('barkley2008_fig5.ref')
     plt.plot(f.t,f.e,c='k',lw=0.2,ls='-',label='Barkley et al. (2008)')
 
-    base = "transient_growth"  # reference case - base case to copy
+    base = "transient_growth"  # reference folder to copy
     p1 = logspace(0, 2, 10)
     for i in range(len(p1)):
         try:
@@ -71,7 +70,7 @@ if __name__ == '__main__':
             print(p1[i],f.vp_real[0])
             plt.scatter(p1[i],f.vp_real[0],s=3, facecolors='none', edgecolors='k')
         except:
-            print('Skipping '+ path)
+            print(' File not found...')
             pass
     plt.legend(loc='best',fontsize=6);
     fname='transient_growth_Re500.'+formt

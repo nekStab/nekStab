@@ -106,9 +106,8 @@ if __name__ == "__main__":
     rnek(root+'/cylinder/stability/adjoint_Floquet','1cyl',True,n_procs=nps)
 
     # BUDGET,WAVEMAKER,BASEFLOW SENSITIVITY
-    #rnek(root+'/4postprocessing/sensitivity',cn,True,n_procs=nps)
-    #rnek(root+'/4postprocessing/steady_force_sensitivity',cn,True,n_procs=nps)
-    #rnek(root+'/4postprocessing/steady_force_sensitivity',cn,True,n_procs=nps)
+    #rnek(root+'/cylinder/postproc/sensitivity_budget_wavemaker/',cn,True,n_procs=nps)
+    #rnek(root+'/cylinder/postproc/steady_force_sensitivity',cn,True,n_procs=nps)
    
     # BACKWARD FACING STEP
     rnek(root+'/back_fstep/baseflow'        ,'bfs',True,n_procs=nps)
@@ -118,7 +117,8 @@ if __name__ == "__main__":
     rnek(root+'/thersyphon/baseflow','tsyphon',True,n_procs=nps)
     
     # AXISYMETRIC JET
-    rnek(root+'/tpjet/baseflow'     ,'tpjet',True,n_procs=nps)
+    rnek(root+'/tpjet/baseflow/newton','tpjet',True,n_procs=nps)
+    rnek(root+'/tpjet/baseflow/tdf','tpjet',True,n_procs=nps)
 
     # 2 CYLINDERS
     rnek(root+'/flip_flop/baseflow' ,'2cyl',True,n_procs=nps)

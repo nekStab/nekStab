@@ -121,7 +121,7 @@ if __name__ == "__main__":
     tic = time.perf_counter()
 
     print('to run this script:')
-    print('nohup python3 -u auto_compute_transient_growth.py >>logfile 2>&1 &')
+    print('nohup python3 -u autorun.py >>logfile 2>&1 &')
     root = os.getcwd()  # main folder loation
     print("Current working directory: {0}".format(os.getcwd()))
     base = "transient_growth"  # reference case - base case to copy
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     p1 = logspace(0, 2, 10)
  
     print(p1)
-    nps = 16
+    nps = 6
 
     for i in range(len(p1)):
         p1[i] = round(p1[i],2)
@@ -147,12 +147,12 @@ if __name__ == "__main__":
         c_pf(pf,pf,{'GENERAL':{'endTime':str(p1[i])}})
         rnek(folder,cn,True,log_suffix="_tg",n_procs=nps)
 
-        ctoc = time.perf_counter(); cttime=ctoc-ctic
+        cttime=time.perf_counter()-ctic
         print(f"Case finished in in {cttime:0.1f} seconds")
         print(f"                    {cttime/60:0.1f} minutes")
         print(f"                    {cttime/3600:0.2f} hours")
 
-    toc = time.perf_counter(); ttime=toc-tic
+    ttime=time.perf_counter()-tic
     print(f"Script finished in in {ttime:0.2f} seconds")
     print(f"                      {ttime/60:0.1f} minutes")
     print(f"                      {ttime/3600:0.2f} hours")

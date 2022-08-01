@@ -5,12 +5,6 @@ c-----------------------------------------------------------------------
 
       call nekStab
 
-      if((istep.eq.0).OR.ifoutfld.AND.(ldimt.gt.1))then
-       ifpo = .false.; ifto = .false.
-       call outpost(t(1,1,1,1,1),t(1,1,1,1,1),vz,pt,t(1,1,1,1,1),'sca')
-       ifpo = .true.; ifto = .true.
-      endif
-
       return
       end
 c-----------------------------------------------------------------------
@@ -25,13 +19,7 @@ c-----------------------------------------------------------------------
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifdyntol = .true. ; call bcast(ifdyntol,lsize)
-
-      endif
       
-      if((istep.eq.0).OR.ifoutfld.AND.(ldimt.gt.1))then
-       ifpo = .false.; ifto = .false.
-       !call outpost(t(1,1,1,1,2),t(1,1,1,1,3),vz,pt,t(1,1,1,1,1),'sca')
-       ifpo = .true.; ifto = .true.
       endif
 
       return
@@ -49,23 +37,30 @@ c-----------------------------------------------------------------------
       ffy = 0.0d0
       ffz = 0.0d0
 
-      !t      (lx1,ly1,lz1,lelt,ldimt)
-      !tbase  (lx1,ly1,lz1,lelt,ldimt)
-      !tp     (lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
-
-      if(ifheat.and.uparam(06).gt.0)then
+      if(uparam(06).gt.0)then
       iel = gllel(ieg)
       ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
-       if (jp .eq. 0) then ! uparam(6) is the Ri/Fr -- random values for example
-         ffy = ffy + t(ix, iy, iz, iel, 1)* uparam(06)
-         ffy = ffy + t(ix, iy, iz, iel, 2)*(uparam(06)/2)
-         ffy = ffy + t(ix, iy, iz, iel, 3)*(uparam(06)/3)
+
+       if (jp .eq. 0) then ! uparam(6) is the Ri or Fr
+
+         if (ldimt .ge. 1) ffy = ffy + t(ix, iy, iz, iel, 1)*uparam(06)  ! temperature
+         !if (ldimt .ge. 2) ffy = ffy + t(ix, iy, iz, iel, 2)*uparam(06)  ! ps 1
+         !if (ldimt .ge. 3) ffy = ffy + t(ix, iy, iz, iel, 3)*uparam(06)  ! ps 2
+         !if (ldimt .ge. 4) ffy = ffy + t(ix, iy, iz, iel, 4)*uparam(06)  ! ps 3
+
+       elseif (jp .eq. 1) then
+
+        if (ldimt .ge. 1) ffy = ffy + tp(ip, 1, 1)*uparam(06) ! temperature 
+        !if (ldmit .ge. 2) ffy = ffy + tp(ip, 2, 1)*uparam(06) ! ps 1
+        !if (ldmit .ge. 3) ffy = ffy + tp(ip, 3, 1)*uparam(06) ! ps 2
+        !if (ldmit .ge. 4) ffy = ffy + tp(ip, 4, 1)*uparam(06) ! ps 3
+
+       elseif(jp .gt. 1) then
+
+         write(6,*)' jp>1 not implemented!'
+
        endif
-       if (jp .gt. 0) then
-        if (ldimt .eq. 1) ffy = ffy + tp(ip, 1, 1) *uparam(06)
-        if (ldmit .eq. 2) ffy = ffy + tp(ip, 2, 1)*(uparam(06)/2)
-        if (ldmit .eq. 3) ffy = ffy + tp(ip, 3, 1)*(uparam(06)/3)
-       endif
+
       endif
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
@@ -102,19 +97,29 @@ c-----------------------------------------------------------------------
       integer e
 
       if (JP.eq.0) then         ! velocity
+
          e  = gllel(ieg)
          ux = 1.0d0
          uy = 0.0d0
          uz = 0.0d0
          temp=0.0d0
 
-         if(x.gt.-1.and.x.lt.1)temp=1.0d0 !cylinder with T
+         if(x.gt.-1.and.x.lt.1)then
+
+          if (ifield.eq.2) temp = 1.0  ! temperature
+          if (ifield.eq.3) temp = 1.0  ! ps1
+          if (ifield.eq.4) temp = 1.0  ! ps2
+          if (ifield.eq.5) temp = 1.0  ! ps3
+
+         endif
 
       else                      ! perturbation
+
          ux = 0.0d0
          uy = 0.0d0
          uz = 0.0d0
          temp = 0.0d0
+
       endif
 
       return
@@ -128,27 +133,19 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc,m
+
+       if (ldimt.gt.0) then
+        do m = 1,ldimt
+         cbc(:,:,m)=cbc(:,:,1)
+         do iel=1,nelt
+          do ifc = 1, 2*ndim
+           if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,m)='t  '
+           if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,m)='t  '
+          enddo
+         enddo
+        enddo
+       endif
       
-      if(ifheat)then
-       cbc(:,:,2)=cbc(:,:,1)
-       do iel=1,nelt
-        do ifc = 1, 2*ndim
-         if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
-         if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
-        enddo
-       enddo
-      endif
-      if (ldimt.gt.1) then
-      do m = 2,ldimt
-       cbc(:,:,m)=cbc(:,:,1)
-       do iel=1,nelt
-        do ifc = 1, 2*ndim
-         if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,m)='t  '
-         if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,m)='t  '
-        enddo
-       enddo
-      enddo
-      endif
       return
       end
 c-----------------------------------------------------------------------
