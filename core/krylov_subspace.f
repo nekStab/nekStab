@@ -38,12 +38,10 @@
       if (if3d) alpha = alpha + glsc3(p%vz, bm1s, q%vz, n)
 
 !     --> Potential energy.
-      if (ifheat) alpha = alpha + glsc3(p%theta(:,1), bm1s, q%theta(:,1), n)
-
-      if (ldimt.gt.1) then
-      do m = 2,ldimt
-            alpha = alpha + glsc3(p%theta(:,m), bm1s, q%theta(:,m), n)
-      enddo
+      if (ldimt.gt.0) then
+       do m = 1,ldimt
+        alpha = alpha + glsc3(p%theta(:,m), bm1s, q%theta(:,m), n)
+       enddo
       endif
 
 !     --> Time component.
@@ -101,13 +99,12 @@
       n = nx1*ny1*nz1*nelv
       n2 = nx2*ny2*nz2*nelv
 
-      call cmult(p%vx,alpha,n)
-      call cmult(p%vy,alpha,n)
-      call cmult(p%pr,alpha,n2)
-      if (if3d) call cmult(p%vz,alpha,n)
-      if (ifheat) call cmult(p%theta(:,1),alpha,n)
-      if (ldimt.gt.1) then
-        do i = 2,ldimt
+                call cmult(p%vx(:),alpha,n)
+                call cmult(p%vy(:),alpha,n)
+                call cmult(p%pr(:),alpha,n2)
+      if (if3d) call cmult(p%vz(:),alpha,n)
+      if (ldimt.gt.0) then
+        do i = 1,ldimt
           call cmult(p%theta(:,i),alpha,n)
         enddo
       endif
@@ -127,15 +124,14 @@
       n = nx1*ny1*nz1*nelv
       n2 = nx2*ny2*nz2*nelv
 
-      call add2(p%vx,q%vx,n)
-      call add2(p%vy,q%vy,n)
-      call add2(p%pr,q%pr,n2)
-      if (if3d) call add2(p%vz,q%vz,n)
-      if (ifheat) call add2(p%theta(:,1),q%theta(:,1),n)
-      if (ldimt.gt.1) then
-      do i = 2,ldimt
-            call add2(p%theta(:,i),q%theta(:,i),n)
-      enddo
+                call add2(p%vx(:),q%vx(:),n)
+                call add2(p%vy(:),q%vy(:),n)
+                call add2(p%pr(:),q%pr(:),n2)
+      if (if3d) call add2(p%vz(:),q%vz(:),n)
+      if (ldimt.gt.0) then
+        do i = 1,ldimt
+                call add2(p%theta(:,i),q%theta(:,i),n)
+        enddo
       endif
       p%time = p%time + q%time
 
@@ -153,16 +149,15 @@
       n = nx1*ny1*nz1*nelv
       n2 = nx2*ny2*nz2*nelv
 
-      call sub2(p%vx,q%vx,n)
-      call sub2(p%vy,q%vy,n)
-      call sub2(p%pr,q%pr,n2)
-      if (if3d) call sub2(p%vz,q%vz,n)
-      if (ifheat) call sub2(p%theta(:,1),q%theta(:,1),n)
-      if (ldimt.gt.1) then
-            do i = 2,ldimt
-                  call sub2(p%theta(:,i),q%theta(:,i),n)
-            enddo
-            endif
+                call sub2(p%vx(:),q%vx(:),n)
+                call sub2(p%vy(:),q%vy(:),n)
+                call sub2(p%pr(:),q%pr(:),n2)
+      if (if3d) call sub2(p%vz(:),q%vz(:),n)
+      if (ldimt.gt.0) then
+       do i = 1,ldimt
+                call sub2(p%theta(:,i),q%theta(:,i),n)
+       enddo
+      endif
       p%time = p%time - q%time
 
       return
@@ -178,15 +173,14 @@
       n = nx1*ny1*nz1*nelv
       n2 = nx2*ny2*nz2*nelv
 
-      call rzero(p%vx,n)
-      call rzero(p%vy,n)
-      call rzero(p%pr,n2)
-      if (if3d) call rzero(p%vz,n)
-      if (ifheat) call rzero(p%theta(:,1),n)
-      if (ldimt.gt.1) then
-            do i = 2,ldimt
-                  call rzero(p%theta(:,i),n)
-            enddo
+                call rzero(p%vx(:),n)
+                call rzero(p%vy(:),n)
+                call rzero(p%pr(:),n2)
+      if (if3d) call rzero(p%vz(:),n)
+      if (ldimt.gt.0) then
+         do i = 1,ldimt
+                call rzero(p%theta(:,i),n)
+         enddo
       endif
       p%time = 0.0D+00
 
@@ -203,15 +197,14 @@
       n = nx1*ny1*nz1*nelv
       n2 = nx2*ny2*nz2*nelv
 
-      call copy(p%vx,q%vx,n)
-      call copy(p%vy,q%vy,n)
-      call copy(p%pr,q%pr,n2)
-      if (if3d) call copy(p%vz,q%vz,n)
-      if (ifheat) call copy(p%theta(:,1),q%theta(:,1),n)
-      if (ldimt.gt.1) then
-            do i = 2,ldimt
-                  call copy(p%theta(:,i),q%theta(:,i),n)
-            enddo
+                call copy(p%vx(:),q%vx(:),n)
+                call copy(p%vy(:),q%vy(:),n)
+                call copy(p%pr(:),q%pr(:),n2)
+      if (if3d) call copy(p%vz(:),q%vz(:),n)
+      if (ldimt.gt.0) then
+        do i = 1,ldimt
+                call copy(p%theta(:,i),q%theta(:,i),n)
+        enddo
       endif
       p%time = q%time
 
@@ -236,14 +229,13 @@
       real, dimension(k) :: time_comp
 
       do i = 1, k
-         qx(:, i) = Q(i)%vx
-         qy(:, i) = Q(i)%vy
-         qp(:, i) = Q(i)%pr
-         if (if3d) qz(:, i) = Q(i)%vz
-         if (ifheat) qt(:, i, 1) = Q(i)%theta(:,1)
-         if (ldimt.gt.1) then
-            do j = 2,ldimt
-                  qt(:, i, j) = Q(i)%theta(:,j)
+                        qx(:, i) = Q(i)%vx(:)
+                        qy(:, i) = Q(i)%vy(:)
+                        qp(:, i) = Q(i)%pr(:)
+         if (if3d)      qz(:, i) = Q(i)%vz(:)
+         if (ldimt.gt.0) then
+            do j = 1,ldimt
+                        qt(:, i, j) = Q(i)%theta(:,j)
             enddo
          endif         
          time_comp(i) = Q(i)%time
@@ -251,14 +243,15 @@
 
       call krylov_zero(dq)
 
-      dq%vx = matmul(qx(:,:), yvec(:))
-      dq%vy = matmul(qy(:,:), yvec(:))
-      dq%pr = matmul(qp(:,:), yvec(:))
-      if(if3d)dq%vz = matmul(qz(:,:), yvec(:))
-      if(ifheat)dq%theta(:,1) = matmul(qt(:,:,1), yvec(:))
-      do j = 2,ldimt
-            dq%theta(:,j) = matmul(qt(:,:,j), yvec(:))
-      enddo
+                        dq%vx(:) = matmul(qx(:,:), yvec(:))
+                        dq%vy(:) = matmul(qy(:,:), yvec(:))
+                        dq%pr(:) = matmul(qp(:,:), yvec(:))
+      if(if3d)          dq%vz(:) = matmul(qz(:,:), yvec(:))
+      if(ldimt.gt.0)then
+       do j = 1,ldimt
+                dq%theta(:,j) = matmul(qt(:,:,j), yvec(:))
+       enddo
+      endif
       dq%time = dot_product(time_comp(:), yvec(:))
 
       return
