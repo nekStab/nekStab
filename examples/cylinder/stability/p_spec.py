@@ -120,3 +120,33 @@ if __name__ == '__main__':
     plt.legend(loc='best',fontsize=6)
     plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
     print('------------------------------------------')
+
+
+    fig=plt.figure();fig.set_size_inches(fig_height, fig_height)
+    plt.axis('equal');xrz = [-1,0,1];xlabels = ['-1','0','1']
+    plt.xticks(xrz,xlabels);plt.xlim(-1.1,1.1);plt.xlabel(r'$\Re (\mu)$')
+    plt.yticks(xrz,xlabels);plt.ylim(-1.1,1.1);plt.ylabel(r'$\Im (\mu)$')
+
+    f = SpectreH('direct_Floquet/Spectre_Hd.dat')
+    plot_H(plt, f.vpr, f.vpi, f.r, 8, 'k', 'o', r'$Re=50$')
+    f = SpectreH('adjoint_Floquet/Spectre_Ha.dat')
+    plot_H(plt, f.vpr, f.vpi, f.r, 2, 'r', 'o', r'$Re=50^{\dagger}$')
+    
+    fname='Spectre_H_Floquet.'+formt
+    plt.legend(loc='best',fontsize=6)
+    plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
+    print('------------------------------------------')
+
+    fig=plt.figure();fig.set_size_inches(fig_width, fig_height)
+    plt.xlabel(r'$\Re (\lambda)$');#plt.xlim(-1,1)
+    plt.ylabel(r'$\Im (\lambda)$');# plt.ylim(-0.1,0.02)
+
+    f = SpectreNS('direct_Floquet/Spectre_NSd_conv.dat')
+    plot_NS(plt, f.vpr, f.vpi, False, 8, 'k', 'o', r'$Re=50$')
+    f = SpectreNS('adjoint_Floquet/Spectre_NSa_conv.dat')
+    plot_NS(plt, f.vpr, f.vpi, False, 2, 'r', 'o', r'$Re=50^{\dagger}$')
+    
+    fname='Spectre_NS_Floquet.'+formt
+    plt.legend(loc='best',fontsize=6)
+    plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);print('Saving '+fname);plt.close()
+    print('------------------------------------------')

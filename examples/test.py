@@ -68,8 +68,8 @@ def rnek(cwd, par_file, ifmpi, log_suffix="", n_procs=1, step_limit=None, verbos
             print(f"Case finished in in {ttime1:0.2f} seconds")
             print(f"                      {ttime1/60:0.1f} minutes")
             print(f"                      {ttime1/3600:0.2f} hours")
-            print('OK')
-            print('OK')
+            print()
+            print()
             print('###############################################')
     except:
         pass
@@ -106,8 +106,8 @@ if __name__ == "__main__":
     rnek(root+'/cylinder/stability/adjoint_Floquet','1cyl',True,n_procs=nps)
 
     # BUDGET,WAVEMAKER,BASEFLOW SENSITIVITY
-    #rnek(root+'/cylinder/postproc/sensitivity_budget_wavemaker/',cn,True,n_procs=nps)
-    #rnek(root+'/cylinder/postproc/steady_force_sensitivity',cn,True,n_procs=nps)
+    rnek(root+'/cylinder/postproc/sensitivity_budget_wavemaker/',cn,True,n_procs=nps)
+    rnek(root+'/cylinder/postproc/steady_force_sensitivity',cn,True,n_procs=nps)
    
     # BACKWARD FACING STEP
     rnek(root+'/back_fstep/baseflow'        ,'bfs',True,n_procs=nps)
