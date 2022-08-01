@@ -1,7 +1,7 @@
 [GENERAL]
 startFrom = BF_bfs0.f00001
 stopAt = endTime
-endTime = 5
+endTime = 1.0
 
 userParam01 = 3.3  # 0:dns,1:stabilization,3:stability
 userParam07 = 64  #
