@@ -65,6 +65,7 @@ def rnek(cwd, par_file, ifmpi, log_suffix="", n_procs=1, step_limit=None, verbos
             print()
         else:
             ttime1=time.perf_counter()-tic1
+            print()
             print(f"Case finished in in {ttime1:0.2f} seconds")
             print(f"                      {ttime1/60:0.1f} minutes")
             print(f"                      {ttime1/3600:0.2f} hours")
