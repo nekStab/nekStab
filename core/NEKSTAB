@@ -7,9 +7,9 @@
       common /nStab_char/ evop
 
       logical                ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,
-     $                       ifseed_load,ifvor,ifvox,ifstorebase,ifdyntol,ifrans
+     $                       ifseed_load,ifvor,ifvox,ifstorebase,ifdyntol
       common /nStab_logical/ ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,
-     $                       ifseed_load,ifvor,ifvox,ifstorebase,ifdyntol,ifrans
+     $                       ifseed_load,ifvor,ifvox,ifstorebase,ifdyntol
 
       real                eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
       common /nStab_real/ eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
