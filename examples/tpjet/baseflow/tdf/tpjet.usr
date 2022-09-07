@@ -4,6 +4,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       call nekStab
+      !call hpts
 
       return
       end
@@ -14,7 +15,7 @@ c-----------------------------------------------------------------------
 
       if(istep.eq.0)then !change defaults
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = 10 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
@@ -70,7 +71,8 @@ c-----------------------------------------------------------------------
 
 
       ! following Leshaft JFM 2019 
-      !ramp = 1./(1.+exp(4.-0.25*time))
+      !ramp = 1./(1.+exp(4.-0.25*time)) !! ramp over time (optional)
+
       pert = (1.+0.05*cos(time*8.*atan(1.)*uparam(05)))!*ramp
 
       if (JP.eq.0) then         ! velocity

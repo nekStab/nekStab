@@ -1,14 +1,14 @@
 [GENERAL]
 startFrom = BF_Re1900_tpjet0.f00001
 stopAt = endTime
-endTime = 10000
+endTime = 2000
 
-userParam01 = 1.4 # time delayed feedback
-userParam05 = 0.600000  #forced frequency (St_D)
+userParam01 = 1.4  # 2.2 newton for forced periods
+userParam05 = 0.60 # forced frequency
 userParam07 = 1 # k_dim
 
 dt = 0
-variableDt = no
+variableDt = yes
 timeStepper = bdf3
 targetCFL = 0.5
 
@@ -26,12 +26,12 @@ axiSymmetry = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-8
+residualTol = 1.0E-9
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-8
+residualTol = 1.0E-9
 residualProj = yes
 density = 1.0
-viscosity = -2000.0
+viscosity = -2005.0
