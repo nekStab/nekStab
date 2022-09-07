@@ -16,6 +16,8 @@ def rnek(cwd, par_file, ifmpi, log_suffix="", n_procs=1, step_limit=None, verbos
         ioinfo = os.path.join(cwd, "ioinfo")
         print("Compiling nek5000 at", cwd,'> compfile')
         with open(compfile, "w") as f1:
+            command = ["./cmpile.sh", "clean"]
+            call(command, cwd=cwd, stdout=f1)
             command = ["./cmpile.sh", "all"]
             call(command, cwd=cwd, stdout=f1)
         if ifmpi:
@@ -98,17 +100,17 @@ if __name__ == "__main__":
     rnek(root+'/cylinder/baseflow/newton'    ,'1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/baseflow/newton_dyn','1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/baseflow/newton_upo','1cyl',True,n_procs=nps)
-    rnek(root+'/cylinder/baseflow/newton_dyn_temp','1cyl',True,n_procs=nps)
+    #rnek(root+'/cylinder/baseflow/newton_dyn_temp','1cyl',True,n_procs=nps)
     
     # STABILITY 
     rnek(root+'/cylinder/stability/direct'         ,'1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/stability/adjoint'        ,'1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/stability/direct_Floquet' ,'1cyl',True,n_procs=nps)
     rnek(root+'/cylinder/stability/adjoint_Floquet','1cyl',True,n_procs=nps)
-
+    
     # BUDGET,WAVEMAKER,BASEFLOW SENSITIVITY
-    rnek(root+'/cylinder/postproc/sensitivity_budget_wavemaker/',cn,True,n_procs=nps)
-    rnek(root+'/cylinder/postproc/steady_force_sensitivity',cn,True,n_procs=nps)
+    rnek(root+'/cylinder/postproc/sensitivity_budget_wavemaker/','1cyl',True,n_procs=nps)
+    rnek(root+'/cylinder/postproc/steady_force_sensitivity','1cyl',True,n_procs=nps)
    
     # BACKWARD FACING STEP
     rnek(root+'/back_fstep/baseflow'        ,'bfs',True,n_procs=nps)
