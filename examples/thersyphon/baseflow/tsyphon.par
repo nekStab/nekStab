@@ -1,7 +1,7 @@
 [GENERAL]
 startfrom = BF_Ra400_tsyphon0.f00001
 stopAt = endTime
-endtime = 1.0
+endtime = 0.1
 
 userparam01 = 2 #
 userparam06 = 500.0 # Ra

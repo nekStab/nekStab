@@ -1,11 +1,11 @@
 [GENERAL]
-startFrom = BFt_1cyl0.f00001
+startFrom = 0 # BFt_1cyl0.f00001
 
 stopAt = endTime
-endTime = 500
+endTime = 1000 # 500
 
 userParam01 = 0
-userParam06 = 0.02
+userParam06 = 0.1
 userParam07 = 100 # k_dim
 
 dt = 0
@@ -14,7 +14,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 10.
+writeInterval = 0.2
 writeDoublePrecision = no
 
 dealiasing = yes
@@ -39,29 +39,29 @@ solver = helm
 residualtol = 1.0E-6
 residualproj = yes
 writetofieldfile = yes
-conductivity = 50.0 # Re*Pr 
+conductivity = -50.0 # Re*Pr 
 rhocp = 1.0
 
-#[SCALAR01]
-#solver = none
-#residualtol = 1.0E-6
-#residualproj = no
-#writetofieldfile = yes
-#diffusivity = 50.0 # Re*Pr
-#density = 1.0
+[SCALAR01]
+solver = helm
+residualtol = 1.0E-6
+residualproj = yes
+writetofieldfile = yes
+diffusivity = -50.0 # Re*Pr
+density = 1.0
 
-#[SCALAR02]
-#solver = none
-#residualtol = 1.0E-6
-#residualproj = no
-#writetofieldfile = yes
-#diffusivity = 50.0 # Re*Pr
-#density = 1.0
+[SCALAR02]
+solver = helm
+residualtol = 1.0E-6
+residualproj = yes
+writetofieldfile = yes
+diffusivity = -50.0 # Re*Pr
+density = 1.0
 
-#[SCALAR03]
-#solver = none
-#residualtol = 1.0E-6
-#residualproj = yes
-#writetofieldfile = yes
-#diffusivity = 50.0 # Re*Pr
-#density = 1.0
+[SCALAR03]
+solver = helm
+residualtol = 1.0E-6
+residualproj = yes
+writetofieldfile = yes
+diffusivity = -50.0 # Re*Pr
+density = 1.0
