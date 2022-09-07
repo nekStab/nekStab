@@ -37,23 +37,23 @@ c-----------------------------------------------------------------------
       ffy = 0.0d0
       ffz = 0.0d0
 
-      if(uparam(06).gt.0)then
+      if ( uparam(06).gt.0 ) then
       iel = gllel(ieg)
       ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
 
        if (jp .eq. 0) then ! uparam(6) is the Ri or Fr
 
-         if (ldimt .ge. 1) ffy = ffy + t(ix, iy, iz, iel, 1)*uparam(06)  ! temperature
-         !if (ldimt .ge. 2) ffy = ffy + t(ix, iy, iz, iel, 2)*uparam(06)  ! ps 1
-         !if (ldimt .ge. 3) ffy = ffy + t(ix, iy, iz, iel, 3)*uparam(06)  ! ps 2
-         !if (ldimt .ge. 4) ffy = ffy + t(ix, iy, iz, iel, 4)*uparam(06)  ! ps 3
+         if (ldimt .eq. 1) ffy = ffy + t(ix, iy, iz, iel, 1)*uparam(06) ! temp
+         if (ldimt .eq. 2) ffy = ffy + t(ix, iy, iz, iel, 2)*uparam(06) ! ps 1
+         if (ldimt .eq. 3) ffy = ffy + t(ix, iy, iz, iel, 3)*uparam(06) ! ps 2
+         if (ldimt .eq. 4) ffy = ffy + t(ix, iy, iz, iel, 4)*uparam(06) ! ps 3
 
        elseif (jp .eq. 1) then
 
-        if (ldimt .ge. 1) ffy = ffy + tp(ip, 1, 1)*uparam(06) ! temperature 
-        !if (ldmit .ge. 2) ffy = ffy + tp(ip, 2, 1)*uparam(06) ! ps 1
-        !if (ldmit .ge. 3) ffy = ffy + tp(ip, 3, 1)*uparam(06) ! ps 2
-        !if (ldmit .ge. 4) ffy = ffy + tp(ip, 4, 1)*uparam(06) ! ps 3
+         if (ldimt .eq. 1) ffy = ffy + tp(ip, 1, 1)*uparam(06) ! temp
+         if (ldmit .eq. 2) ffy = ffy + tp(ip, 2, 1)*uparam(06) ! ps 1
+         if (ldmit .eq. 3) ffy = ffy + tp(ip, 3, 1)*uparam(06) ! ps 2
+         if (ldmit .eq. 4) ffy = ffy + tp(ip, 4, 1)*uparam(06) ! ps 3
 
        elseif(jp .gt. 1) then
 
