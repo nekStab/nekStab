@@ -349,7 +349,7 @@ c-----------------------------------------------------------------------
             else
                write(6,"('      Time per nondimensional time: ',F8.2,' min ')") tpernondt/60.0d0
             endif
-            write(6,"('      Local time: ',F8.4,'  File:',I8)") time-deltatime, int((time-deltatime)/param(14))+1
+            write(6,"('      Local time: ',F10.4,'  File:',I8)") time-deltatime, int((time-deltatime)/param(14))+1
             print *,''
 
          endif

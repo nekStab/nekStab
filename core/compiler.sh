@@ -5,7 +5,7 @@
 if command -v mpiifort -v 2>/dev/null; then
     echo $(mpiifort -v)
     export FC="mpiifort"
-    export CC="mpiicc"
+    export CC="mpiicx"
     export FFLAGS+=" -extend-source"
     
     if command -v $(ifort --version | grep ^oneapi) 2>/dev/null; then
@@ -15,8 +15,8 @@ if command -v mpiifort -v 2>/dev/null; then
         export FFLAGS+=" -mkl"
         export FFLAGS+=" -xHost"
     fi
-    export USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" #optional link for old versions
-    # #export FFLAGS+=" -g -traceback" # tracer 
+    export USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" #optional link for old versions
+    export FFLAGS+=" -g -traceback" # tracer 
     # #export FFLAGS+=" -fpe0 -debug extended" # debugger
 
 else
@@ -28,7 +28,7 @@ else
     # if [[ $(gfortran -dumpversion | cut -f1 -d.) -gt 10 ]]; then
     #     export FFLAGS+=" -fallow-argument-mismatch"
     # fi
-    #export FFLAGS+=" -g -fbacktrace"
+    export FFLAGS+=" -g -fbacktrace"
     #export FFLAGS+=" -Og -ggdb -Wextra -Warray-bounds -Warray-temporaries -Wconversion -Wno-argument-mismatch" 
     #export FFLAGS+=" -finit-real=nan -ffpe-trap=invalid,zero"
     #export FFLAGS+=" -fsanitize=leak -fsanitize=address"
