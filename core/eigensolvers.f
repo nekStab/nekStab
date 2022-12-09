@@ -181,6 +181,8 @@
          write(filename,'(a,a,a)')'BF_',trim(SESSION),'0.f00001'
          if(nid.eq.0)write(*,*)'Loading base flow: ',filename
          call load_fld(filename)
+      else
+         if(nid.eq.0)write(*,*)'Baseflow prescribed by the useric function in the .usr'
       endif
 
       !t      (lx1,ly1,lz1,lelt,ldimt)
