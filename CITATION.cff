@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use our package, please cite it as below."
+authors:
+- family-names: "Frantz"
+  given-names: "R. A. S."
+  orcid: "https://orcid.org/0000-0001-8219-3368"
+- family-names: "Loiseau"
+  given-names: "J.-Ch."
+  orcid: "https://orcid.org/0000-0002-7244-8416"
+  - family-names: "Robinet"
+  given-names: "J.-Ch."
+  orcid: "https://orcid.org/0000-0002-3529-6003"
+  
+title: "nekStab : global stability analysis toolbox for nek5000"
+version: 1.0.0
+doi: 10.5281/zenodo.1234
+date-released: 2023-01-01
+url: "https://github.com/nekStab"
