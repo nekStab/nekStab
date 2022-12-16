@@ -39,8 +39,7 @@
 
 
       if (iffindiff) then
-         tol = 1e-5
-         dtol = 1e-5
+         tol = 1e-6 ; dtol = 1e-6
       else
          if(dtol.eq.0.0d0)then
             dtol=max(param(21),param(22))
@@ -243,11 +242,7 @@
       integer :: i, j, k, maxiter, calls
       real :: beta, tol
 
-      if (iffindiff) then
-          tol = 1e-5
-      else
-          tol = max(param(21), param(22))
-      endif
+      tol = max(param(21), param(22))
 
 !     ----- Allocate arrays -----
       allocate(Q(ksize+1),H(ksize+1, ksize), yvec(ksize), evec(ksize+1))
@@ -278,9 +273,16 @@
          write(6,"(' ARNOLDI --- Iteration:',I5,'/',I5,' residual:',E15.7)")k,ksize,beta**2
          write(889,"(I6,1E15.7)")k,beta**2; close(889)
       endif
+
       if (beta**2 .lt. tol) then ! count of calls to linearized solver
          calls = calls + k*nsteps
          exit arnoldi
+      endif
+
+      ! --> Relaxed exit condition if finite-difference approximation of the operator is considered.
+      if ((iffindiff) .and. (beta**2 .lt. 1e-8)) then ! count of calls to linearized solver
+          calls = calls + k*nsteps
+          exit arnoldi
       endif
       enddo arnoldi
 
@@ -299,6 +301,7 @@
       endif
 
       if (beta**2 .lt. tol) exit gmres
+      if ((iffindiff).and.(beta**2 .lt. 1e-6)) exit gmres
       enddo gmres
 
 
