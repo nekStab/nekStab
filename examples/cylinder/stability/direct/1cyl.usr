@@ -24,6 +24,7 @@ c-----------------------------------------------------------------------
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .true. ; call bcast(ifvor,lsize)
         ifvox = .true. ; call bcast(ifvox,lsize)
+        iffindiff = .true. ; call bcast(iffindiff,lsize)
 
       endif
 
@@ -117,7 +118,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
-      
+
       !this mesh was generatd with genbox
       !with only BCs for velicity
       !here we chenge outflow to dirichlet if adjoint
@@ -145,5 +146,26 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine usrdat3
+      return
+      end
+
+c automatically added by makenek
+      subroutine usrdat0()
+
+      return
+      end
+
+c automatically added by makenek
+      subroutine usrsetvert(glo_num,nel,nx,ny,nz) ! to modify glo_num
+      integer*8 glo_num(1)
+
+      return
+      end
+
+c automatically added by makenek
+      subroutine userqtl
+
+      call userqtl_scig
+
       return
       end

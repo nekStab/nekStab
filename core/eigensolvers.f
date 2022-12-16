@@ -8,28 +8,28 @@
 
 !     This function provides the user-defined inner product to be used throughout
 !     the computation.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     px, py, pz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the first vector.
-!     
+!
 !     pp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the first vector.
-!     
+!
 !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the second vector.
-!     
+!
 !     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the second vector.
-!     
+!
 !     RETURN
 !     ------
-!     
+!
 !     alpha : real
 !     Value of the inner-product alpha = <p, q>.
-!     
+!
       use krylov_subspace
       implicit none
       include "SIZE"
@@ -49,9 +49,9 @@
       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
       if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
       if (ldimt.gt.0) then
-       do i = 1,ldimt
-        alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
-       enddo
+         do i = 1,ldimt
+            alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
+         enddo
       endif
 
       return
@@ -99,19 +99,19 @@
 !     This function normalizes the state vector [qx, qy, qz, qp]^T where
 !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
 !     components while qp is the corresponding pressure field.
-!     
+!
 !     INPUTS / OUTPUTS
 !     ----------------
-!     
+!
 !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays storing the velocity components.
-!     
+!
 !     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array storing the corresponding pressure field.
-!     
+!
 !     alpha : real
 !     Norm of the vector.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       use krylov_subspace
@@ -185,17 +185,17 @@
          if(nid.eq.0)write(*,*)'Baseflow prescribed by the useric function in the .usr'
       endif
 
-      !t      (lx1,ly1,lz1,lelt,ldimt)
-      !tbase  (lx1,ly1,lz1,lelt,ldimt)
-      !tp     (lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
+!t      (lx1,ly1,lz1,lelt,ldimt)
+!tbase  (lx1,ly1,lz1,lelt,ldimt)
+!tp     (lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
 
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
 
       if (ldimt.gt.0) then
-       do m = 1,ldimt
-        call copy(tbase(:,:,:,:,m),t(:,:,:,:,m),n)
-       enddo
+         do m = 1,ldimt
+            call copy(tbase(:,:,:,:,m),t(:,:,:,:,m),n)
+         enddo
       endif
 
 !     ----- Prepare stability parameters -----
@@ -226,9 +226,9 @@
             wrk2%vx(:) = vxp(:, 1) ; wrk2%vy(:) = vyp(:, 1) ; wrk2%vz(:) = vzp(:, 1)
             wrk2%pr(:) = prp(:, 1)
             if (ldimt.gt.0) then
-             do m = 1,ldimt
-              wrk2%theta(:,m) = tp(:, m, 1)
-             enddo
+               do m = 1,ldimt
+                  wrk2%theta(:,m) = tp(:, m, 1)
+               enddo
             endif
             call krylov_normalize(wrk2, alpha)
             call matvec(wrk, wrk2)
@@ -255,22 +255,22 @@
 
             call opcopy(vxp(:,1), vyp(:,1), vzp(:,1), ubase, vbase, wbase)
             if (ldimt.gt.0) then
-             do m = 1,ldimt
-              call copy(tp(:,m,1),tbase(:,:,:,:,m),n)
-             enddo
+               do m = 1,ldimt
+                  call copy(tp(:,m,1),tbase(:,:,:,:,m),n)
+               enddo
             endif
 
          endif
 
 !     ----- Normalized to unit-norm -----
 
-         wrk%vx(:) = vxp(:, 1) ; wrk%vy(:) = vyp(:, 1) ; wrk%vz(:) = vzp(:, 1)
-         wrk%pr(:) = prp(:, 1)
-         if (ldimt.gt.0) then
-          do m = 1,ldimt
-           wrk%theta(:,m) = tp(:, m, 1)
-          enddo
-         endif
+         ! wrk%vx(:) = vxp(:, 1) ; wrk%vy(:) = vyp(:, 1) ; wrk%vz(:) = vzp(:, 1)
+         ! wrk%pr(:) = prp(:, 1)
+         ! if (ldimt.gt.0) then
+         !    do m = 1,ldimt
+         !       wrk%theta(:,m) = tp(:, m, 1)
+         !    enddo
+         ! endif
          call krylov_normalize(wrk, alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
@@ -336,11 +336,11 @@
 !     --> Arnoldi factorization.
          call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
 
-         !if(nid.eq.0) then
-         !   open(unit=12345, file="Hessenberg_matrix.dat")
-         !   write(12345, *) H(1:k_dim, 1:k_dim)
-         !   close(12345)
-         !endif
+!if(nid.eq.0) then
+!   open(unit=12345, file="Hessenberg_matrix.dat")
+!   write(12345, *) H(1:k_dim, 1:k_dim)
+!   close(12345)
+!endif
 
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
@@ -370,6 +370,24 @@
 
          end select
 
+      enddo
+
+      if (nid.eq.0) then
+          open(unit=12345, file="orthonormality.dat")
+      endif
+
+      do i = 1, k_dim
+          call krylov_norm(alpha, Q(i))
+          if (nid.eq.0) then
+              write(12345, *) "Norm of the ", i, "th mode = ", alpha
+          endif
+          do j = i+1, k_dim
+              call krylov_inner_product(alpha, q(i), q(j))
+              if (nid.eq.0) then
+                  write(12345, *) "Orthogonality between mode ", i, " and mode ", j, " = ", alpha
+              endif
+          enddo
+          if (nid.eq.0) write(12345, *)
       enddo
 
 !     ----- Output all the spectrums and converged eigenmodes -----
@@ -453,24 +471,24 @@
 
 !     --> Re-order the Krylov basis accordingly.
       do i = 1, k_dim+1
-                   qx(:, i) = Q(i)%vx(:)
-                   qy(:, i) = Q(i)%vy(:)
+         qx(:, i) = Q(i)%vx(:)
+         qy(:, i) = Q(i)%vy(:)
          if (if3D) qz(:, i) = Q(i)%vz(:)
          if (ifpo) qp(:, i) = Q(i)%pr(:)
          if (ldimt.gt.0) then
-          do m = 1,ldimt
-                   qt(:, i, m) = Q(i)%theta(:,m)
-          enddo
+            do m = 1,ldimt
+               qt(:, i, m) = Q(i)%theta(:,m)
+            enddo
          endif
       enddo
-                qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
-                qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
+      qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
+      qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
       if (if3D) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
       if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
       if (ldimt.gt.0) then
-       do m = 1,ldimt
-             qt(:, m, 1:ksize) = matmul(qt(:, m ,1:ksize), vecs)
-       enddo
+         do m = 1,ldimt
+            qt(:, m, 1:ksize) = matmul(qt(:, m ,1:ksize), vecs)
+         enddo
       endif
 
 !     --> Update the Schur matrix with b.T @ Q corresponding to
@@ -484,15 +502,15 @@
       call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,:,mstart),
      $     qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,:,ksize+1))
       do i = 1, k_dim+1
-                   Q(i)%vx(:) = qx(:, i)
-                   Q(i)%vy(:) = qy(:, i)
+         Q(i)%vx(:) = qx(:, i)
+         Q(i)%vy(:) = qy(:, i)
          if (if3D) Q(i)%vz(:) = qz(:, i)
          if (ifpo) Q(i)%pr(:) = qp(:, i)
          if (ldimt.gt.0) then
             do m = 1,ldimt
-                   Q(i)%theta(:,m) = qt(:, m, i)
+               Q(i)%theta(:,m) = qt(:, m, i)
             enddo
-      endif
+         endif
       enddo
 
       return
@@ -552,13 +570,13 @@
 
 !     ----- Output all the spectrums and converged eigenmodes -----
       do i = 1, k_dim
-                   qx(:, i) = Q(i)%vx(:)
-                   qy(:, i) = Q(i)%vy(:)
+         qx(:, i) = Q(i)%vx(:)
+         qy(:, i) = Q(i)%vy(:)
          if (if3D) qz(:, i) = Q(i)%vz(:)
          if (ifpo) qp(:, i) = Q(i)%pr(:)
          if (ldimt.gt.0) then
             do m = 1,ldimt
-                   qt(:, i, m) = Q(i)%theta(:,m)
+               qt(:, i, m) = Q(i)%theta(:,m)
             enddo
          endif
       enddo
@@ -604,14 +622,14 @@
      $        aimag(log_transform(vals(i))) / sampling_period
 
 !     ----- Computation of the corresponding eigenmode -----
-                   fp_cx(:) = matmul(qx(:, 1:k_dim), vecs(:, i))
-                   fp_cy(:) = matmul(qy(:, 1:k_dim), vecs(:, i))
+         fp_cx(:) = matmul(qx(:, 1:k_dim), vecs(:, i))
+         fp_cy(:) = matmul(qy(:, 1:k_dim), vecs(:, i))
          if (if3D) fp_cz(:) = matmul(qz(:, 1:k_dim), vecs(:, i))
          if (ifpo) fp_cp(:) = matmul(qp(:, 1:k_dim), vecs(:, i))
          if (ldimt.gt.0) then
-          do m = 1,ldimt
-                 fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))      
-          enddo
+            do m = 1,ldimt
+               fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))
+            enddo
          endif
 
 !     ----- Normalization to be unit-norm -----
@@ -664,13 +682,13 @@
       if (nid .eq. 0) then
 
          close(10) ; close(20) ;  close(30)
-!     
+!
          write(fmt2,'("(A,I16)")')
          write(fmt3,'("(A,F16.4)")')
          write(fmt4,'("(A,F16.12)")')
          write(fmt5,'("(A,E15.7)")') ! max precision
          write(fmt6,'("(A,E13.4)")') ! same as hmhlz
-!     
+!
          write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
 !     write(filename,"(',I7.7,'.info')") itime/ioutput
          open (844,file=filename,action='write',status='replace')
@@ -730,32 +748,32 @@
 
 !     This function selects the eigenvalues to be placed in the upper left corner
 !     during the Schur condensation phase.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
 
 !     delta : real
 !     All eigenvalues outside the circle of radius 1-delta will be selected.
-!     
+!
 !     nev : integer
 !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
 !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-!     
+!
 !     n : integer
 !     Total number of eigenvalues.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     selected : n-dimensional logical array.
 !     Array indicating which eigenvalue has been selected (.true.).
-!     
+!
 !     cnt : integer
 !     Number of selected eigenvalues. cnt >= nev + 4.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -803,22 +821,22 @@
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lv = lx1*ly1*lz1*lelv
 !     Velocity components of the latest Krylov vector.
-!     
+!
 !     f_pr : nek array of size lp = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
-!     
+!
 !     H : k+1 x k real matrix.
 !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-!     
+!
 !     k : int
 !     Current iteration of the Arnoldi factorization.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       use krylov_subspace

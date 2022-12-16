@@ -38,7 +38,7 @@
          param(12) = dt
          call compute_cfl(ctarg, vx, vy, vz, dt) ! C=sum(ux_i/dx_i)*dt
          if(nid.eq.0)write(6,*)' current CFL and target=',ctarg,param(26)
-         lastep = 0             ! subs1.f:279 
+         lastep = 0             ! subs1.f:279
          fintim = nsteps*dt
       endif
 
@@ -65,28 +65,28 @@
 
 !     Dispatch the correct matrix-vector product to the Arnoldi factorization.
 !     All subroutines need to have the same interface.
-!     
+!
 !     NOTE : The baseflow needs to be pass to (ubase, vbase, wbase, tbase)
 !     before this function is called.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     qx, qy, qz, qt : nek-arrays of size lv
 !     Initial velocity and temperature components.
-!     
+!
 !     qp : nek-array of size lp
 !     Initial pressure component.
-!     
+!
 !     OUTPUTS
 !     -------
-!     
+!
 !     fx, fy, fz, ft : nek-arrays of size lv
 !     Final velocity and temperature components.
-!     
+!
 !     fp : nek-array of size lp
 !     Final pressure component.
-!     
+!
 
       use krylov_subspace
       implicit none
@@ -103,16 +103,16 @@
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
       if (ifheat) call copy(t(1,1,1,1,1), tbase(1,1,1,1,1),  nx1*ny1*nz1*nelv)
       if (ldimt.gt.1) then
-            do m = 2,ldimt
-                  call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
-            enddo
+         do m = 2,ldimt
+            call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+         enddo
       endif
       if(ifbf2d .and. if3d)then
          call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
       endif
 
 !     --> Standard setup for the linearized solver.
-      if(.not.init) then 
+      if(.not.init) then
          call prepare_linearized_solver
          init = .true.
       endif
@@ -123,7 +123,12 @@
 !     --> Direct solver only steady and periodic!
       if (uparam(01) .ge. 3.0 .and. uparam(01) .lt. 3.2 ) then
          evop = 'd'
-         call forward_linearized_map(f, q)
+         if (iffindiff) then
+             if (nid.EQ.0) write(*, *) "Using the finite-difference approximation of the Fréchet derivative."
+             call forward_finite_difference_map(f, q)
+         else
+             call forward_linearized_map(f, q)
+         endif
       endif
 
 !     --> Adjoint solver only steady and periodic!
@@ -165,9 +170,9 @@
 !     Integrate forward in time the linearized Navier-Stokes equations.
 !     Denoting by L the Jacobian of the Navier-Stokes equations, the corresponding
 !     matrix vector product is thus
-!     
+!
 !     x(t) = exp(t * L) * x(0)
-!     
+!
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -243,7 +248,259 @@
       end subroutine forward_linearized_map
 
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+
+
+      subroutine forward_finite_difference_map(f, q)
+
+          ! Approximate the linearized forward map by finite-differencing the nonlinear solver.
+
+          use krylov_subspace
+          implicit none
+          include 'SIZE'
+          include 'TOTAL'
+          include 'ADJOINT'
+
+          type(krylov_vector) :: q, f
+          type(krylov_vector) :: wrk, work1, work2, work3, work4
+
+          real, parameter :: epsilon0 = 1e-6
+          real :: dummy
+          integer :: m
+
+          logical, save :: init
+          data             init /.false./
+          n = nx1*ny1*nz1*nelv
+
+          ! --> Setup the Nek parameters for the finite-differences approximation.
+          ifpert = .false. ; ifadj = .false.
+          call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
+
+          ! --> Turning-off the base flow side-by-side computation.
+          ifbase = .false.
+          ! if (uparam(01) .eq. 3.11) ifbase = .true. ! activate Floquet
+          ! if (uparam(01) .eq. 3.31) ifbase = .true. ! activate Floquet for intracycle transient growth
+          ! if (uparam(01) .eq. 2.1 .or. uparam(01) .eq. 2.2) then
+          !     init = .true.          ! Use stored baseflow if ifstorebase.
+          !     ifbase = .true.        ! activate baseflow evolution for UPO.
+          ! endif
+          ! if (ifstorebase .and. init) ifbase = .false. ! deactivate ifbase if baseflow stored.
+
+          ! if(ifstorebase .and.ifbase.and..not.init)then
+          !     if(nid .eq. 0) write(6,*) 'ALLOCATING ORBIT WITH NSTEPS:',nsteps
+          !     allocate(uor(lv, nsteps), vor(lv, nsteps))
+          !     if(if3d)then
+          !         allocate(wor(lv,nsteps))
+          !     else                   ! 2D
+          !         allocate(wor(1,1))
+          !     endif
+          !     if(ifheat)allocate(tor(lv, nsteps))
+          ! endif
+
+          !-----------------------------------------------------------------------
+          !-----                                                             -----
+          !-----     FINITE-DIFFERENCE APPROX. OF THE FRECHET DERIVATIVE     -----
+          !-----                                                             -----
+          !-----------------------------------------------------------------------
+
+          ! --> Scale the perturbation.
+          call krylov_copy(wrk, q)
+          call krylov_cmult(wrk, epsilon0)
+
+          ! --> Initial condition for the first evaluation.
+          call opcopy(vx, vy, vz, ubase, vbase, wbase)
+          ! if (ifheat) call copy(t(1, 1, 1, 1, 1), tbase(1, 1, 1, 1, 1), nx1*ny1*nz1*nelv)
+          ! if (ldimt.gt.1) then
+          !     do m = 2,ldimt
+          !         call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+          !     enddo
+          ! endif
+          ! if(ifbf2d .and. if3d)then
+          !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! endif
+
+          call opadd2(vx, vy, vz, wrk%vx, wrk%vy, wrk%vz)
+          ! if (ifheat) call add2(t, q%theta(:, 1), nx1*ny1*nz1*nelv)
+          ! if (ldimt.gt.1) then
+          !     do m = 2,ldimt
+          !         call add2(t(1,1,1,1,m), q%theta(:,m),  nx1*ny1*nz1*nelv)
+          !     enddo
+          ! endif
+          ! if(ifbf2d .and. if3d)then
+          !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! endif
+
+          time = 0.0D+00
+          do istep = 1, nsteps
+              !     --> Output current info to logfile.
+              if(nid .eq. 0) write(6,"(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
+
+              ! --> Integrate forward in time.
+              call nekstab_usrchk()
+              call nek_advance()
+
+          enddo
+
+          !     --> Copy the solution.
+          call nopcopy(work1%vx, work1%vy, work1%vz, work1%pr, work1%theta, vx, vy, vz, pr, t)
+
+
+
+
+
+          !     --> Initial condition for the second evaluation.
+          call opcopy(vx, vy, vz, ubase, vbase, wbase)
+          ! if (ifheat) call copy(t(1, 1, 1, 1, 1), tbase(1, 1, 1, 1, 1), nx1*ny1*nz1*nelv)
+          ! if (ldimt.gt.1) then
+          !     do m = 2,ldimt
+          !         call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+          !     enddo
+          ! endif
+          ! if(ifbf2d .and. if3d)then
+          !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! endif
+
+          call opsub2(vx, vy, vz, wrk%vx, wrk%vy, wrk%vz)
+          ! if (ifheat) call sub2(t, q%theta(:, 1), nx1*ny1*nz1*nelv)
+          ! if (ldimt.gt.1) then
+          !     do m = 2,ldimt
+          !         call sub2(t(1,1,1,1,m), q%theta(:,m),  nx1*ny1*nz1*nelv)
+          !     enddo
+          ! endif
+          ! if(ifbf2d .and. if3d)then
+          !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! endif
+
+          time = 0.0D+00
+          do istep = 1, nsteps
+              !     --> Output current info to logfile.
+              if(nid .eq. 0) write(6,"(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
+
+              ! --> Integrate forward in time.
+              call nekstab_usrchk()
+              call nek_advance()
+
+          enddo
+
+          !     --> Copy the solution.
+          call nopcopy(work2%vx, work2%vy, work2%vz, work2%pr, work2%theta, vx, vy, vz, pr, t)
+
+
+
+
+
+          ! --> Compute the final approximation.
+          call krylov_cmult(work2, -1.0D+00)
+          call krylov_copy(f, work1)
+          call krylov_add2(f, work2)
+          call krylov_cmult(f, 1.0D+00/(2.00D+00*epsilon0))
+
+
+
+
+          ! ! --> Scale the perturbation.
+          ! call krylov_copy(wrk, q)
+          ! call krylov_cmult(wrk, 2.0D+00*epsilon0)
+
+          ! ! --> Initial condition for the first evaluation.
+          ! call opcopy(vx, vy, vz, ubase, vbase, wbase)
+          ! ! if (ifheat) call copy(t(1, 1, 1, 1, 1), tbase(1, 1, 1, 1, 1), nx1*ny1*nz1*nelv)
+          ! ! if (ldimt.gt.1) then
+          ! !     do m = 2,ldimt
+          ! !         call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+          ! !     enddo
+          ! ! endif
+          ! ! if(ifbf2d .and. if3d)then
+          ! !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! ! endif
+
+          ! call opadd2(vx, vy, vz, wrk%vx, wrk%vy, wrk%vz)
+          ! ! if (ifheat) call add2(t, q%theta(:, 1), nx1*ny1*nz1*nelv)
+          ! ! if (ldimt.gt.1) then
+          ! !     do m = 2,ldimt
+          ! !         call add2(t(1,1,1,1,m), q%theta(:,m),  nx1*ny1*nz1*nelv)
+          ! !     enddo
+          ! ! endif
+          ! ! if(ifbf2d .and. if3d)then
+          ! !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! ! endif
+
+          ! time = 0.0D+00
+          ! do istep = 1, nsteps
+          !     !     --> Output current info to logfile.
+          !     if(nid .eq. 0) write(6,"(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
+
+          !     ! --> Integrate forward in time.
+          !     call nekstab_usrchk()
+          !     call nek_advance()
+
+          ! enddo
+
+          ! !     --> Copy the solution.
+          ! call nopcopy(work3%vx, work3%vy, work3%vz, work3%pr, work3%theta, vx, vy, vz, pr, t)
+
+
+
+
+
+          ! !     --> Initial condition for the second evaluation.
+          ! call opcopy(vx, vy, vz, ubase, vbase, wbase)
+          ! ! if (ifheat) call copy(t(1, 1, 1, 1, 1), tbase(1, 1, 1, 1, 1), nx1*ny1*nz1*nelv)
+          ! ! if (ldimt.gt.1) then
+          ! !     do m = 2,ldimt
+          ! !         call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+          ! !     enddo
+          ! ! endif
+          ! ! if(ifbf2d .and. if3d)then
+          ! !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! ! endif
+
+          ! call opsub2(vx, vy, vz, wrk%vx, wrk%vy, wrk%vz)
+          ! ! if (ifheat) call sub2(t, q%theta(:, 1), nx1*ny1*nz1*nelv)
+          ! ! if (ldimt.gt.1) then
+          ! !     do m = 2,ldimt
+          ! !         call sub2(t(1,1,1,1,m), q%theta(:,m),  nx1*ny1*nz1*nelv)
+          ! !     enddo
+          ! ! endif
+          ! ! if(ifbf2d .and. if3d)then
+          ! !     call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
+          ! ! endif
+
+          ! time = 0.0D+00
+          ! do istep = 1, nsteps
+          !     !     --> Output current info to logfile.
+          !     if(nid .eq. 0) write(6,"(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
+
+          !     ! --> Integrate forward in time.
+          !     call nekstab_usrchk()
+          !     call nek_advance()
+
+          ! enddo
+
+          ! !     --> Copy the solution.
+          ! call nopcopy(work4%vx, work4%vy, work4%vz, work4%pr, work4%theta, vx, vy, vz, pr, t)
+
+
+
+
+
+          ! ! --> Compute the final approximation.
+          ! call krylov_cmult(work3, -1.0D+00)
+          ! call krylov_cmult(work1, 8.0D+00)
+          ! call krylov_cmult(work2, -8.0D+00)
+
+          ! call krylov_copy(f, work1)
+          ! call krylov_add2(f, work2)
+          ! call krylov_add2(f, work3)
+          ! call krylov_add2(f, work4)
+
+          ! call krylov_cmult(f, 1.0D+00 / (12.0D+00 * epsilon0))
+
+          return
+      end subroutine forward_finite_difference_map
+
+
+      !-----------------------------------------------------------------------
 
 
       subroutine adjoint_linearized_map(f, q)
@@ -251,9 +508,9 @@
 !     Integrate forward in time the adjoint Navier-Stokes equations.
 !     Denoting by L adjoint Navier-Stokes operator, the corresponding
 !     matrix vector product is thus
-!     
+!
 !     x(t) = exp(t * L) * x(0)
-!     
+!
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -395,7 +652,12 @@
 !     ----------------------------------
 
 !     --> Evaluate exp(t*L) * q0.
-      call forward_linearized_map(f, q)
+      if (iffindiff) then
+          if (nid.EQ.0) write(*, *) "Using the finite-difference approximation of the Fréchet derivative."
+          call forward_finite_difference_map(f, q)
+      else
+          call forward_linearized_map(f, q)
+      endif
 
 !     --> Evaluate (exp(t*L) - I) * q0.
       call krylov_sub2(f, q)

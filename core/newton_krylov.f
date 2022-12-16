@@ -33,15 +33,24 @@
       data             calls_counter /0/
 
       logical, save :: dyntolinit
-      
+
       real, save :: dtol
       data          dtol /0.0d0/
-      if(dtol.eq.0.0d0)then
-         dtol=max(param(21),param(22))
-         if(nid.eq.0)write(6,*)'Saving user specified tolerance:',dtol
+
+
+      if (iffindiff) then
+         tol = 1e-5
+         dtol = 1e-5
+      else
+         if(dtol.eq.0.0d0)then
+            dtol=max(param(21),param(22))
+            if(nid.eq.0)write(6,*)'Saving user specified tolerance:',dtol
+         endif
+         tol = max(param(21), param(22))
       endif
+
       maxiter_newton = 100 ; maxiter_gmres = 100
-      tol = max(param(21), param(22))
+
       if(istep.eq.0.and.nid.eq.0)then
          open(unit=886,file='residu.dat',status='replace')
          open(unit=887,file='residu_newton.dat',status='replace')
@@ -126,9 +135,9 @@
          deallocate(uor,vor,wor)
          if(ifheat)deallocate(tor)
       endif
-      
+
       enddo newton
-      
+
       if(nid.eq.0.and.i.le.maxiter_newton)then
          close(886); close(887)
          if(i.eq.maxiter_newton)then
@@ -143,25 +152,25 @@
                write(6,*)'NEWTON for forced UPO finished successfully',i,'iterations.'
                write(6,*)' period found:',time,1.0d0/time
             endif
-         
-         write(6,*)'calls to the linearized solver: ',calls_counter
-         write(6,*)'total nondimensional time:',tottime
-         if(ifdyntol)write(6,*)'ifdyntol active!'
+
+            write(6,*)'calls to the linearized solver: ',calls_counter
+            write(6,*)'total nondimensional time:',tottime
+            if(ifdyntol)write(6,*)'ifdyntol active!'
          endif
       endif
       if(residual.lt.dtol)then
-         
+
          param(63) = 1          ! Enforce 64-bit output
          call bcast(param,200*wdsize)
          call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, "BF_")
          param(63) = 0          ! Enforce 32-bit output
-         call bcast(param,200*wdsize) 
-         
+         call bcast(param,200*wdsize)
+
          if(ifvor)then          ! outpost vorticity
             call comp_vort3(vort,wo1,wo2,q%vx,q%vy,q%vz);ifto=.false.;ifpo=.false.
             call outpost(vort(1,1),vort(1,2),vort(1,3),pr,t,'BFV')
          endif
-         
+
       endif
       return
       end subroutine newton_krylov
@@ -176,39 +185,39 @@
 
 !     Implementation of simple time-stepper GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     rhs_x, rhs_y, rhs_z, rhs_t : nek arrays of size (lv).
 !     Arrays containing the right-hand side of the linear problem to be solved.
-!     
+!
 !     rhs_p : nek array of size (lp)
 !     Array containing the right-hand side of the linear problem to be solved (pressure component).
-!     
+!
 !     maxiter : integer
 !     Maximum number of restarts for the GMRES computation.
-!     
+!
 !     ksize : integer
 !     Dimension of the Krylov subspace.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     sol_x, sol_y, sol_z, sol_t : nek arrays of size (lv).
 !     Arrays containing the solution of the linear problem.
-!     
+!
 !     sol_p : nek array of size (lp).
 !     Array containing the solution of the linear problem (pressure component).
-!     
+!
 !     calls : total number of calls to the linearized solver.
-!     Integer containing the total sum of nsteps*k necessary to converge the solution.     
-!     
+!     Integer containing the total sum of nsteps*k necessary to converge the solution.
+!
 !     NOTE : This is a plain implementation of GMRES following the algorithm given in
 !     Y. Saad. Iterative methods for sparse linear systems. Section 6.5 GMRES, alg. 6.9
-!     
+!
 !     Last Edit : March 26th 2021 by JC Loiseau.
-!     
+!
 
       use krylov_subspace
       implicit none
@@ -234,7 +243,11 @@
       integer :: i, j, k, maxiter, calls
       real :: beta, tol
 
-      tol = max(param(21), param(22))
+      if (iffindiff) then
+          tol = 1e-5
+      else
+          tol = max(param(21), param(22))
+      endif
 
 !     ----- Allocate arrays -----
       allocate(Q(ksize+1),H(ksize+1, ksize), yvec(ksize), evec(ksize+1))
@@ -274,7 +287,7 @@
 !     --> Update solution.
       call krylov_matmul(dq, Q(1:k), yvec(1:k), k)
       call krylov_add2(sol, dq)
-      
+
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
       call krylov_copy(Q(1), sol)
       call initialize_gmres_vector(beta, Q(1), rhs)
@@ -367,7 +380,7 @@
 !     --> Compute the right hand side of the time-stepper Newton.
       call nopcopy(f%vx, f%vy, f%vz, f%pr, f%theta, vx, vy, vz, pr, t)
       call krylov_copy(fc_nwt, f) ! for Newton UPO newton_linearized_map
-      call krylov_sub2(f, q) 
+      call krylov_sub2(f, q)
       f%time = 0.0D+00
 
 !     --> Pass current guess as base flow for the linearized calculation.
@@ -389,9 +402,9 @@
       include 'SIZE'
       include 'TOTAL'
       real, intent(in) :: tole
-      
+
       if(nid.eq.0)write(6,*)'ifdyntol Changing tol from',param(21),'to',abs(tole)
-      
+
       param(21) = abs(tole) ; call bcast(param(21),wdsize)
       param(22) = abs(tole) ; call bcast(param(22),wdsize)
 
@@ -435,7 +448,7 @@
             nwtol=1e-4
             if(nid.eq.0)write(6,*)'Forcing minimal tolerances:',nwtol
          endif
-         
+
 !     if(nwtol > max(param(21), param(22)))then
 !     nwtol=max(param(21), param(22))
 !     if(nid.eq.0)write(6,*)'Keeping current tolerances:',nwtol

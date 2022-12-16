@@ -19,6 +19,7 @@ c-----------------------------------------------------------------------
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifdyntol = .false. ; call bcast(ifdyntol,lsize)
+        iffindiff = .true. ; call bcast(iffindif, lsize)
 
       endif
 
