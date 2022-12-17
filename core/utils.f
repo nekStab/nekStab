@@ -147,7 +147,7 @@ c-----------------------------------------------------------------------
       end subroutine quicksort2
 c-----------------------------------------------------------------------
       subroutine nekStab_forcing (ffx,ffy,ffz,ix,iy,iz,ieg)
-! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
+!     credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
       implicit none
       include 'SIZE'            !
       include 'INPUT'           ! IF3D
@@ -203,7 +203,7 @@ c-----------------------------------------------------------------------
       end subroutine nekStab_forcing_temp
 c-----------------------------------------------------------------------
       subroutine spng_init
-! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
+!     credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -245,7 +245,7 @@ c-----------------------------------------------------------------------
       end subroutine spng_init
 c-----------------------------------------------------------------------
       subroutine spng_set
-! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
+!     credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
 !     set sponge function and refernece fields
       implicit none
       include 'SIZE'
@@ -394,7 +394,7 @@ c-----------------------------------------------------------------------
       call dsavg(qx)
       call dsavg(qy)
       if(if3D) call dsavg(qz)
-! V?MASK removes pointsa at the wall and inflow
+!     V?MASK removes pointsa at the wall and inflow
       call bcdirVC(qx, qy, qz,v1mask,v2mask,v3mask)
 
       if(ifheat)then
@@ -500,6 +500,23 @@ c-----------------------------------------------------------------------
 
       return
       end subroutine nopsub2
+c-----------------------------------------------------------------------
+      subroutine nopadd2(a1,a2,a3,a4,a5, b1,b2,b3,b4,b5)
+      implicit none
+      include 'SIZE'
+      include 'INPUT'
+      integer n,n2
+      real a1(1),a2(1),a3(1),a4(1),a5(1),b1(1),b2(1),b3(1),b4(1),b5(1)
+      n=nx1*ny1*nz1*nelv
+      n2=nx2*ny2*nz2*nelv
+      call add2(a1,b1,n)
+      call add2(a2,b2,n)
+      if (ndim.eq.3)call add2(a3,b3,n)
+      if (ifpo)call add2(a4,b4,n2)
+      if (ifheat)call add2(a5,b5,n)
+
+      return
+      end subroutine nopadd2
 c-----------------------------------------------------------------------
       subroutine nopcmult(a1,a2,a3,a4,a5,c)
       implicit none
