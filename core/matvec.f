@@ -187,6 +187,7 @@
       logical, save :: init
       data             init /.false./
       n = nx1*ny1*nz1*nelv
+      n2 = nx2*ny2*nz2*nelv
 
 !     --> Setup the parameters for the linearized solver.
       ifpert = .true. ; ifadj = .false.
@@ -268,9 +269,9 @@
           type(krylov_vector) :: q, f, perturbation
           type(krylov_vector) :: work
 
-          real, parameter :: epsilon0 = 1e-6
-          real :: dummy
+          real :: epsilon0
           integer :: i, j, k, m
+          real :: glsc3, glmax, dummy
 
           logical, save :: init
           data             init /.false./
@@ -281,23 +282,29 @@
           call bcast(ifpert, lsize) ; call bcast(ifadj, lsize)
 
           call krylov_zero(f)
+          call krylov_zero(work)
+          call nopcopy(work%vx, work%vy, work%vz, work%pr, work%theta(:, 1), ubase, vbase, wbase, pr, tbase(:, :, :, :, 1))
+          if (ldimt.gt.1) then
+              do m = 2,ldimt
+                  call copy(work%theta(:,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+              enddo
+          endif
+
+          call krylov_norm(dummy, work)
+          epsilon0 = 1e-6 * dummy
 
           if (findiff_order .eq. 2) then
               amplitudes(1) = 1 ; amplitudes(2) = -1
               coefs(1) = 1 ; coefs(2) = -1
-
               coefs = coefs / 2.0D+00
-              amplitudes = amplitudes * epsilon0
           else if (findiff_order .eq. 4) then
               amplitudes(1) = 1 ; amplitudes(2) = -1
               amplitudes(3) = 2 ; amplitudes(4) = -2
-
               coefs(1) = 8 ; coefs(2) = -8
               coefs(3) = -1 ; coefs(4) = 1
-
               coefs = coefs/12.0D+00
-              amplitudes = amplitudes * epsilon0
           endif
+          amplitudes = amplitudes * epsilon0
 
           ! --> Turning-off the base flow side-by-side computation.
           ifbase = .false.
@@ -328,12 +335,12 @@
 
           do i = 1, findiff_order
               ! --> Scale the perturbation.
+              call krylov_zero(perturbation)
               call krylov_copy(perturbation, q)
               call krylov_cmult(perturbation, amplitudes(i))
 
               ! --> Initial condition for the each evaluation.
-              call opcopy(vx, vy, vz, ubase, vbase, wbase)
-              if (ifheat) call copy(t(1, 1, 1, 1, 1), tbase(1, 1, 1, 1, 1), nx1*ny1*nz1*nelv)
+              call nopcopy(vx, vy, vz, pr, t(1,1,1,1,1), ubase, vbase, wbase, pr, tbase(1,1,1,1,1))
               if (ldimt.gt.1) then
                   do m = 2,ldimt
                       call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
@@ -343,11 +350,10 @@
                   call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
               endif
 
-              call opadd2(vx, vy, vz, perturbation%vx, perturbation%vy, perturbation%vz)
-              if (ifheat) call add2(t, q%theta(:, 1), nx1*ny1*nz1*nelv)
+              call nopadd2(vx, vy, vz, pr, t(1,1,1,1,1), perturbation%vx, perturbation%vy, perturbation%vz, perturbation%pr, perturbation%theta(:, 1))
               if (ldimt.gt.1) then
                   do m = 2,ldimt
-                      call add2(t(1,1,1,1,m), q%theta(:,m),  nx1*ny1*nz1*nelv)
+                      call add2(t(1,1,1,1,m), perturbation%theta(:,m),  nx1*ny1*nz1*nelv)
                   enddo
               endif
               if(ifbf2d .and. if3d)then
@@ -367,9 +373,16 @@
               enddo
 
               !     --> Copy the solution and compute the approximation of the Fréchet dérivative.
-              call nopcopy(work%vx, work%vy, work%vz, work%pr, work%theta, vx, vy, vz, pr, t)
+              call krylov_zero(work)
+              call nopcopy(work%vx, work%vy, work%vz, work%pr, work%theta(:, 1), vx, vy, vz, pr, t(1,1,1,1,1))
+              if (ldimt.gt.1) then
+                  do m = 2,ldimt
+                      call copy(work%theta(:,m), t(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+                  enddo
+              endif
               call krylov_cmult(work, coefs(i))
               call krylov_add2(f, work)
+
           enddo
 
           ! --> Rescale the approximate Fréchet derivative with the step size.
@@ -531,6 +544,9 @@
 !     ----------------------------------
 
 !     --> Evaluate exp(t*L) * q0.
+      ! call forward_finite_difference_map(f, q)
+      ! call forward_linearized_map(f, q)
+      ! call exitt()
       if (iffindiff) then
           if (nid.EQ.0) write(*, *) "Using the finite-difference approximation of the Fréchet derivative."
           call forward_finite_difference_map(f, q)
