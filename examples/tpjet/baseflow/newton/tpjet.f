@@ -1,68 +1,25 @@
 c-----------------------------------------------------------------------
       subroutine userchk
-
       include 'SIZE'
       include 'TOTAL'
 
-      parameter (lt=lx1*ly1*lz1*lelv)
-      real, dimension(lt) :: vx_r, vy_r, vz_r
-      real, dimension(lt) :: vx_i, vy_i, vz_i
-      real, dimension(lt) :: vx_b, vy_b, vz_b
-      common /baseflow_data/ vx_b, vy_b, vz_b
-
-      character(len=80)   :: filename
-      real :: kinetic_energy, amplitude=0.0001, phase
-
-      n = nx1*ny1*nz1*nelv
-
-      if(istep.eq.0) time=0.0d0
-
       call nekStab
-      call hpts
-
-      if (istep.eq.0) then
-
-        ! --> Export the mass matrix.
-        call outpost(bm1, bm1, vz, pr, t, "BM1")
-
-        ! --> Perturbation energy file.
-        if (nid.eq.0) open(unit=1234, file="Pertubation_energy.dat")
-
-        time = 0.0D+00
-      endif
-
-      ! --> Compute the perturbation energy.
-      !call opcopy(vx_r, vy_r, vz_r, vx, vy, vz)
-      !call opsub2(vx_r, vy_r, vz_r, vx_b, vy_b, vz_b)
-      kinetic_energy = glsc3(vx, bm1, vx, n) + glsc3(vy, bm1, vy, n)
-
-      if (nid.eq.0) write(1234, *) time, kinetic_energy
-
-      if (istep.eq.nsteps) then
-        if (nid.eq.0) close(1234)
-      endif
 
       return
       end
 c-----------------------------------------------------------------------
-      subroutine nekStab_usrchk
+      subroutine nekstab_usrchk
       include 'SIZE'
       include 'TOTAL'
 
       if(istep.eq.0)then !change defaults
-
-        xLspg = uparam(8); call bcast(xLspg , wdsize)
-        xRspg = uparam(9); call bcast(xRspg , wdsize)
-
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
         schur_tgt = 2 ; call bcast(schur_tgt,isize)
-        maxmodes = 2 ; call bcast(maxmodes,isize)
+        maxmodes = 10 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
-        ifvor = .true. ; call bcast(ifvor,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
-
-        glob_skip = 2 ; call bcast(glob_skip,isize)
-
+        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
       endif
 
       return
@@ -73,20 +30,9 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
 
-      integer ip, iel
-      real rtmp
-
       ffx = 0.0d0
       ffy = 0.0d0
       ffz = 0.0d0
-
-      if(ifheat.and.uparam(06).gt.0)then
-      iel = gllel(ieg)
-      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
-      if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
-      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
-      ffy=rtmp*uparam(06)
-      endif
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
@@ -101,7 +47,7 @@ c-----------------------------------------------------------------------
 
       if (JP.eq.0) then         ! velocity
          e  = gllel(ieg)
-         ux=1.0d0
+         ux=ubb(ix,iy,iz,e)
          uy=0.0d0
          uz=0.0d0
          temp=0.0d0
@@ -120,16 +66,19 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
       integer e
+      real ramp,pert
+
+
+      ! following Leshaft JFM 2019 
+      !ramp = 1./(1.+exp(4.-0.25*time))
+      pert = (1.+0.05*cos(time*8.*atan(1.)*uparam(05)))!*ramp
 
       if (JP.eq.0) then         ! velocity
          e  = gllel(ieg)
-         ux = 1.0d0
+         ux = ubb(ix,iy,iz,e)*pert
          uy = 0.0d0
          uz = 0.0d0
          temp=0.0d0
-
-         if(x.gt.-1.and.x.lt.1)temp=1.0d0 !cylinder with T
-
       else                      ! perturbation
          ux = 0.0d0
          uy = 0.0d0
@@ -147,21 +96,9 @@ c-----------------------------------------------------------------------
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
-      integer iel,ifc
-
-      if(ifheat)then
-       cbc(:,:,2)=cbc(:,:,1)
-       do iel=1,nelt
-        do ifc = 1, 2*ndim
-         if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
-         if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
-        enddo
-       enddo
-      endif
-
+      call set_rjet(ubb)
       return
       end
-c-----------------------------------------------------------------------
 
 c automatically added by makenek
       subroutine uservp(ix,iy,iz,eg)

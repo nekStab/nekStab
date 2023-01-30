@@ -1,10 +1,10 @@
 [GENERAL]
-startfrom = BF_Ra400_tsyphon0.f00001
+startfrom = BF_Ra2000_tsyphon0.f00001
 stopAt = endTime
-endtime = 0.1
+endtime = 0.14
 
 userparam01 = 2 #
-userparam06 = 500.0 # Ra
+userparam06 = 4000.0 # Ra
 userparam07 = 100  # k_dim
 
 dt = 0
@@ -17,25 +17,25 @@ writeinterval = 10.
 writedoubleprecision = no
 
 dealiasing = yes
-#filtering = explicit
-#filterweight = 0.01
-#filtercutoffratio = 0.84
+filtering = explicit
+filterweight = 0.01
+filtercutoffratio = 0.84
 
 [VELOCITY]
 viscosity = 5.0 # Prandtl number directily # param(2)
-residualtol = 1.0E-11
+residualtol = 1.0E-10
 residualproj = yes
 density = 1.0
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualtol = 1.0E-11
+residualtol = 1.0E-8
 residualproj = yes
 writetofieldfile = yes
 
 [TEMPERATURE]
 solver = helm
-residualtol = 1.0E-11
+residualtol = 1.0E-8
 residualproj = yes
 writetofieldfile = yes
 conductivity = 1.0

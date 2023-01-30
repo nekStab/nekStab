@@ -22,8 +22,10 @@ c-----------------------------------------------------------------------
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
-        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+        ifdyntol = .false. ; call bcast(ifdyntol,lsize)
+        iffindiff = .false. ; call bcast(iffindiff,lsize)
       endif
+
       return
       end
 c-----------------------------------------------------------------------

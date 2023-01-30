@@ -24,7 +24,7 @@ c-----------------------------------------------------------------------
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .true. ; call bcast(ifvor,lsize)
         ifvox = .true. ; call bcast(ifvox,lsize)
-        iffindiff = .true. ; call bcast(iffindiff,lsize)
+        iffindiff = .false. ; call bcast(iffindiff,lsize)
 
       endif
 
