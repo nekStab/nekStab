@@ -8,13 +8,11 @@ set -a
 #    parameter (lpelt=lelt)
 #    include 'NEKSTAB.inc'
 #-------------------------------------------------------------------------------
-
-# export NEKSTAB_SOURCE_ROOT="../../../.." #--> path to nekStab
+# Add to .bashrc:
+# export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
 # export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
-
 # export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 # export PATH=$NEK_SOURCE_ROOT/bin:$PATH
-
 #-------------------------------------------------------------------------------
 # OPTIONAL COMPILER SETTINGS
 #-------------------------------------------------------------------------------
@@ -112,7 +110,6 @@ cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
 
 echo "include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab" > makefile_usr.inc
 echo "generating makefile_usr.inc ... done"
-
 
 VERMAKENEK="19.0.1"
 set +a -e
