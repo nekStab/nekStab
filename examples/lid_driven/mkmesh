@@ -1,0 +1,11 @@
+genbox << EOF
+cav.box
+EOF
+#
+genmap << EOF
+box
+.001
+EOF
+#
+mv box.re2 cav.re2
+mv box.ma2 cav.ma2
