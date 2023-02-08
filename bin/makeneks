@@ -23,42 +23,44 @@ if command -v mpiifort -v 2>/dev/null; then
     echo $(mpiifort -v)
     export FC="mpiifort"
     export CC="mpiicx"
-    export FFLAGS+=" -extend-source"
+    export FFLAGS+=" -extend-source" # support to long lines
     
     if command -v $(ifort --version | grep ^oneapi) 2>/dev/null; then
         export FFLAGS+=" -qmkl"
-        #export FFLAGS+=" -xHost" # do not use xHost with ONEAPI
+        # do not use xHost with OneAPI
     else # not OneAPI
         export FFLAGS+=" -mkl -xHost"
     fi
     export USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" #optional link for old versions
-    export FFLAGS+=" -g -traceback" # tracer 
+    export FFLAGS+=" -g -traceback" # Intel tracer 
     # #export FFLAGS+=" -fpe0 -debug extended" # debugger
-
 else
     echo "GCC compiler found:"
     echo " version $(gcc --version | grep ^gcc | sed 's/^.* //g')"
     export FC="mpif90"
     export CC="mpicc"
-    export FFLAGS+="-march=native -ffixed-line-length-none -w -Wall -lm"
+    export FFLAGS+=" -march=native -ffixed-line-length-none -w -Wall"
     # if [[ $(gfortran -dumpversion | cut -f1 -d.) -gt 10 ]]; then
     #     export FFLAGS+=" -fallow-argument-mismatch"
     # fi
-    export FFLAGS+=" -g -fbacktrace"
+    # debug flags
+    export FFLAGS+=" -g -fbacktrace" # GCC tracer 
     #export FFLAGS+=" -Og -ggdb -Wextra -Warray-bounds -Warray-temporaries -Wconversion -Wno-argument-mismatch" 
     #export FFLAGS+=" -finit-real=nan -ffpe-trap=invalid,zero"
-    #export FFLAGS+=" -fsanitize=leak " #-fsanitize=address"
+    #export FFLAGS+=" -fsanitize=leak -fsanitize=address"
 fi
 
 case $(uname -s) in
     Darwin) case $(uname -p) in
             x86_64) ar="x86_64" 
             #echo "Darwin-x86-64 architecture identified"
-            export FFLAGS+=" -mcmodel=large"
+            #export FFLAGS+=" -mcmodel=large"
             ;;
             arm)  ar="arm" 
             #echo "Darwin-arm architecture identified"
-            export FFLAGS+=" -mcmodel=small"
+            # export FFLAGS+=" -mcmodel=small"
+            # Generate code for the small code model. The program and its statically defined symbols must be within 4GB of each other. Pointers are 64 bits. Programs can be statically or dynamically linked. 
+            # This is the default code model.
             ;;
         esac
         ;;
@@ -66,9 +68,9 @@ case $(uname -s) in
     Linux) case $(uname -p) in
             x86_64) ar="x86_64" 
             #echo "Linux-x86-64 architecture identified"
-            export FFLAGS+=" -mcmodel=large" # Restricts code to 2GB and no memory restriction on data
+            export FFLAGS+=" -mcmodel=large"
             ;;
-            arm)  ar="arm" 
+            arm)  ar="arm"
             #echo "Linux-arm architecture identified"
             ;;
         esac
@@ -101,7 +103,7 @@ echo "Nek5000 version: "$N_VERSION
 echo " using source path: $NEK_SOURCE_ROOT"
 echo "nekStab version: "$NS_VERSION
 echo " using source path: $NEKSTAB_SOURCE_ROOT"
-echo "compiling with:"
+echo "preparing compilation with:"
 x=($(which $FC; echo $FFLAGS $USR_LFLAGS))
 echo "${x[@]}"
 
@@ -111,7 +113,6 @@ cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
 echo "include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab" > makefile_usr.inc
 echo "generating makefile_usr.inc ... done"
 
-VERMAKENEK="19.0.1"
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
 if [[ $1 != "clean" ]]; then
