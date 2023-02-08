@@ -11,181 +11,116 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from scipy.signal import savgol_filter
 
-params = {'text.usetex': False,'font.size': 8,'legend.fontsize': 8,'legend.handlelength': 2.5,
-'agg.path.chunksize':100000
-};plt.rcParams.update(params)
-transp = False
+params = {'text.usetex': False,
+          'font.size': 11,
+          'legend.fontsize': 11,
+          'legend.handlelength': 2.5,
+          'agg.path.chunksize':100000}
+plt.rcParams.update(params)
+
 formt = 'png'
 ajust = 'tight'
-qual = 600
-siz2 = 5.4
-siz1 = 16.0*siz2/9.0
-
-lspec = 0.5 # width spctra lines
-smarker = 0.001 # width signal markers
+qual = 400
+fig_width = 4.3
+fig_height = 16*fig_width/9
         
-def fft(u,t,dt):
+def fft(u,dt):
     ufft = rfft(u)
     ufreq = rfftfreq(len(u), d=dt)
     prfreq = ufreq[np.argmax(np.abs(ufft))]
     print('Peak at f=',round(prfreq,6))
     return ufft,ufreq,prfreq
 
-#files = sorted(glob.glob('*/*.his', recursive=True))
-files = [
-'1cyl.his',
-]
-tskps = [
-0,
-]
-tmaxs = [
-0,
-]
+files = ['1cyl.his']
+tskps = [0] # set to 0 to plot all
+tmaxs = [0]
 
-i = 0
-for filen in files:
-    print('Opening file',filen)
-    file = open(filen, 'r')
-    fld = filen.split('/')[0]
-    nps = int(file.readline().rstrip())
-    print('Number of probes found:',nps)
-    x=np.zeros(nps);y=np.zeros(nps);z=np.zeros(nps)
-    for n, line in zip(range(nps), file):
-        x[n], y[n], z[n] = line.split()
-    file.close()
+for i, filen in enumerate(files):
+    print(f'Opening file {filen}')
+    
+    with open(filen, 'r') as file:
+        nps = int(file.readline().rstrip())
+        print(f'Number of probes found: {nps}')
+
+        coords = np.zeros((nps, 3))
+        for n, line in zip(range(nps), file):
+            coords[n] = line.split()
+
     try:
-        data = np.loadtxt(filen, skiprows=nps+1).reshape(-1, nps, 5)
-        if3d = True
+        data = np.loadtxt(filen, skiprows=nps + 1).reshape(-1, nps, 5)
+        is_3d = True
     except:
-        data = np.loadtxt(filen, skiprows=nps+1).reshape(-1, nps, 4)
-        if3d = False
-
-    #nps = 1
+        data = np.loadtxt(filen, skiprows=nps + 1).reshape(-1, nps, 4)
+        is_3d = False
+            
     for prb in range(0,nps,1):
-        print('Probe number ',prb+1)
-        fig, axs = plt.subplots(2, sharex=False)
-        fig.set_size_inches(siz1, siz2)
-        axs[0].set_xlabel(r'$t$')
-        axs[0].set_title(r''+' x,y,z='+str(x[prb])+','+str(y[prb])+','+str(z[prb]))
+        print(f'Probe number {prb + 1}')
+
         t=data[:,prb,0][1:]
         u=data[:,prb,1][1:]
         v=data[:,prb,2][1:]
-        if if3d:
+        if is_3d:
             w=data[:,prb,3][1:]
             p=data[:,prb,4][1:]
         else:
             p=data[:,prb,3][1:]
 
+        # Adjust time series (crop and interpolate for constant time step)
+        tmin, tmax = t.min(), t.max()
+        print(f'Original time series: {tmin} {tmax}')
 
-        tmin=t.min();tmax=t.max()
-        print('Original time series from:',tmin,tmax)
-        if float(tskps[i]) > 0 and float(tskps[i]) > tmin:
-            tmin = float(tskps[i])
-        if float(tmaxs[i]) > 0 and float(tmaxs[i]) < tmax:
-            tmax = float(tmaxs[i])
-        print('Cropped time series from:',tmin,tmax)
-        itmin = np.where(t >= tmin)[0][0]
-        itmax = np.where(t >= tmax)[0][0]
+        tmin = max(tmin, float(tskps[i])) if float(tskps[i]) > 0 else tmin
+        tmax = min(tmax, float(tmaxs[i])) if float(tmaxs[i]) > 0 else tmax
+        print(f'Cropped time series: {tmin} {tmax}')
+
+        itmin, itmax = np.where(t >= tmin)[0][0], np.where(t >= tmax)[0][0]
         to = t[itmin:itmax]
-        dtt = np.zeros(len(to), dtype = np.float64)
-        for xx in range(1,len(dtt)-1): #compute dt array
-            dtt[xx] = to[xx+1] - to[xx]
-        print(to.shape,dtt.shape)
-        dt = dtt.max() #np.round(dtt.max(),decimals=7) # get maximum dt of array to be safe
-        tn = np.linspace(t[itmin], t[itmax], int((t[itmax]-t[itmin])/dt), endpoint=False)
-        axs[1].set_xlabel(r'$St$')
+        dtt = np.zeros(len(to), dtype=np.float64)
+        for xx in range(1, len(dtt) - 1):
+            dtt[xx] = to[xx + 1] - to[xx]
 
-        uo = u[itmin:itmax]; nm='u'; cor='r'
-        qur = np.mean(uo); uo -= qur; print('(',nm,') mean, min, max=',round(qur,6),uo.min(),uo.max())
-        un = interpolate.interp1d(to,uo,kind='slinear',fill_value="extrapolate")(tn) #'zero','slinear','quadratic','cubic'=spline interpolation of 0th,1st,2nd,3rd;
-        u = un
-        ufft,ufreq,prfreq = fft(un,tn,dt)
+        dt = dtt.max()
+        tn = np.linspace(t[itmin], t[itmax], int((t[itmax] - t[itmin]) / dt), endpoint=False)
 
-        #axs[1].semilogy(ufreq,np.abs(ufft),c=cor,lw=lspec,label=nm+' St='+("{0:.4f}".format(round(prfreq,4))))
-        #axs[1].axvline(x=prfreq           ,c=cor,lw=lspec,ls=':')
+        # Figure 
+        fig, axs = plt.subplots(2, sharex=False)
+        fig.set_size_inches(fig_height, fig_width)
+        
+        # Plot time series (signal on upper part of the figure)
+        axs[0].set_xlabel(r'$t$')
+        axs[0].set_title(f'x,y,z={coords[prb][0]},{coords[prb][1]},{coords[prb][2]}')
+        
+        # We focus on the vertical velocity signal
+        nm='v' # name of the signal
+        cor='r' # color of the signal
+        vo = v[itmin:itmax]
+        qur = np.mean(vo) # compute mean
+        vo -= qur # remove mean
+        print('(',nm,') mean, min, max=',round(qur,6),vo.min(),vo.max())
+        vn = interpolate.interp1d(to,vo,kind='slinear',fill_value="extrapolate")(tn) #'zero','slinear','quadratic','cubic'=spline interpolation of 0th,1st,2nd,3rd;
+        
+        axs[0].scatter(tn,vn,c=cor,ls='-',s=0.001) # plot signal
 
-        uo = v[itmin:itmax]; nm='v'; cor='g'
-        qur = np.mean(uo); uo -= qur; print('(',nm,') mean, min, max=',round(qur,6),uo.min(),uo.max())
-        un = interpolate.interp1d(to,uo,kind='slinear',fill_value="extrapolate")(tn) #'zero','slinear','quadratic','cubic'=spline interpolation of 0th,1st,2nd,3rd;
-        ud = un
+        ufft,ufreq,prfreq = fft(vn,dt) # compute fft
 
-      
-        axs[0].scatter(tn,un,c=cor,ls='-',s=smarker)
-        ufft,ufreq,prfreq = fft(un,tn,dt)
-        axs[1].semilogy(ufreq,np.abs(ufft),c=cor,lw=lspec)#,label=nm+' St='+("{0:.4f}".format(round(prfreq,4))))
-
+        axs[1].semilogy(ufreq,np.abs(ufft),c=cor,lw=0.6)#,label=nm+' St='+("{0:.4f}".format(round(prfreq,4))))
         axs[1].axvline(x=prfreq         ,c=cor,lw=0.5,ls='--',label='$St=$'+("{0:.4f}".format(round(prfreq,4))))
-   
-        if if3d:
-            uo = w[itmin:itmax]; nm='w'; cor='b'
-        else:
-            uo = p[itmin:itmax]; nm='p'; cor='b'
-        qur = np.mean(uo); uo -= qur; print('(',nm,') mean, min, max=',round(qur,6),uo.min(),uo.max())
-        un = interpolate.interp1d(to,uo,kind='slinear',fill_value="extrapolate")(tn) #'zero','slinear','quadratic','cubic'=spline interpolation of 0th,1st,2nd,3rd;
-        udd = un
-        
-        #axs[0].scatter(tn,un,c=cor,ls='-',s=smarker)
-        #ufft,ufreq,prfreq = fft(un,tn,dt)
-        #axs[1].semilogy(ufreq,np.abs(ufft),c=cor,lw=lspec,label=nm+' St='+("{0:.4f}".format(round(prfreq,4))))
-        #axs[1].axvline(x=prfreq           ,c=cor,lw=lspec,ls=':')
-        
+        axs[1].set_xlabel(r'$St$')
         axs[1].set_xlim(0., 0.4)
         axs[1].set_ylim(1e1,1e5) 
 
-        #plt.ylim(1e-5,1e5) 
-
         plt.legend(loc='upper right')
-        fname = fld+str(prb+1)+'.'+formt
+        fname = 'his'+str(prb+1)+'_fft.'+formt
         print('Saving ',fname); print()
         plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust)
         plt.close(); plt.clf()
-        '''
-        t = tn
-        fig = plt.figure();fig.set_size_inches(siz1*2, siz2*2);ax = fig.gca(projection='3d')
-        ax.set_title(r''+ratios[i]+' x,y,z='+str(x[prb])+','+str(y[prb])+','+str(z[prb]))
-        ax.set_xlabel(r'$u$');ax.set_ylabel(r'$v$');ax.set_zlabel(r'$w$')
-        #ax.view_init(60, 35);
-        factor=1.1
-        vmin = np.min(u)*factor;     vmax = np.max(u)*factor
-        vdmin = np.min(ud)*factor;   vdmax = np.max(ud)*factor
-        vddmin = np.min(udd)*factor; vddmax = np.max(udd)*factor
+        
+        # Phase space plot
+        fig = plt.figure(figsize=(fig_height, fig_width))
+        plt.xlabel(r'$v$')
+        plt.ylabel(r'$\dot{v}$')
+        plt.plot(v[2:-2],np.gradient(v)[2:-2]/dt,c='r',ls='-',lw=0.8)
 
-        ax.plot(u,ud,vddmin, c='r',ls='dotted',lw=0.4)
-        ax.plot(vmin*np.ones(len(t)),ud,udd, c='g',ls='dotted',lw=0.4)
-        ax.plot(u,vdmax*np.ones(len(t)),udd,c='b',ls='dotted',lw=0.4)
-        ax.plot(u,ud,udd,c='k',ls='solid',lw=0.8)
-
-        ax.set_xlim(vmin,vmax);ax.set_ylim(vdmin,vdmax);ax.set_zlim(vddmin,vddmax)
-        fname = fld+'_'+ratios[i]+'his'+str(prb+1)+'_attractor.'+formt
+        fname = 'his'+str(prb+1)+'_phase_space.'+formt
         print('Saving ',fname)
-        plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);plt.close(); plt.clf()
-
-        u = savgol_filter(ud, 3, 1, deriv=0, mode='nearest')
-        ud = savgol_filter(ud, 15, 6, deriv=1, mode='nearest')
-        udd = savgol_filter(ud, 23, 9, deriv=2, mode='nearest')
-        dd = 6
-        t = tn[dd:-dd];u = u[dd:-dd];ud = ud[dd:-dd]; udd = udd[dd:-dd]
-
-        fig = plt.figure();fig.set_size_inches(siz1*2, siz2*2);ax = fig.gca(projection='3d')
-        #ax.set_title(r'R=0.'+ratios[i]+' x,y,z='+str(x[prb])+','+str(y[prb])+','+str(z[prb]))
-        ax.set_title(r'x,y,z='+str(x[prb])+','+str(y[prb])+','+str(z[prb]))
-        ax.set_xlabel(r'$v$');ax.set_ylabel(r'$\dot{v}$');ax.set_zlabel(r'$\ddot{v}$')
-        #ax.view_init(60, 35);
-        factor=1.1
-        vmin = np.min(u)*factor;     vmax = np.max(u)*factor
-        vdmin = np.min(ud)*factor;   vdmax = np.max(ud)*factor
-        vddmin = np.min(udd)*factor; vddmax = np.max(udd)*factor
-
-        #ax.plot(u,ud,vddmin, c='r',ls='dotted',lw=0.4)
-        #ax.plot(vmin*np.ones(len(t)),ud,udd, c='g',ls='dotted',lw=0.4)
-        #ax.plot(u,vdmax*np.ones(len(t)),udd,c='b',ls='dotted',lw=0.4)
-        ax.plot(u,ud,udd,c='k',ls='solid',lw=0.8)
-
-        ax.set_xlim(vmin,vmax);ax.set_ylim(vdmin,vdmax);ax.set_zlim(vddmin,vddmax)
-        fname = fld+'_'+ratios[i]+'his'+str(prb+1)+'_attractor_rec.'+formt
-        print('Saving ',fname)
-        plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust);plt.close(); plt.clf()
-        '''
-    i += 1
-
-
+        plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust)

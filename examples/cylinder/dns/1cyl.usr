@@ -3,8 +3,6 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      if(istep.eq.0) time=0.0d0
-
       call nekStab
       call hpts
 
@@ -19,15 +17,14 @@ c-----------------------------------------------------------------------
 
         xLspg = uparam(8); call bcast(xLspg , wdsize)
         xRspg = uparam(9); call bcast(xRspg , wdsize)
+        spng_str = uparam(10);  call bcast(spng_str, wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 2 ; call bcast(schur_tgt,isize)
-        maxmodes = 2 ; call bcast(maxmodes,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
+        maxmodes = 10 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .true. ; call bcast(ifvor,lsize)
         ifvox = .true. ; call bcast(ifvox,lsize)
-        
-        glob_skip = 2 ; call bcast(glob_skip,isize)
 
       endif
 
@@ -39,20 +36,10 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
 
-      integer ip, iel
-      real rtmp
- 
       ffx = 0.0d0
       ffy = 0.0d0
+      !if(ifto)ffy = temp*0.15d0 !coupling the scalar field
       ffz = 0.0d0
-
-      if(ifheat.and.uparam(06).gt.0)then
-      iel = gllel(ieg)
-      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
-      if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
-      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
-      ffy=rtmp*uparam(06)
-      endif
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
@@ -106,6 +93,23 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine usrdat
       return
       end
@@ -115,16 +119,32 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       integer iel,ifc
       
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
       if(ifheat)then
-       cbc(:,:,2)=cbc(:,:,1)
-       do iel=1,nelt
-        do ifc = 1, 2*ndim
-         if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
-         if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
-        enddo
-       enddo
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
       endif
 
       return
       end
 c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end

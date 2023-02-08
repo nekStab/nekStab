@@ -22,12 +22,12 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-06
+residualTol = 1.0E-05
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-08
+residualTol = 1.0E-07
 residualProj = no
 density = 1.0
 viscosity = -50.0
