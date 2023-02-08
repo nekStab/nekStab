@@ -1,0 +1,36 @@
+[GENERAL]
+startFrom = BF_cav0.f00001
+stopAt = endTime
+endTime = 0.5 # ~ (1/0.34)/6 according to Nyquist theorem
+
+userParam01 = 2   # 0:DNS, 2:Newton, 3.1: Eigenproblem
+userParam02 = 0   # Krylov vector to load (if restarting)
+userParam07 = 90  # Krylov base lenght (from 80-200) 
+userParam10 = 1.5 # Cavity aspect ratio 
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+density = 1.0
+viscosity = -3600.0
+
+#[TEMPERATURE]
+#solver = helm
+#residualTol = 1.0E-9
+#residualProj = yes
+#writeToFieldFile = yes
+#conductivity = -2000.0
+#rhoCp = 1.0
