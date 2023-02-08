@@ -94,20 +94,14 @@ c-----------------------------------------------------------------------
          print *,'  / __ \ / _ \ / //_/\__ \ / __// __ `// __ \'
          print *,' / / / //  __// ,<  ___/ // /_ / /_/ // /_/ /'
          print *,'/_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/ '  
-         print *,'COPYRIGHT (c) 2020-2022 DynFluid Laboratoire Paris ',NSVERSION
+         print *,'COPYRIGHT (c) 2020-2023 DynFluid Laboratoire Paris ',NSVERSION
          print *,'Nek5000 ', NVERSION
          print *,''
-!     print *,'==================================================='
-!     print *,'== nekStab ========================================'
-!     print *,'== Copyright (c) 2021 DynFluid Laboratoire ========'
-!     print *,'==================================================='
-!     write(6,'(A,A)')' Nek5000 version        : ', NVERSION
-!     write(6,'(A,A)')' NekStab version        : ', NSVERSION
       endif
 
       call copy(bm1s, bm1, n)   ! never comment this !
 
-      if(spng_str.ne.0)then     !sponge on
+      if(spng_str.ne.0)then !sponge on
 
          if(nid.eq.0)write(6,*)
          if(nid.eq.0)write(6,*)' Initializing sponge...'
@@ -128,6 +122,7 @@ c-----------------------------------------------------------------------
 !     ifvo=.false.; ifpo = .false.; ifto = .true.
 !     call outpost(vx,vy,vz,pr,bm1s,'BMS')
 !     ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
+
          if(nid.eq.0)write(6,*)'Sponge activated.'
          if(nid.eq.0)write(6,*)
       endif
@@ -153,7 +148,7 @@ c-----------------------------------------------------------------------
 
          call nekStab_outpost   ! outpost vorticity
          call nekStab_comment   ! print comments
-         call nekStab_energy   (vx,vy,vz,t,'total_energy.dat'   ,glob_skip)
+         call nekStab_energy   (vx,vy,vz,t,'total_energy.dat',glob_skip)
          call nekStab_enstrophy(vx,vy,vz,t,'total_enstrophy.dat',glob_skip)
 
       case(1)                   ! fixed points computation
@@ -179,7 +174,7 @@ c-----------------------------------------------------------------------
 
          if(ifbfcv)call nek_end
 
-      case(2)                   ! Newton-Krylov solver
+      case(2) ! Newton-Krylov solver
 
 !     sanity check
          if(uparam(1).eq.2.0)then
