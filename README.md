@@ -75,6 +75,24 @@ If you have questions about Nek5000, please contact the dedicated [GitHub repo](
 
 When using **nekStab**, please consider citing one of the following papers :
 
+- [Frantz et al. (2023)](https://arxiv.org/abs/2301.12940) presents the complete theoretical framework underlying **nekStab**.
+```bibtex
+@article{frantz2023krylov,
+    author = {Frantz, R. A. S. and Loiseau, J.-Ch. and Robinet, J.-Ch.},
+    title = "{Krylov Methods for Large-Scale Dynamical Systems: Application in Fluid Dynamics}",
+    journal = {Applied Mechanics Reviews},
+    volume = {75},
+    number = {3},
+    year = {2023},
+    month = {03},
+    issn = {0003-6900},
+    doi = {10.1115/1.4056808},
+    url = {https://doi.org/10.1115/1.4056808},
+    note = {030802},
+    eprint = {https://asmedigitalcollection.asme.org/appliedmechanicsreviews/article-pdf/75/3/030802/6996354/amr\_075\_03\_030802.pdf},
+}
+```
+
 - [Loiseau et al. (2019)](https://arxiv.org/pdf/1804.03859.pdf) presents most of the theoretical framework underlying **nekStab**.
 ```bibtex
 @incollection{chapter:loiseau:2019,
