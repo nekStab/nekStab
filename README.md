@@ -23,12 +23,16 @@ If you already have C and Fortran compilers, you can install both on Ubuntu/Debi
 
 **Prerequisites**
 
+Linux
 ```bash
-sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4
-brew install mpich gfortran
+sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4 htop
+```
+MacOS
+```bash
+brew install mpich gfortran wget git cmake htop
 ```
 
-**Cloning the repository**
+**Cloning the repository and Nek5000**
 
 ```bash
 git clone --depth=50 https://github.com/nekStab/nekStab.git
@@ -36,9 +40,7 @@ cd nekStab
 ./Nek5000clone.sh
 ```
 
-
 Run **vim $HOME/.bashrc** and add the following :
-
 ```bash
 export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
 export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
@@ -48,14 +50,26 @@ export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
 
 Computing the fixed point for the cylinder flow example using the Newton-Krylov solver on 4 processors is as simple as
 
+Go to a given example folder and compile the code:
 ```bash
 cd ~/nekStab/examples/cylinder/baseflow/newton  
 ./cmpile.sh all
-or
-makeneks 1cyl 
-then
-nekbmpi 1cyl 4 
+```
+alternatively you can compile with _makeneks_ followed by the case name:
+```bash
+makeneks 1cyl
+```
+
+If 'Compilation successful!' then you can run the code:
+```bash
+nekbmpi 1cyl 4
+```
+to follow the code output in the _logfile_ try:
+```bash
 tail -f logfile
+```
+To stop the code just:
+```bash
 killall nek5000
 ```
 
