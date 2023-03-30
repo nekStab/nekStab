@@ -25,6 +25,7 @@ If you already have C and Fortran compilers, you can install both on Ubuntu/Debi
 
 ```bash
 sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4
+brew install mpich gfortran
 ```
 
 **Cloning the repository**
