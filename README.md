@@ -30,7 +30,7 @@ sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4
 **Cloning the repository**
 
 ```bash
-git clone --depth=50 --branch=master https://github.com/nekStab/nekStab.git
+git clone --depth=50 https://github.com/nekStab/nekStab.git
 cd nekStab
 ./Nek5000clone.sh
 ```
@@ -42,6 +42,7 @@ Run **vim $HOME/.bashrc** and add the following :
 export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
 export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
 ```
 
 Computing the fixed point for the cylinder flow example using the Newton-Krylov solver on 4 processors is as simple as
