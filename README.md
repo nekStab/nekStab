@@ -49,8 +49,13 @@ Computing the fixed point for the cylinder flow example using the Newton-Krylov 
 
 ```bash
 cd ~/nekStab/examples/cylinder/baseflow/newton  
-./cmpile.sh all  
-nekbmpi 1cyl 4  
+./cmpile.sh all
+or
+makeneks 1cyl 
+then
+nekbmpi 1cyl 4 
+tail -f logfile
+killall nek5000
 ```
 
 For more information on compiling the code on Mac OS or optional packages, see the [**Documentation**](https://nekstab.github.io/nekStabDoc/en/master/).
