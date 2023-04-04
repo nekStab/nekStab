@@ -1,0 +1,31 @@
+[GENERAL]
+startFrom = 0
+#startFrom = 0
+#startFrom = 0
+
+stopAt = endTime
+endTime = 1000
+#endTime = 1
+
+# Choose the operation mode : 
+userParam01 = 0 # DNS mode
+#userParam01 = 2 # Base Flow computation (Newton method)
+#userParam01 = 3.1 # Eigenvalue computation (Krylov method)
+
+userParam03 = 0 # Krylov base length
+
+dt = 0 # 0 to variable time steppe
+variableDt = yes # compute a value to match taget Co
+timeStepper = bdf3 # 3rd order 
+targetCFL = 0.5 # stable CFL limit
+
+writeControl = runTime
+writeInterval = 10. # write to disk interval
+
+[PRESSURE]
+residualTol = 1.0E-06 # tolerance to Pressure solver
+
+[VELOCITY]
+residualTol = 1.0E-07 # tolerance to Helmholtz solver
+density = 1.0 # do not change
+viscosity = -50.0 # Reynolds number (given as negative value)
