@@ -410,7 +410,7 @@ c-----------------------------------------------------------------------
       real, dimension(lv,ldimt), intent(in) :: pt
       !real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
       integer, intent(in) :: skip
-      character(len=20), intent(in) :: fname
+      character(len=16), intent(in) :: fname
       real glsc3,uek,vek,wek,eek,pot
       save eek
       logical, save :: initialized
