@@ -8,6 +8,10 @@ export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
 
+# For macOS error - not enough slots available
+export OMPI_MCA_btl_vader_backing_directory=/tmp
+export TMPDIR=/tmp
+
 #uncomment the deisred compiler
 source ${NEKSTAB_SOURCE_ROOT}/core/compiler.sh
 
