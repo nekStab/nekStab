@@ -17,13 +17,14 @@ timeStepper = bdf3 # 3rd order
 targetCFL = 0.5 # CFL limit
 
 writeControl = runTime
-writeInterval = 10. # write to disk interval
+writeInterval = 20. # write to disk interval
 
 [PRESSURE]
-residualTol = 1.0E-08 # tolerance to Pressure solver
-residualProj = yes
+residualTol = 1.0E-06 # tolerance to Pressure solver
+residualProj = no
 
 [VELOCITY]
-residualTol = 1.0E-08 # tolerance to Helmholtz solver
+residualTol = 1.0E-06 # tolerance to Helmholtz solver
+residualProj = no 
 density = 1.0 # do not change
 viscosity = -100.0 # Reynolds number (given as negative value)
