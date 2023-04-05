@@ -21,8 +21,8 @@ plt.rcParams.update(params)
 formt = 'png'
 ajust = 'tight'
 qual = 400
-fig_width = 4.3
-fig_height = 16*fig_width/9
+fig_width = 3.4
+fig_height = 4.3
         
 def fft(u,dt):
     ufft = rfft(u)
@@ -32,8 +32,12 @@ def fft(u,dt):
     return ufft,ufreq,prfreq
 
 files = ['1cyl.his']
+
+# set the skipping time
 tskps = [0] # set to 0 to plot all
-tmaxs = [0]
+
+# set the maximum time 
+tmaxs = [0] # set to 0 to plot all
 
 for i, filen in enumerate(files):
     print(f'Opening file {filen}')
@@ -114,6 +118,28 @@ for i, filen in enumerate(files):
         print('Saving ',fname); print()
         plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust)
         plt.close(); plt.clf()
+        
+        
+        
+        # log 
+        fig = plt.figure(figsize=(fig_height, fig_width))
+        plt.xlabel(r'$t$')
+        plt.ylabel(r'$v$')
+        plt.yscale('log')
+        #plt.xscale('log')
+        plt.plot(tn,vn,c='r',ls='-',lw=0.8)
+        
+        from scipy.signal import hilbert
+        vn_hilbert = np.abs(hilbert(vn))
+        plt.plot(tn[1:-1], vn_hilbert[1:-1], c='b', ls='--', lw=0.8)
+        
+        plt.xlim(0,200)
+        plt.ylim(1e-4,1)
+
+        fname = 'his'+str(prb+1)+'_log.'+formt
+        print('Saving ',fname)
+        plt.savefig(fname,format=formt,dpi=qual,bbox_inches=ajust)
+        
         
         # Phase space plot
         fig = plt.figure(figsize=(fig_height, fig_width))
