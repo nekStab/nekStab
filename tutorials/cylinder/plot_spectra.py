@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import matplotlib.pyplot as plt
 import numpy as np
-
-params = {'text.usetex': True,
+params = {'text.usetex': False,
           'font.size': 8,
           'legend.fontsize': 8,
           'legend.handlelength': 1.,}

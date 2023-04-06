@@ -1,16 +1,8 @@
 #!/usr/bin/env python
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
-import matplotlib.gridspec as gridspec
-import matplotlib as mpl
 import numpy as np
-from scipy import sin, cos, pi, exp, tanh, log, interpolate
+from scipy import interpolate
 from scipy.fft import rfftfreq, rfft
-import os, os.path, csv, time, pickle, glob
-from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap, BoundaryNorm
-from scipy.signal import savgol_filter
-
 params = {'text.usetex': False,
           'font.size': 11,
           'legend.fontsize': 11,
