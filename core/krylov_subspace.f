@@ -32,7 +32,7 @@
       integer m
 
       n = nx1*ny1*nz1*nelv
-      
+
 !     --> Kinetic energy.
       alpha = glsc3(p%vx, bm1s, q%vx, n) + glsc3(p%vy, bm1s, q%vy, n)
       if (if3d) alpha = alpha + glsc3(p%vz, bm1s, q%vz, n)
@@ -237,7 +237,7 @@
             do j = 1,ldimt
                         qt(:, i, j) = Q(i)%theta(:,j)
             enddo
-         endif         
+         endif
          time_comp(i) = Q(i)%time
       enddo
 

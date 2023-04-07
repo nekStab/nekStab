@@ -49,10 +49,10 @@
       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
       if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
       if (ldimt.gt.0) then
-         do i = 1,ldimt
-            alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
-         enddo
-      endif
+          do i = 1,ldimt
+              alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
+          enddo
+       endif
 
       return
       end subroutine inner_product

@@ -255,7 +255,6 @@
       subroutine forward_finite_difference_map(f, q)
 
           ! Approximate the linearized forward map by finite-differencing the nonlinear solver.
-
           use krylov_subspace
           implicit none
           include 'SIZE'
@@ -544,9 +543,6 @@
 !     ----------------------------------
 
 !     --> Evaluate exp(t*L) * q0.
-      ! call forward_finite_difference_map(f, q)
-      ! call forward_linearized_map(f, q)
-      ! call exitt()
       if (iffindiff) then
           if (nid.EQ.0) write(*, *) "Using the finite-difference approximation of the Fréchet derivative."
           call forward_finite_difference_map(f, q)

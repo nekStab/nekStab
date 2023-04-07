@@ -6,7 +6,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      k_dim = 100               ! standard value, increas  in .usr 
+      k_dim = 100               ! standard value, increas  in .usr
       schur_tgt = 2             ! schur target for schur step factorizaiton
       eigen_tol = 1.0e-6        ! tolerance for eigenmodes convergence
       schur_del = 0.10d0        !
@@ -29,7 +29,7 @@ c-----------------------------------------------------------------------
       ifseed_load = .false.     ! loading initial seed (e.g. Re_ )
 !     if all false the 'useric' subroutine prescribes the initial seed
 
-!     position for zero-crossing vertical velocity check ! 
+!     position for zero-crossing vertical velocity check !
       xck = 2.0D0  ; call bcast(xck, wdsize)
       yck = 0.0D0  ; call bcast(yck, wdsize)
       zck = 0.0D0  ; call bcast(zck, wdsize)
@@ -56,7 +56,7 @@ c-----------------------------------------------------------------------
       call bcast(glob_skip, isize)
 
       call bcast(ifres   , lsize) !lsize for boolean
-      call bcast(ifvor   , lsize)    
+      call bcast(ifvor   , lsize)
       call bcast(ifvox   , lsize)
       call bcast(ifseed_nois  , lsize)
       call bcast(ifseed_symm  , lsize)
@@ -93,7 +93,7 @@ c-----------------------------------------------------------------------
          print *,'   ____   ___   / /__/ ___/ / /_ ____ _ / /_ '
          print *,'  / __ \ / _ \ / //_/\__ \ / __// __ `// __ \'
          print *,' / / / //  __// ,<  ___/ // /_ / /_/ // /_/ /'
-         print *,'/_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/ '  
+         print *,'/_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/ '
          print *,'COPYRIGHT (c) 2020-2022 DynFluid Laboratoire Paris ',NSVERSION
          print *,'Nek5000 ', NVERSION
          print *,''
@@ -113,7 +113,7 @@ c-----------------------------------------------------------------------
          if(nid.eq.0)write(6,*)' Initializing sponge...'
          if(nid.eq.0)write(6,*)' Sponge strenght:',spng_str
          if(spng_str.lt.0)then
-           spng_str=abs(spng_str) 
+           spng_str=abs(spng_str)
            if(nid.eq.0)write(6,*)' Ensure positive sponge strenght:',spng_str
          endif
          call spng_init
@@ -205,7 +205,7 @@ c-----------------------------------------------------------------------
          elseif(uparam(1).eq.3.2)then
             if(nid.eq.0)write(6,*)'Krylov-Schur for adjoint LNSE...'
          elseif(uparam(1).eq.3.21)then
-            if(nid.eq.0)write(6,*)'Krylov-Schur for adjoint LNSE in Floquet...'           
+            if(nid.eq.0)write(6,*)'Krylov-Schur for adjoint LNSE in Floquet...'
          elseif(uparam(1).eq.3.3)then
             if(nid.eq.0)write(6,*)'Krylov-Schur for transient growth...'
          elseif(uparam(1).eq.3.31)then
@@ -235,7 +235,7 @@ c-----------------------------------------------------------------------
          if(uparam(01) .eq. 4.3) call bf_sensitivity
 
 !     -----> Sensitivity to steady force.
-         if(uparam(01) .eq. 4.41 .or. 
+         if(uparam(01) .eq. 4.41 .or.
      $        uparam(01) .eq. 4.42) call ts_steady_force_sensitivity
          if(uparam(01) .eq. 4.43) call delta_forcing
 
@@ -496,7 +496,7 @@ c-----------------------------------------------------------------------
 
       real, save :: x0(3), scale
       data x0 /3*0/
-      
+
       integer :: nij,i,iobj,memtot,mem,ieg,ifc,ie
       integer, parameter :: lr=lx1*ly1*lz1
 
@@ -528,7 +528,7 @@ c-----------------------------------------------------------------------
             dpdy_mean = -scale_vf(2)
             dpdz_mean = -scale_vf(3)
          endif
-         call add2s2(pm1,xm1,dpdx_mean,n) ! Doesn't work if object is cut by 
+         call add2s2(pm1,xm1,dpdx_mean,n) ! Doesn't work if object is cut by
          call add2s2(pm1,ym1,dpdy_mean,n) ! periodicboundary.  In this case,
          call add2s2(pm1,zm1,dpdz_mean,n) ! set ._mean=0 and compensate in
          nij = 3
@@ -574,13 +574,13 @@ c-----------------------------------------------------------------------
                   ie = gllel(ieg)
                   call drgtrq(dgtq,xm0,ym0,zm0,sij,pm1,vdiff,ifc,ie)
                   call cmult(dgtq,scale,12)
-                  dragpx(iobj) = dragpx(iobj) + dgtq(1,1) ! pressure 
+                  dragpx(iobj) = dragpx(iobj) + dgtq(1,1) ! pressure
                   dragpy(iobj) = dragpy(iobj) + dgtq(2,1)
                   dragpz(iobj) = dragpz(iobj) + dgtq(3,1)
                   dragvx(iobj) = dragvx(iobj) + dgtq(1,2) ! viscous
                   dragvy(iobj) = dragvy(iobj) + dgtq(2,2)
                   dragvz(iobj) = dragvz(iobj) + dgtq(3,2)
-                  torqpx(iobj) = torqpx(iobj) + dgtq(1,3) ! pressure 
+                  torqpx(iobj) = torqpx(iobj) + dgtq(1,3) ! pressure
                   torqpy(iobj) = torqpy(iobj) + dgtq(2,3)
                   torqpz(iobj) = torqpz(iobj) + dgtq(3,3)
                   torqvx(iobj) = torqvx(iobj) + dgtq(1,4) ! viscous
