@@ -105,6 +105,9 @@
 
 !     --> Check residual || f(q) ||
       call krylov_norm(residual, f) ; residual = residual ** 2
+!      if (uparam(01) .eq. 2) then
+!          residual = residual / (nsteps*dt)
+!      endif
 !     write(*, *) "RESIDUAL ", residual
 
       if(nid.eq.0)then
@@ -432,7 +435,8 @@
       include 'TOTAL'
       real,intent(in) :: residual,dtol
       real :: nwtol
-      nwtol = 10**(log10(residual)-1) ! always a decade smaller
+      !nwtol = 10**(log10(residual)-1) ! always a decade smaller
+      nwtol = 10**(log10(residual)-2)
 
       if(nid.eq.0)write(6,*)'current residual:',residual
       if(nid.eq.0)write(6,*)'new    tolerance:',nwtol
