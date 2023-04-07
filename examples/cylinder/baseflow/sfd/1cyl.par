@@ -9,7 +9,7 @@ userParam04 = 0.12 # freq (Strouhal leading mode)
 userParam05 = 0.05  # gain (twice growth rate leading mode)
 
 dt = 0
-variableDt = yes
+variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5
 
@@ -24,12 +24,12 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-9
+residualTol = 1.0E-10
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-9
+residualTol = 1.0E-12
 residualProj = no
 density = 1.0
-viscosity = -50.0
+viscosity = -70.0

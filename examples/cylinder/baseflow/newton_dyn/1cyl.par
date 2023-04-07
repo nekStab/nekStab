@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 2
-userParam07 = 100 # k_dim
+userParam07 = 81 # k_dim
 
 dt = 0
 variableDt = no
@@ -23,12 +23,12 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-11
+residualTol = 1.0E-10
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-11
-residualProj = yes
+residualTol = 1.0E-12
+residualProj = no
 density = 1.0
-viscosity = -50.0
+viscosity = -70.0

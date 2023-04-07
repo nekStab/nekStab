@@ -1,0 +1,35 @@
+[GENERAL]
+startFrom = rstocf0.f00001
+
+stopAt = endTime
+endTime = 1000
+
+userParam01 = 1.1  # newton
+userParam04 = 1.2  # Freq
+userParam05 = 0.1  # Gain
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 10.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-10
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-12
+residualProj = no
+density = 1.0
+viscosity = -4500.0

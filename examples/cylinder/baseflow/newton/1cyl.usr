@@ -19,7 +19,7 @@ c-----------------------------------------------------------------------
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifdyntol = .false. ; call bcast(ifdyntol,lsize)
-        iffindiff = .true. ; call bcast(iffindif, lsize)
+        iffindiff = .false. ; call bcast(iffindif, lsize)
 
       endif
 
@@ -120,3 +120,42 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
+
+c automatically added by makenek
+      subroutine uservp(ix,iy,iz,eg)
+
+      return
+      end
+
+c automatically added by makenek
+      subroutine userq(ix,iy,iz,eg)
+
+      return
+      end
+
+c automatically added by makenek
+      subroutine usrdat0() 
+
+      return
+      end
+
+c automatically added by makenek
+      subroutine usrdat3 
+
+      return
+      end
+
+c automatically added by makenek
+      subroutine usrsetvert(glo_num,nel,nx,ny,nz) ! to modify glo_num
+      integer*8 glo_num(1)
+
+      return
+      end
+
+c automatically added by makenek
+      subroutine userqtl
+
+      call userqtl_scig
+
+      return
+      end

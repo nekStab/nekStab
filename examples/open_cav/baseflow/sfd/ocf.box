@@ -1,0 +1,35 @@
+ocyl.rea
+2	spatial dimension
+1	number of fields
+#	OCF_2D_Junior
+#	6 JUL 2016
+Box_1
+-20  -20  Nelx Nely
+-1.2 -0.4  1.0 x0 x1 ratio
+ 0.0  0.5  1.0 y0 y1 ratio
+v  ,E  ,SYM,SYM,
+Box_2
+-20  -20  Nelx Nely
+-0.4  0.0  1.0 x0 x1 ratio
+ 0.0  0.5  1.0 y0 y1 ratio
+E  ,E  ,W  ,SYM,
+Box_3
+-40  -20  Nelx Nely
+ 0.0  1.0  1.0 x0 x1 ratio
+ 0.0  0.5  1.0 y0 y1 ratio
+E  ,E  ,E  ,SYM,
+Box_4
+-20  -20  Nelx Nely
+ 1.0  1.75 1.0 x0 x1 ratio
+ 0.0  0.5  1.0 y0 y1 ratio
+E  ,E  ,W  ,SYM,
+Box_5
+-20  -20  Nelx Nely
+1.75  2.5  1.0 x0 x1 ratio
+ 0.0  0.5  1.0 y0 y1 ratio
+E  ,O  ,SYM,SYM,
+Box_6
+-40  -40  Nelx Nely
+ 0.0  1.0  1.0 x0 x1 ratio
+-1.0  0.0  1.0 y0 y1 ratio
+W  ,W  ,W  ,E  ,

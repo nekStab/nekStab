@@ -1,0 +1,42 @@
+[GENERAL]
+startfrom = tsyphon0.f00001
+stopAt = endTime
+endtime = 20
+
+userparam01 = 2 #
+userparam06 = 15000.0 # Ra
+userparam07 = 100  # k_dim
+
+dt = 0
+variabledt = yes
+timestepper = bdf3
+targetcfl = 0.5
+
+writecontrol = runTime #timestep
+writeinterval = 10.
+writedoubleprecision = no
+
+dealiasing = yes
+filtering = explicit
+filterweight = 0.01
+filtercutoffratio = 0.84
+
+[VELOCITY]
+viscosity = 5.0 # Prandtl number directily # param(2)
+residualtol = 1.0E-08
+residualproj = no
+density = 1.0
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualtol = 1.0E-06
+residualproj = yes
+writetofieldfile = yes
+
+[TEMPERATURE]
+solver = helm
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
+conductivity = 1.0
+rhocp = 1.0

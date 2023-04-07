@@ -3,7 +3,7 @@ startFrom = 0
 stopAt = endTime
 endTime = 1.0
 
-userParam01 = 4.41  # Sensitivity to steady forcing
+userParam01 = 4.42  # Sensitivity to steady forcing
 userParam07 = 128 # k_dim
 
 dt = 0
