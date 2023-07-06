@@ -185,10 +185,6 @@
          if(nid.eq.0)write(*,*)'Baseflow prescribed by the useric function in the .usr'
       endif
 
-      !t      (lx1,ly1,lz1,lelt,ldimt)
-      !tbase  (lx1,ly1,lz1,lelt,ldimt)
-      !tp     (lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
-
 !     ----- Save baseflow to disk (recommended) -----
       call opcopy(ubase,vbase,wbase,vx,vy,vz)
 
@@ -223,13 +219,7 @@
 
             if(nid.eq.0)write(6,*)'Filling fields with noise...'
             call add_noise(vxp(:,1),vyp(:,1),vzp(:,1),tp(:,:,1))
-            wrk2%vx(:) = vxp(:, 1) ; wrk2%vy(:) = vyp(:, 1) ; wrk2%vz(:) = vzp(:, 1)
-            wrk2%pr(:) = prp(:, 1)
-            if (ldimt.gt.0) then
-             do m = 1,ldimt
-              wrk2%theta(:,m) = tp(:, m, 1)
-             enddo
-            endif
+            call nopcopy(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%theta, vxp, vyp, vzp, prp, tp)
             call krylov_normalize(wrk2, alpha)
             call matvec(wrk, wrk2)
 
@@ -242,7 +232,6 @@
 
             if (uparam(01) .ge. 3.0 .and. uparam(01) .lt. 3.2 ) then
                write(filename,'(a,a,a)')'dRe',trim(SESSION),'0.f00001'
-
             elseif(uparam(01) .ge. 3.2 .and. uparam(01) .lt. 3.3 ) then
                write(filename,'(a,a,a)')'aRe',trim(SESSION),'0.f00001'
             endif
@@ -263,14 +252,6 @@
          endif
 
 !     ----- Normalized to unit-norm -----
-
-!          wrk%vx(:) = vxp(:, 1) ; wrk%vy(:) = vyp(:, 1) ; wrk%vz(:) = vzp(:, 1)
-!          wrk%pr(:) = prp(:, 1)
-!          if (ldimt.gt.0) then
-!           do m = 1,ldimt
-!            wrk%theta(:,m) = tp(:, m, 1)
-!           enddo
-!          endif
          call nopcopy(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%theta, vxp, vyp, vzp, prp, tp)
          call krylov_normalize(wrk, alpha)
 
@@ -306,19 +287,6 @@
          endif                  !nid.eq.0
          call bcast(H,(k_dim+1)*k_dim*wdsize) !broadcast H matrix to all procs
 
-!     if(nid.eq.2)then !-> debug only
-!     write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
-!     write(6,*) ''
-!     open(67,file=trim(filename),status='unknown',form='formatted')
-!     write(67,*) beta
-!     do i = 1,mstart+1
-!     do j = 1,mstart
-!     write(67,*) H(i,j)
-!     enddo
-!     enddo
-!     close(67)
-!     endif
-
          mstart=mstart+1        !careful here!
          call load_files(Q, mstart, k_dim+1, 'KRY')
          if(nid.eq.0) write(6,*)'Restart fields loaded to memory!'
@@ -331,17 +299,10 @@
 !     =====                            =====
 !     ======================================
 
-      schur_cnt = 0
-      converged = .false.
+      schur_cnt = 0 ; converged = .false.
       do while ( .not. converged )
 !     --> Arnoldi factorization.
          call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
-
-         !if(nid.eq.0) then
-         !   open(unit=12345, file="Hessenberg_matrix.dat")
-         !   write(12345, *) H(1:k_dim, 1:k_dim)
-         !   close(12345)
-         !endif
 
 !     --> Compute the eigenspectrum of the Hessenberg matrix.
          call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
@@ -349,7 +310,7 @@
 !     --> Check the residual of the eigenvalues.
          residual = abs(H(k_dim+1, k_dim) * vecs(k_dim, :))
          cnt = count(residual .lt. eigen_tol)
-         if (nid .eq. 0) write(6, *) 'converged eigenvalues:',cnt
+         if (nid .eq. 0) write(6, *) 'Number of converged eigenvalues:',cnt
 
 !     --> Select whether to stop or apply Schur condensation depending on schur_tgt.
          select case (schur_tgt)
@@ -513,16 +474,10 @@
       include 'SIZE'
       include 'TOTAL'
 
-!     ----- Krylov basis V for the projection M*V = V*H -----
-
       real wo1(lv),wo2(lv),wo3(lv),vort(lv,3)
 
+!     ----- Krylov basis V for the projection M*V = V*H -----
       type(krylov_vector), dimension(k_dim+1) :: Q
-      type(krylov_vector) :: qq, ff
-
-      real, dimension(lv,k_dim+1)        :: qx, qy, qz
-      real, dimension(lp,k_dim+1)        :: qp
-      real, dimension(lv,ldimt,k_dim+1)        :: qt
 
 !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
 
@@ -530,10 +485,9 @@
       complex*16, dimension(k_dim,k_dim) :: vecs
 
 !     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
+      type(krylov_vector) :: real_eigvec, imag_eigvec
+      type(krylov_vector) :: opt_prt, opt_rsp
 
-      complex*16, dimension(lv)          :: fp_cx, fp_cy, fp_cz
-      complex*16, dimension(lp)          :: fp_cp
-      complex*16, dimension(lv,ldimt)    :: fp_ct
 !     ----- Miscellaneous -----
       integer :: i,m
 
@@ -550,19 +504,6 @@
 
       sampling_period = dt*nsteps
       n = nx1*ny1*nz1*nelv
-
-!     ----- Output all the spectrums and converged eigenmodes -----
-      do i = 1, k_dim
-                   qx(:, i) = Q(i)%vx(:)
-                   qy(:, i) = Q(i)%vy(:)
-         if (if3D) qz(:, i) = Q(i)%vz(:)
-         if (ifpo) qp(:, i) = Q(i)%pr(:)
-         if (ldimt.gt.0) then
-            do m = 1,ldimt
-                   qt(:, i, m) = Q(i)%theta(:,m)
-            enddo
-         endif
-      enddo
 
 !     evop defined in matrix_vector_product
 
@@ -581,86 +522,70 @@
       endif
 
       outposted = 0
-      do i = 1, k_dim
+        do i = 1, k_dim
 
-         time = real(i)         !here for the outposted files have different times
+            time = real(i)         !here for the outposted files have different times
 
-         if(nid.eq.0) then
+            if(nid.eq.0) then
+                !     --> Outpost the eigenspectrum of the Hessenberg matrix.
+                write(10,"(3E15.7)") real(vals(i)), aimag(vals(i)), residual(i)
+                flush(10)
+                !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
+                write(20, "(3E15.7)") real(log_transform(vals(i))) / sampling_period, aimag(log_transform(vals(i))) / sampling_period, residual(i)
+                flush(20)
+            endif
 
-!     --> Outpost the eigenspectrum of the Hessenberg matrix.
-            write(10,"(3E15.7)") real(vals(i)), aimag(vals(i)), residual(i)
+            if (residual(i) .lt. eigen_tol .and. outposted.lt.maxmodes ) then !just the converged ones
+                outposted = outposted + 1
+                !     --> Outpost only the converged part of the log-transformed spectrum.
+                if(nid.eq.0) write(30, "(2E15.7)") real(log_transform(vals(i))) / sampling_period, aimag(log_transform(vals(i))) / sampling_period
 
-!     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
-            write(20, "(3E15.7)") real(log_transform(vals(i))) / sampling_period,
-     $           aimag(log_transform(vals(i))) / sampling_period,
-     $           residual(i)
+                !     ----- Computation of the corresponding eigenmode -----
+                call krylov_matmul(real_eigvec, Q(1:k_dim), real(vecs(:, i)), k_dim)
+                call krylov_matmul(imag_eigvec, Q(1:k_dim), imag(vecs(:, i)), k_dim)
 
-         endif
+                !     ----- Normalization to be unit-norm -----
+                call krylov_norm(alpha_r, real_eigvec) ; call krylov_norm(alpha_i, imag_eigvec)
+                alpha = alpha_r**2 + alpha_i**2 ; beta = 1.0d0/sqrt(alpha)
+                call krylov_cmult(real_eigvec, beta) ; call krylov_cmult(imag_eigvec, beta)
 
-         if (residual(i) .lt. eigen_tol .and. outposted.lt.maxmodes ) then !just the converged ones
-         outposted = outposted + 1
+                !     ----- Output the real and imaginary parts -----
+                call outpost(real_eigvec%vx, real_eigvec%vy, real_eigvec%vz, real_eigvec%pr, real_eigvec%theta, nRe)
+                call outpost(imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, imag_eigvec%pr, imag_eigvec%theta, nIm)
 
-!     --> Outpost only the converged part of the log-transformed spectrum.
-         if(nid.eq.0)write(30, "(2E15.7)") real(log_transform(vals(i))) / sampling_period,
-     $        aimag(log_transform(vals(i))) / sampling_period
+                if(ifvor)then
+                    !     ----- Output vorticity from real part -----
+                    call oprzero(wo1, wo2, wo3)
+                    call comp_vort3(vort, wo1, wo2, real_eigvec%vx, real_eigvec%vy, real_eigvec%vz)
 
-!     ----- Computation of the corresponding eigenmode -----
-                   fp_cx(:) = matmul(qx(:, 1:k_dim), vecs(:, i))
-                   fp_cy(:) = matmul(qy(:, 1:k_dim), vecs(:, i))
-         if (if3D) fp_cz(:) = matmul(qz(:, 1:k_dim), vecs(:, i))
-         if (ifpo) fp_cp(:) = matmul(qp(:, 1:k_dim), vecs(:, i))
-         if (ldimt.gt.0) then
-          do m = 1,ldimt
-                 fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))
-          enddo
-         endif
+                    ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
+                    call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, nRv)
+                    ifto = ifto_sav ; ifpo = ifpo_sav
+                endif
 
-!     ----- Normalization to be unit-norm -----
-!     Note: volume integral of FP*conj(FP) = 1.
-         call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
-         call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), alpha_i)
-         alpha = alpha_r**2 + alpha_i**2
-         beta = 1.0d0/sqrt(alpha)
+                !     computing and outposting optimal response from real part ! works with Floquet!
+                if((uparam(1).eq.3.3.or.uparam(1).eq.3.31))then
+                    old_uparam1 = uparam(1)
+                    if(uparam(1).eq.3.3)uparam(1)=3.1 ! changing to linearized solver !
+                    if(uparam(1).eq.3.31)uparam(1)=3.11 ! changing to linearized solver in Floquet
+                    call bcast(uparam(1),wdsize)
 
-!     ----- Output the real part -----
-         call nopcopy(vx,vy,vz,pr,t, real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
-         call nopcmult(vx,vy,vz,pr,t, beta)
-         call outpost(vx,vy,vz,pr,t, nRe)
+                    call krylov_copy(opt_prt, real_eigvec)
+                    call matvec(opt_rsp, opt_prt)  ! baseflow already in ubase
+                    call outpost(opt_rsp%vx, opt_rsp%vy, opt_rsp%vz, opt_rsp%pr, opt_rsp%theta, 'ore')
 
-         if(ifvor)then
-!     ----- Output vorticity from real part -----
-            call oprzero(wo1, wo2, wo3)
-            call comp_vort3(vort, wo1, wo2, vx, vy, vz)
+                    if (ifvor) then
+                        call comp_vort3(vort, wo1, wo2, opt_rsp%vx, opt_rsp%vy, opt_rsp%vz)
+                        ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
+                        call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, 'orv')
+                    endif
 
-            ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
-            call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, nRv)
-            ifto = ifto_sav ; ifpo = ifpo_sav
-         endif
-
-!     ----- Output the imaginary part -----
-         call nopcopy(vx,vy,vz,pr,t, aimag(fp_cx),aimag(fp_cy),aimag(fp_cz),aimag(fp_cp),aimag(fp_ct))
-         call nopcmult(vx,vy,vz,pr,t, beta)
-         call outpost(vx,vy,vz,pr,t, nIm)
-
-!     computing and outposting optimal response from real part ! works with Floquet!
-         if((uparam(1).eq.3.3.or.uparam(1).eq.3.31))then
-            old_uparam1 = uparam(1)
-            if(uparam(1).eq.3.3)uparam(1)=3.1 ! changing to linearized solver !
-            if(uparam(1).eq.3.31)uparam(1)=3.11 ! changing to linearized solver in Floquet
-            call bcast(uparam(1),wdsize)
-            call nopcopy(ff%vx, ff%vy, ff%vz, ff%pr, ff%theta, real(fp_cx),real(fp_cy),real(fp_cz),real(fp_cp),real(fp_ct))
-            call matvec(qq,ff)  ! baseflow already in ubase
-            call outpost(qq%vx, qq%vy, qq%vz, qq%pr, qq%theta, 'ore')
-            call comp_vort3(vort, wo1, wo2, qq%vx, qq%vy, qq%vz)
-            ifto_sav = ifto; ifpo_sav = ifpo; ifto = .false.; ifpo = .false.
-            call outpost(vort(1,1), vort(1,2), vort(1,3), pr, t, 'orv')
-            ifto = ifto_sav ; ifpo = ifpo_sav
-            uparam(1) = old_uparam1
-            call bcast(uparam(1),wdsize)
-         endif
-      endif
-
-      enddo
+                    ifto = ifto_sav ; ifpo = ifpo_sav
+                    uparam(1) = old_uparam1
+                    call bcast(uparam(1),wdsize)
+                endif
+            endif
+        enddo
 
       if (nid .eq. 0) then
 
