@@ -173,7 +173,9 @@
       n      = nx1*ny1*nz1*nelv
       time   = 0.0d0
       H(:,:)  = 0.0d0; b_vec  = 0.0d0 ; residual = 0.0d0
-      call krylov_zero(Q(1:k_dim+1))
+      do i = 1,k_dim+1
+        call krylov_zero(Q(i))
+      enddo
 
 !     ----- Loading baseflow from disk (optional) -----
 
@@ -261,7 +263,7 @@
 
          call whereyouwant('KRY',1)
          time = 0.0d0
-         call outpost(Q(1)%vx, Q(1)%vy, Q(1)%vz, Q(1)%pr, Q(1)%theta, 'KRY')
+         call krylov_outpost(Q(1), 'KRY')
 
       elseif(uparam(2).gt.0)then
 
@@ -443,18 +445,9 @@
 !     --> Add the last generated Krylov vector as the new starting one.
       mstart = mstart + 1
 
-      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,:,mstart),
-     $     qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,:,ksize+1))
+      call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,:,mstart), qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,:,ksize+1))
       do i = 1, k_dim+1
-                   Q(i)%vx(:) = qx(:, i)
-                   Q(i)%vy(:) = qy(:, i)
-         if (if3D) Q(i)%vz(:) = qz(:, i)
-         if (ifpo) Q(i)%pr(:) = qp(:, i)
-         if (ldimt.gt.0) then
-            do m = 1,ldimt
-                   Q(i)%theta(:,m) = qt(:, m, i)
-            enddo
-      endif
+        call nocopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, Q(i)%pr, Q(i)%theta, qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, :, i))
       enddo
 
       return
@@ -720,7 +713,7 @@
 !     ------------------------------------------------------------------------------------
 
 
-      subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
+      subroutine arnoldi_checkpoint(f, H, k)
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
@@ -747,9 +740,7 @@
       include 'SIZE'
       include 'TOTAL'
 
-      real, dimension(lv), intent(in) :: f_xr, f_yr, f_zr
-      real, dimension(lp), intent(in) :: f_pr
-      real, dimension(lv), intent(in) :: f_tr
+      type(krylov_vector), intent(in) :: f
 
       integer, intent(in) :: k
       real, dimension(k+1,k), intent(in) :: H
@@ -774,7 +765,7 @@
 !     call whereyouwant("KRY", k) ! for restart of newton solver
 !     endif
       time = time * k           !order in ParaView
-      call outpost(f_xr, f_yr, f_zr, f_pr, f_tr, "KRY")
+      call krylov_outpost(f, "KRY")
 
 !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.
       call eig(H(1:k, 1:k), vecs, vals, k)
