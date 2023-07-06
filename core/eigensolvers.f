@@ -474,13 +474,10 @@
       include 'SIZE'
       include 'TOTAL'
 
-      real wo1(lv),wo2(lv),wo3(lv),vort(lv,3)
-
 !     ----- Krylov basis V for the projection M*V = V*H -----
       type(krylov_vector), dimension(k_dim+1) :: Q
 
-!     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-
+!     ----- Eigenvalues (vals) and eigenvectors (vecs) of the Hessenberg matrix -----
       complex*16, dimension(k_dim)       :: vals
       complex*16, dimension(k_dim,k_dim) :: vecs
 
@@ -490,6 +487,8 @@
 
 !     ----- Miscellaneous -----
       integer :: i,m
+
+      real wo1(lv),wo2(lv),wo3(lv),vort(lv,3)
 
       real                               :: sampling_period
       real, dimension(k_dim)             :: residual
@@ -503,7 +502,6 @@
       integer :: outposted
 
       sampling_period = dt*nsteps
-      n = nx1*ny1*nz1*nelv
 
 !     evop defined in matrix_vector_product
 
@@ -529,10 +527,8 @@
             if(nid.eq.0) then
                 !     --> Outpost the eigenspectrum of the Hessenberg matrix.
                 write(10,"(3E15.7)") real(vals(i)), aimag(vals(i)), residual(i)
-                flush(10)
                 !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
                 write(20, "(3E15.7)") real(log_transform(vals(i))) / sampling_period, aimag(log_transform(vals(i))) / sampling_period, residual(i)
-                flush(20)
             endif
 
             if (residual(i) .lt. eigen_tol .and. outposted.lt.maxmodes ) then !just the converged ones
@@ -542,7 +538,7 @@
 
                 !     ----- Computation of the corresponding eigenmode -----
                 call krylov_matmul(real_eigvec, Q(1:k_dim), real(vecs(:, i)), k_dim)
-                call krylov_matmul(imag_eigvec, Q(1:k_dim), imag(vecs(:, i)), k_dim)
+                call krylov_matmul(imag_eigvec, Q(1:k_dim), aimag(vecs(:, i)), k_dim)
 
                 !     ----- Normalization to be unit-norm -----
                 call krylov_norm(alpha_r, real_eigvec) ; call krylov_norm(alpha_i, imag_eigvec)
@@ -550,8 +546,7 @@
                 call krylov_cmult(real_eigvec, beta) ; call krylov_cmult(imag_eigvec, beta)
 
                 !     ----- Output the real and imaginary parts -----
-                call outpost(real_eigvec%vx, real_eigvec%vy, real_eigvec%vz, real_eigvec%pr, real_eigvec%theta, nRe)
-                call outpost(imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, imag_eigvec%pr, imag_eigvec%theta, nIm)
+                call krylov_outpost(real_eigvec, nRe) ; call krylov_outpost(imag_eigvec, nIm)
 
                 if(ifvor)then
                     !     ----- Output vorticity from real part -----
@@ -572,7 +567,7 @@
 
                     call krylov_copy(opt_prt, real_eigvec)
                     call matvec(opt_rsp, opt_prt)  ! baseflow already in ubase
-                    call outpost(opt_rsp%vx, opt_rsp%vy, opt_rsp%vz, opt_rsp%pr, opt_rsp%theta, 'ore')
+                    call krylov_outpost(opt_rsp, 'ore')
 
                     if (ifvor) then
                         call comp_vort3(vort, wo1, wo2, opt_rsp%vx, opt_rsp%vy, opt_rsp%vz)
