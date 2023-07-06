@@ -281,22 +281,43 @@
         call krylov_inner_product(beta, imag_p, imag_q)
         gamma = alpha + beta
 
-        call krylov_inner_product(alpha, real_p, imag_q)
-        call krylov_inner_product(beta, imag_p, real_q)
+        call krylov_inner_product(alpha, real_q, imag_p)
+        call krylov_inner_product(beta, imag_q, real_p)
         delta = alpha - beta
 
         ! --> Bi-orthogonalize the adjoint mode.
         call krylov_copy(wrk1, real_q) ; call krylov_copy(wrk2, imag_q)
         call krylov_cmult(wrk1, gamma) ; call krylov_cmult(wrk2, delta)
-        call krylov_sub2(wrk1, wrk2) ; call krylov_copy(wrk3, wrk1)
-        call krylov_cmult(wrk3, 1.D+00 / sqrt(gamma**2 + delta**2))
+        call krylov_sub2(wrk1, wrk2)   ; call krylov_copy(wrk3, wrk1)
+        call krylov_cmult(wrk3, 1.D+00 / (gamma**2 + delta**2))
 
         call krylov_copy(wrk1, real_q) ; call krylov_copy(wrk2, imag_q)
         call krylov_cmult(wrk1, delta) ; call krylov_cmult(wrk2, gamma)
-        call krylov_add2(wrk1, wrk2) ; call krylov_copy(wrk4, wrk1)
-        call krylov_cmult(wrk4, 1.D+00 / sqrt(gamma**2 + delta**2))
+        call krylov_add2(wrk1, wrk2)   ; call krylov_copy(wrk4, wrk1)
+        call krylov_cmult(wrk4, 1.D+00 / (gamma**2 + delta**2))
 
         call krylov_copy(real_q, wrk3) ; call krylov_copy(imag_q, wrk4)
 
         return
       end subroutine krylov_biorthogonalize
+
+      subroutine krylov_gradient(dxp, dyp, dzp, p)
+        use krylov_subspace
+        implicit none
+        include "SIZE"
+        include "TOTAL"
+
+        type(krylov_vector), intent(in) :: p
+        type(krylov_vector), intent(out) :: dxp, dyp, dzp
+
+        call gradm1(dxp%vx, dyp%vx, dzp%vx, p%vx, nelv)
+        call dsavg(dxp%vx) ; call dsavg(dyp%vx) ; call dsavg(dzp%vx)
+
+        call gradm1(dxp%vy, dyp%vy, dzp%vy, p%vy, nelv)
+        call dsavg(dxp%vy) ; call dsavg(dyp%vy) ; call dsavg(dzp%vy)
+
+        call gradm1(dxp%vz, dyp%vz, dzp%vz, p%vz, nelv)
+        call dsavg(dxp%vz) ; call dsavg(dyp%vz) ; call dsavg(dzp%vz)
+
+        return
+      end subroutine krylov_gradient
