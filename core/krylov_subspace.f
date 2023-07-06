@@ -20,6 +20,18 @@
       contains
       end module krylov_subspace
 
+      subroutine krylov_outpost(q, prefix)
+      use krylov_subspace
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      character(len=3), intent(in) :: prefix
+      type(krylov_vector), intent(in) :: q
+
+      call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, prefix)
+
+      return
+      end subroutine krylov_outpost
 
       subroutine krylov_inner_product(alpha, p, q)
       use krylov_subspace
