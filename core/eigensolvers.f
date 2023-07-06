@@ -1,139 +1,139 @@
-!-----------------------------------------------------------------------
-
-
-
-
-
-      subroutine inner_product(alpha, px,py,pz,pp,pt, qx,qy,qz,qp,qt)
-
-!     This function provides the user-defined inner product to be used throughout
-!     the computation.
+! !-----------------------------------------------------------------------
 !
-!     INPUTS
-!     ------
 !
-!     px, py, pz : nek arrays of size lv = lx1*ly1*lz1*lelv.
-!     Arrays containing the velocity fields of the first vector.
 !
-!     pp : nek array of size lp = lx2*ly2*lz2*lelt
-!     Array containing the pressure field of the first vector.
 !
-!     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
-!     Arrays containing the velocity fields of the second vector.
 !
-!     qp : nek array of size lp = lx2*ly2*lz2*lelt
-!     Array containing the pressure field of the second vector.
+!       subroutine inner_product(alpha, px,py,pz,pp,pt, qx,qy,qz,qp,qt)
 !
-!     RETURN
-!     ------
+! !     This function provides the user-defined inner product to be used throughout
+! !     the computation.
+! !
+! !     INPUTS
+! !     ------
+! !
+! !     px, py, pz : nek arrays of size lv = lx1*ly1*lz1*lelv.
+! !     Arrays containing the velocity fields of the first vector.
+! !
+! !     pp : nek array of size lp = lx2*ly2*lz2*lelt
+! !     Array containing the pressure field of the first vector.
+! !
+! !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
+! !     Arrays containing the velocity fields of the second vector.
+! !
+! !     qp : nek array of size lp = lx2*ly2*lz2*lelt
+! !     Array containing the pressure field of the second vector.
+! !
+! !     RETURN
+! !     ------
+! !
+! !     alpha : real
+! !     Value of the inner-product alpha = <p, q>.
+! !
+!       use krylov_subspace
+!       implicit none
+!       include "SIZE"
+!       include "TOTAL"
 !
-!     alpha : real
-!     Value of the inner-product alpha = <p, q>.
+!       real, dimension(lv), intent(in) :: px, py, pz
+!       real, dimension(lv), intent(in) :: qx, qy, qz
+!       real, dimension(lp), intent(in) :: pp, qp !not used
+!       real, dimension(lv,ldimt), intent(in) :: pt, qt
 !
-      use krylov_subspace
-      implicit none
-      include "SIZE"
-      include "TOTAL"
-
-      real, dimension(lv), intent(in) :: px, py, pz
-      real, dimension(lv), intent(in) :: qx, qy, qz
-      real, dimension(lp), intent(in) :: pp, qp !not used
-      real, dimension(lv,ldimt), intent(in) :: pt, qt
-
-      real, intent(out) :: alpha
-      real :: glsc3
-      integer i
-
-      n = nx1 * ny1 * nz1 * nelv
-
-      alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
-      if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
-      if (ldimt.gt.0) then
-       do i = 1,ldimt
-        alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
-       enddo
-      endif
-
-      return
-      end subroutine inner_product
-
-
-
-
-
-!--------------------------------------------------------------------------
-
-
-
-
-
-      subroutine norm(qx, qy, qz, qp, qt, alpha) ! Compute vector norm
-      use krylov_subspace
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-      real, intent(in), dimension(lv) :: qx, qy, qz
-      real, intent(in), dimension(lp) :: qp
-      real, intent(in), dimension(lv,ldimt) :: qt
-      real, intent(out)                :: alpha
-
-      call inner_product(alpha, qx,qy,qz,qp,qt, qx,qy,qz,qp,qt)
-      alpha = dsqrt(alpha)
-
-      return
-      end subroutine norm
-
-
-
-
-
-!----------------------------------------------------------------------
-
-
-
-
-
-      subroutine normalize(qx, qy, qz, qp, qt, alpha)
-
-!     This function normalizes the state vector [qx, qy, qz, qp]^T where
-!     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
-!     components while qp is the corresponding pressure field.
+!       real, intent(out) :: alpha
+!       real :: glsc3
+!       integer i
 !
-!     INPUTS / OUTPUTS
-!     ----------------
+!       n = nx1 * ny1 * nz1 * nelv
 !
-!     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
-!     Arrays storing the velocity components.
+!       alpha = glsc3(px, bm1s, qx, n) + glsc3(py, bm1s, qy, n)
+!       if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, n)
+!       if (ldimt.gt.0) then
+!        do i = 1,ldimt
+!         alpha = alpha + glsc3(pt(:,i), bm1s, qt(:,i), n)
+!        enddo
+!       endif
 !
-!     qp : nek array of size lp = lx2*ly2*lz2*lelt
-!     Array storing the corresponding pressure field.
+!       return
+!       end subroutine inner_product
 !
-!     alpha : real
-!     Norm of the vector.
 !
-!     Last edit : April 2nd 2020 by JC Loiseau.
-
-      use krylov_subspace
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-      real, dimension(lv), intent(inout) :: qx, qy, qz
-      real, dimension(lp), intent(inout) :: qp
-      real, dimension(lv,ldimt), intent(inout) :: qt
-      real, intent(out)                   :: alpha
-      real                                :: beta
-
-!     --> Compute the user-defined norm.
-      call norm(qx, qy, qz, qp, qt, alpha)
-      beta = 1.0d0/alpha
-
-!     --> Normalize the vector.
-      call nopcmult(qx, qy, qz, qp, qt, beta)
-
-      return
-      end subroutine normalize
+!
+!
+!
+! !--------------------------------------------------------------------------
+!
+!
+!
+!
+!
+!       subroutine norm(qx, qy, qz, qp, qt, alpha) ! Compute vector norm
+!       use krylov_subspace
+!       implicit none
+!       include 'SIZE'
+!       include 'TOTAL'
+!
+!       real, intent(in), dimension(lv) :: qx, qy, qz
+!       real, intent(in), dimension(lp) :: qp
+!       real, intent(in), dimension(lv,ldimt) :: qt
+!       real, intent(out)                :: alpha
+!
+!       call inner_product(alpha, qx,qy,qz,qp,qt, qx,qy,qz,qp,qt)
+!       alpha = dsqrt(alpha)
+!
+!       return
+!       end subroutine norm
+!
+!
+!
+!
+!
+! !----------------------------------------------------------------------
+!
+!
+!
+!
+!
+!       subroutine normalize(qx, qy, qz, qp, qt, alpha)
+!
+! !     This function normalizes the state vector [qx, qy, qz, qp]^T where
+! !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
+! !     components while qp is the corresponding pressure field.
+! !
+! !     INPUTS / OUTPUTS
+! !     ----------------
+! !
+! !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
+! !     Arrays storing the velocity components.
+! !
+! !     qp : nek array of size lp = lx2*ly2*lz2*lelt
+! !     Array storing the corresponding pressure field.
+! !
+! !     alpha : real
+! !     Norm of the vector.
+! !
+! !     Last edit : April 2nd 2020 by JC Loiseau.
+!
+!       use krylov_subspace
+!       implicit none
+!       include 'SIZE'
+!       include 'TOTAL'
+!
+!       real, dimension(lv), intent(inout) :: qx, qy, qz
+!       real, dimension(lp), intent(inout) :: qp
+!       real, dimension(lv,ldimt), intent(inout) :: qt
+!       real, intent(out)                   :: alpha
+!       real                                :: beta
+!
+! !     --> Compute the user-defined norm.
+!       call norm(qx, qy, qz, qp, qt, alpha)
+!       beta = 1.0d0/alpha
+!
+! !     --> Normalize the vector.
+!       call nopcmult(qx, qy, qz, qp, qt, beta)
+!
+!       return
+!       end subroutine normalize
 
 !-----------------------------------------------------------------------
 
@@ -447,7 +447,7 @@
 
       call nopcopy(qx(:,mstart),  qy(:,mstart),  qz(:,mstart),  qp(:,mstart),  qt(:,:,mstart), qx(:,ksize+1), qy(:,ksize+1), qz(:,ksize+1), qp(:,ksize+1), qt(:,:,ksize+1))
       do i = 1, k_dim+1
-        call nocopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, Q(i)%pr, Q(i)%theta, qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, :, i))
+        call nopcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, Q(i)%pr, Q(i)%theta, qx(:, i), qy(:, i), qz(:, i), qp(:, i), qt(:, :, i))
       enddo
 
       return
