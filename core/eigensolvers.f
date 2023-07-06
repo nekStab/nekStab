@@ -8,28 +8,28 @@
 
 !     This function provides the user-defined inner product to be used throughout
 !     the computation.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     px, py, pz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the first vector.
-!     
+!
 !     pp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the first vector.
-!     
+!
 !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays containing the velocity fields of the second vector.
-!     
+!
 !     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array containing the pressure field of the second vector.
-!     
+!
 !     RETURN
 !     ------
-!     
+!
 !     alpha : real
 !     Value of the inner-product alpha = <p, q>.
-!     
+!
       use krylov_subspace
       implicit none
       include "SIZE"
@@ -99,19 +99,19 @@
 !     This function normalizes the state vector [qx, qy, qz, qp]^T where
 !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
 !     components while qp is the corresponding pressure field.
-!     
+!
 !     INPUTS / OUTPUTS
 !     ----------------
-!     
+!
 !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
 !     Arrays storing the velocity components.
-!     
+!
 !     qp : nek array of size lp = lx2*ly2*lz2*lelt
 !     Array storing the corresponding pressure field.
-!     
+!
 !     alpha : real
 !     Norm of the vector.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       use krylov_subspace
@@ -264,13 +264,14 @@
 
 !     ----- Normalized to unit-norm -----
 
-         wrk%vx(:) = vxp(:, 1) ; wrk%vy(:) = vyp(:, 1) ; wrk%vz(:) = vzp(:, 1)
-         wrk%pr(:) = prp(:, 1)
-         if (ldimt.gt.0) then
-          do m = 1,ldimt
-           wrk%theta(:,m) = tp(:, m, 1)
-          enddo
-         endif
+!          wrk%vx(:) = vxp(:, 1) ; wrk%vy(:) = vyp(:, 1) ; wrk%vz(:) = vzp(:, 1)
+!          wrk%pr(:) = prp(:, 1)
+!          if (ldimt.gt.0) then
+!           do m = 1,ldimt
+!            wrk%theta(:,m) = tp(:, m, 1)
+!           enddo
+!          endif
+         call nopcopy(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%theta, vxp, vyp, vzp, prp, tp)
          call krylov_normalize(wrk, alpha)
 
          mstart = 1; istep = 1; time = 0.0d0
@@ -610,7 +611,7 @@
          if (ifpo) fp_cp(:) = matmul(qp(:, 1:k_dim), vecs(:, i))
          if (ldimt.gt.0) then
           do m = 1,ldimt
-                 fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))      
+                 fp_ct(:,m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))
           enddo
          endif
 
@@ -664,13 +665,13 @@
       if (nid .eq. 0) then
 
          close(10) ; close(20) ;  close(30)
-!     
+!
          write(fmt2,'("(A,I16)")')
          write(fmt3,'("(A,F16.4)")')
          write(fmt4,'("(A,F16.12)")')
          write(fmt5,'("(A,E15.7)")') ! max precision
          write(fmt6,'("(A,E13.4)")') ! same as hmhlz
-!     
+!
          write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
 !     write(filename,"(',I7.7,'.info')") itime/ioutput
          open (844,file=filename,action='write',status='replace')
@@ -730,32 +731,32 @@
 
 !     This function selects the eigenvalues to be placed in the upper left corner
 !     during the Schur condensation phase.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
 
 !     delta : real
 !     All eigenvalues outside the circle of radius 1-delta will be selected.
-!     
+!
 !     nev : integer
 !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
 !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-!     
+!
 !     n : integer
 !     Total number of eigenvalues.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     selected : n-dimensional logical array.
 !     Array indicating which eigenvalue has been selected (.true.).
-!     
+!
 !     cnt : integer
 !     Number of selected eigenvalues. cnt >= nev + 4.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -803,22 +804,22 @@
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lv = lx1*ly1*lz1*lelv
 !     Velocity components of the latest Krylov vector.
-!     
+!
 !     f_pr : nek array of size lp = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
-!     
+!
 !     H : k+1 x k real matrix.
 !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-!     
+!
 !     k : int
 !     Current iteration of the Arnoldi factorization.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       use krylov_subspace
@@ -915,61 +916,3 @@
       end function log_transform
 
 !     ------------------------------------------------------------------------------------
-
-      subroutine power_iteration
-
-      use krylov_subspace
-
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
-
-!     -->
-      real, dimension(lv) :: qx, qy, qz
-      real, dimension(lp) :: qp
-      real, dimension(lv) :: qt
-
-!     -->
-      real, dimension(lv) :: fx, fy, fz
-      real, dimension(lp) :: fp
-      real, dimension(lv) :: ft
-
-      real :: alpha, beta
-      integer :: i, j
-      character(len=80) :: filename
-
-      n = nx1 * ny1 * nz1 * nelv
-
-      write(filename,'(a,a,a)')'BF_',trim(SESSION),'0.f00001'
-      if(nid.eq.0)write(*,*)'Loading base flow: ',filename
-      call load_fld(filename)
-      call opcopy(ubase,vbase,wbase,vx,vy,vz)
-      if(ifheat) call copy(tbase,t(:,:,:,:,1),n)
-
-      if( istep.eq.0 .and. (uparam(1).eq.3.11 .or. uparam(1).eq.3.22) )then
-      param(10)=time            ! upo period in field
-      if(nid.eq.0)write(6,*)'adjusting period from file: endTime=',param(10)
-      endif
-      call bcast(param(10), wdsize)
-      call prepare_linearized_solver ! in matvec.f
-
-      call add_noise(vxp(1,1),vyp(1,1),vzp(1,1),tp(1,1,1))
-      call normalize(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp(1,1,1),alpha)
-      call nopcopy(qx, qy, qz, qp, qt, vxp(:,1), vyp(:,1), vzp(:,1), prp(:,1), tp(:,:,1))
-
-      call outpost(qx, qy, qz, qp, qt, "PRT")
-
-      do i = 1, 10
-         call matvec(fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
-         call inner_product(alpha, fx, fy, fz, fp, ft, qx, qy, qz, qp, qt)
-         call norm(qx, qy, qz, qp, qt, beta)
-         if (nid.EQ.0) write(*, *) "Rayleigh Quotient : ", alpha/beta, alpha, beta
-         call nopcopy(qx, qy, qz, qp, qt, fx, fy, fz, fp, ft)
-         call normalize(qx, qy, qz, qp, qt, alpha)
-         call outpost(qx, qy, qz, qp, qt, "PRT")
-      enddo
-
-      call nek_end
-
-      return
-      end subroutine power_iteration
