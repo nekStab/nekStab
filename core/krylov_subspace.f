@@ -15,7 +15,7 @@
       end type krylov_vector
 
       type(krylov_vector), save, public :: ic_nwt, fc_nwt
-      real,save,allocatable,dimension(:, :),public ::uor,vor,wor,tor
+      real,save,allocatable,dimension(:, :), public :: uor,vor,wor,tor
 
       contains
       end module krylov_subspace
@@ -32,7 +32,7 @@
       integer m
 
       n = nx1*ny1*nz1*nelv
-      
+
 !     --> Kinetic energy.
       alpha = glsc3(p%vx, bm1s, q%vx, n) + glsc3(p%vy, bm1s, q%vy, n)
       if (if3d) alpha = alpha + glsc3(p%vz, bm1s, q%vz, n)
@@ -237,7 +237,7 @@
             do j = 1,ldimt
                         qt(:, i, j) = Q(i)%theta(:,j)
             enddo
-         endif         
+         endif
          time_comp(i) = Q(i)%time
       enddo
 
@@ -256,3 +256,47 @@
 
       return
       end subroutine krylov_matmul
+
+      subroutine krylov_biorthogonalize(real_p, imag_p, real_q, imag_q)
+        use krylov_subspace
+        implicit none
+        include "SIZE"
+        include "TOTAL"
+
+        type(krylov_vector), intent(inout) :: real_p, imag_p
+        type(krylov_vector), intent(inout) :: real_q, imag_q
+        type(krylov_vector) :: wrk1, wrk2, wrk3, wrk4
+        real :: alpha, beta, gamma, delta
+
+        ! --> Normalize the direct mode to unit-norm.
+        call krylov_norm(alpha, real_p) ; alpha = alpha**2
+        call krylov_norm(beta, imag_p)  ; beta  = beta**2
+
+        delta = 1.0D+00 / sqrt(alpha + beta)
+        call krylov_cmult(real_p, delta)
+        call krylov_cmult(imag_p, delta)
+
+        ! --> Inner product between direct and adjoint modes.
+        call krylov_inner_product(alpha, real_p, real_q)
+        call krylov_inner_product(beta, imag_p, imag_q)
+        gamma = alpha + beta
+
+        call krylov_inner_product(alpha, real_p, imag_q)
+        call krylov_inner_product(beta, imag_p, real_q)
+        delta = alpha - beta
+
+        ! --> Bi-orthogonalize the adjoint mode.
+        call krylov_copy(wrk1, real_q) ; call krylov_copy(wrk2, imag_q)
+        call krylov_cmult(wrk1, gamma) ; call krylov_cmult(wrk2, delta)
+        call krylov_sub2(wrk1, wrk2) ; call krylov_copy(wrk3, wrk1)
+        call krylov_cmult(wrk3, 1.D+00 / sqrt(gamma**2 + delta**2))
+
+        call krylov_copy(wrk1, real_q) ; call krylov_copy(wrk2, imag_q)
+        call krylov_cmult(wrk1, delta) ; call krylov_cmult(wrk2, gamma)
+        call krylov_add2(wrk1, wrk2) ; call krylov_copy(wrk4, wrk1)
+        call krylov_cmult(wrk4, 1.D+00 / sqrt(gamma**2 + delta**2))
+
+        call krylov_copy(real_q, wrk3) ; call krylov_copy(imag_q, wrk4)
+
+        return
+      end subroutine krylov_biorthogonalize
