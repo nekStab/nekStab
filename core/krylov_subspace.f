@@ -7,11 +7,12 @@
       integer, public, parameter :: lv = lx1*ly1*lz1*lelv
       integer, public, parameter :: lp = lx2*ly2*lz2*lelv
       integer, save, public :: n,n2
+
       type, public :: krylov_vector
-      real, dimension(lv) :: vx, vy, vz
-      real, dimension(lp) :: pr
-      real, dimension(lv,ldimt) :: theta
-      real :: time
+        real, dimension(lv) :: vx, vy, vz
+        real, dimension(lp) :: pr
+        real, dimension(lv,ldimt) :: theta
+        real :: time
       end type krylov_vector
 
       type(krylov_vector), save, public :: ic_nwt, fc_nwt
@@ -23,8 +24,6 @@
       subroutine krylov_outpost(q, prefix)
       use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
       character(len=3), intent(in) :: prefix
       type(krylov_vector), intent(in) :: q
 
@@ -70,8 +69,6 @@
       subroutine krylov_norm(alpha, p)
       use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
       type(krylov_vector), intent(in) :: p
       real, intent(out) :: alpha
 
@@ -83,8 +80,7 @@
       subroutine krylov_normalize(p, alpha)
       use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
+
       type(krylov_vector),intent(inout) :: p
       real, intent(out) :: alpha
       real :: inv_alpha
@@ -104,6 +100,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+
       type(krylov_vector) :: p
       real alpha
       integer i
@@ -130,6 +127,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+
       type(krylov_vector) :: p, q
       integer i
 
@@ -156,6 +154,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+
       type(krylov_vector) :: p, q
       integer i
       n = nx1*ny1*nz1*nelv
@@ -180,6 +179,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+
       type(krylov_vector) :: p
       integer i
       n = nx1*ny1*nz1*nelv
@@ -204,8 +204,10 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+
       type(krylov_vector) :: p, q
       integer i
+
       n = nx1*ny1*nz1*nelv
       n2 = nx2*ny2*nz2*nelv
 
@@ -272,8 +274,6 @@
       subroutine krylov_biorthogonalize(real_p, imag_p, real_q, imag_q)
         use krylov_subspace
         implicit none
-        include "SIZE"
-        include "TOTAL"
 
         type(krylov_vector), intent(inout) :: real_p, imag_p
         type(krylov_vector), intent(inout) :: real_q, imag_q
