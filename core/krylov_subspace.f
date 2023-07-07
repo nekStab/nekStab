@@ -1,8 +1,10 @@
       module krylov_subspace
       implicit none
       include 'SIZE'
+      include 'TOTAL'
 
       private
+      public krylov_outpost, krylov_inner_product, krylov_norm, krylov_normalize, krylov_cmult, krylov_add2, krylov_sub2, krylov_zero, krylov_copy, krylov_matmul, krylov_biorthogonalize, krylov_gradient
 
       integer, public, parameter :: lv = lx1*ly1*lz1*lelv
       integer, public, parameter :: lp = lx2*ly2*lz2*lelv
@@ -19,24 +21,22 @@
       real,save,allocatable,dimension(:, :), public :: uor,vor,wor,tor
 
       contains
-      end module krylov_subspace
 
       subroutine krylov_outpost(q, prefix)
-      use krylov_subspace
-      implicit none
-      character(len=3), intent(in) :: prefix
-      type(krylov_vector), intent(in) :: q
-
-      call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, prefix)
-
-      return
+      !! Wrapper around Nek5000 outpost utility.
+        implicit none
+        character(len=3), intent(in) :: prefix
+        type(krylov_vector), intent(in) :: q
+        call outpost(q%vx, q%vy, q%vz, q%pr, q%theta, prefix)
+        return
       end subroutine krylov_outpost
 
+
+
+
+
       subroutine krylov_inner_product(alpha, p, q)
-      use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
       type(krylov_vector), intent(in) :: p, q
       real, intent(out) :: alpha
       real :: glsc3
@@ -67,7 +67,6 @@
       end subroutine krylov_inner_product
 
       subroutine krylov_norm(alpha, p)
-      use krylov_subspace
       implicit none
       type(krylov_vector), intent(in) :: p
       real, intent(out) :: alpha
@@ -78,8 +77,9 @@
       end subroutine krylov_norm
 
       subroutine krylov_normalize(p, alpha)
-      use krylov_subspace
       implicit none
+      include 'SIZE'
+      include 'TOTAL'
 
       type(krylov_vector),intent(inout) :: p
       real, intent(out) :: alpha
@@ -95,11 +95,10 @@
       return
       end subroutine krylov_normalize
 
+
+
       subroutine krylov_cmult(p, alpha)
-      use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
 
       type(krylov_vector) :: p
       real alpha
@@ -123,10 +122,7 @@
       end subroutine krylov_cmult
 
       subroutine krylov_add2(p, q)
-      use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
 
       type(krylov_vector) :: p, q
       integer i
@@ -150,10 +146,7 @@
 
 
       subroutine krylov_sub2(p, q)
-      use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
 
       type(krylov_vector) :: p, q
       integer i
@@ -175,10 +168,7 @@
       end subroutine krylov_sub2
 
       subroutine krylov_zero(p)
-      use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
 
       type(krylov_vector) :: p
       integer i
@@ -199,11 +189,11 @@
       return
       end subroutine krylov_zero
 
+
+
+
       subroutine krylov_copy(p, q)
-      use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
 
       type(krylov_vector) :: p, q
       integer i
@@ -226,10 +216,7 @@
       end subroutine krylov_copy
 
       subroutine krylov_matmul(dq, Q, yvec, k)
-      use krylov_subspace
       implicit none
-      include 'SIZE'
-      include 'TOTAL'
 
       integer :: i, j, k
       type(krylov_vector) :: dq
@@ -272,7 +259,6 @@
       end subroutine krylov_matmul
 
       subroutine krylov_biorthogonalize(real_p, imag_p, real_q, imag_q)
-        use krylov_subspace
         implicit none
 
         type(krylov_vector), intent(inout) :: real_p, imag_p
@@ -314,10 +300,7 @@
       end subroutine krylov_biorthogonalize
 
       subroutine krylov_gradient(dxp, dyp, dzp, p)
-        use krylov_subspace
         implicit none
-        include "SIZE"
-        include "TOTAL"
 
         type(krylov_vector), intent(in) :: p
         type(krylov_vector), intent(out) :: dxp, dyp, dzp
@@ -333,3 +316,11 @@
 
         return
       end subroutine krylov_gradient
+
+
+      end module krylov_subspace
+
+
+
+
+
