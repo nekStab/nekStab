@@ -38,7 +38,7 @@
          param(12) = dt
          call compute_cfl(ctarg, vx, vy, vz, dt) ! C=sum(ux_i/dx_i)*dt
          if(nid.eq.0)write(6,*)' current CFL and target=',ctarg,param(26)
-         lastep = 0             ! subs1.f:279 
+         lastep = 0             ! subs1.f:279
          fintim = nsteps*dt
       endif
 
@@ -103,16 +103,16 @@
       call opcopy(vx, vy, vz, ubase, vbase, wbase)
       if (ifheat) call copy(t(1,1,1,1,1), tbase(1,1,1,1,1),  nx1*ny1*nz1*nelv)
       if (ldimt.gt.1) then
-            do m = 2,ldimt
-                  call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
-            enddo
+         do m = 2,ldimt
+            call copy(t(1,1,1,1,m), tbase(1,1,1,1,m),  nx1*ny1*nz1*nelv)
+         enddo
       endif
       if(ifbf2d .and. if3d)then
          call rzero(vz,nx1*ny1*nz1*nelv);if(nid.eq.0)write(6,*)'Forcing vz=0'
       endif
 
 !     --> Standard setup for the linearized solver.
-      if(.not.init) then 
+      if(.not.init) then
          call prepare_linearized_solver
          init = .true.
       endif

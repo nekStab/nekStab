@@ -79,9 +79,9 @@ c---------------------------------------------------------
       end
 c---------------------------------------------------------
       subroutine compute_omega(l2)
-c
+c     
 c     Generate \Omega criterion vortex of
-c
+c     
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -148,10 +148,10 @@ c---------------------------------------------------------
       end
 c---------------------------------------------------------
       subroutine compute_q(l2)
-c
+c     
 c     Generate Q criterion vortex of Hunt, Wray & Moin, CTR-S88 1988
 c     positive second invariant of velocity gradient tensor
-c
+c     
       include 'SIZE'
       include 'TOTAL'
 
@@ -177,10 +177,10 @@ c
       end
 c---------------------------------------------------------
       subroutine compute_delta(l2)
-c
+c     
 c     Generate  Discriminant (DELTA) criterion vortex of Chong, Perry & Cantwell, Phys. Fluids 1990
 c     complex eigenvalues of velocity gradient tensor
-c
+c     
       include 'SIZE'
       include 'TOTAL'
 
@@ -212,35 +212,35 @@ c
       end
 c---------------------------------------------------------
       subroutine compute_swirling(l2)
-c
+c     
 c     Generate Swirling Strength criterion vortex of
 c     Zhou, Adrian, Balachandar and Kendall, JFM 1999
-c
+c     
 c     imaginary part of complex eigenvalues of velocity gradient tensor
 c     presented as lambda_ci^2
-c
+c     
 c     for the 3x3 case
 c     |d11, d12, d13|  |du/dx,du/dy,du/dz|
 c     D = [d_ij] = |d21, d22, d23|= |dv/dx,dv/dy,dv/dz|
 c     |d31, d32, d33|  |dw/dx,dw/dy,dw/dz|
-c
+c     
 c     |lambda_r,  0,       0      |
 c     [d_ij]= [vr,vcr,vci]|  0,   lambda_cr, lambda_ci|[vr,vcr,vci]^-1
 c     |  0,  -lambda_ci, lambda_cr|
-c
+c     
 c     λ^3+P*λ^2+Qλ+R=0
-c
+c     
 c     where P = -I_D   = -tr(D)
 c     Q = II_D  =  0.5[P*P - tr(DD)]
 c     R = -III_D = 1/3.[-P+3QP-tr(DDD)]
 c     for the 2x2 case
-c
+c     
 c     λ^2+Qλ+R=0
-c
+c     
 c     where Q = II_D  =  0.5[P*P - tr(DD)]
 c     R = -III_D = 1/3.[-P+3QP-tr(DDD)]
-c
-c
+c     
+c     
       include 'SIZE'
       include 'TOTAL'
       parameter (lxyz=lx1*ly1*lz1)
@@ -347,13 +347,13 @@ c---------------------------------------------------------
       end
 c---------------------------------------------------------
       subroutine compute_firstInv(a, l)
-c
+c     
 c     for the 3x3 case
 c     |d11, d12, d13|
 c     D = [d_ij] = |d21, d22, d23|
 c     |d31, d32, d33|
 c     compute_firstInv returns tr(d_ij)=(d11+d22+d33)
-c
+c     
       include 'SIZE'
       include 'TOTAL'
       parameter(lxyz=lx1*ly1*lz1)
@@ -372,14 +372,14 @@ c
       end
 c-------------------------------------------------------------------
       subroutine compute_secondInv(a, l)
-c
+c     
 c     for the 3x3 case
 c     |d11, d12, d13|
 c     D = [d_ij] = |d21, d22, d23|
 c     |d31, d32, d33|
 c     compute_SecondInv returns
 c     0.5*(tr(d_ij)^2+tr(d_ij*d_ij))=-(d22*d33-d23*d32)-(d11*d22-d12*d21)-(d33*d11-d13*d31)
-c
+c     
       include 'SIZE'
       include 'TOTAL'
       parameter (lxyz=lx1*ly1*lz1)
@@ -403,15 +403,15 @@ c
       end
 c-------------------------------------------------------------------
       subroutine compute_thirdInv(a, l)
-c
+c     
 c     for the 3x3 case
 c     |d11, d12, d13|
 c     D = [d_ij] = |d21, d22, d23|
 c     |d31, d32, d33|
-c
+c     
 c     compute_thirdInv returns det(D)
 c     =-d11*(d23*d32-d22*d33)-d12*(d21*d33-d31*d23)-d13*(d31*d22-d21*d32)
-c
+c     
       include 'SIZE'
       include 'TOTAL'
       parameter (lxyz=lx1*ly1*lz1)
