@@ -4,7 +4,7 @@
       include 'TOTAL'
 
       private
-      public krylov_outpost, krylov_inner_product, krylov_norm, krylov_normalize, krylov_cmult, krylov_add2, krylov_sub2, krylov_zero, krylov_copy, krylov_matmul, krylov_biorthogonalize, krylov_gradient
+      public krylov_outpost, krylov_inner_product, krylov_normalize, krylov_cmult, krylov_add2, krylov_sub2, krylov_zero, krylov_copy, krylov_matmul, krylov_biorthogonalize, krylov_gradient
 
       integer, public, parameter :: lv = lx1*ly1*lz1*lelv
       integer, public, parameter :: lp = lx2*ly2*lz2*lelv
@@ -17,7 +17,10 @@
         real :: time
 
       contains
-        procedure :: norm => krylov_norm
+        private
+        ! --> Define the norm of the Krylov vector.
+        procedure, pass(self) :: krylov_norm
+        generic, public    :: norm => krylov_norm
       end type krylov_vector
 
       type(krylov_vector), save, public :: ic_nwt, fc_nwt
@@ -79,10 +82,10 @@
 
 
 
-      real function krylov_norm(p) result(alpha)
+      real function krylov_norm(self) result(alpha)
       implicit none
-      class(krylov_vector), intent(in) :: p
-      alpha = krylov_inner_product(p, p)
+      class(krylov_vector), intent(in) :: self
+      alpha = krylov_inner_product(self, self)
       alpha = dsqrt(alpha)
       return
       end function krylov_norm
