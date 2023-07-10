@@ -397,7 +397,7 @@
          call krylov_matmul(imag_eigvec, Q(1:k_dim), aimag(vecs(:, i)), k_dim)
 
 !     ----- Normalization to be unit-norm -----
-         call krylov_norm(alpha_r, real_eigvec) ; call krylov_norm(alpha_i, imag_eigvec)
+         alpha_r = krylov_norm(real_eigvec) ; alpha_i = krylov_norm(imag_eigvec)
          alpha = alpha_r**2 + alpha_i**2 ; beta = 1.0d0/sqrt(alpha)
          call krylov_cmult(real_eigvec, beta) ; call krylov_cmult(imag_eigvec, beta)
 
@@ -441,13 +441,13 @@
       if (nid .eq. 0) then
 
          close(10) ; close(20) ;  close(30)
-!     
+!
          write(fmt2,'("(A,I16)")')
          write(fmt3,'("(A,F16.4)")')
          write(fmt4,'("(A,F16.12)")')
          write(fmt5,'("(A,E15.7)")') ! max precision
          write(fmt6,'("(A,E13.4)")') ! same as hmhlz
-!     
+!
          write(filename,'(A,A,A)')'Spectre_',trim(evop),'.info'
 !     write(filename,"(',I7.7,'.info')") itime/ioutput
          open (844,file=filename,action='write',status='replace')
@@ -507,32 +507,32 @@
 
 !     This function selects the eigenvalues to be placed in the upper left corner
 !     during the Schur condensation phase.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     vals : n-dimensional complex array.
 !     Array containing the eigenvalues.
 
 !     delta : real
 !     All eigenvalues outside the circle of radius 1-delta will be selected.
-!     
+!
 !     nev : integer
 !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
 !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-!     
+!
 !     n : integer
 !     Total number of eigenvalues.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     selected : n-dimensional logical array.
 !     Array indicating which eigenvalue has been selected (.true.).
-!     
+!
 !     cnt : integer
 !     Number of selected eigenvalues. cnt >= nev + 4.
-!     
+!
 !     Last edit : April 2nd 2020 by JC Loiseau.
 
       implicit none
@@ -580,22 +580,22 @@
 
 !     This function implements a fairly simple checkpointing procedure in case one
 !     would need to restart the computation (e.g. in case of cluster shutdown).
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lv = lx1*ly1*lz1*lelv
 !     Velocity components of the latest Krylov vector.
-!     
+!
 !     f_pr : nek array of size lp = lx2*ly2*lz2*lelt
 !     Pressure field of the latest Krylov vector.
-!     
+!
 !     H : k+1 x k real matrix.
 !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-!     
+!
 !     k : int
 !     Current iteration of the Arnoldi factorization.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       use krylov_subspace

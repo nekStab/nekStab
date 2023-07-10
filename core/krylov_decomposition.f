@@ -9,35 +9,35 @@
 !     This function implements the k-step Arnoldi factorization of the linearized
 !     Navier-Stokes operator. The rank k of the Arnoldi factorization is set as a user
 !     parameter in x_SIZE.f (see parameter k_dim).
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     mstart : integer
 !     Index at which to start the Arnoldi factorization. By default, it should be set to 1.
 !     Note that it changes when the Arnoldi factorization is used as part of the Krylov-Schur
 !     algorithm.
-!     
+!
 !     mend : integer
 !     Index at which to stop the Arnoldi factorization. By default, it should be set to kdim.
 !     Note that it changes when the Arnoldi factorization is used as part of the GMRES solver
-!     
+!
 !     ksize : integer
 !     Size of the Krylov subspace (same as k_dim).
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     qx, qy, qz : nek arrays of size (lx1*ly1*lz1*lelt, ksize).
 !     Arrays containing the various Krylov vectors associated to each velocity component.
-!     
+!
 !     qp : nek arrays of size (lx2*ly2*lz2*lelt, ksize)
 !     Arrays containing the various Krylov vectors associated to the pressure field.
-!     
+!
 !     H : k x k real matrix.
 !     Upper Hessenberg matrix resulting from the Arnoldi factorization of the linearized
 !     Navier-Stokes operator.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
       use krylov_subspace
       implicit none
@@ -117,30 +117,30 @@
 
 !     This function orthonormalizes the latest Krylov vector f w.r.t. all of the
 !     previous ones and updates the entries of the Hessenberg matrix accordingly.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     k : int
 !     Current step of the Arnoldi factorization.
-!     
+!
 !     f_xr, f_yr, f_zr : nek arrays of size lt = lx1*ly1*lz1*lelt.
 !     Velocity components of the latest Krylov vector.
 !     When returned, it has been orthonormalized w.r.t. to all previous
 !     Krylov vectors.
-!     
+!
 !     f_pr : nek array of size lp = lx2*ly2*lz2*lelt.
 !     Pressure component of the latest Krylov vector.
-!     
+!
 !     qx, qy, qz : nek arrays of size (lv, k)
 !     Velocity components of the Krylov basis.
-!     
+!
 !     qp : nek array of size (lp, k).
 !     Pressure component of the Krylov basis.
-!     
+!
 !     H : k x k real matrix.
 !     Upper Hessenberg matrix.
-!     
+!
 !     Last edit : April 3rd 2020 by JC Loiseau.
 
       use krylov_subspace
@@ -162,7 +162,7 @@
 !     --> Initialize array.
       call rzero(h_vec, k)
 
-      call krylov_norm(beta, f)
+      beta = krylov_norm(f)
 
 !     --> Orthonormalize f w.r.t the Krylov basis.
       do i = 1, k

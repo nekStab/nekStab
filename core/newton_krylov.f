@@ -96,7 +96,7 @@
       tottime = tottime + nsteps*dt
 
 !     --> Check residual || f(q) ||
-      call krylov_norm(residual, f) ; residual = residual ** 2
+      residual = krylov_norm(f) ; residual = residual ** 2
 !     write(*, *) "RESIDUAL ", residual
 
       if(nid.eq.0)then
@@ -176,39 +176,39 @@
 
 !     Implementation of simple time-stepper GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     rhs_x, rhs_y, rhs_z, rhs_t : nek arrays of size (lv).
 !     Arrays containing the right-hand side of the linear problem to be solved.
-!     
+!
 !     rhs_p : nek array of size (lp)
 !     Array containing the right-hand side of the linear problem to be solved (pressure component).
-!     
+!
 !     maxiter : integer
 !     Maximum number of restarts for the GMRES computation.
-!     
+!
 !     ksize : integer
 !     Dimension of the Krylov subspace.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     sol_x, sol_y, sol_z, sol_t : nek arrays of size (lv).
 !     Arrays containing the solution of the linear problem.
-!     
+!
 !     sol_p : nek array of size (lp).
 !     Array containing the solution of the linear problem (pressure component).
-!     
+!
 !     calls : total number of calls to the linearized solver.
 !     Integer containing the total sum of nsteps*k necessary to converge the solution.
-!     
+!
 !     NOTE : This is a plain implementation of GMRES following the algorithm given in
 !     Y. Saad. Iterative methods for sparse linear systems. Section 6.5 GMRES, alg. 6.9
-!     
+!
 !     Last Edit : March 26th 2021 by JC Loiseau.
-!     
+!
 
       use krylov_subspace
       implicit none

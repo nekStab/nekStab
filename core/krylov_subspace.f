@@ -77,16 +77,13 @@
 
 
 
-      subroutine krylov_norm(alpha, p)
+      real function krylov_norm(p) result(alpha)
       implicit none
       type(krylov_vector), intent(in) :: p
-      real, intent(out) :: alpha
-
       call krylov_inner_product(alpha, p, p)
       alpha = dsqrt(alpha)
       return
-      end subroutine krylov_norm
-
+      end function krylov_norm
 
 
 
@@ -98,7 +95,7 @@
       real, intent(out) :: alpha
 
 !     --> Compute the user-defined norm.
-      call krylov_norm(alpha, p)
+      alpha = krylov_norm(p)
 !     --> Normalize the vector.
       call krylov_cmult(p, 1.0D+00/alpha)
 
@@ -299,8 +296,8 @@
       real :: alpha, beta, gamma, delta
 
 !     --> Normalize the direct mode to unit-norm.
-      call krylov_norm(alpha, real_p) ; alpha = alpha**2
-      call krylov_norm(beta, imag_p)  ; beta  = beta**2
+      alpha = krylov_norm(real_p) ; alpha = alpha**2
+      beta  = krylov_norm(imag_p)  ; beta  = beta**2
 
       delta = 1.0D+00 / sqrt(alpha + beta)
       call krylov_cmult(real_p, delta)
