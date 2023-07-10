@@ -703,7 +703,7 @@ c----------------------------------------------------------------------
 !     --> Normalize eigenmode to unit-norm (Sanity check).
       alpha = real_eigvec%norm() ; beta = imag_eigvec%norm()
       alpha = 1.D+00 / sqrt(alpha**2 + beta**2)
-      call krylov_cmult(real_eigvec, alpha) ; call krylov_cmult(imag_eigvec, alpha)
+      real_eigvec = alpha*real_eigvec ; imag_eigvec = alpha*imag_eigvec
 
 !     #####
 !     #####

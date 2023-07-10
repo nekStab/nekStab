@@ -399,7 +399,7 @@
 !     ----- Normalization to be unit-norm -----
          alpha_r = real_eigvec%norm() ; alpha_i = imag_eigvec%norm()
          alpha = alpha_r**2 + alpha_i**2 ; beta = 1.0d0/sqrt(alpha)
-         call krylov_cmult(real_eigvec, beta) ; call krylov_cmult(imag_eigvec, beta)
+         real_eigvec = beta*real_eigvec ; imag_eigvec = beta*imag_eigvec
 
 !     ----- Output the real and imaginary parts -----
          call krylov_outpost(real_eigvec, nRe) ; call krylov_outpost(imag_eigvec, nIm)

@@ -287,7 +287,7 @@
       call ts_gmres(rhs, sol, 10, k_dim, calls)
 
 !     -->
-      call krylov_cmult(sol, alpha)
+      sol = alpha*sol
 
 !     --> Outpost solution.
       call outpost(sol%vx, sol%vy, sol%vz, sol%pr, sol%theta, prefix)

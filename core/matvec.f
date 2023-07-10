@@ -368,7 +368,6 @@
 
 !     --> Evaluate (I - exp(t*L)) * q0.
       f = q - f
-      !call krylov_cmult(f, -1.0D+00)
 
       return
       end subroutine ts_force_sensitivity_map
@@ -410,8 +409,7 @@
          call btvec%zero()
 
          call compute_bvec(bvec, fc_nwt)
-         call krylov_cmult(bvec, q%time)
-         f = f + bvec
+         f = f + q%time * bvec
 
          call compute_bvec(btvec, ic_nwt)
          f%time = krylov_inner_product(btvec, q)
@@ -466,7 +464,7 @@
 
 !     --> Approximate the time-derivative.
       bvec = wrk2 - wrk1
-      call krylov_cmult(bvec, 1.0/dt)
+      bvec = (1.0D+00/dt) * bvec
       bvec%time = 0.0D+00
 
 

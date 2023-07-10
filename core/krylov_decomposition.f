@@ -160,14 +160,9 @@
 
 !     --> Orthonormalize f w.r.t the Krylov basis.
       do i = 1, k
-!     --> Copy the i-th Krylov vector to the working arrays.
-         wrk  = q(i)
-
 !     --> Orthogonalize f w.r.t. to q_i.
-         alpha = krylov_inner_product(f, wrk)
-         call krylov_cmult(wrk, alpha)
-         f = f - wrk
-
+         alpha = krylov_inner_product(f, q(i))
+         f = f - alpha*q(i)
 !     --> Update the corresponding entry in the Hessenberg matrix.
          H(i, k) = alpha
       enddo
@@ -175,9 +170,8 @@
 !     --> Perform full re-orthogonalization (see instability of MGS process).
       do i = 1, k
          wrk = q(i)
-         alpha = krylov_inner_product(f, wrk)
-         call krylov_cmult(wrk, alpha)
-         f = f - wrk
+         alpha = krylov_inner_product(f, q(i))
+         f = f - alpha*q(i)
          H(i, k) = H(i, k) + alpha
       enddo
 

@@ -324,9 +324,7 @@
       real :: beta
 
 !     --> Initial Krylov vector.
-      call matvec(f, q)
-      f = f - rhs
-      call krylov_cmult(f, -1.0D+00)
+      call matvec(f, q) ; f = rhs - f
 
 !     --> Normalize the starting vector.
       call krylov_normalize(f, beta) ; q = f

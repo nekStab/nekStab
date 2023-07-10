@@ -4,7 +4,7 @@
       include 'TOTAL'
 
       private
-      public krylov_outpost, krylov_inner_product, krylov_normalize, krylov_cmult, krylov_zero, krylov_matmul, krylov_biorthogonalize, krylov_gradient
+      public krylov_outpost, krylov_inner_product, krylov_normalize, krylov_matmul, krylov_biorthogonalize, krylov_gradient
 
       integer, public, parameter :: lv = lx1*ly1*lz1*lelv
       integer, public, parameter :: lp = lx2*ly2*lz2*lelv
@@ -22,7 +22,7 @@
         generic, public       :: norm => krylov_norm
 
         ! --> Overload the = operator for copy.
-        procedure, pass(out) :: krylov_copy
+        procedure, pass(out) :: krylov_copy ! call out%copy(from)
         generic, public      :: assignment(=) => krylov_copy
 
         ! --> Overload + for vector addition.
@@ -36,6 +36,11 @@
         ! --> Zero-out a krylov vector.
         procedure, pass(self) :: krylov_zero
         generic, public       :: zero => krylov_zero
+
+        ! --> Overload * for scalar multiplication.
+        procedure, pass(input) :: krylov_left_scalar_multiplication
+        procedure, pass(input) :: krylov_right_scalar_multiplication
+        generic, public        :: operator(*) => krylov_left_scalar_multiplication, krylov_right_scalar_multiplication
       end type krylov_vector
 
       type(krylov_vector), save, public :: ic_nwt, fc_nwt
@@ -116,7 +121,7 @@
 !     --> Compute the user-defined norm.
       alpha = self%norm()
 !     --> Normalize the vector.
-      call krylov_cmult(self, 1.0D+00/alpha)
+      self = self * (1.0D+00/alpha)
 
       return
       end subroutine krylov_normalize
@@ -125,29 +130,26 @@
 
 
 
-      subroutine krylov_cmult(p, alpha)
+      type(krylov_vector) function krylov_right_scalar_multiplication(input, scalar) result(out)
       implicit none
-
-      type(krylov_vector), intent(inout) :: p
-      real, intent(in) :: alpha
-      integer :: i
-
-      n = nx1*ny1*nz1*nelv ; n2 = nx2*ny2*nz2*nelv
-
-      call cmult(p%vx(:),alpha,n)
-      call cmult(p%vy(:),alpha,n)
-      call cmult(p%pr(:),alpha,n2)
-      if (if3d) call cmult(p%vz(:),alpha,n)
-      if (ldimt.gt.0) then
-         do i = 1,ldimt
-            call cmult(p%theta(:,i),alpha,n)
-         enddo
-      endif
-      p%time = p%time * alpha
-
+      class(krylov_vector), intent(in) :: input
+      real, intent(in) :: scalar
+      out%vx    = scalar * input%vx
+      out%vy    = scalar * input%vy
+      out%vz    = scalar * input%vz
+      out%pr    = scalar * input%pr
+      out%theta = scalar * input%theta
+      out%time  = scalar * input%time
       return
-      end subroutine krylov_cmult
+      end function krylov_right_scalar_multiplication
 
+      type(krylov_vector) function krylov_left_scalar_multiplication(scalar, input) result(out)
+      implicit none
+      class(krylov_vector), intent(in) :: input
+      real, intent(in) :: scalar
+      out = krylov_right_scalar_multiplication(input, scalar)
+      return
+      end function krylov_left_scalar_multiplication
 
 
 
@@ -155,12 +157,12 @@
       type(krylov_vector) function krylov_add(p, q) result(out)
       implicit none
       class(krylov_vector), intent(in)  :: p, q
-      out%vx = p%vx + q%vx
-      out%vy = p%vy + q%vy
-      out%vz = p%vz + q%vz
-      out%pr = p%pr + q%pr
+      out%vx    = p%vx + q%vx
+      out%vy    = p%vy + q%vy
+      out%vz    = p%vz + q%vz
+      out%pr    = p%pr + q%pr
       out%theta = p%theta + q%theta
-      out%time = p%time + q%time
+      out%time  = p%time + q%time
       return
       end function krylov_add
 
@@ -171,12 +173,12 @@
       type(krylov_vector) function krylov_sub(p, q) result(out)
       implicit none
       class(krylov_vector), intent(in)  :: p, q
-      out%vx = p%vx - q%vx
-      out%vy = p%vy - q%vy
-      out%vz = p%vz - q%vz
-      out%pr = p%pr - q%pr
+      out%vx    = p%vx - q%vx
+      out%vy    = p%vy - q%vy
+      out%vz    = p%vz - q%vz
+      out%pr    = p%pr - q%pr
       out%theta = p%theta - q%theta
-      out%time = p%time - q%time
+      out%time  = p%time - q%time
       return
       end function krylov_sub
 
@@ -187,12 +189,12 @@
       subroutine krylov_zero(self)
       implicit none
       class(krylov_vector), intent(inout) :: self
-      self%vx = 0.0D+00
-      self%vy = 0.0D+00
-      self%vz = 0.0D+00
-      self%pr = 0.0D+00
+      self%vx    = 0.0D+00
+      self%vy    = 0.0D+00
+      self%vz    = 0.0D+00
+      self%pr    = 0.0D+00
       self%theta = 0.0D+00
-      self%time = 0.0D+00
+      self%time  = 0.0D+00
       return
       end subroutine krylov_zero
 
@@ -204,12 +206,12 @@
       implicit none
       type(krylov_vector), intent(in)  :: from
       class(krylov_vector), intent(out) :: out
-      out%vx = from%vx
-      out%vy = from%vy
-      out%vz = from%vz
-      out%pr = from%pr
+      out%vx    = from%vx
+      out%vy    = from%vy
+      out%vz    = from%vz
+      out%pr    = from%pr
       out%theta = from%theta
-      out%time = from%time
+      out%time  = from%time
       return
       end subroutine krylov_copy
 
@@ -277,8 +279,7 @@
       alpha = real_p%norm()**2 ; beta  = imag_p%norm()**2
 
       delta = 1.0D+00 / sqrt(alpha + beta)
-      call krylov_cmult(real_p, delta)
-      call krylov_cmult(imag_p, delta)
+      real_p = delta*real_p ; imag_p = delta*imag_p
 
 !     --> Inner product between direct and adjoint modes.
       alpha = krylov_inner_product(real_p, real_q)
@@ -290,16 +291,11 @@
       delta = alpha - beta
 
 !     --> Bi-orthogonalize the adjoint mode.
-      wrk1 = real_q ; wrk2 = imag_q
-      call krylov_cmult(wrk1, gamma) ; call krylov_cmult(wrk2, delta)
-      wrk1 = wrk1 - wrk2   ; wrk3 = wrk1
-      call krylov_cmult(wrk3, 1.D+00 / (gamma**2 + delta**2))
+      wrk1 = gamma*real_q - delta*imag_q
+      wrk3 = wrk1 * (1.0D+00 / (gamma**2 + delta**2))
 
-      wrk1 = real_q ; wrk2 = imag_q
-      call krylov_cmult(wrk1, delta) ; call krylov_cmult(wrk2, gamma)
-!       call krylov_add2(wrk1, wrk2)
-      wrk1 = wrk1 + wrk2  ; wrk4 = wrk1
-      call krylov_cmult(wrk4, 1.D+00 / (gamma**2 + delta**2))
+      wrk1 = delta*real_q + gamma*imag_q
+      wrk4 = wrk1 * (1.0D+00 / (gamma**2 + delta**2))
 
       ! --> Copy back the result.
       real_q = wrk3 ; imag_q = wrk4
