@@ -367,8 +367,8 @@
       call adjoint_linearized_map(f, q)
 
 !     --> Evaluate (I - exp(t*L)) * q0.
-      call krylov_sub2(f, q)
-      call krylov_cmult(f, -1.0D+00)
+      f = q - f
+      !call krylov_cmult(f, -1.0D+00)
 
       return
       end subroutine ts_force_sensitivity_map
@@ -398,7 +398,7 @@
       call forward_linearized_map(f, q)
 
 !     --> Evaluate (exp(t*L) - I) * q0.
-      call krylov_sub2(f, q)
+      f = f - q
 
 !     ----------------------------------
 !     -----     NEWTON FOR UPO     -----
@@ -406,12 +406,12 @@
 
       if ( uparam(1) .eq. 2.1 ) then
 
-         call krylov_zero(bvec)
-         call krylov_zero(btvec)
+         call bvec%zero()
+         call btvec%zero()
 
          call compute_bvec(bvec, fc_nwt)
          call krylov_cmult(bvec, q%time)
-         f = f + bvec !call krylov_add2(f, bvec)
+         f = f + bvec
 
          call compute_bvec(btvec, ic_nwt)
          f%time = krylov_inner_product(btvec, q)
@@ -465,8 +465,7 @@
      $     vx,      vy,      vz,      pr,      t(1,1,1,1,1))
 
 !     --> Approximate the time-derivative.
-      call krylov_sub2(wrk2, wrk1)
-      bvec = wrk2
+      bvec = wrk2 - wrk1
       call krylov_cmult(bvec, 1.0/dt)
       bvec%time = 0.0D+00
 

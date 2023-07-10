@@ -50,7 +50,7 @@
       endif
 
 !     --> Initialize arrays.
-      call krylov_zero(f) ; call krylov_zero(dq)
+      call f%zero() ; call dq%zero()
 
 !     --> Copy initial condition.
       call nopcopy(q%vx, q%vy, q%vz, q%pr, q%theta, vx, vy, vz, pr, t)
@@ -119,7 +119,7 @@
       tottime = tottime + calls*dt
 
 !     --> Update Newton solution.
-      call krylov_sub2(q, dq)
+      q = q - dq
 
 !     --> Deallocate nonlinear solution variable!
       if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
@@ -239,9 +239,9 @@
 !     ----- Allocate arrays -----
       allocate(Q(ksize+1),H(ksize+1, ksize), yvec(ksize), evec(ksize+1))
 
-      call krylov_zero(sol)
+      call sol%zero()
       do i = 1, ksize+1
-         call krylov_zero(Q(i))
+         call Q(i)%zero()
       enddo
       H = 0.0D+00 ; yvec = 0.0D+00 ; evec = 0.0D+00
 
@@ -254,7 +254,7 @@
 !     --> Zero-out stuff.
       H = 0.0D+00 ; yvec = 0.0D+00; evec = 0.0D+00 ; evec(1) = beta
       do j = 2, ksize+1
-         call krylov_zero(Q(j))
+         call Q(j)%zero()
       enddo
 
       arnoldi : do k = 1, k_dim
@@ -325,7 +325,7 @@
 
 !     --> Initial Krylov vector.
       call matvec(f, q)
-      call krylov_sub2(f, rhs)
+      f = f - rhs
       call krylov_cmult(f, -1.0D+00)
 
 !     --> Normalize the starting vector.
@@ -374,7 +374,7 @@
 !     --> Compute the right hand side of the time-stepper Newton.
       call nopcopy(f%vx, f%vy, f%vz, f%pr, f%theta, vx, vy, vz, pr, t)
       fc_nwt = f ! for Newton UPO newton_linearized_map
-      call krylov_sub2(f, q)
+      f = f - q
       f%time = 0.0D+00
 
 !     --> Pass current guess as base flow for the linearized calculation.

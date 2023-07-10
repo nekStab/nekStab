@@ -37,7 +37,7 @@
       time   = 0.0d0
       H(:,:)  = 0.0d0; b_vec  = 0.0d0 ; residual = 0.0d0
       do i = 1,k_dim+1
-         call krylov_zero(Q(i))
+         call Q(i)%zero()
       enddo
 
 !     ----- Loading baseflow from disk (optional) -----

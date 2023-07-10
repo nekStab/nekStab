@@ -67,7 +67,7 @@
       endif
 
 !     --> Initialize arrays.
-      call krylov_zero(f) ; alpha = 0.0d0
+      call f%zero() ; alpha = 0.0d0
 
 !     --> Arnoldi factorization.
       do mstep = mstart, mend
@@ -166,7 +166,7 @@
 !     --> Orthogonalize f w.r.t. to q_i.
          alpha = krylov_inner_product(f, wrk)
          call krylov_cmult(wrk, alpha)
-         call krylov_sub2(f, wrk)
+         f = f - wrk
 
 !     --> Update the corresponding entry in the Hessenberg matrix.
          H(i, k) = alpha
@@ -177,7 +177,7 @@
          wrk = q(i)
          alpha = krylov_inner_product(f, wrk)
          call krylov_cmult(wrk, alpha)
-         call krylov_sub2(f, wrk)
+         f = f - wrk
          H(i, k) = H(i, k) + alpha
       enddo
 
