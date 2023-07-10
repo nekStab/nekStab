@@ -8,7 +8,7 @@
 
       integer, public, parameter :: lv = lx1*ly1*lz1*lelv
       integer, public, parameter :: lp = lx2*ly2*lz2*lelv
-      integer, save, public :: n,n2
+      integer, save, public :: n, n2
 
       type, public :: krylov_vector
       real, dimension(lv) :: vx, vy, vz
@@ -44,10 +44,9 @@
 
 
 
-      subroutine krylov_inner_product(alpha, p, q)
+      real function krylov_inner_product(p, q) result(alpha)
       implicit none
       type(krylov_vector), intent(in) :: p, q
-      real, intent(out) :: alpha
       real :: glsc3
       integer m
 
@@ -71,7 +70,7 @@
       if ( isnan(alpha) ) call nek_end
 
       return
-      end subroutine krylov_inner_product
+      end function krylov_inner_product
 
 
 
@@ -80,7 +79,7 @@
       real function krylov_norm(p) result(alpha)
       implicit none
       type(krylov_vector), intent(in) :: p
-      call krylov_inner_product(alpha, p, p)
+      alpha = krylov_inner_product(p, p)
       alpha = dsqrt(alpha)
       return
       end function krylov_norm
@@ -297,19 +296,19 @@
 
 !     --> Normalize the direct mode to unit-norm.
       alpha = krylov_norm(real_p) ; alpha = alpha**2
-      beta  = krylov_norm(imag_p)  ; beta  = beta**2
+      beta  = krylov_norm(imag_p) ; beta  = beta**2
 
       delta = 1.0D+00 / sqrt(alpha + beta)
       call krylov_cmult(real_p, delta)
       call krylov_cmult(imag_p, delta)
 
 !     --> Inner product between direct and adjoint modes.
-      call krylov_inner_product(alpha, real_p, real_q)
-      call krylov_inner_product(beta, imag_p, imag_q)
+      alpha = krylov_inner_product(real_p, real_q)
+      beta  = krylov_inner_product(imag_p, imag_q)
       gamma = alpha + beta
 
-      call krylov_inner_product(alpha, real_q, imag_p)
-      call krylov_inner_product(beta, imag_q, real_p)
+      alpha = krylov_inner_product(real_q, imag_p)
+      beta  = krylov_inner_product(imag_q, real_p)
       delta = alpha - beta
 
 !     --> Bi-orthogonalize the adjoint mode.

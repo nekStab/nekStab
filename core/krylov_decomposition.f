@@ -171,7 +171,7 @@
          call krylov_copy(wrk, q(i))
 
 !     --> Orthogonalize f w.r.t. to q_i.
-         call krylov_inner_product(alpha, f, wrk)
+         alpha = krylov_inner_product(f, wrk)
          call krylov_cmult(wrk, alpha)
          call krylov_sub2(f, wrk)
 
@@ -183,7 +183,7 @@
 !     --> Perform full re-orthogonalization (see instability of MGS process).
       do i = 1, k
          call krylov_copy(wrk, q(i))
-         call krylov_inner_product(alpha, f, wrk)
+         alpha = krylov_inner_product(f, wrk)
          call krylov_cmult(wrk, alpha)
          call krylov_sub2(f, wrk)
          H(i, k) = H(i, k) + alpha
