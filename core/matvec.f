@@ -453,7 +453,7 @@
       call nopcopy(vx, vy, vz, pr, t, qbase%vx, qbase%vy, qbase%vz, qbase%pr, qbase%theta)
       param(10) = qbase%time
       call prepare_linearized_solver
-      call krylov_copy(wrk1, qbase)
+      wrk1 = qbase
 
 !     --> Single time-step to approximate the time-derivative.
       time = 0.0D+00
@@ -466,7 +466,7 @@
 
 !     --> Approximate the time-derivative.
       call krylov_sub2(wrk2, wrk1)
-      call krylov_copy(bvec, wrk2)
+      bvec = wrk2
       call krylov_cmult(bvec, 1.0/dt)
       bvec%time = 0.0D+00
 

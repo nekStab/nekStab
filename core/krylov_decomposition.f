@@ -82,8 +82,9 @@
 !     --> Update Hessenberg matrix and compute the orthogonal residual f.
          call update_hessenberg_matrix(H(1:mstep+1, 1:mstep), f, Q(1:mstep), mstep)
 
-!     --> Add the residual vector as the new Krylov vector.
-         call krylov_copy(Q(mstep+1), f)
+!     --> Normalize the residual vector and add as the new Krylov vector.
+!          call krylov_normalize(f, alpha) ! Already done in update_hessenberg_matrix.
+         Q(mstep+1) = f
 
 !     --> Save checkpoint for restarting/run-time analysis.
          if(ifres) call arnoldi_checkpoint(f, H(1:mstep+1, 1:mstep), mstep)
@@ -157,18 +158,10 @@
       integer i
       real alpha, beta
 
-      real, dimension(k) :: h_vec
-
-!     --> Initialize array.
-      call rzero(h_vec, k)
-
-      beta = f%norm()
-
 !     --> Orthonormalize f w.r.t the Krylov basis.
       do i = 1, k
-
 !     --> Copy the i-th Krylov vector to the working arrays.
-         call krylov_copy(wrk, q(i))
+         wrk  = q(i)
 
 !     --> Orthogonalize f w.r.t. to q_i.
          alpha = krylov_inner_product(f, wrk)
@@ -177,26 +170,18 @@
 
 !     --> Update the corresponding entry in the Hessenberg matrix.
          H(i, k) = alpha
-
       enddo
 
 !     --> Perform full re-orthogonalization (see instability of MGS process).
       do i = 1, k
-         call krylov_copy(wrk, q(i))
+         wrk = q(i)
          alpha = krylov_inner_product(f, wrk)
          call krylov_cmult(wrk, alpha)
          call krylov_sub2(f, wrk)
          H(i, k) = H(i, k) + alpha
-         if (nid.EQ.0) then
-            write(*, *) "ALPHA REORTH :", alpha
-         endif
       enddo
 
-!     --> Normalise the residual vector.
-      call krylov_normalize(f, alpha)
-
-!     --> Update the Hessenberg matrix.
-      H(k+1, k) = alpha
+      call krylov_normalize(f, beta) ; H(k+1, k) = beta
 
       return
       end subroutine update_hessenberg_matrix

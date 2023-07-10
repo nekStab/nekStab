@@ -122,7 +122,7 @@
 
          mstart = 1; istep = 1; time = 0.0d0
 
-         call krylov_copy(Q(1), wrk)
+         Q(1) = wrk
 
          call whereyouwant('KRY',1)
          time = 0.0d0
@@ -421,7 +421,7 @@
             if(uparam(1).eq.3.31)uparam(1)=3.11 ! changing to linearized solver in Floquet
             call bcast(uparam(1),wdsize)
 
-            call krylov_copy(opt_prt, real_eigvec)
+            opt_prt = real_eigvec
             call matvec(opt_rsp, opt_prt) ! baseflow already in ubase
             call krylov_outpost(opt_rsp, 'ore')
 

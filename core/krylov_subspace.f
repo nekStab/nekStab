@@ -13,18 +13,21 @@
       type, public :: krylov_vector
         real, dimension(lv) :: vx, vy, vz
         real, dimension(lp) :: pr
-        real, dimension(lv,ldimt) :: theta
+        real, dimension(lv, ldimt) :: theta
         real :: time
-
       contains
         private
         ! --> Define the norm of the Krylov vector.
         procedure, pass(self) :: krylov_norm
-        generic, public    :: norm => krylov_norm
+        generic, public       :: norm => krylov_norm
+
+        ! --> Overload the = operator for copy.
+        procedure, pass(out) :: krylov_copy
+        generic, public      :: assignment(=) => krylov_copy
       end type krylov_vector
 
       type(krylov_vector), save, public :: ic_nwt, fc_nwt
-      real,save,allocatable,dimension(:, :), public :: uor,vor,wor,tor
+      real, save, allocatable, dimension(:, :), public :: uor, vor, wor, tor
 
 
 
@@ -93,16 +96,16 @@
 
 
 
-      subroutine krylov_normalize(p, alpha)
+      subroutine krylov_normalize(self, alpha)
       implicit none
 
-      type(krylov_vector),intent(inout) :: p
+      type(krylov_vector), intent(inout) :: self
       real, intent(out) :: alpha
 
 !     --> Compute the user-defined norm.
-      alpha = p%norm()
+      alpha = self%norm()
 !     --> Normalize the vector.
-      call krylov_cmult(p, 1.0D+00/alpha)
+      call krylov_cmult(self, 1.0D+00/alpha)
 
       return
       end subroutine krylov_normalize
@@ -219,25 +222,25 @@
 
 
 
-      subroutine krylov_copy(p, q)
+      subroutine krylov_copy(out, from)
       implicit none
 
-      type(krylov_vector), intent(inout) :: p
-      type(krylov_vector), intent(in)    :: q
+      type(krylov_vector), intent(in)  :: from
+      class(krylov_vector), intent(out) :: out
       integer :: i
 
       n = nx1*ny1*nz1*nelv ; n2 = nx2*ny2*nz2*nelv
 
-      call copy(p%vx(:),q%vx(:),n)
-      call copy(p%vy(:),q%vy(:),n)
-      call copy(p%pr(:),q%pr(:),n2)
-      if (if3d) call copy(p%vz(:),q%vz(:),n)
+      call copy(out%vx(:), from%vx(:),n)
+      call copy(out%vy(:), from%vy(:),n)
+      call copy(out%pr(:), from%pr(:),n2)
+      if (if3d) call copy(out%vz(:), from%vz(:),n)
       if (ldimt.gt.0) then
          do i = 1,ldimt
-            call copy(p%theta(:,i),q%theta(:,i),n)
+            call copy(out%theta(:,i), from%theta(:,i),n)
          enddo
       endif
-      p%time = q%time
+      out%time = from%time
 
       return
       end subroutine krylov_copy
@@ -319,17 +322,18 @@
       delta = alpha - beta
 
 !     --> Bi-orthogonalize the adjoint mode.
-      call krylov_copy(wrk1, real_q) ; call krylov_copy(wrk2, imag_q)
+      wrk1 = real_q ; wrk2 = imag_q
       call krylov_cmult(wrk1, gamma) ; call krylov_cmult(wrk2, delta)
-      call krylov_sub2(wrk1, wrk2)   ; call krylov_copy(wrk3, wrk1)
+      call krylov_sub2(wrk1, wrk2)   ; wrk3 = wrk1
       call krylov_cmult(wrk3, 1.D+00 / (gamma**2 + delta**2))
 
-      call krylov_copy(wrk1, real_q) ; call krylov_copy(wrk2, imag_q)
+      wrk1 = real_q ; wrk2 = imag_q
       call krylov_cmult(wrk1, delta) ; call krylov_cmult(wrk2, gamma)
-      call krylov_add2(wrk1, wrk2)   ; call krylov_copy(wrk4, wrk1)
+      call krylov_add2(wrk1, wrk2)   ; wrk4 = wrk1
       call krylov_cmult(wrk4, 1.D+00 / (gamma**2 + delta**2))
 
-      call krylov_copy(real_q, wrk3) ; call krylov_copy(imag_q, wrk4)
+      ! --> Copy back the result.
+      real_q = wrk3 ; imag_q = wrk4
 
       return
       end subroutine krylov_biorthogonalize

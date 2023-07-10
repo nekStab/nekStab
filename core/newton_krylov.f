@@ -245,7 +245,7 @@
       enddo
       H = 0.0D+00 ; yvec = 0.0D+00 ; evec = 0.0D+00
 
-      call krylov_copy(Q(1), rhs)
+      Q(1) = rhs
       call krylov_normalize(Q(1), beta)
 
       calls = 0
@@ -283,7 +283,7 @@
       call krylov_add2(sol, dq)
 
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
-      call krylov_copy(Q(1), sol)
+      Q(1) = sol
       call initialize_gmres_vector(beta, Q(1), rhs)
 
       if(nid.eq.0)then
@@ -328,8 +328,7 @@
       call krylov_cmult(f, -1.0D+00)
 
 !     --> Normalize the starting vector.
-      call krylov_normalize(f, beta)
-      call krylov_copy(q, f)
+      call krylov_normalize(f, beta) ; q = f
 
       return
       end subroutine initialize_gmres_vector
@@ -353,7 +352,7 @@
       type(krylov_vector) :: q
 
 !     --> Copy the initial condition to Nek.
-      call krylov_copy(ic_nwt, q) ! for Newton UPO newton_linearized_map
+      ic_nwt = q ! for Newton UPO newton_linearized_map
       call nopcopy(vx, vy, vz, pr, t, q%vx, q%vy, q%vz, q%pr, q%theta)
 
 !     --> Turn-off the linearized solver.
@@ -373,7 +372,7 @@
 
 !     --> Compute the right hand side of the time-stepper Newton.
       call nopcopy(f%vx, f%vy, f%vz, f%pr, f%theta, vx, vy, vz, pr, t)
-      call krylov_copy(fc_nwt, f) ! for Newton UPO newton_linearized_map
+      fc_nwt = f ! for Newton UPO newton_linearized_map
       call krylov_sub2(f, q)
       f%time = 0.0D+00
 
