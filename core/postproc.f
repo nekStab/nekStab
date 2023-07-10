@@ -428,7 +428,7 @@ c
      &        -mygi(l,2,1)*mygi(l,3,2))
       elseif (ifaxis) then      ! AXISYMMETRIC CASE
          if(nid.eq.0) write(6,*)
-     &        'ABORT: compute_thirdInv axialsymmetric support for now'
+     &        'ABORT: compute_thirdInv axialsymmetric not supported for now'
          call exitt
       else                      ! 2D CASE
          a=mygi(l,1,1)*mygi(l,2,2)-mygi(l,1,2)*mygi(l,2,1)
@@ -661,6 +661,7 @@ c----------------------------------------------------------------------
       include 'TOTAL'
 
 !     ----- Arrays to store the instability mode real and imaginary parts.
+      type(krylov_vector) :: real_eigvec, imag_eigvec
       real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe, t_dRe
       real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm, t_dIm
       real, dimension(lp) :: pr_dRe, pr_dIm
@@ -692,19 +693,17 @@ c----------------------------------------------------------------------
 !     --> Load the real part of the mode.
       write(filename, '(a, a, a)') 'dRe', trim(SESSION), '0.f00001'
       call load_fld(filename)
-      call nopcopy(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, vx, vy, vz, pr, t)
+      call nopcopy(real_eigvec%vx, real_eigvec%vy, real_eigvec%vz, real_eigvec%pr, real_eigvec%theta, vx, vy, vz, pr, t)
 
 !     --> Load the imaginary part of the mode.
       write(filename, '(a, a, a)') 'dIm', trim(SESSION), '0.f00001'
       call load_fld(filename)
-      call nopcopy(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, vx, vy, vz, pr, t)
+      call nopcopy(imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, imag_eigvec%pr, imag_eigvec%theta, vx, vy, vz, pr, t)
 
 !     --> Normalize eigenmode to unit-norm (Sanity check).
-      call norm(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
-      call norm(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, beta)
-      alpha = sqrt(alpha**2 + beta**2)
-      call nopcmult(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
-      call nopcmult(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, alpha)
+      call krylov_norm(alpha, real_eigvec) ; call krylov_norm(beta, imag_eigvec)
+      alpha = 1.D+00 / sqrt(alpha**2 + beta**2)
+      call krylov_cmult(real_eigvec, alpha) ; call krylov_cmult(imag_eigvec, alpha)
 
 !     #####
 !     #####
@@ -713,15 +712,15 @@ c----------------------------------------------------------------------
 !     #####
 
 !     --> Compute the production terms.
-      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 1, 
+      call compute_production(real_eigvec%vx, real_eigvec%vy, real_eigvec%vz, imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, 1,
      $     energy_budget(:, 1), energy_budget(:, 2), energy_budget(:, 3))
-      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 2,
+      call compute_production(real_eigvec%vx, real_eigvec%vy, real_eigvec%vz, imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, 2,
      $     energy_budget(:, 4), energy_budget(:, 5), energy_budget(:, 6))
-      call compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, 3,
+      call compute_production(real_eigvec%vx, real_eigvec%vy, real_eigvec%vz, imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, 3,
      $     energy_budget(:, 7), energy_budget(:, 8), energy_budget(:, 9))
 
 !     --> Compute the dissipation term.
-      call compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, energy_budget(:, 10))
+      call compute_dissipation(real_eigvec%vx, real_eigvec%vy, real_eigvec%vz, imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, energy_budget(:, 10))
 
 !     --> Compute the integrals and the sum.
       do i = 1,10

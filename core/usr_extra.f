@@ -101,14 +101,14 @@ c-----------------------------------------------------------------------
 
       call copy(bm1s, bm1, n)   ! never comment this !
 
-      if(spng_str.ne.0)then !sponge on
+      if(spng_str.ne.0)then     !sponge on
 
          if(nid.eq.0)write(6,*)
          if(nid.eq.0)write(6,*)' Initializing sponge...'
          if(nid.eq.0)write(6,*)' Sponge strenght:',spng_str
          if(spng_str.lt.0)then
-           spng_str=abs(spng_str) 
-           if(nid.eq.0)write(6,*)' Ensure positive sponge strenght:',spng_str
+            spng_str=abs(spng_str) 
+            if(nid.eq.0)write(6,*)' Ensure positive sponge strenght:',spng_str
          endif
          call spng_init
 
@@ -174,7 +174,7 @@ c-----------------------------------------------------------------------
 
          if(ifbfcv)call nek_end
 
-      case(2) ! Newton-Krylov solver
+      case(2)                   ! Newton-Krylov solver
 
 !     sanity check
          if(uparam(1).eq.2.0)then
@@ -408,7 +408,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       real, dimension(lv), intent(in) :: px, py, pz
       real, dimension(lv,ldimt), intent(in) :: pt
-      !real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
+!     real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
       integer, intent(in) :: skip
       character(len=16), intent(in) :: fname
       real glsc3,uek,vek,wek,eek,pot
@@ -429,7 +429,7 @@ c-----------------------------------------------------------------------
          vek = glsc3(py,bm1s,py,n)
          if(if3d)wek = glsc3(pz,bm1s,pz,n)
          if(ifheat)pot = glsc3(pt(:,1),bm1s,ym1,n)
-         !if(ifheat)pot = glsc3(pt(:,:,:,:,1),bm1s,ym1,n)
+!     if(ifheat)pot = glsc3(pt(:,:,:,:,1),bm1s,ym1,n)
          if(nid.eq.0)write(730,"(6E15.7)")time,uek*eek,vek*eek,wek*eek,(uek+vek+wek)*eek,pot*eek
       endif
 
@@ -443,7 +443,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       real, dimension(lv), intent(in) :: px, py, pz
       real, dimension(lv,ldimt), intent(in) :: pt
-      !real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
+!     real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
       integer, intent(in) :: skip
       character(len=20), intent(in) :: fname
       real vort(lv,3),wo1(lv),wo2(lv)

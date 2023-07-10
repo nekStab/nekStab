@@ -63,7 +63,7 @@ c-----------------------------------------------------------------------c
             call opcopy(uor(:,istep),vor(:,istep),wor(:,istep),vx,vy,vz)
             if(ifheat)call copy(tor(1,istep),t(1,1,1,1,1),nx1*ny1*nz1*nelv)
 
-         else !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
+         else                   !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
 
             call opsub3 (do1,do2,do3, vx,vy,vz, uor(:,1),vor(:,1),wor(:,1)) !ub=v-vold
             if(istep.gt.norbit+1) call normvc(h1,semi,l2,linf,do1,do2,do3); rate=(l2-residu0); residu0=l2
@@ -73,12 +73,12 @@ c-----------------------------------------------------------------------c
 
             do i=1,norbit-1     !discard the i=1 solution
                
-                           uor(:,i)=uor(:,i+1)
-                           vor(:,i)=vor(:,i+1)
+               uor(:,i)=uor(:,i+1)
+               vor(:,i)=vor(:,i+1)
                if (if3d)   wor(:,i)=wor(:,i+1)
                if (ifheat) tor(:,i)=tor(:,i+1)
-            
-            enddo !store the last one
+               
+            enddo               !store the last one
             call opcopy(uor(1,norbit),vor(1,norbit),wor(1,norbit),vx,vy,vz) !store solution
             if (ifheat)call copy(tor(1,norbit),t(1,1,1,1,1),nx1*ny1*nz1*nelv)
             
