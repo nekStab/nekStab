@@ -108,12 +108,11 @@
       subroutine krylov_cmult(p, alpha)
       implicit none
 
-      type(krylov_vector) :: p
-      real alpha
-      integer i
+      type(krylov_vector), intent(inout) :: p
+      real, intent(in) :: alpha
+      integer :: i
 
-      n = nx1*ny1*nz1*nelv
-      n2 = nx2*ny2*nz2*nelv
+      n = nx1*ny1*nz1*nelv ; n2 = nx2*ny2*nz2*nelv
 
       call cmult(p%vx(:),alpha,n)
       call cmult(p%vy(:),alpha,n)
@@ -136,7 +135,8 @@
       subroutine krylov_add2(p, q)
       implicit none
 
-      type(krylov_vector) :: p, q
+      type(krylov_vector), intent(inout) :: p
+      type(krylov_vector), intent(in)    :: q
       integer i
 
       n = nx1*ny1*nz1*nelv
@@ -163,10 +163,11 @@
       subroutine krylov_sub2(p, q)
       implicit none
 
-      type(krylov_vector) :: p, q
-      integer i
-      n = nx1*ny1*nz1*nelv
-      n2 = nx2*ny2*nz2*nelv
+      type(krylov_vector), intent(inout) :: p
+      type(krylov_vector), intent(in)    :: q
+      integer :: i
+
+      n = nx1*ny1*nz1*nelv ;n2 = nx2*ny2*nz2*nelv
 
       call sub2(p%vx(:),q%vx(:),n)
       call sub2(p%vy(:),q%vy(:),n)
@@ -189,10 +190,10 @@
       subroutine krylov_zero(p)
       implicit none
 
-      type(krylov_vector) :: p
-      integer i
-      n = nx1*ny1*nz1*nelv
-      n2 = nx2*ny2*nz2*nelv
+      type(krylov_vector), intent(inout) :: p
+      integer :: i
+
+      n = nx1*ny1*nz1*nelv ; n2 = nx2*ny2*nz2*nelv
 
       call rzero(p%vx(:),n)
       call rzero(p%vy(:),n)
@@ -215,11 +216,11 @@
       subroutine krylov_copy(p, q)
       implicit none
 
-      type(krylov_vector) :: p, q
-      integer i
+      type(krylov_vector), intent(inout) :: p
+      type(krylov_vector), intent(in)    :: q
+      integer :: i
 
-      n = nx1*ny1*nz1*nelv
-      n2 = nx2*ny2*nz2*nelv
+      n = nx1*ny1*nz1*nelv ; n2 = nx2*ny2*nz2*nelv
 
       call copy(p%vx(:),q%vx(:),n)
       call copy(p%vy(:),q%vy(:),n)
@@ -242,11 +243,12 @@
       subroutine krylov_matmul(dq, Q, yvec, k)
       implicit none
 
-      integer :: i, j, k
-      type(krylov_vector) :: dq
-      type(krylov_vector), dimension(k) :: Q
-      real, dimension(k) :: yvec
+      type(krylov_vector), intent(out) :: dq
+      type(krylov_vector), dimension(k), intent(in) :: Q
+      real, dimension(k), intent(in) :: yvec
+      integer, intent(in) :: k
 
+      integer :: i, j
       real, dimension(lv, k) :: qx, qy, qz
       real, dimension(lp, k) :: qp
       real, dimension(lv, k, ldimt) :: qt
