@@ -11,10 +11,13 @@
       integer, save, public :: n, n2
 
       type, public :: krylov_vector
-      real, dimension(lv) :: vx, vy, vz
-      real, dimension(lp) :: pr
-      real, dimension(lv,ldimt) :: theta
-      real :: time
+        real, dimension(lv) :: vx, vy, vz
+        real, dimension(lp) :: pr
+        real, dimension(lv,ldimt) :: theta
+        real :: time
+
+      contains
+        procedure :: norm => krylov_norm
       end type krylov_vector
 
       type(krylov_vector), save, public :: ic_nwt, fc_nwt
@@ -78,7 +81,7 @@
 
       real function krylov_norm(p) result(alpha)
       implicit none
-      type(krylov_vector), intent(in) :: p
+      class(krylov_vector), intent(in) :: p
       alpha = krylov_inner_product(p, p)
       alpha = dsqrt(alpha)
       return
@@ -94,7 +97,7 @@
       real, intent(out) :: alpha
 
 !     --> Compute the user-defined norm.
-      alpha = krylov_norm(p)
+      alpha = p%norm()
 !     --> Normalize the vector.
       call krylov_cmult(p, 1.0D+00/alpha)
 
@@ -297,8 +300,7 @@
       real :: alpha, beta, gamma, delta
 
 !     --> Normalize the direct mode to unit-norm.
-      alpha = krylov_norm(real_p) ; alpha = alpha**2
-      beta  = krylov_norm(imag_p) ; beta  = beta**2
+      alpha = real_p%norm()**2 ; beta  = imag_p%norm()**2
 
       delta = 1.0D+00 / sqrt(alpha + beta)
       call krylov_cmult(real_p, delta)

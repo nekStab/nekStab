@@ -96,7 +96,7 @@
       tottime = tottime + nsteps*dt
 
 !     --> Check residual || f(q) ||
-      residual = krylov_norm(f) ; residual = residual ** 2
+      residual = f%norm() ; residual = residual ** 2
 !     write(*, *) "RESIDUAL ", residual
 
       if(nid.eq.0)then

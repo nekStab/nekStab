@@ -701,7 +701,7 @@ c----------------------------------------------------------------------
       call nopcopy(imag_eigvec%vx, imag_eigvec%vy, imag_eigvec%vz, imag_eigvec%pr, imag_eigvec%theta, vx, vy, vz, pr, t)
 
 !     --> Normalize eigenmode to unit-norm (Sanity check).
-      alpha = krylov_norm(real_eigvec) ; beta = krylov_norm(imag_eigvec)
+      alpha = real_eigvec%norm() ; beta = imag_eigvec%norm()
       alpha = 1.D+00 / sqrt(alpha**2 + beta**2)
       call krylov_cmult(real_eigvec, alpha) ; call krylov_cmult(imag_eigvec, alpha)
 

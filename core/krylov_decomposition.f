@@ -162,7 +162,7 @@
 !     --> Initialize array.
       call rzero(h_vec, k)
 
-      beta = krylov_norm(f)
+      beta = f%norm()
 
 !     --> Orthonormalize f w.r.t the Krylov basis.
       do i = 1, k
