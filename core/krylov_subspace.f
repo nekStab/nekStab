@@ -4,7 +4,7 @@
       include 'TOTAL'
 
       private
-      public krylov_outpost, krylov_inner_product, krylov_normalize, krylov_cmult, krylov_add2, krylov_sub2, krylov_zero, krylov_copy, krylov_matmul, krylov_biorthogonalize, krylov_gradient
+      public krylov_outpost, krylov_inner_product, krylov_normalize, krylov_cmult, krylov_sub2, krylov_zero, krylov_matmul, krylov_biorthogonalize, krylov_gradient
 
       integer, public, parameter :: lv = lx1*ly1*lz1*lelv
       integer, public, parameter :: lp = lx2*ly2*lz2*lelv
@@ -24,6 +24,10 @@
         ! --> Overload the = operator for copy.
         procedure, pass(out) :: krylov_copy
         generic, public      :: assignment(=) => krylov_copy
+
+        ! --> Overload + for vector addition.
+        procedure :: krylov_add
+        generic, public :: operator(+) => krylov_add
       end type krylov_vector
 
       type(krylov_vector), save, public :: ic_nwt, fc_nwt
@@ -141,29 +145,27 @@
 
 
 
-      subroutine krylov_add2(p, q)
+      type(krylov_vector) function krylov_add(p, q) result(out)
       implicit none
 
-      type(krylov_vector), intent(inout) :: p
-      type(krylov_vector), intent(in)    :: q
+      class(krylov_vector), intent(in)  :: p
+      class(krylov_vector), intent(in)  :: q
       integer i
 
-      n = nx1*ny1*nz1*nelv
-      n2 = nx2*ny2*nz2*nelv
+      out%vx = p%vx + q%vx
+      out%vy = p%vy + q%vy
+      if (if3d) out%vz = p%vz + q%vz
 
-      call add2(p%vx(:),q%vx(:),n)
-      call add2(p%vy(:),q%vy(:),n)
-      call add2(p%pr(:),q%pr(:),n2)
-      if (if3d) call add2(p%vz(:),q%vz(:),n)
       if (ldimt.gt.0) then
-         do i = 1,ldimt
-            call add2(p%theta(:,i),q%theta(:,i),n)
-         enddo
+        do i = 1, ldimt
+            out%theta(:, i) = p%theta(:, i) + q%theta(:, i)
+        enddo
       endif
-      p%time = p%time + q%time
+
+      out%time = p%time + q%time
 
       return
-      end subroutine krylov_add2
+      end function krylov_add
 
 
 
@@ -329,7 +331,8 @@
 
       wrk1 = real_q ; wrk2 = imag_q
       call krylov_cmult(wrk1, delta) ; call krylov_cmult(wrk2, gamma)
-      call krylov_add2(wrk1, wrk2)   ; wrk4 = wrk1
+!       call krylov_add2(wrk1, wrk2)
+      wrk1 = wrk1 + wrk2  ; wrk4 = wrk1
       call krylov_cmult(wrk4, 1.D+00 / (gamma**2 + delta**2))
 
       ! --> Copy back the result.

@@ -280,7 +280,8 @@
 
 !     --> Update solution.
       call krylov_matmul(dq, Q(1:k), yvec(1:k), k)
-      call krylov_add2(sol, dq)
+      sol = sol + dq
+      !call krylov_add2(sol, dq)
 
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
       Q(1) = sol

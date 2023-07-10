@@ -411,7 +411,7 @@
 
          call compute_bvec(bvec, fc_nwt)
          call krylov_cmult(bvec, q%time)
-         call krylov_add2(f, bvec)
+         f = f + bvec !call krylov_add2(f, bvec)
 
          call compute_bvec(btvec, ic_nwt)
          f%time = krylov_inner_product(btvec, q)
