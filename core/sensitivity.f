@@ -9,20 +9,20 @@
 !     Provided the direct and adjoint modes have already been computed,
 !     this function computes the wavemaker following the formulation by
 !     Giannetti et al. [1]. Set uparam(01) = 4.1 in the par file to use it.
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     wm_blah0.f000001 : Nek file. The wavemaker is stored in the array
 !     for the temperature.
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Giannetti F. & Luchini P.
 !     Structural sensitivity of the first instability of the cylinder wake.
 !     J. Fluid Mech., vol 581., 2007.
-!     
+!
 !     NOTE : This implementation does not apply to cases involving temperature
 !     or any other scalar.
 
@@ -89,13 +89,13 @@
 !     Provided the direct and adjoint modes have been computed,
 !     this function computes the baseflow sensitivity following
 !     the formulation by Marquet et al. [1].
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Marquet O., Sipp D. and Jacquin L.
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
@@ -228,15 +228,15 @@
 !     A time-stepper formulation of the problem is used and
 !     the linearized system is solved using GMRES. Set uparam(01) = 4.41
 !     to compute the real part and uparam(01) = 4.42 for the imaginary one.
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     fsr_blah0.f00001 / fsi_blah0.f00001 : Sensitivity fields.
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Marquet O., Sipp D. and Jacquin L.
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
@@ -275,7 +275,7 @@
       call opcopy(rhs%vx, rhs%vy, rhs%vz, vx, vy, vz)
 
 !     --> Zero-out initial guess.
-      call krylov_zero(sol)
+      call sol%zero()
 
 !     --> Recast rhs into time-stepper/discrete-time framework.
       call initialize_rhs_ts_steady_force_sensitivity(rhs)
@@ -287,7 +287,7 @@
       call ts_gmres(rhs, sol, 10, k_dim, calls)
 
 !     -->
-      call krylov_cmult(sol, alpha)
+      sol = alpha*sol
 
 !     --> Outpost solution.
       call outpost(sol%vx, sol%vy, sol%vz, sol%pr, sol%theta, prefix)
@@ -359,16 +359,16 @@ c-----------------------------------------------------------------------
 !     Provided the base flow and the steady force sensitivity have been computed,
 !     this function computes the variations of a leading eigenvalue induced
 !     by a steady pointwise force according to eq. (5.1) by Marquet et al. [1].
-!     
+!
 !     OUTPOST
 !     -------
-!     
+!
 !     dfr_blah0.f00001 : Eigenvalue variations (x_comp -> delta_lambda/alpha)
 !     (y_comp -> delta_omega /alpha).
-!     
+!
 !     References
 !     ----------
-!     
+!
 !     [1] Marquet O., Sipp D. and Jacquin L.
 !     Sensitivity analysis and passive control of cylinder flow
 !     J. Fluid Mech., vol 615, pp. 221-252, 2008.

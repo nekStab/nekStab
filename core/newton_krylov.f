@@ -50,7 +50,7 @@
       endif
 
 !     --> Initialize arrays.
-      call krylov_zero(f) ; call krylov_zero(dq)
+      call f%zero() ; call dq%zero()
 
 !     --> Copy initial condition.
       call nopcopy(q%vx, q%vy, q%vz, q%pr, q%theta, vx, vy, vz, pr, t)
@@ -96,7 +96,7 @@
       tottime = tottime + nsteps*dt
 
 !     --> Check residual || f(q) ||
-      call krylov_norm(residual, f) ; residual = residual ** 2
+      residual = f%norm() ; residual = residual ** 2
 !     write(*, *) "RESIDUAL ", residual
 
       if(nid.eq.0)then
@@ -119,7 +119,7 @@
       tottime = tottime + calls*dt
 
 !     --> Update Newton solution.
-      call krylov_sub2(q, dq)
+      q = q - dq
 
 !     --> Deallocate nonlinear solution variable!
       if(ifstorebase.and.(uparam(1).eq.2.1.or.uparam(1).eq.2.2))then
@@ -176,39 +176,39 @@
 
 !     Implementation of simple time-stepper GMRES to be part of the Newton-Krylov solver
 !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
-!     
+!
 !     INPUT
 !     -----
-!     
+!
 !     rhs_x, rhs_y, rhs_z, rhs_t : nek arrays of size (lv).
 !     Arrays containing the right-hand side of the linear problem to be solved.
-!     
+!
 !     rhs_p : nek array of size (lp)
 !     Array containing the right-hand side of the linear problem to be solved (pressure component).
-!     
+!
 !     maxiter : integer
 !     Maximum number of restarts for the GMRES computation.
-!     
+!
 !     ksize : integer
 !     Dimension of the Krylov subspace.
-!     
+!
 !     RETURNS
 !     -------
-!     
+!
 !     sol_x, sol_y, sol_z, sol_t : nek arrays of size (lv).
 !     Arrays containing the solution of the linear problem.
-!     
+!
 !     sol_p : nek array of size (lp).
 !     Array containing the solution of the linear problem (pressure component).
-!     
+!
 !     calls : total number of calls to the linearized solver.
 !     Integer containing the total sum of nsteps*k necessary to converge the solution.
-!     
+!
 !     NOTE : This is a plain implementation of GMRES following the algorithm given in
 !     Y. Saad. Iterative methods for sparse linear systems. Section 6.5 GMRES, alg. 6.9
-!     
+!
 !     Last Edit : March 26th 2021 by JC Loiseau.
-!     
+!
 
       use krylov_subspace
       implicit none
@@ -239,13 +239,13 @@
 !     ----- Allocate arrays -----
       allocate(Q(ksize+1),H(ksize+1, ksize), yvec(ksize), evec(ksize+1))
 
-      call krylov_zero(sol)
+      call sol%zero()
       do i = 1, ksize+1
-         call krylov_zero(Q(i))
+         call Q(i)%zero()
       enddo
       H = 0.0D+00 ; yvec = 0.0D+00 ; evec = 0.0D+00
 
-      call krylov_copy(Q(1), rhs)
+      Q(1) = rhs
       call krylov_normalize(Q(1), beta)
 
       calls = 0
@@ -254,7 +254,7 @@
 !     --> Zero-out stuff.
       H = 0.0D+00 ; yvec = 0.0D+00; evec = 0.0D+00 ; evec(1) = beta
       do j = 2, ksize+1
-         call krylov_zero(Q(j))
+         call Q(j)%zero()
       enddo
 
       arnoldi : do k = 1, k_dim
@@ -280,10 +280,11 @@
 
 !     --> Update solution.
       call krylov_matmul(dq, Q(1:k), yvec(1:k), k)
-      call krylov_add2(sol, dq)
+      sol = sol + dq
+      !call krylov_add2(sol, dq)
 
 !     --> Recompute residual for sanity check and initialize new Krylov seed if needed.
-      call krylov_copy(Q(1), sol)
+      Q(1) = sol
       call initialize_gmres_vector(beta, Q(1), rhs)
 
       if(nid.eq.0)then
@@ -323,13 +324,10 @@
       real :: beta
 
 !     --> Initial Krylov vector.
-      call matvec(f, q)
-      call krylov_sub2(f, rhs)
-      call krylov_cmult(f, -1.0D+00)
+      call matvec(f, q) ; f = rhs - f
 
 !     --> Normalize the starting vector.
-      call krylov_normalize(f, beta)
-      call krylov_copy(q, f)
+      call krylov_normalize(f, beta) ; q = f
 
       return
       end subroutine initialize_gmres_vector
@@ -353,7 +351,7 @@
       type(krylov_vector) :: q
 
 !     --> Copy the initial condition to Nek.
-      call krylov_copy(ic_nwt, q) ! for Newton UPO newton_linearized_map
+      ic_nwt = q ! for Newton UPO newton_linearized_map
       call nopcopy(vx, vy, vz, pr, t, q%vx, q%vy, q%vz, q%pr, q%theta)
 
 !     --> Turn-off the linearized solver.
@@ -373,8 +371,8 @@
 
 !     --> Compute the right hand side of the time-stepper Newton.
       call nopcopy(f%vx, f%vy, f%vz, f%pr, f%theta, vx, vy, vz, pr, t)
-      call krylov_copy(fc_nwt, f) ! for Newton UPO newton_linearized_map
-      call krylov_sub2(f, q)
+      fc_nwt = f ! for Newton UPO newton_linearized_map
+      f = f - q
       f%time = 0.0D+00
 
 !     --> Pass current guess as base flow for the linearized calculation.

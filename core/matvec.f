@@ -65,28 +65,28 @@
 
 !     Dispatch the correct matrix-vector product to the Arnoldi factorization.
 !     All subroutines need to have the same interface.
-!     
+!
 !     NOTE : The baseflow needs to be pass to (ubase, vbase, wbase, tbase)
 !     before this function is called.
-!     
+!
 !     INPUTS
 !     ------
-!     
+!
 !     qx, qy, qz, qt : nek-arrays of size lv
 !     Initial velocity and temperature components.
-!     
+!
 !     qp : nek-array of size lp
 !     Initial pressure component.
-!     
+!
 !     OUTPUTS
 !     -------
-!     
+!
 !     fx, fy, fz, ft : nek-arrays of size lv
 !     Final velocity and temperature components.
-!     
+!
 !     fp : nek-array of size lp
 !     Final pressure component.
-!     
+!
 
       use krylov_subspace
       implicit none
@@ -165,9 +165,9 @@
 !     Integrate forward in time the linearized Navier-Stokes equations.
 !     Denoting by L the Jacobian of the Navier-Stokes equations, the corresponding
 !     matrix vector product is thus
-!     
+!
 !     x(t) = exp(t * L) * x(0)
-!     
+!
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -251,9 +251,9 @@
 !     Integrate forward in time the adjoint Navier-Stokes equations.
 !     Denoting by L adjoint Navier-Stokes operator, the corresponding
 !     matrix vector product is thus
-!     
+!
 !     x(t) = exp(t * L) * x(0)
-!     
+!
 !     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t) the final
 !     one (fx, fy, fz, fp, ft).
 
@@ -367,8 +367,7 @@
       call adjoint_linearized_map(f, q)
 
 !     --> Evaluate (I - exp(t*L)) * q0.
-      call krylov_sub2(f, q)
-      call krylov_cmult(f, -1.0D+00)
+      f = q - f
 
       return
       end subroutine ts_force_sensitivity_map
@@ -398,7 +397,7 @@
       call forward_linearized_map(f, q)
 
 !     --> Evaluate (exp(t*L) - I) * q0.
-      call krylov_sub2(f, q)
+      f = f - q
 
 !     ----------------------------------
 !     -----     NEWTON FOR UPO     -----
@@ -406,15 +405,14 @@
 
       if ( uparam(1) .eq. 2.1 ) then
 
-         call krylov_zero(bvec)
-         call krylov_zero(btvec)
+         call bvec%zero()
+         call btvec%zero()
 
          call compute_bvec(bvec, fc_nwt)
-         call krylov_cmult(bvec, q%time)
-         call krylov_add2(f, bvec)
+         f = f + q%time * bvec
 
          call compute_bvec(btvec, ic_nwt)
-         call krylov_inner_product(f%time, btvec, q)
+         f%time = krylov_inner_product(btvec, q)
 
          if(nid .eq. 0) write(6,*)'Newton period correction:',f%time
 
@@ -453,7 +451,7 @@
       call nopcopy(vx, vy, vz, pr, t, qbase%vx, qbase%vy, qbase%vz, qbase%pr, qbase%theta)
       param(10) = qbase%time
       call prepare_linearized_solver
-      call krylov_copy(wrk1, qbase)
+      wrk1 = qbase
 
 !     --> Single time-step to approximate the time-derivative.
       time = 0.0D+00
@@ -465,9 +463,8 @@
      $     vx,      vy,      vz,      pr,      t(1,1,1,1,1))
 
 !     --> Approximate the time-derivative.
-      call krylov_sub2(wrk2, wrk1)
-      call krylov_copy(bvec, wrk2)
-      call krylov_cmult(bvec, 1.0/dt)
+      bvec = wrk2 - wrk1
+      bvec = (1.0D+00/dt) * bvec
       bvec%time = 0.0D+00
 
 
