@@ -25,6 +25,7 @@ jobs:
 
       - name: Compiling examples/cylinder/dns/
         run: |
+          ./exports.sh
           cd examples/cylinder/dns/
           mks 1cyl
           nekmpi 1cyl 2
