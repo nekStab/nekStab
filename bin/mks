@@ -1,0 +1,99 @@
+#!/bin/bash
+set -a
+
+# Compiler and architecture settings
+FC=""
+CC=""
+FFLAGS=""
+USR_LFLAGS=""
+ar=""
+
+# Fetch version information for user reference
+N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
+NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
+
+#-------------------------------------------------------------------------------
+# Compiler Detection
+#-------------------------------------------------------------------------------
+if command -v mpiifort >/dev/null 2>&1; then
+    # Intel compiler found
+    echo "Intel compiler found: $(mpiifort -v)"
+    FC="mpiifort"
+    CC="mpiicx"
+    FFLAGS+=" -extend-source"
+    
+    if command -v $(ifort --version | grep ^oneapi) >/dev/null 2>&1; then
+        FFLAGS+=" -qmkl"
+    else
+        FFLAGS+=" -mkl -xHost"
+    fi
+    
+    FFLAGS+=" -g -traceback"
+    USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
+else
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # On macOS with Homebrew's mpif90
+        if [[ -f "/opt/homebrew/bin/mpif90" ]]; then
+            echo "Homebrew mpif90 found"
+            FC="/opt/homebrew/bin/mpif90"
+        else
+            echo "Clang compiler found: $(clang --version | head -n1)"
+        fi
+    else
+        # On Linux, we expect gcc to be gcc
+        echo "GCC compiler found: $(gcc --version | head -n1)"
+    fi
+    FC="mpif90"
+    CC="mpicc"
+    FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
+    FFLAGS+=" -march=native" # Enables all instruction subsets supported by the local machine.
+    FFLAGS+=" -g" # Enables debugging information.
+    FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
+fi
+
+#-------------------------------------------------------------------------------
+# Architecture Detection
+#-------------------------------------------------------------------------------
+case $(uname -s) in
+    Darwin)
+        case $(uname -p) in
+            x86_64) ar="x86_64" ;;
+            arm)    ar="arm" ;; # not compatile with mcmodel=large
+        esac
+        ;;
+    Linux)
+        case $(uname -p) in
+            x86_64) ar="x86_64"; FFLAGS+=" -mcmodel=large" ;;
+            arm)    ar="arm" ;;
+        esac
+        ;;
+esac
+
+#-------------------------------------------------------------------------------
+# Final Preparations
+#-------------------------------------------------------------------------------
+FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
+export FFLAGS
+
+# User-specified object files
+USR="krylov_subspace.o matvec.o krylov_decomposition.o eigensolvers.o lapack_wrapper.o fixedp.o usr_extra.o utils.o IO.o postproc.o newton_krylov.o sensitivity.o"
+export USR
+
+# Output summary of settings
+echo "Nek5000 version: $N_VERSION"
+echo "nekStab version: $NS_VERSION"
+echo "preparing compilation with: $(which $FC; echo $FFLAGS $USR_LFLAGS)"
+
+# Update makefile and static variables
+cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
+echo "include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab" > makefile_usr.inc
+
+set +a -e
+$NEK_SOURCE_ROOT/bin/nekconfig $@
+if [[ $1 != "clean" ]]; then
+ $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
+ set -o pipefail
+ touch $1.usr 
+ make -j4 2>&1 | tee -a build.log
+ set +o pipefail
+fi

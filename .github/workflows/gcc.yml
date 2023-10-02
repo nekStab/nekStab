@@ -1,91 +1,30 @@
 name: GCC+MPICH
-
 on:
-  # allows us to run workflows manually
   workflow_dispatch:
-
-  pull_request:
-    branches:
-      - master
   push:
     branches:
-      - master
+      - main
+  pull_request:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   MPICH_FC: gfortran
+  MAKEFLAGS: "-j $(awk '/Thread/ {print $NF}' /proc/cpuinfo)"
 
 jobs:
   main:
     runs-on: ubuntu-latest
     continue-on-error: true
-    # Steps represent a sequence of tasks that will be executed as part of the job
+
     steps:
-    
       - name: Checkout repository nekStab
-        uses: actions/checkout@v2
-        
-      - name: Checkout submodules Nek5000
-        run: git submodule update --init --recursive
-      
-      - name: Install dependecies for Nek500 and NekStab
-        shell: bash
-        run: |
-          sudo apt -y update
-          #sudo apt install -y build-essential cmake mpich
-          sudo apt install -y gfortran libmpich-dev libopenblas-dev
-      
-      - name: Export parallel flag 
-        shell: bash
-        run: |
-          lscpu
-          export MAKEFLAGS="-j "`  lscpu | grep -i Thread | awk '{print $NF}' `
-          export NEKSTAB_SOURCE_ROOT="../../../" #--> path to nekStab
-          export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-          export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+        uses: actions/checkout@v4
 
-      - name: Compile nektools
-        shell: bash
+      - name: Execute Nek5000 Setup Script
+        run: yes | ./Nek5000setup.sh
+
+      - name: Compiling examples/cylinder/dns/
         run: |
-          cd Nek5000/tools
-          ./maketools genmap genbox
-          cd ../..
-          
-      - name: Compiling examples/cylinder/0dns/
-        shell: bash
-        run: |
-          cd examples/cylinder/0dns/
-          ./cmpile.sh all
+          cd examples/cylinder/dns/
+          mks 1cyl
           nekmpi 1cyl 2
-      #    cd ../../../
-
-      # - name: Compiling examples/cylinder/baseflow/
-      #   shell: bash
-      #   run: |
-      #     cd examples/cylinder/baseflow/sfd
-      #     ./cmpile.sh all
-      #     cd ../newton
-      #     ./cmpile.sh all
-      #     cd ../boostconv
-      #     cd ../../../../
-  
-      # - name: Compiling examples/cylinder/stability/
-      #   shell: bash
-      #   run: |
-      #     cd examples/cylinder/stability/direct
-      #     ./cmpile.sh all
-      #     cd ../adjoint
-      #     ./cmpile.sh all
-      #     cd ../../../../
-          
-      # - name: Compiling examples/cylinder/postprocessing
-      #   shell: bash
-      #   run: |
-      #     cd examples/cylnder/postprocessing/energy_budget/
-      #     ./cmpile.sh all
-      #     cd ../wavemaker/
-      #     ./cmpile.sh all
-      #     cd ../baseflow_sensitivity
-      #     ./cmpile.sh all
-      #     cd ../steady_force_sensitivity
-      #     ./cmpile.sh all
