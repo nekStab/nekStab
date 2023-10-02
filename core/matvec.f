@@ -8,13 +8,13 @@
 
 !     --> Force only single perturbation mode.
       if (param(31) .gt. 1) then
-         write(6, *) 'nekStab not ready for npert > 1 -- jp loops not yet implemented. Stoppiing.'
+         write(6, *) 'not ready for npert >1 : Stopping.'
          call nek_end
       endif
       param(31) = 1 ; npert = param(31)
 
 !     --> Force deactivate OIFS.
-      if (ifchar) write(6, *) 'OIFS not working with linearized solver. Turning it off.'
+      if (ifchar) write(6, *) 'OIFS not working with linearized solver.'
       ifchar = .false. ; call bcast(ifchar, lsize)
 
 !     --> Enforce CFL target for EXTk

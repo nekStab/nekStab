@@ -51,5 +51,6 @@
       real bm1s(lx1,ly1,lz1,lelt) !weight matrix without sponge 
       real xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
 
-      common /nStab_sponge/  spng_fun, spng_vr, spng_vt, spng_str, spng_wl, spng_wr, spng_dl, spng_dr, bm1s, 
-     $                       xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
+      common /nStab_sponge/  spng_fun, spng_vr, spng_vt, spng_str, 
+     $             spng_wl, spng_wr, spng_dl, spng_dr, bm1s, 
+     $             xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
