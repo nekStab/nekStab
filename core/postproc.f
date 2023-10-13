@@ -739,8 +739,13 @@ c----------------------------------------------------------------------
          call outpost(vx, vy, vz, pr, t, "KIN")
       enddo
 
-      if (nid .eq. 0) write(*, *) "Energy Budget :", integrals
-      if (nid .eq. 0) write(*, *) "Sum Energy budget :", sum(integrals)
+      if (nid == 0) then
+         open(101, file='pert_kin_budget.dat', form='formatted')
+         do i = 1, 10 ! write the energy budget terms
+           write(101, '(I2, " ", 1E15.7)') i, integrals(i)
+         enddo
+         write(101, '("sum", 3x, 1E15.7)') sum(integrals(:))
+       endif ! nid == 0
 
       return
       end subroutine stability_energy_budget

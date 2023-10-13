@@ -19,10 +19,10 @@ if command -v mpiifort >/dev/null 2>&1; then
     # Intel compiler found
     echo "Intel compiler found: $(mpiifort -v)"
     FC="mpiifort"
-    CC="mpiicx"
+    CC="mpiicc"
     FFLAGS+=" -extend-source"
     
-    if command -v $(ifort --version | grep ^oneapi) >/dev/null 2>&1; then
+    if [[ $(ifort --version 2>&1) =~ "oneapi" ]]; then
         FFLAGS+=" -qmkl"
     else
         FFLAGS+=" -mkl -xHost"
