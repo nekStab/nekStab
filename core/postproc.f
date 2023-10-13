@@ -671,8 +671,10 @@ c----------------------------------------------------------------------
 
 !     ----- Miscellaneous.
       real :: alpha, beta, glsc2
-      integer :: i, j, k
+      integer :: i, j, k, mode
       character(len=80) :: filename
+      character(len=6) :: mode_str ! Assuming mode will not exceed 6 digits
+      character(len=3) :: mode_str2  ! Length 3 to hold 'K' and two digits
 
       n = nx1*ny1*nz1*nelv
       energy_budget = 0.0D+00
@@ -689,13 +691,19 @@ c----------------------------------------------------------------------
       call load_fld(filename)
       call nopcopy(ubase, vbase, wbase, pr, tbase, vx, vy, vz, pr, t)
 
-!     --> Load the real part of the mode.
-      write(filename, '(a, a, a)') 'dRe', trim(SESSION), '0.f00001'
+
+      do mode = 1, maxmodes
+
+      ! Format the mode number with leading zeros
+      write(mode_str, '(i6.6)') mode
+
+!      --> Load the real part of the mode.
+      write(filename, '(a, a, a, a)') 'dRe', trim(SESSION), '0.f', trim(mode_str)
       call load_fld(filename)
       call nopcopy(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, vx, vy, vz, pr, t)
 
 !     --> Load the imaginary part of the mode.
-      write(filename, '(a, a, a)') 'dIm', trim(SESSION), '0.f00001'
+      write(filename, '(a, a, a, a)') 'dIm', trim(SESSION), '0.f', trim(mode_str)
       call load_fld(filename)
       call nopcopy(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, vx, vy, vz, pr, t)
 
@@ -736,16 +744,20 @@ c----------------------------------------------------------------------
 
       do i = 1, k, 3
          call opcopy(vx, vy, vz, energy_budget(:, i), energy_budget(:, i+1), energy_budget(:, i+2))
-         call outpost(vx, vy, vz, pr, t, "KIN")
+         
+         write(mode_str2, "('K',I2.2)") mode
+         call outpost(vx, vy, vz, pr, t, mode_str2)
       enddo
 
       if (nid == 0) then
-         open(101, file='pert_kin_budget.dat', form='formatted')
+         write(filename, '(A,A,i4.4,A)') 'PKE_dRe', trim(SESSION), '0.f', trim(mode_str)
+         open(101, file=filename, form='formatted')
          do i = 1, 10 ! write the energy budget terms
            write(101, '(I2, " ", 1E15.7)') i, integrals(i)
          enddo
          write(101, '("sum", 3x, 1E15.7)') sum(integrals(:))
        endif ! nid == 0
+      enddo
 
       return
       end subroutine stability_energy_budget
