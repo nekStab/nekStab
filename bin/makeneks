@@ -22,15 +22,15 @@ if command -v mpiifort -v 2>/dev/null; then
     echo "Intel compiler found:"
     echo $(mpiifort -v)
     export FC="mpiifort"
-    export CC="mpiicx"
+    export CC="mpiicc"
     export FFLAGS+=" -extend-source" # support to long lines
-    
-    if command -v $(ifort --version | grep ^oneapi) 2>/dev/null; then
+
+    if [[ $(ifort --version 2>&1) =~ "oneapi" ]]; then
         export FFLAGS+=" -qmkl"
-        # do not use xHost with OneAPI
-    else # not OneAPI
+    else
         export FFLAGS+=" -mkl -xHost"
     fi
+
     export USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" #optional link for old versions
     export FFLAGS+=" -g -traceback" # Intel tracer 
     # #export FFLAGS+=" -fpe0 -debug extended" # debugger
