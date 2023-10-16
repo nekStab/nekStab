@@ -753,9 +753,9 @@ c----------------------------------------------------------------------
          write(filename, '(A,A,A,A)') 'PKE_dRe', trim(SESSION), '0.f', trim(mode_str)
          open(101, file=filename, form='formatted')
          do i = 1, 10 ! write the energy budget terms
-           write(101, '(I2, " ", 1E15.7)') i, integrals(i)
+           write(101, '(1E15.7)') integrals(i)
          enddo
-         write(101, '("sum", 3x, 1E15.7)') sum(integrals(:))
+         write(101, '(1E15.7)') sum(integrals(:))
        endif ! nid == 0
       enddo
 
