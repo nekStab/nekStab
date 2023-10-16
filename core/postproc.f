@@ -695,7 +695,7 @@ c----------------------------------------------------------------------
       do mode = 1, maxmodes
 
       ! Format the mode number with leading zeros
-      write(mode_str, '(i6.6)') mode
+      write(mode_str, '(i5.5)') mode
 
 !      --> Load the real part of the mode.
       write(filename, '(a, a, a, a)') 'dRe', trim(SESSION), '0.f', trim(mode_str)
@@ -750,7 +750,7 @@ c----------------------------------------------------------------------
       enddo
 
       if (nid == 0) then
-         write(filename, '(A,A,i4.4,A)') 'PKE_dRe', trim(SESSION), '0.f', trim(mode_str)
+         write(filename, '(A,A,A,A)') 'PKE_dRe', trim(SESSION), '0.f', trim(mode_str)
          open(101, file=filename, form='formatted')
          do i = 1, 10 ! write the energy budget terms
            write(101, '(I2, " ", 1E15.7)') i, integrals(i)
