@@ -51,6 +51,7 @@ else
     FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
 fi
 
+LD="$FC" # linker ! 
 #-------------------------------------------------------------------------------
 # Architecture Detection
 #-------------------------------------------------------------------------------
