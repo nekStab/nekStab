@@ -1,12 +1,17 @@
-$(OBJDIR)/krylov_subspace.o:      $(NEKSTAB_SOURCE_ROOT)/core/krylov_subspace.f      ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/matvec.o:               $(NEKSTAB_SOURCE_ROOT)/core/matvec.f               ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/krylov_decomposition.o: $(NEKSTAB_SOURCE_ROOT)/core/krylov_decomposition.f ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/eigensolvers.o:         $(NEKSTAB_SOURCE_ROOT)/core/eigensolvers.f         ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/lapack_wrapper.o:       $(NEKSTAB_SOURCE_ROOT)/core/lapack_wrapper.f       ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/fixedp.o:               $(NEKSTAB_SOURCE_ROOT)/core/fixedp.f               ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/usr_extra.o:            $(NEKSTAB_SOURCE_ROOT)/core/usr_extra.f            ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/utils.o:                $(NEKSTAB_SOURCE_ROOT)/core/utils.f                ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/IO.o:                   $(NEKSTAB_SOURCE_ROOT)/core/IO.f                   ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/postproc.o:             $(NEKSTAB_SOURCE_ROOT)/core/postproc.f             ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/newton_krylov.o:        $(NEKSTAB_SOURCE_ROOT)/core/newton_krylov.f        ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/sensitivity.o:          $(NEKSTAB_SOURCE_ROOT)/core/sensitivity.f          ;$(FC) -c $(FL2) $< -o $@
+
+# all nekStab files are in .f90 (format for )free format source code
+$(OBJDIR)/nek_vectors.o:          $(NEKSTAB_SOURCE_ROOT)/core/nek_vectors.f90               ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/krylov_subspace.o:      $(NEKSTAB_SOURCE_ROOT)/core/krylov_subspace.f90      ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/krylov_decomposition.o: $(NEKSTAB_SOURCE_ROOT)/core/krylov_decomposition.f90 ;$(FC) -c $(FL2) $< -o $@
+
+$(OBJDIR)/matvec.o:               $(NEKSTAB_SOURCE_ROOT)/core/matvec.f90               ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/eigensolvers.o:         $(NEKSTAB_SOURCE_ROOT)/core/eigensolvers.f90         ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/lapack_wrapper.o:       $(NEKSTAB_SOURCE_ROOT)/core/lapack_wrapper.f90       ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/fixedp.o:               $(NEKSTAB_SOURCE_ROOT)/core/fixedp.f90               ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/forcing.o:              $(NEKSTAB_SOURCE_ROOT)/core/forcing.f90              ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/main.o:                 $(NEKSTAB_SOURCE_ROOT)/core/main.f90                 ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/utils.o:                $(NEKSTAB_SOURCE_ROOT)/core/utils.f90                ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/IO.o:                   $(NEKSTAB_SOURCE_ROOT)/core/IO.f90                   ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/postproc.o:             $(NEKSTAB_SOURCE_ROOT)/core/postproc.f90             ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/newton_krylov.o:        $(NEKSTAB_SOURCE_ROOT)/core/newton_krylov.f90        ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/sensitivity.o:          $(NEKSTAB_SOURCE_ROOT)/core/sensitivity.f90          ;$(FC) -c $(FL2) $< -o $@

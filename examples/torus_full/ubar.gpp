@@ -1,0 +1,15 @@
+#!/usr/bin/gnuplot --persist
+
+file1 = "< grep 'Bulk' logfile"
+file2 = "< grep 'dP0dS' logfile"
+
+set terminal x11 1
+
+plot file1 u 0:3 w l t 'u_bulk'
+
+set terminal x11 2
+
+plot file2 u 3:5 w l t 'dP0dS'
+
+pause 10
+reread

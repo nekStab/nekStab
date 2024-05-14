@@ -1,0 +1,166 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use LinearStab
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      
+      call nekstab_init
+
+      !if(istep.eq.0)then !change defaults
+      xLspg = 5
+      xRspg = 5
+      spng_st = 1.7!; call bcast(spng_str, wdsize)
+      k_dim = 200
+      schur_tgt = 2
+      maxmodes = 2 
+      findiff_order = 1
+      ifdyntol = .true.
+
+      call activate_sponge ! activate sponge
+
+      !endif
+
+      ! isNewtonFP  = .true.
+      ! call newton_krylov
+      ! isNewtonFP  = .false.
+
+      ! call linear_stability_analysis('steady','direct')
+      ! call linear_stability_analysis('steady','adjoint')
+      ! call transient_growth_analysis('steady')
+      call resolvent_analysis('steady')
+
+      !call nek_end
+
+      ! call nekStab_outpost   ! outpost vorticity
+      ! call nekStab_comment   ! print comments
+      ! call nekStab_energy   (vx,vy,vz,t,'total_energy.dat',1)
+      ! call nekStab_enstrophy(vx,vy,vz,t,'total_enstrophy.dat',1)
+      ! call nekStab_torque   ('lift_drag.dat', 1)
+      ! call hpts
+
+      end
+c-----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      !if(ifto)ffy = temp*0.15d0 !coupling the scalar field
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+         if(x.gt.-1.and.x.lt.1)temp=1.0d0 !cylinder with T
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end

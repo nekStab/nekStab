@@ -2,7 +2,7 @@
 startFrom = rstcyl0.f00001
 
 stopAt = endTime
-endTime = 7.9
+endTime = 7.9000
 userParam01 = 2.1 # Newton-GMRES for UPOs
 userParam07 = 100 # k_dim
 
@@ -12,13 +12,13 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 250.
+writeInterval = 10.
 writeDoublePrecision = no
 
 dealiasing = yes
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt

@@ -1,0 +1,9 @@
+casename2D
+casename3D
+1
+100
+0.0
+1.0
+1
+no
+P
