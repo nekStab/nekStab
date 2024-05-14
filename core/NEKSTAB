@@ -1,56 +1,74 @@
       ! LINEAR STABILITY FRAMEWORK
       ! Shared memory bounded arrays and parameters
-
-      character(len=1),parameter :: nxtl=char(10) !new line character
-
+      !
+      ! RESPECT 72 CHAR LIMIT PER LINE
+      
+      ! Character variables
       character(len=1) :: evop
       common /nStab_char/ evop
-
-      logical                ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,
-     $                       ifseed_load,ifvor,ifvox,ifstorebase,ifdyntol
-      common /nStab_logical/ ifbfcv,ifres,ifldbf,ifbf2D,ifseed_nois,ifseed_symm,
-     $                       ifseed_load,ifvor,ifvox,ifstorebase,ifdyntol
-
-      real                eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
-      common /nStab_real/ eigen_tol,schur_del,glmax_qc,dtmaxx,xmn,xmx,ymn,ymx,zmn,zmx
-
-      integer                  bst_skp, bst_snp, k_dim
-      common /nStab_boostconv/ bst_skp, bst_snp, k_dim
-
-      integer            mstep,schur_tgt,maxmodes,schur_cnt,glob_skip
-      common /nStab_int/ mstep,schur_tgt,maxmodes,schur_cnt,glob_skip
-
-      real xck,yck,zck
-      common /nStab_zeroc/ xck,yck,zck
-
-      real ubase(lx1,ly1,lz1,lelt)
-     $    ,vbase(lx1,ly1,lz1,lelt)
-     $    ,wbase(lx1,ly1,lz1,lelt)
-     $    ,tbase(lx1,ly1,lz1,lelt,ldimt)
-      common /nStab_bflows/ ubase,vbase,wbase,tbase
       
-      real ubb(lx1,ly1,lz1,lelt)
-     $    ,vbb(lx1,ly1,lz1,lelt)
-     $    ,vjb(lx1,ly1,lz1,lelt)
-      common /nStab_bcs/ ubb,vbb,vjb
-
-      real fcx(lx1,ly1,lz1,lelt)
-     $    ,fcy(lx1,ly1,lz1,lelt)
-     $    ,fcz(lx1,ly1,lz1,lelt)
-     $    ,fct(lx1,ly1,lz1,lelt)
-      common /nStab_forces/ fcx, fcy, fcz, fct !general forcing array
-
-      real spng_fun(lx1*ly1*lz1*lelt)     ! sponge function
-     $    ,spng_vr(LX1*LY1*LZ1*lelt,ldim) ! reference velocity field
-     $    ,spng_vt(LX1*LY1*LZ1*lelt)      ! reference temperature field
-      real spng_str      !var sponge strength
-      real spng_wl(ldim) !var sponge width (left section; every dmension separately)
-      real spng_wr(ldim) !var sponge width (right section)
-      real spng_dl(ldim) !var sponge drop/rise width (left section)
-      real spng_dr(ldim) !var sponge drop/rise width (right section)
-      real bm1s(lx1,ly1,lz1,lelt) !weight matrix without sponge 
-      real xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
-
-      common /nStab_sponge/  spng_fun, spng_vr, spng_vt, spng_str, 
-     $             spng_wl, spng_wr, spng_dl, spng_dr, bm1s, 
-     $             xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
+      ! Logical variables for various stability flags
+      logical :: ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm
+      logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol
+      logical :: iffindiff, isNekStabinit
+      logical :: isDirect, isAdjoint, isTransientGrowth, isResolvent
+      logical :: isFloquetDirect, isFloquetAdjoint
+      logical :: isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
+      
+      common /nStab_logical/ ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois
+      common /nStab_logical/ ifseed_symm, ifseed_load
+      common /nStab_logical/ ifvor, ifvox, ifstorebase, ifdyntol
+      common /nStab_logical/ iffindiff
+      common /nStab_logical/ isNekStabinit, isDirect, isAdjoint
+      common /nStab_logical/ isTransientGrowth
+      common /nStab_logical/ isFloquetDirect, isFloquetAdjoint
+      common /nStab_logical/ isFloquetTransientGrowth
+      common /nStab_logical/ isNewtonFP, isNewtonPO, isNewtonPO_T
+      
+      ! Real variables for numerical tolerances and domain dimensions
+      real :: eigen_tol, schur_del, glmax_qc, dtmaxx
+      real :: xmn, xmx, ymn, ymx, zmn, zmx, epsilon_base
+      common /nStab_real/ eigen_tol, schur_del, glmax_qc, epsilon_base
+      common /nStab_real/ dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx
+      
+      ! Integer variables for boost convergence and spatial dimensions
+      integer :: bst_skp, bst_snp, k_dim
+      common /nStab_boostconv/ bst_skp, bst_snp, k_dim
+      
+      integer :: mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof
+      common /nStab_int/ mstep, schur_tgt, maxmodes, schur_cnt
+      common /nStab_int/ glob_skip, nof
+      
+      ! Real variables for finite difference method
+      real :: xck, yck, zck
+      integer :: findiff_order
+      real :: coefs(4), ampls(4)
+      common /nStab_fd/ xck, yck, zck, coefs, ampls, findiff_order
+      
+      ! Arrays for base flow variables
+      real :: ubase(lx1,ly1,lz1,lelv), vbase(lx1,ly1,lz1,lelv)
+      real :: wbase(lx1,ly1,lz1,lelv), pbase(lx2,ly2,lz2,lelv)
+      real :: tbase(lx1,ly1,lz1,lelt,ldimt)
+      common /nStab_bflows/ ubase, vbase, wbase, pbase, tbase
+      
+      ! Arrays for boundary condition variables
+      real :: ubb(lx1,ly1,lz1,lelv), vbb(lx1,ly1,lz1,lelv)
+      real :: vjb(lx1,ly1,lz1,lelv)
+      common /nStab_bcs/ ubb, vbb, vjb
+      
+      ! Arrays for general forcing variables
+      real :: fcx(lx1,ly1,lz1,lelv), fcy(lx1,ly1,lz1,lelv)
+      real :: fcz(lx1,ly1,lz1,lelv), fcp(lx2,ly2,lz2,lelv)
+      real :: fct(lx1,ly1,lz1,lelt,ldimt)
+      common /nStab_forces/ fcx, fcy, fcz, fcp, fct
+            
+      ! Arrays and variables for sponge function and related parameters
+      real :: spng_fn(lx1*ly1*lz1*lelv), spng_vr(lx1*ly1*lz1*lelv,ldim)
+      real :: spng_vt(lx1*ly1*lz1*lelt,ldimt)
+      real :: spng_st, spng_wl(ldim), spng_wr(ldim)
+      real :: spng_dl(ldim), spng_dr(ldim), bm1s(lx1,ly1,lz1,lelv)
+      real :: xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
+      common /nStab_sponge/ spng_fn, spng_vr, spng_vt, spng_st, spng_wl
+      common /nStab_sponge/ spng_wr, spng_dl, spng_dr, bm1s
+      common /nStab_sponge/ xLspg, xRspg, yLspg, yRspg, zLspg, zRspg
+      common /nStab_sponge/ acc_spg

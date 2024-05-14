@@ -1,14 +1,15 @@
 #!/bin/bash
-set -a
+set -a # export all variables and functions defined in the script
 
 # Compiler and architecture settings
-FC=""
-CC=""
-FFLAGS=""
-USR_LFLAGS=""
-ar=""
+FC="mpif90"   # default (changed from mpif77)
+CC="mpicc"    # default
+FFLAGS=""     # fortran flags
+CFLAGS=""     # c flags
+USR_LFLAGS="" # linking flags
+ar=""         # architecture specific
 
-# Fetch version information for user reference
+# Fetch version information to print in the initialisation message
 N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
 NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
 
@@ -16,60 +17,82 @@ NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
 # Compiler Detection
 #-------------------------------------------------------------------------------
 if command -v mpiifort >/dev/null 2>&1; then
-    # Intel compiler found
-    echo "Intel compiler found: $(mpiifort -v)"
+    echo "Compiler found: $(mpiifort -v)"
+
     FC="mpiifort"
     CC="mpiicc"
-    FFLAGS+=" -extend-source"
-    
-    if [[ $(ifort --version 2>&1) =~ "oneapi" ]]; then
-        FFLAGS+=" -qmkl"
+    FFLAGS+=" -fixed -extend-source" # Enables long lines.
+    if command -v mpiifx >/dev/null 2>&1; then
+        echo "Using LLVM version of Intel compiler..."
+        FC="mpiifx"
+        CC="mpiicx"
+        CFLAGS+=" -w -Wno-unused-command-line-argument"
+        FFLAGS+=" -w -xHost -qmkl" # Suppresses all warning messages (otherwise will not compile nek5000)
     else
-        FFLAGS+=" -mkl -xHost"
+        echo "LLVM not found, using classic."
+        export USR_LFLAGS+=" -qmkl"
+        #FFLAGS+=" -ipo -O3 -no-prec-div -fp-model fast=2"
     fi
-    
-    FFLAGS+=" -g -traceback"
+
+    FFLAGS+=" -g -traceback" # Enables debugging information.
+    FLAGS+=" -fanalyser"     # Enable the Clang Static Analyzer for code analysis
+
     USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
 else
-    if [[ "$(uname)" == "Darwin" ]]; then
-        # On macOS with Homebrew's mpif90
-        if [[ -f "/opt/homebrew/bin/mpif90" ]]; then
-            echo "Homebrew mpif90 found"
-            FC="/opt/homebrew/bin/mpif90"
-        else
-            echo "Clang compiler found: $(clang --version | head -n1)"
-        fi
-    else
-        # On Linux, we expect gcc to be gcc
-        echo "GCC compiler found: $(gcc --version | head -n1)"
-    fi
-    FC="mpif90"
-    CC="mpicc"
+    echo "Compiler found: $(mpif90 --version | head -n1)"
+    FFLAGS+=" -ffixed-form"             # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
-    FFLAGS+=" -march=native" # Enables all instruction subsets supported by the local machine.
-    FFLAGS+=" -g" # Enables debugging information.
-    FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
-fi
+    FFLAGS+=" -march=native"            # Enables all instruction subsets supported by the local machine.
+    FFLAGS+=" -g"                       # Enables debugging information.
+    FFLAGS+=" -fbacktrace"              # Provides a backtrace in case of errors, useful for debugging.
+    #FFLAGS+=" -fanalyzer" # Enable the Clang Static Analyzer for code analysis
+    # FFLAGS+=" -Ofast" # Enable aggressive optimization level for maximum performance
+    # FFLAGS+=" -ffast-math" # Enable fast math optimizations for floating-point operations
+    # FFLAGS+=" -funsafe-math-optimizations" # Enable unsafe math optimizations for improved performance
 
-LD="$FC" # linker ! 
+    # comment Nek5000/core/makenek.inc:226 with : sed -i '226s/^/#/' $HOME/nextStab/Nek5000/core/makenek.inc
+    #FFLAGS+=" -std=legacy -w" # Provides a backtrace in case of errors, useful for debugging.
+    #FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
+
+fi
 #-------------------------------------------------------------------------------
 # Architecture Detection
 #-------------------------------------------------------------------------------
 case $(uname -s) in
-    Darwin)
-        case $(uname -p) in
-            x86_64) ar="x86_64" ;;
-            arm)    ar="arm" ;; # not compatile with mcmodel=large
-        esac
+Darwin)
+    case $(uname -p) in
+    x86_64) ar="x86_64" ;;
+    arm) ar="arm" ;; # not compatile with mcmodel=large
+    esac
+    ;;
+Linux)
+    case $(uname -p) in
+    x86_64)
+        ar="x86_64"
+        FFLAGS+=" -mcmodel=large"
         ;;
-    Linux)
-        case $(uname -p) in
-            x86_64) ar="x86_64"; FFLAGS+=" -mcmodel=large" ;;
-            arm)    ar="arm" ;;
-        esac
-        ;;
+    arm) ar="arm" ;;
+    esac
+    ;;
 esac
-
+#-------------------------------------------------------------------------------
+# Linking with LAPACK and BLAS
+#-------------------------------------------------------------------------------
+# Lapack is a library of linear algebra routines.
+# Blas (Basic Linear Algebra Subprograms) is used by Lapack.
+# if [ "$FC" = "mpif90" ]; then
+#     if ldconfig -p | grep -q libopenblas; then
+#         echo "OpenBLAS exists in path, using it:"
+#         export USR_LFLAGS+=" -lopenblas"
+#         # export USR_LFLAGS+=" -L/usr/local/opt/openblas/lib"
+#         # export FFLAGS+=" -I/usr/local/opt/openblas/include"
+#     else
+echo "OpenBLAS does not exist, using LAPACK and BLAS:"
+export USR_LFLAGS+=" -llapack -lblas"
+#     fi
+# fi
+#-------------------------------------------------------------------------------
+LD="$FC" # linker !
 #-------------------------------------------------------------------------------
 # Final Preparations
 #-------------------------------------------------------------------------------
@@ -77,24 +100,72 @@ FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 export FFLAGS
 
 # User-specified object files
-USR="krylov_subspace.o matvec.o krylov_decomposition.o eigensolvers.o lapack_wrapper.o fixedp.o usr_extra.o utils.o IO.o postproc.o newton_krylov.o sensitivity.o"
+USR="krylov_subspace.o"
+USR+=" matvec.o"
+USR+=" krylov_decomposition.o"
+USR+=" eigensolvers.o"
+USR+=" lapack_wrapper.o"
+USR+=" fixedp.o"
+USR+=" main.o"
+USR+=" utils.o"
+USR+=" IO.o"
+USR+=" postproc.o"
+USR+=" newton_krylov.o"
+USR+=" sensitivity.o"
+USR+=" forcing.o"
+USR+=" nek_vectors.o"
+# Check if the makefile_usr file exists and source it
+if [ -f "makefile_usr" ]; then
+    source makefile_usr
+fi
 export USR
 
 # Output summary of settings
 echo "Nek5000 version: $N_VERSION"
 echo "nekStab version: $NS_VERSION"
-echo "preparing compilation with: $(which $FC; echo $FFLAGS $USR_LFLAGS)"
+echo "preparing compilation with: $(
+    which $FC
+    echo $FFLAGS $USR_LFLAGS
+)"
 
 # Update makefile and static variables
 cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
-echo "include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab" > makefile_usr.inc
+
+FILE="SIZE"
+INCLUDE_LINE="include 'NEKSTAB.inc'" # respect spaces
+grep -q "^ *$INCLUDE_LINE" "$FILE" || echo -e "\n      $INCLUDE_LINE" >>"$FILE"
+
+# Define the file and the include line
+FILE="makefile_usr.inc"
+INCLUDE_LINE="include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab"
+# Check if the file exists
+if [ -f "$FILE" ]; then
+    # Check if an include line for makefile_nekStab is in the file
+    if grep -q "^include .*makefile_nekStab" "$FILE"; then
+        # The include line is in the file, replace it
+        sed -i "s|^include .*makefile_nekStab|$INCLUDE_LINE|" "$FILE"
+    else
+        # The include line is not in the file, append it
+        echo -e "\n$INCLUDE_LINE" >>"$FILE"
+    fi
+else
+    # The file does not exist, create it with the include line
+    echo "$INCLUDE_LINE" >"$FILE"
+fi
 
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
 if [[ $1 != "clean" ]]; then
- $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
- set -o pipefail
- touch $1.usr 
- make -j4 2>&1 | tee -a build.log
- set +o pipefail
+    $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
+    set -o pipefail
+    touch $1.usr
+    make -j4 2>&1 | tee -a build.log
+    set +o pipefail
+fi
+
+if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
+    mv *.mod obj
+fi
+if [ $(ls *.smod 2>/dev/null | wc -l) -gt 0 ]; then
+    mv *.smod obj
 fi

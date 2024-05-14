@@ -1,0 +1,246 @@
+      include "experimental/rans_komg.f"
+      !include "experimental/rans_wallfunctions.f"
+c-----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         if(istep.eq.0)then !change defaults
+
+            time = 0.0d0
+            k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+            schur_tgt = 0 ; call bcast(schur_tgt,isize)
+            maxmodes = 10 ; call bcast(maxmodes,isize)
+            ifres = .false. ; call bcast(ifres,lsize)
+            ifvor = .true. ; call bcast(ifvor,lsize)
+            ifvox = .true. ; call bcast(ifvox,lsize)
+            ifdyntol = .false. ; call bcast(ifdyntol,lsize)
+            iffindiff = .true. ; call bcast(iffindiff,lsize)
+
+         endif
+
+         return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         call nekStab_drive
+         call hpts
+
+         !if (nid.eq.0) write (6, *) 'St_cutoff=',1.0d0/(2.0d0*param(26))
+
+         ! we need k_base and omega_base (from BF_1cyl0.f0001)
+         ! nut_0 is computed as a_1 * k_base / max(a_1*omega_base, SF2_0)
+         ! nut_0 can be put in t(1,1,1,1) and used in userf and usrvp for ifield=2
+         ! nut_0'=0 which means we do not need to use a solver in temperature equation (solver=none)
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userf(ix,iy,iz,ieg) ! set acceleration term
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         include 'NEKUSE'
+         integer ix,iy,iz,ieg
+
+         ffx = 0.0d0
+         ffy = 0.0d0
+         ffz = 0.0d0
+         temp = 0.0d0
+
+         if(ifield.eq.1) then
+            call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg) ! velocity
+         elseif(ifield.gt.1)then
+            call nekStab_forcing_temp(temp,ix,iy,iz,ieg,ifield-1)
+         endif
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc(ix,iy,iz,iside,ieg) ! set up boundary conditions
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         include 'NEKUSE'
+         integer ix,iy,iz,iside,ieg
+         character*3 cb1
+
+         common /rans_usr/ ifld_tke,ifld_tau,m_id
+         integer ifld_tke,ifld_tau,m_id, iel
+
+         iel = gllel(ieg)
+         cb1 = cbc(iside,iel,1) !velocity boundary condition
+
+         if (JP.eq.0) then         ! velocity
+            ux   = 1.0d0
+            uy   = 0.0d0
+            uz   = 0.0d0
+            temp = 0.0d0
+            if (x.gt. -1) temp = 1.0d0
+
+            ! U, TKE, and Omg are all zero on the wall
+            if(cb1.eq.'W  ') then
+               if(ifield.eq.ifld_tke) then
+                  temp = 0.0d0
+               else if(ifield.eq.ifld_tau) then
+                  temp = 0.0d0
+               end if
+            end if
+         else                      ! perturbation
+            ux = 0.0d0
+            uy = 0.0d0
+            uz = 0.0d0
+            temp = 0.0d0
+         endif
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         include 'NEKUSE'
+         integer ix,iy,iz,ieg
+
+         common /rans_usr/ ifld_tke, ifld_tau, m_id
+         integer ifld_tke,ifld_tau, m_id
+
+         if (JP.eq.0) then         ! velocity
+
+            ux   = 1.0d0
+            uy   = 0.0d0
+            uz   = 0.0d0
+            temp = 0.0d0
+
+            if(ifield.eq.2) temp = 1.0d0 ! temperature
+            if(ifield.eq.ifld_tke) temp = 0.010d0 ! k/tke
+            if(ifield.eq.ifld_tau) temp = 0.20d0 ! tau/omega
+
+         else                      ! perturbation
+            ux = 0.0d0
+            uy = 0.0d0
+            uz = 0.0d0
+            temp = 0.0d0
+         endif
+
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         real wd
+         common /walldist/ wd(lx1,ly1,lz1,lelv)
+
+         common /rans_usr/ ifld_tke, ifld_tau, m_id
+         integer ifld_tke,ifld_tau, m_id
+
+         integer w_id
+         real coeffs(30) !array for passing your own coeffs
+         logical ifcoeffs
+
+         integer iel,ifc,m
+         cbc(:,:,2)=cbc(:,:,1)
+         do iel=1,nelt
+            do ifc = 1, 2*ndim
+               if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+               if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+            enddo
+         enddo
+
+         ifld_tke = 3 !address of tke equation in t array
+         ifld_tau = 4 !address of omega equation in t array
+         ifcoeffs =.false. !set to true to pass your own coeffs
+c
+c
+c
+c The 𝑘−𝜏 model offers certain favorable characteristics over the 𝑘−𝜔 model,
+c including bounded asymptotic behavior of 𝜏 and its source terms and
+c favorable near-wall gradients. These make it especially suited for high-order c codes and complex geometries.
+c
+c
+c     Supported models (loading model coeficcients)
+c     m_id = 0 !regularized standard k-omega (no wall functions)
+c     m_id = 1 !regularized low-Re k-omega (no wall functions)
+c     m_id = 2 !regularized standard k-omega SST (no wall functions)
+c     m_id = 3 !Not supported
+         m_id = 4 !standard k-tau ! recommended for now
+c     m_id = 5 !low Re k-tau
+c     m_id = 6 !standard k-tau SST
+
+C     Wall distance function:
+c     w_id = 0 ! user specified
+c     w_id = 1 ! cheap_dist (path to wall, may work better for periodic boundaries)
+         w_id = 2 ! distf (coordinate difference, provides smoother function)
+
+         call rans_init(ifld_tke,ifld_tau,ifcoeffs,coeffs,w_id,wd,m_id)
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg) ! diffusion coefficients
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         include 'NEKUSE'
+
+         integer ix,iy,iz,ieg,iel
+
+         common /rans_usr/ ifld_tke, ifld_tau, m_id
+         integer ifld_tke,ifld_tau, m_id
+
+         real rans_mut,rans_mutsk,rans_mutso,rans_turbPrandtl
+         real mu_t,Pr_t
+
+         iel = gllel(ieg)
+         Pr_t=rans_turbPrandtl()
+         mu_t=rans_mut(ix,iy,iz,iel) ! eddy viscosity
+
+         if(ifield.eq.1) then
+            udiff  = cpfld(ifield,1)+mu_t
+            utrans = cpfld(ifield,2)
+         else if(ifield.eq.2) then ! adding to the momentum diffusion coefficient
+            udiff  = cpfld(ifield,1)+mu_t*cpfld(ifield,2)/(Pr_t*cpfld(1,2))
+            utrans = cpfld(ifield,2)
+         else if(ifield.eq.ifld_tke) then ! modifying the k diffusion coefficient
+            udiff  = cpfld(1,1)+rans_mutsk(ix,iy,iz,iel)
+            utrans = cpfld(1,2)
+         else if(ifield.eq.ifld_tau) then ! modifying the omega/tau diffusion coefficient
+            udiff  = cpfld(1,1)+rans_mutso(ix,iy,iz,iel)
+            utrans = cpfld(1,2)
+         end if
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,ieg) ! source terms
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         include 'NEKUSE'
+
+         common /rans_usr/ ifld_tke, ifld_tau, m_id
+         integer ifld_tke,ifld_tau, m_id
+
+         real rans_kSrc,rans_omgSrc
+         real rans_kDiag,rans_omgDiag
+
+         integer ix,iy,iz,ieg,iel
+         iel = gllel(ieg)
+
+         if (ifield.eq.2) then ! temperature
+            ! no volumetric source heat source for now
+            qvol = 0.0d0 ! explicit
+            avol = 0.0d0 ! implicit
+         else if (ifield.eq.ifld_tke) then ! k/tke
+            qvol = rans_kSrc  (ix,iy,iz,iel) ! explicit
+            avol = rans_kDiag (ix,iy,iz,iel) ! implicit
+         else if (ifield.eq.ifld_tau) then ! tau/omega
+            qvol = rans_omgSrc (ix,iy,iz,iel) ! explicit
+            avol = rans_omgDiag(ix,iy,iz,iel) ! implicit
+         end if
+
+      end

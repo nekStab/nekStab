@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Get the value of the input mesh file and send to a variable inputmsh
+inputmsh=$1
+
+# Echo the string of inputmsh
+echo "Converting $inputmsh"
+
+# Open a file named "convert.geo" and write the following lines to it
+cat <<EOF > convert.geo
+Merge "$inputmsh";
+SetOrder 2;
+Mesh.MshFileVersion = 2.2;
+Save "output.msh";
+EOF
+
+# Run gmsh to convert the mesh without opening the GUI
+gmsh convert.geo -2
+
+# Extract the file name without the extension
+filename=$(basename "$inputmsh" .msh)
+
+# Run gmsh2nek to convert the to re2 format
+
+# 3D case with 1 periodic BCs between surfaces 6 and 8
+gmsh2nek << EOF
+3
+output
+0
+1
+6 8
+$filename
+EOF
+
+# 2D case 
+# gmsh2nek << EOF
+# 2
+# output
+# 0
+# 0
+# $filename
+# EOF
+
+rm convert.geo output.msh convert.msh
+
+# Run genmap with the output file
+genmap << EOF
+$filename
+.001
+EOF

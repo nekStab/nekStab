@@ -1,0 +1,66 @@
+[GENERAL]
+startFrom = 0 # BF_1cyl0.f00001
+stopAt = endTime
+endTime = 200.0
+
+userParam01 = 0
+userParam02 = 0     # krylov snapshot to load - output frequency for statistics
+userParam03 = 0     # stabilization technique: 1:sfd - surface
+# Akervik
+# userParam04 = 0.25   # freq (Strouhal leading mode)
+# userParam05 = 0.25   # gain (twice growth rate leading mode)
+# Casacuberta
+userParam04 = -0.133   # freq (Strouhal leading mode)
+userParam05 = 0.147   # sigma
+userParam06 = 0     # AoA
+userParam07 = 200   # k_dim
+userParam08 = 0     # sponge lenght left
+userParam09 = 0     # sponge lenght right
+userParam10 = 0     # sponge strenght
+
+dt = 0.2 # St=1 -> dt=1/2*St_tar = 0.5
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 2.5
+extrapolation = OIFS
+
+writeControl = runTime
+writeInterval = 10.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = hpfrt
+filtermodes = 2
+filterweight = 5.0
+
+[PROBLEMTYPE]
+variableProperties = yes
+stressFormulation = yes
+
+[MESH]
+numberOfBCFields = 1
+
+[PRESSURE]
+residualTol = 1.0e-5
+residualProj = yes
+
+[VELOCITY]
+density = 1.0
+viscosity = -40000.0
+residualTol = 1.0e-6
+
+[TEMPERATURE] # keep temp field on !
+solver = none
+rhoCp = 1.0
+conductivity = -1 # -Pe = Re*Pr
+residualTol = 1.0e-6
+
+[SCALAR01] #tke
+density = 1.0
+diffusivity = -40000.0
+residualTol = 1.0e-6
+
+[SCALAR02] #tau
+density = 1.0
+diffusivity = -40000.0
+residualTol = 1.0e-6

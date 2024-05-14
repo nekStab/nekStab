@@ -45,3 +45,15 @@ examples/cylinder/postprocessing/steady_force_sensitivity/V
 examples/cylinder/postprocessing/steady_force_sensitivity/U
 .DS_Store
 Nek5000
+examples/back_fstep/transient_growth/orebfs0.f00001
+examples/back_fstep/transient_growth/orebfs0.f00002
+examples/back_fstep/transient_growth/orvbfs0.f00001
+examples/back_fstep/transient_growth/orvbfs0.f00002
+examples/back_fstep/transient_growth/pImbfs0.f00001
+examples/back_fstep/transient_growth/pImbfs0.f00002
+examples/back_fstep/transient_growth/pRebfs0.f00001
+examples/back_fstep/transient_growth/pRebfs0.f00002
+examples/back_fstep/transient_growth/orebfs0.f00001
+examples/back_fstep/transient_growth/orvbfs0.f00001
+examples/back_fstep/transient_growth/pImbfs0.f00001
+examples/back_fstep/transient_growth/pRebfs0.f00001
