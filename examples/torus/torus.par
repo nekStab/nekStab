@@ -1,0 +1,44 @@
+[GENERAL]
+startfrom = BF_torus0.f00001
+
+stopat = endTime
+endtime = 0.4
+dt = 0.
+
+userParam01 = 2.0
+userParam02 = 0
+userParam07 = 200 # k_dim
+
+timestepper = bdf3
+variabledt = yes
+targetcfl = 2
+extrapolation = OIFS
+
+writecontrol = runTime
+writeinterval = 200.
+writedoubleprecision = no
+
+dealiasing = yes
+filtering = hpfrt
+filtermodes = 2
+filterweight = 5.0
+
+[PROBLEMTYPE]
+cyclicboundaries = yes
+
+[MESH]
+writetofieldfile = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualtol = 1.0E-08
+residualproj = yes
+writetofieldfile = yes
+
+[VELOCITY]
+residualtol = 1.0E-010
+residualproj = no
+density = 1.0
+viscosity = -1650.0
+advection = yes
+writetofieldfile = yes

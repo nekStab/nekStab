@@ -13,7 +13,6 @@ params = {'text.usetex': False,
           'legend.fontsize': 8,
           'legend.handlelength': 1.,}
 plt.rcParams.update(params)
-plt.style.use('seaborn-white')
 
 #':' dotted,'-.' dashdot, '--' dashed, '-' solid
 #b: blue, g: green, r: red,c: cyan,m: magenta,y: yellow,k: black
