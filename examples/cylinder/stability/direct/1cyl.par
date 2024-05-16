@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3.1 # Direct
-userParam07 = 200 # k_dim
+userParam07 = 50 # k_dim
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
 userParam10 = 1.7 # Sponge streght

@@ -1,9 +1,9 @@
 
 # all nekStab files are in .f90 (format for )free format source code
-$(OBJDIR)/nek_vectors.o:          $(NEKSTAB_SOURCE_ROOT)/core/nek_vectors.f90               ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/nek_vectors.o:          $(NEKSTAB_SOURCE_ROOT)/core/nek_vectors.f90          ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/krylov_subspace.o:      $(NEKSTAB_SOURCE_ROOT)/core/krylov_subspace.f90      ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/krylov_decomposition.o: $(NEKSTAB_SOURCE_ROOT)/core/krylov_decomposition.f90 ;$(FC) -c $(FL2) $< -o $@
-
+$(OBJDIR)/quicksort.o:            $(NEKSTAB_SOURCE_ROOT)/core/quicksort.f              ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/matvec.o:               $(NEKSTAB_SOURCE_ROOT)/core/matvec.f90               ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/eigensolvers.o:         $(NEKSTAB_SOURCE_ROOT)/core/eigensolvers.f90         ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/lapack_wrapper.o:       $(NEKSTAB_SOURCE_ROOT)/core/lapack_wrapper.f90       ;$(FC) -c $(FL2) $< -o $@

@@ -102,6 +102,7 @@ export FFLAGS
 # User-specified object files
 USR="krylov_subspace.o"
 USR+=" matvec.o"
+USR+=" quicksort.o"
 USR+=" krylov_decomposition.o"
 USR+=" eigensolvers.o"
 USR+=" lapack_wrapper.o"

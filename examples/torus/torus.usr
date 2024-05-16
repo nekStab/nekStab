@@ -1,3 +1,4 @@
+#include "experimental/meshsmoother.f"
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
          include 'SIZE'
@@ -7,10 +8,10 @@ c-----------------------------------------------------------------------
             k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
             schur_tgt = 0 ; call bcast(schur_tgt,isize)
             maxmodes = 10 ; call bcast(maxmodes,isize)
-            ifdyntol = .false. ; call bcast(ifdyntol,lsize)
+            ifdyntol = .true. ; call bcast(ifdyntol,lsize)
             ifres = .false. ; call bcast(ifres,lsize)
-            ifvor = .false. ; call bcast(ifvor,lsize)
-            ifvox = .false. ; call bcast(ifvox,lsize)
+            ifvor = .true. ; call bcast(ifvor,lsize)
+            ifvox = .true. ; call bcast(ifvox,lsize)
          endif
 
       end
@@ -35,7 +36,7 @@ c-----------------------------------------------------------------------
          include 'TOTAL'
          include 'NEKUSE'
          call makebf_str_pulse(ffx,ffy,ffz,ix,iy,iz,ieg) ! add to ff*
-         call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+         !call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
       end
 c----------------------------------------------------------------------------------
       subroutine userbc(i,j,k,iside,eg)
@@ -82,19 +83,34 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine usrdat2
-         implicit none
          include 'SIZE'
          include 'TOTAL'
          include 'HELIXD'
-         if (istep.eq.0) then
-            omega = (womersley**2)*cpfld(1,1)      ! pulsation frequency
-            pulse_T = 2.0D0*pi/omega               ! pulsation period
-            an_phi = atan2(pitch_s,curv_radius)
-            sweep = length*cos(an_phi)/curv_radius ! sweep angle in radians
-         endif
+
+         integer iel,ifc
+         parameter(nbc=2)         !number of boundary conditions
+         character*3 dcbc(nbc)
+         save        dcbc
+         data        dcbc /'P  ', 'W  '/  !BCs listed here
+         idftyp = 1      !distance function - 0 -> exponential, 1-> tanh
+         alpha = 15.     !Input for wall distance function
+         beta  = 0.12     !
+         nouter = 60      !total loops around laplacian and optimizer smoothing
+         nlap = 30        !number of laplacian iterations in each loop
+         nopt = 30        !number of optimization iterations in each loop
+         mtyp = 1         !metric type
+
+         omega = (womersley**2)*cpfld(1,1)      ! pulsation frequency
+         pulse_T = 2.0D0*pi/omega               ! pulsation period
+         an_phi = atan2(pitch_s,curv_radius)
+         sweep = length*cos(an_phi)/curv_radius ! sweep angle in radians
          call helix_pipe
          if (nid.eq.0) write(6,*) 'usrdat2: phi = ', an_phi*180.0d0/3.140d0
          if (nid.eq.0) write(6,*) 'usrdat2: curv_radius = ', curv_radius
+
+        !call smoothmesh(mtyp,nouter,nlap,nopt,nbc,dcbc,idftyp,alpha,beta)
+
+
       end
 c-----------------------------------------------------------------------
       subroutine usrdat3

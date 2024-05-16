@@ -286,13 +286,11 @@
          b_tilde = b
       
          call dgels(trans, m, n, nrhs, A_tilde, lda, b_tilde, ldb, work, lwork, info)
-      
-         write (6, *) "Least-Squares solver :", info
-      
-      !      if (info /= 0) then         ! some error occured
-      !         write (6, *) "Least-Squares solver UNsuccessful. CHECK!"
-      !   !     http://www.netlib.org/lapack/explore-html/d7/d3b/group__double_g_esolve_ga225c8efde208eaf246882df48e590eac.html
-      !      end if
+      !write (6, *) "Least-Squares solver :", info
+      !if (info /= 0) then         ! some error occured
+      !write (6, *) "Least-Squares solver UNsuccessful. CHECK!"
+      !!http://www.netlib.org/lapack/explore-html/d7/d3b/group__double_g_esolve_ga225c8efde208eaf246882df48e590eac.html
+      !end if
       
       !     --> Return solution.
          x = b_tilde(1:n)
