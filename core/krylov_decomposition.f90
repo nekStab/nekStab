@@ -145,43 +145,43 @@
       
          real, dimension(k) :: h_vec
       
-      !     --> Initialize array.
+      ! --> Initialize array.
          call rzero(h_vec, k)
       
          call k_norm(beta, f)
       
-      !     --> Orthonormalize f w.r.t the Krylov basis.
+      ! --> Orthonormalize f w.r.t the Krylov basis.
          do i = 1, k
       
-      !     --> Copy the i-th Krylov vector to the working arrays.
+      ! --> Copy the i-th Krylov vector to the working arrays.
             call k_copy(wrk, q(i))
       
-      !     --> Orthogonalize f w.r.t. to q_i.
+      ! --> Orthogonalize f w.r.t. to q_i.
             call k_dot(alpha, f, wrk)
             call k_cmult(wrk, alpha)
             call k_sub2(f, wrk)
       
-      !     --> Update the corresponding entry in the Hessenberg matrix.
+      ! --> Update the corresponding entry in the Hessenberg matrix.
             H(i, k) = alpha
       
          end do
       
-      !     --> Perform full re-orthogonalization (see instability of MGS process).
+      ! --> Perform full re-orthogonalization (see instability of MGS process).
          do i = 1, k
             call k_copy(wrk, q(i))
             call k_dot(alpha, f, wrk)
             call k_cmult(wrk, alpha)
             call k_sub2(f, wrk)
             H(i, k) = H(i, k) + alpha
-            if (nid == 0) then
-               write (*, *) "ALPHA REORTH :", alpha
-            end if
+      !if (nid == 0) then
+      !   write (*, *) "ALPHA REORTH :", alpha
+      !end if
          end do
       
-      !     --> Normalise the residual vector.
+      ! --> Normalise the residual vector.
          call k_normalize(f, alpha)
       
-      !     --> Update the Hessenberg matrix.
+      ! --> Update the Hessenberg matrix.
          H(k + 1, k) = alpha
       
          return

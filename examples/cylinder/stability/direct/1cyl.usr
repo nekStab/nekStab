@@ -3,7 +3,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      call nekStab
+      call nekStab_drive
 
       return
       end
@@ -19,9 +19,9 @@ c-----------------------------------------------------------------------
         spng_str = uparam(10);  call bcast(spng_str, wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 0 ; call bcast(schur_tgt,isize)
+        schur_tgt = 5 ; call bcast(schur_tgt,isize)
         maxmodes = 10 ; call bcast(maxmodes,isize)
-        ifres = .false. ; call bcast(ifres,lsize)
+        ifres = .true. ; call bcast(ifres,lsize)
         ifvor = .true. ; call bcast(ifvor,lsize)
         ifvox = .true. ; call bcast(ifvox,lsize)
 

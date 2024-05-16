@@ -200,7 +200,9 @@
                end do
                end if
                call k_normalize(wrk2, alpha)
+               call outpost2(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, nof, 'NOS')
                call matvec(wrk, wrk2)
+               call outpost2(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%t, nof, 'NOS')
       
             elseif (ifseed_symm) then ! symmetry initial seed
       
@@ -589,14 +591,15 @@
                if (nid == 0) write (6, *) '  grad norm Re/Im:', norma_Re, norma_Im
                if (nid == 0) write (6, *)
       
-               if (norma_Re > 1.1 .or. norma_Im > 1.1) then
-                  if (nid == 0) write (6, *) ' Skipping spurious (non-physical) eigenvector:', i, real(vals(i)), aimag(vals(i))
-                  cycle  ! skip this iteration if all real parts are zero
-               end if !
+      !    if (norma_Re > 1.1 .or. norma_Im > 1.1) then
+      !       if (nid == 0) write (6, *) ' Skipping spurious (non-physical) eigenvector:', i, real(vals(i)), aimag(vals(i))
+      !       cycle  ! skip this iteration if all real parts are zero
+      !    end if !
       
                if (nid == 0) write (6, *) 'Outposting eigenvector:', i, '/', maxmodes
                if (nid == 0) write (6, *) '  sigma=', real(log_transform(vals(i)))/speriod
                if (nid == 0) write (6, *) '  omega=', aimag(log_transform(vals(i)))/speriod
+               if (nid == 0) write (6, *) '      f=', (aimag(log_transform(vals(i)))/speriod)/2.0d0*pi
                outp = outp + 1
       
       !     --> Outpost only the converged part of the log-transformed spectrum.
@@ -686,7 +689,6 @@
       !-----------------------------------------------------------------------
       
       subroutine select_eigenvalues(selected, cnt, vals, delta, nev, n)
-      
       !     This function selects the eigenvalues to be placed in the upper left corner
       !     during the Schur condensation phase.
       !
@@ -718,7 +720,8 @@
       !     Last edit : April 2nd 2020 by JC Loiseau.
       
          implicit none
-      
+         include 'SIZE'
+         include 'TOTAL'
       !     ----- Input arguments -----
          integer :: nev
          integer :: n
@@ -738,8 +741,8 @@
             idx(i) = i
          end do
          call quicksort2(n, abs(vals), idx)
-      
-      !     --> Select eigenvalues closer to the unit circle.
+
+        !     --> Select eigenvalues closer to the unit circle.
          selected = abs(vals) >= (1.0d0 - delta)
       
       !     --> Select at least the nev+4 largest eigenvalues.
@@ -818,7 +821,7 @@
          if (nid == 0) then
       !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
             write (filename, '(A,A,i4.4,A)') 'Spectre_H', evop, k, '.dat'
-            write (6, *) 'Outposting eigenspectrum of current Hessenberg matrix to : ', filename
+            write (6, *) 'Writing Hessenberg matrix eigenspectrum to', filename
       
             open (67, file=trim(filename), status='unknown', form='formatted')
             write (67, '(3E15.7)') (real(vals(i)), aimag(vals(i)), residual(i), i=1, k)
@@ -826,7 +829,7 @@
       
       !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
             write (filename, '(A,A,i4.4,A)') 'Spectre_NS', evop, k, '.dat'
-            write (6, *) 'Outposting eigenspectrum of current log-transform spectrum matrix to : ', filename
+            write (6, *) 'Writing log-transformed eigenspectrum to', filename
       
             open (67, file=trim(filename), status='unknown', form='formatted')
             write (67, '(3E15.7)') (real(log_transform(vals(i)))/(dt*nsteps),
@@ -836,14 +839,14 @@
       
       !     --> Outpost the Hessenberg matrix for restarting purposes (if needed).
             write (filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
-            write (6, *) 'Outposting current Hessenberg matrix to :', filename
+            write (6, *) 'Writing Hessenberg matrix to', filename
       
             open (67, file=trim(filename), status='unknown', form='formatted')
             write (67, *) ((H(i, j), j=1, k), i=1, k + 1)
             close (67)
       
       !     --> Write to logfile the current number of converged eigenvalues.
-            write (6, *) 'iteration converged and target :', cnt, '/', schur_tgt !keep small caps to ease grep
+            write (6, *) 'converged modes:', cnt, 'target:', schur_tgt !keep small caps to ease grep
          end if
       
       ! if(cnt.ge.schur_tgt)then

@@ -1,0 +1,31 @@
+[GENERAL]
+startFrom = BF_1cyl0.f00001
+
+stopAt = endTime
+endTime = 1.
+
+userParam01 = 3.1
+userParam07 = 100 # k_dim
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 20
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-11
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-11
+residualProj = yes
+density = 1.0
+viscosity = -50.0
