@@ -173,11 +173,11 @@
             call k_cmult(wrk, alpha)
             call k_sub2(f, wrk)
             H(i, k) = H(i, k) + alpha
-
+      
       !if (nid == 0) then
       !   write (*, *) "ALPHA REORTH :", alpha
       !end if
-            
+      
          end do
       
       ! --> Normalise the residual vector.
