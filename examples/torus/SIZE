@@ -10,8 +10,8 @@
 
       ! BASIC
       parameter (ldim=3)               ! domain dimension (2 or 3)
-      parameter (lx1=09) ! GLL points per element along each direction
-      parameter (lxd=12) ! GL  points
+      parameter (lx1=06)!04,06,08,10,12 GLL points per element along each direction
+      parameter (lxd=09)!06,09,12,15,18 GL  points
       parameter (lelg=540) ! max number of global elements 
       parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
       parameter (lpmin=1)             ! min number of MPI ranks 

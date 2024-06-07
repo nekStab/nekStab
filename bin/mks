@@ -17,34 +17,82 @@ NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
 # Compiler Detection
 #-------------------------------------------------------------------------------
 if command -v mpiifort >/dev/null 2>&1; then
-    echo "Compiler found: $(mpiifort -v)"
+    echo "Compiler found: $(which mpiifort)"
+    echo "$(mpiifort --version | head -n1)"
 
     FC="mpiifort"
     CC="mpiicc"
-    FFLAGS+=" -fixed -extend-source" # Enables long lines.
+
+    #https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/fixed.html 
+    # Nek5000 is in fixed form .f, while NekStab is in free form .f90
+    FFLAGS+=" -fixed" # Specifies that the statement field ends at column 132.
+    
+    # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/extend-source.html
+    FFLAGS+=" -extend-source 132" # Specifies that the statement field ends at column 132.
+
     if command -v mpiifx >/dev/null 2>&1; then
-        echo "Using LLVM version of Intel compiler..."
+
+        echo "Using Intel oneAPI Compiler ..."
+
         FC="mpiifx"
         CC="mpiicx"
+
         CFLAGS+=" -w -Wno-unused-command-line-argument"
-        FFLAGS+=" -w -xHost -qmkl" # Suppresses all warning messages (otherwise will not compile nek5000)
-    else
-        echo "LLVM not found, using classic."
-        export USR_LFLAGS+=" -qmkl"
-        #FFLAGS+=" -ipo -O3 -no-prec-div -fp-model fast=2"
+        FFLAGS+=" -xHost -mkl"
+
+
+        # Check the link line advisor for the correct flags with MKL
+        # https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html
+
+        USR_LFLAGS+=" -i8 -I${MKLROOT}/include  -Wl,--start-group ${MKLROOT}/lib/libmkl_intel_ilp64.a ${MKLROOT}/lib/libmkl_sequential.a ${MKLROOT}/lib/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
+
+
+    else # mpiifort
+
+        echo "Using Intel Compiler Classic..."
+        #FFLAGS+=" -xHost" # alreqady includes
+        
+        # FFLAGS+=" -fp-model source" 
+        # FFLAGS+=" -fp-model fast=2"  
+        # FFLAGS+=" -no-prec-div"  
+
+        # export PPLIST="VENDOR_BLAS"
+        # FFLAGS+=" -mkl"
+        # USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
+
     fi
 
-    FFLAGS+=" -g -traceback" # Enables debugging information.
-    FLAGS+=" -fanalyser"     # Enable the Clang Static Analyzer for code analysis
+    # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/g-002.html
+    # FFLAGS+=" -g3" # Enables stack tracing.
+    # FFLAGS+=" -traceback" # Enables stack tracing.
 
-    USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
+    # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/stand.html
+    # FFLAGS+=" -stand f18" # adhere strictly to the standards of f90/f95/f03/f08/f15 
+
+    # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/fpe-all.html
+    # FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
+
+    # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/check.html
+    # FFLAGS+=" -check all,nobounds,nouninit" # Nek500 fails for array subscript/character substring expressions and uninitialized variables.
+
+    # https://gjbex.github.io/Defensive_programming_and_debugging/CodeValidation/Compilers/ifort_flags/
+    # FFLAGS+=" -warn all,noexternal,nointerfaces -diag-enable remark" 
+
 else
-    echo "Compiler found: $(mpif90 --version | head -n1)"
+
+    echo "Compiler found: $(which mpif90)"
+    echo "$(mpif90 --version | head -n1)"
+
     FFLAGS+=" -ffixed-form"             # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native"            # Enables all instruction subsets supported by the local machine.
     FFLAGS+=" -g"                       # Enables debugging information.
     FFLAGS+=" -fbacktrace"              # Provides a backtrace in case of errors, useful for debugging.
+    USR_LFLAGS+=" -llapack -lblas"
+# -Wall -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -std=f2008 -pedantic -fbacktrace
+
+
+# https://people.ucsc.edu/~imay1/_static/AM129_F22/chapters/chapt02/ch02_fortran_flags.html
     #FFLAGS+=" -fanalyzer" # Enable the Clang Static Analyzer for code analysis
     # FFLAGS+=" -Ofast" # Enable aggressive optimization level for maximum performance
     # FFLAGS+=" -ffast-math" # Enable fast math optimizations for floating-point operations
@@ -83,16 +131,21 @@ esac
 # if [ "$FC" = "mpif90" ]; then
 #     if ldconfig -p | grep -q libopenblas; then
 #         echo "OpenBLAS exists in path, using it:"
-#         export USR_LFLAGS+=" -lopenblas"
+        #  export USR_LFLAGS+=" -lopenblas"
+         #find $CONDA_PREFIX -name libopenblas*
+        # export USR_LFLAGS+=" -L/home/rfrantz/miniforge3/pkgs/openblas-0.3.27-pthreads_h7a3da1a_0/lib/"
+
+        
+
 #         # export USR_LFLAGS+=" -L/usr/local/opt/openblas/lib"
 #         # export FFLAGS+=" -I/usr/local/opt/openblas/include"
 #     else
-echo "OpenBLAS does not exist, using LAPACK and BLAS:"
-export USR_LFLAGS+=" -llapack -lblas"
+# echo "OpenBLAS does not exist, using LAPACK and BLAS:"
+# export USR_LFLAGS+=" -llapack -lblas"
 #     fi
 # fi
 #-------------------------------------------------------------------------------
-LD="$FC" # linker !
+# LD="$FC" # linker !
 #-------------------------------------------------------------------------------
 # Final Preparations
 #-------------------------------------------------------------------------------
@@ -115,6 +168,7 @@ USR+=" newton_krylov.o"
 USR+=" sensitivity.o"
 USR+=" forcing.o"
 USR+=" nek_vectors.o"
+
 # Check if the makefile_usr file exists and source it
 if [ -f "makefile_usr" ]; then
     source makefile_usr

@@ -16,14 +16,14 @@ c-----------------------------------------------------------------------
 
         xLspg = uparam(8); call bcast(xLspg , wdsize)
         xRspg = uparam(9); call bcast(xRspg , wdsize)
-        spng_str = uparam(10);  call bcast(spng_str, wdsize)
+        spng_st = uparam(10);  call bcast(spng_st, wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 5 ; call bcast(schur_tgt,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = 10 ; call bcast(maxmodes,isize)
-        ifres = .true. ; call bcast(ifres,lsize)
-        ifvor = .true. ; call bcast(ifvor,lsize)
-        ifvox = .true. ; call bcast(ifvox,lsize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
 
       endif
 
