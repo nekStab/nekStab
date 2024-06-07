@@ -44,6 +44,8 @@
       !-----------------------------------------------------------------------
       subroutine axpby(x, alpha, y, beta, n)
          real x(1), y(1), alpha, beta
+         integer, intent(in) :: n
+         integer i
          do i = 1, n
             x(i) = x(i)*alpha + y(i)*beta
          end do

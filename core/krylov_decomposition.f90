@@ -86,7 +86,7 @@
             eetime1 = dnekclock(); telapsed = (eetime1 - eetime0)/3600.0d0; tmiss = telapsed*(ksize - mstep)
       
             if (nid == 0) then
-               write (6, "(' Time per iteration/remaining:',I3,'h ',I2,'min /',I3,'h ',I2,'min')"),
+               write (6, "(' Time per iteration/remaining:',I3,'h ',I2,'min /',I3,'h ',I2,'min')")
      $   int(telapsed), ceiling((telapsed - int(telapsed))*60.0d0),
      $   int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
                print *, ''
@@ -173,9 +173,11 @@
             call k_cmult(wrk, alpha)
             call k_sub2(f, wrk)
             H(i, k) = H(i, k) + alpha
+
       !if (nid == 0) then
       !   write (*, *) "ALPHA REORTH :", alpha
       !end if
+            
          end do
       
       ! --> Normalise the residual vector.
