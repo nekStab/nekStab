@@ -54,7 +54,7 @@
          end if
       
       !     --> Check integrity.
-         if (isnan(alpha)) call nek_end
+        !  if (isnan(alpha)) call nek_end
       
          return
       end subroutine k_dot
@@ -68,7 +68,7 @@
          real, intent(out) :: alpha
       
          call k_dot(alpha, p, p)
-         alpha = dsqrt(alpha)
+         alpha = sqrt(alpha)
          return
       end subroutine k_norm
       

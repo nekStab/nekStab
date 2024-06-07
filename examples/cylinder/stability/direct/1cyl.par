@@ -5,10 +5,10 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3.1 # Direct
-userParam07 = 120 # k_dim
+userParam07 = 92 # k_dim
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
-userParam10 = 1.7 # Sponge streght
+userParam10 = 0 # Sponge streght
 
 dt = 0
 variableDt = no
@@ -27,11 +27,11 @@ dealiasing = yes
 [PRESSURE]
 preconditioner = semg_xxt
 residualTol = 1.0E-7
-residualProj = yes
+residualProj = no
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-9
+residualTol = 1.0E-7
 residualProj = no
 density = 1.0
 viscosity = -50.0
