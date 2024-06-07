@@ -6,12 +6,12 @@ c-----------------------------------------------------------------------
 
          if(istep.eq.0)then !change defaults
             k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-            schur_tgt = 0 ; call bcast(schur_tgt,isize)
+            schur_tgt = 2 ; call bcast(schur_tgt,isize)
             maxmodes = 10 ; call bcast(maxmodes,isize)
             ifdyntol = .true. ; call bcast(ifdyntol,lsize)
             ifres = .false. ; call bcast(ifres,lsize)
-            ifvor = .true. ; call bcast(ifvor,lsize)
-            ifvox = .true. ; call bcast(ifvox,lsize)
+            ifvor = .false. ; call bcast(ifvor,lsize)
+            ifvox = .false. ; call bcast(ifvox,lsize)
          endif
 
       end
@@ -36,7 +36,7 @@ c-----------------------------------------------------------------------
          include 'TOTAL'
          include 'NEKUSE'
          call makebf_str_pulse(ffx,ffy,ffz,ix,iy,iz,ieg) ! add to ff*
-         !call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+         call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
       end
 c----------------------------------------------------------------------------------
       subroutine userbc(i,j,k,iside,eg)
@@ -109,7 +109,6 @@ c-----------------------------------------------------------------------
          if (nid.eq.0) write(6,*) 'usrdat2: curv_radius = ', curv_radius
 
         !call smoothmesh(mtyp,nouter,nlap,nopt,nbc,dcbc,idftyp,alpha,beta)
-
 
       end
 c-----------------------------------------------------------------------

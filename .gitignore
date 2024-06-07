@@ -54,3 +54,4 @@ examples/back_fstep/transient_growth/pRebfs0.f*
 examples/cylinder/stability/direct/NOS*.f*
 examples/torus/torus0.*
 examples/torus_full/strtorus0.*
+*__genmod.f90

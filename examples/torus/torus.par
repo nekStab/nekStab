@@ -2,11 +2,14 @@
 startfrom = BF_torus0.f00001
 
 stopat = endTime
-endtime = 0.5
+endtime = 0.25  #5000
 dt = 0
 
-userParam01 = 3.1
+userParam01 = 3.1 #1.1 # 3.1
 userParam02 = 0
+userParam04 = 0.1
+userParam05 = 0.05
+
 userParam07 = 200 # k_dim
 
 timestepper = bdf3
@@ -15,7 +18,7 @@ targetcfl = 2
 extrapolation = OIFS
 
 writecontrol = runTime
-writeinterval = 10.
+writeinterval = 100.
 writedoubleprecision = no
 
 dealiasing = yes
@@ -31,15 +34,15 @@ writetofieldfile = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualtol = 1.0E-06
+residualtol = 1.0E-010
 residualproj = no
 writetofieldfile = yes
 
 [VELOCITY]
-residualtol = 1.0E-07
+residualtol = 1.0E-010
 residualproj = no
 density = 1.0
-viscosity = -1650.0
+viscosity = -1000.0 # 1650 #  based on radius 
 advection = yes
 writetofieldfile = yes
 
