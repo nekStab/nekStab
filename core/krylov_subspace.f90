@@ -54,7 +54,7 @@
          end if
       
       !     --> Check integrity.
-        !  if (isnan(alpha)) call nek_end
+      !  if (isnan(alpha)) call nek_end
       
          return
       end subroutine k_dot
