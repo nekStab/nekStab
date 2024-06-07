@@ -97,7 +97,7 @@
       end subroutine activate_sponge
       !--------------------------------------------------------------------
       subroutine spng_init
-      ! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
+
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -131,7 +131,7 @@
       !     save reference field -> sponge value reference
          call opcopy(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, NDIM), vx, vy, vz) !only DNS
          if (ifto) call copy(spng_vt(:, 1), t(1, 1, 1, 1, 1), n) !only DNS - temperature
-         call spng_set             ! -> compute spng_fn
+         call spng_set ! -> compute spng_fn
       
          return
       end subroutine spng_init

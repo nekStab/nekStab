@@ -69,7 +69,7 @@
          real, intent(out) :: alpha
       
          call inner_product(alpha, qx, qy, qz, qp, qt, qx, qy, qz, qp, qt)
-         alpha = dsqrt(alpha)
+         alpha = sqrt(alpha)
       
       end subroutine norm
       
@@ -131,15 +131,15 @@
          real, allocatable, dimension(:, :) :: b_vec
       
       !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-         complex*16, allocatable, dimension(:) :: vals
-         complex*16, allocatable, dimension(:, :) :: vecs
+         complex(kind=KIND(0.0d0)), allocatable, dimension(:) :: vals
+         complex(kind=KIND(0.0d0)), allocatable, dimension(:, :) :: vecs
       
          real, allocatable, dimension(:) :: residual
       
       !     ----- Miscellaneous -----
          type(krylov_vector) :: wrk, wrk2
       
-         integer :: mstart, cnt, m
+         integer :: mstart, converged_eigenvalues, m
          real :: alpha
          logical :: converged
          integer :: i, j
@@ -196,13 +196,13 @@
                if (ifto) call add_noise_scal(wrk2%t(:, 1), 9.0e4, 3.0e3, 4.0e5)
                if (ldimt > 1) then
                do m = 2, ldimt
-                  if (ifpsco(m - 1)) call add_noise_scal(wrk2%t(:, 1), 9.0e1*m, 3.0e2*m, 4.0e1*m)
+                  if (ifpsco(m - 1)) call add_noise_scal(wrk2%t(:, m), 9.0e1*m, 3.0e2*m, 4.0e1*m)
                end do
                end if
                call k_normalize(wrk2, alpha)
-               call outpost2(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, nof, 'NOS')
+            !    call outpost2(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, nof, 'NOS')
                call matvec(wrk, wrk2)
-               call outpost2(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%t, nof, 'NOS')
+            !    call outpost2(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%t, nof, 'NOS')
       
             elseif (ifseed_symm) then ! symmetry initial seed
       
@@ -236,9 +236,11 @@
       
             call k_copy(Q(1), wrk)
       
-            call whereyouwant('KRY', 1)
-            call outpost2(Q(1)%vx, Q(1)%vy, Q(1)%vz, Q(1)%pr, Q(1)%t, nof, 'KRY')
-      
+            if (ifres)then
+              call whereyouwant('KRY', 1)
+              call outpost2(Q(1)%vx, Q(1)%vy, Q(1)%vz, Q(1)%pr, Q(1)%t, nof, 'KRY')
+            endif 
+            
          elseif (uparam(2) > 0) then
       
             mstart = int(uparam(2))
@@ -294,23 +296,28 @@
       
          schur_cnt = 0
          converged = .false.
+
          do while (.not. converged)
+
       !     --> Arnoldi factorization.
             call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
       
-      !if(nid.eq.0) then
-      !   open(unit=12345, file="Hessenberg_matrix.dat")
-      !   write(12345, *) H(1:k_dim, 1:k_dim)
-      !   close(12345)
-      !endif
+      !     if(nid.eq.0) then
+      !        open(unit=12345, file="Hessenberg_matrix.dat")
+      !        write(12345, *) H(1:k_dim, 1:k_dim)
+      !        close(12345)
+      !     endif
       
       !     --> Compute the eigenspectrum of the Hessenberg matrix.
             call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
       
       !     --> Check the residual of the eigenvalues.
+
             residual = abs(H(k_dim + 1, k_dim)*vecs(k_dim, :))
-            cnt = count(residual < eigen_tol)
-            if (nid == 0) write (6, *) 'total eigenvalues converged:', cnt
+            
+            converged_eigenvalues = count(residual < eigen_tol)
+            
+            if (nid == 0) write (6, *) 'total eigenvalues converged:', converged_eigenvalues
       
       !     --> Select whether to stop or apply Schur condensation depending on schur_tgt.
             select case (schur_tgt)
@@ -322,7 +329,7 @@
       
       !     --> Krylov-Schur factorization.
             case (1:)
-               if (cnt >= schur_tgt) then ! Krylov-Schur factorization completed.
+               if (converged_eigenvalues >= schur_tgt) then ! Krylov-Schur factorization completed.
                   converged = .true.
                else                ! Apply Schur condensation before restarting the factorization.
                   schur_cnt = schur_cnt + 1
@@ -345,13 +352,17 @@
             if (nid == 0) write (99, *)
          end do
          if (nid == 0) close (unit=99)
-      
-      !     ----- Output all the spectrums and converged eigenmodes -----
-         if (nid == 0) write (6, *) 'Exporting modes...'
-         if (nid == 0) print *, ''
-         call outpost_ks(vals, vecs, Q, residual, cnt)
-      
-         if (nid == 0) write (6, *) 'converged eigenmodes:', cnt
+
+         if (nid == 0) write (6, *) 'Converged eigenvalues: ', converged_eigenvalues
+
+         if (converged_eigenvalues > 0) then
+            if (nid == 0) then
+                write (6, *) 'Exporting modes...'
+                ! write (6, *) 'residual: ', residual
+            end if
+            call outpost_ks(vals, vecs, Q, residual, converged_eigenvalues)
+         end if
+
          if (nid == 0) write (6, *) 'Eigenproblem solver finished.'
       
       !     --> Deallocation.
@@ -392,7 +403,7 @@
       
       !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
       
-         complex*16, dimension(ksize) :: vals
+         complex(kind=KIND(0.0d0)), dimension(ksize) :: vals
       
       !     ----- Miscellaneous -----
          integer :: i, m
@@ -472,43 +483,49 @@
       !----------------------------------------------------------------------
       
       subroutine outpost_ks(vals, vecs, Q, residual, converged)
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
+        use krylov_subspace
+        implicit none
+        include 'SIZE'
+        include 'TOTAL'
+
+        ! Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix
+        complex(kind=KIND(0.0d0)), dimension(k_dim), intent(in) :: vals
+        complex(kind=KIND(0.0d0)), dimension(k_dim, k_dim), intent(in) :: vecs
+
+        ! Krylov basis V for the projection M*V = V*H
+        type(krylov_vector), dimension(k_dim + 1), intent(in) :: Q
+        real, dimension(k_dim), intent(in) :: residual
+        integer, intent(in) :: converged
+
+        ! Krylov vectors
+        type(krylov_vector) :: qq, ff
+
+        ! Arrays for Krylov basis
+        real, dimension(lv, k_dim + 1) :: qx, qy, qz
+        real, dimension(lp, k_dim + 1) :: qp
+        real, dimension(lt, ldimt, k_dim + 1) :: qt
+
+        ! Arrays for the storage/output of a given eigenmode of the NS operator
+        complex(kind=KIND(0.0d0)), dimension(lv) :: fp_cx, fp_cy, fp_cz
+        complex(kind=KIND(0.0d0)), dimension(lp) :: fp_cp
+        complex(kind=KIND(0.0d0)), dimension(lt, ldimt) :: fp_ct
+
+        ! Miscellaneous variables
+        integer :: i, m
+        real :: speriod, trim, spurious_tol!, glmin, glmax
+        real :: alpha, alpha_r, alpha_i, beta, old_uparam1
+        real :: norma_Re, norma_Im
+        complex :: log_transform
+        logical ifto_sav, ifpo_sav
+
+        ! File handling variables
+        character(len=80) :: filename
+        character(len=20) :: fich1, fich2, fich3, fmt2, fmt3, fmt4, fmt5, fmt6
+        character(len=3) :: nRe, nIm, nRv
+        integer :: outp
       
-      !     ----- Krylov basis V for the projection M*V = V*H -----
-         type(krylov_vector), dimension(k_dim + 1) :: Q
-         type(krylov_vector) :: qq, ff
-      
-         real, dimension(lv, k_dim + 1) :: qx, qy, qz
-         real, dimension(lp, k_dim + 1) :: qp
-         real, dimension(lt, ldimt, k_dim + 1) :: qt
-      
-      !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-         complex*16, dimension(k_dim) :: vals
-         complex*16, dimension(k_dim, k_dim) :: vecs
-      
-      !     ----- Arrays for the storage/output of a given eigenmode of the NS operator -----
-         complex*16, dimension(lv) :: fp_cx, fp_cy, fp_cz
-         complex*16, dimension(lp) :: fp_cp
-         complex*16, dimension(lt, ldimt) :: fp_ct
-      
-      !     ----- Miscellaneous -----
-         integer :: i, m, converged
-      
-         real :: speriod, trim, spurious_tol, glmin, glmax
-         real, dimension(k_dim) :: residual
-         real :: alpha, alpha_r, alpha_i, beta, old_uparam1
-         real :: norma_Re, norma_Im
-         complex :: log_transform
-         logical ifto_sav, ifpo_sav
-      
-         character(len=80) :: filename
-         character(len=20) :: fich1, fich2, fich3, fmt2, fmt3, fmt4, fmt5, fmt6
-         character(len=3) :: nRe, nIm, nRv
-         integer :: outp
-      
+        write (6, *) 'entered outpost_ks'
+
          nv = nx1*ny1*nz1*nelv
          speriod = dt*nsteps ! sampling period
       
@@ -517,6 +534,7 @@
          nIm = trim(evop)//'Im'
          nRv = trim(evop)//'Rv'
       
+
          fich1 = 'Spectre_H'//trim(evop)//'.dat'
          fich2 = 'Spectre_NS'//trim(evop)//'.dat'
          fich3 = 'Spectre_NS'//trim(evop)//'_conv.dat'
@@ -558,7 +576,7 @@
       
             if (outp >= maxmodes) then
       
-               if (nid == 0) write (6, *), 'maxmodes reached, skipping converged mode ', i
+               if (nid == 0) write (6, *) 'maxmodes reached, skipping converged mode ', i
                cycle ! skip nonconverged modes or if too many modes have been outposted
       
             else ! converged modes
@@ -688,7 +706,7 @@
       
       !-----------------------------------------------------------------------
       
-      subroutine select_eigenvalues(selected, cnt, vals, delta, nev, n)
+      subroutine select_eigenvalues(selected, converged_eigenvalues, vals, delta, nev, n)
       !     This function selects the eigenvalues to be placed in the upper left corner
       !     during the Schur condensation phase.
       !
@@ -714,8 +732,8 @@
       !     selected : n-dimensional logical array.
       !     Array indicating which eigenvalue has been selected (.true.).
       !
-      !     cnt : integer
-      !     Number of selected eigenvalues. cnt >= nev + 4.
+      !     converged_eigenvalues : integer
+      !     Number of selected eigenvalues. converged_eigenvalues >= nev + 4.
       !
       !     Last edit : April 2nd 2020 by JC Loiseau.
       
@@ -726,12 +744,12 @@
          integer :: nev
          integer :: n
          integer, dimension(n) :: idx
-         complex*16, dimension(n) :: vals
+         complex(kind=KIND(0.0d0)), dimension(n) :: vals
          real :: delta
       
       !     ----- Output argument -----
          logical, dimension(n) :: selected
-         integer :: cnt
+         integer :: converged_eigenvalues
       
       !     ----- Miscellaneous -----
          integer :: i
@@ -751,7 +769,7 @@
             selected(idx(n - (nev + 4))) = .true.
          end if
       
-         cnt = count(selected)
+         converged_eigenvalues = count(selected)
       
          return
       end subroutine select_eigenvalues
@@ -792,9 +810,9 @@
          integer, intent(in) :: k
          real, dimension(k + 1, k), intent(in) :: H
       
-         integer :: i, j, cnt
-         complex*16, dimension(k) :: vals
-         complex*16, dimension(k, k) :: vecs
+         integer :: i, j, converged_eigenvalues
+         complex(kind=KIND(0.0d0)), dimension(k) :: vals
+         complex(kind=KIND(0.0d0)), dimension(k, k) :: vecs
          real, dimension(k) :: residual
          character(len=80) filename
          complex :: log_transform
@@ -816,7 +834,7 @@
       
       !     --> Compute the residual (assume H results from classical Arnoldi factorization).
          residual = abs(H(k + 1, k)*vecs(k, :))
-         cnt = count(residual < eigen_tol)
+         converged_eigenvalues = count(residual < eigen_tol)
       
          if (nid == 0) then
       !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
@@ -846,15 +864,14 @@
             close (67)
       
       !     --> Write to logfile the current number of converged eigenvalues.
-            write (6, *) 'converged modes:', cnt, 'target:', schur_tgt !keep small caps to ease grep
+            write (6, *) 'converged eigenvalues:', converged_eigenvalues, 'target:', schur_tgt !keep small caps to ease grep
          end if
-      
-      ! if(cnt.ge.schur_tgt)then
-      !       !ifres=.true. is required!
-      !       if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
-      !       !call outpost_ks(vals, vecs, Q, residual)
-      !       call nek_end
-      ! endif
+    
+    !   if (schur_tgt > 0 .and. converged_eigenvalues >= schur_tgt) then
+    !         !ifres=.true. is required!
+    !         if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
+    !         call nek_end
+    !   endif
       
          return
       end subroutine arnoldi_checkpoint

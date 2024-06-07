@@ -11,7 +11,7 @@
       logical :: ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm
       logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol
       logical :: iffindiff, isNekStabinit
-      logical :: isDirect, isAdjoint, isTransientGrowth, isResolvent
+      logical :: isDirect, isAdjoint, isTransientGrowth
       logical :: isFloquetDirect, isFloquetAdjoint
       logical :: isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
       

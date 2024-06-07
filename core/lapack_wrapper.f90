@@ -31,13 +31,13 @@
       !     Last edit : April 1st 2020 by JC Loiseau.
       
          implicit none
-         character*1 :: jobvs = "V", sort = "S"
+         character(len=1) :: jobvs = "V", sort = "S"
          integer :: n, lda, sdim, ldvs, lwork, info
          real, dimension(n, n) :: A, vecs
          real, dimension(n) :: wr, wi
          real, dimension(3*n) :: work
          logical, dimension(n) :: bwork
-         complex*16, dimension(n) :: vals
+         complex(kind=KIND(0.0d0)), dimension(n) :: vals
       
          external select_eigvals
       
@@ -91,7 +91,7 @@
       !     Last edit : April 1st 2020 by JC Loiseau.
       
          implicit none
-         character*1 :: job = "N", compq = "V"
+         character(len=1) :: job = "N", compq = "V"
          integer :: info, ldq, ldt, liwork, lwork, m, n
          double precision :: s, sep
          logical, dimension(n) :: selected
@@ -137,16 +137,15 @@
       !     Last edit : April 1st 2020 by JC Loiseau.
       
          implicit none
-         character*1 :: jobvl = "N", jobvr = "V"
+         character(len=1) :: jobvl = "N", jobvr = "V"
          integer :: n, lwork, info, lda, ldvl, ldvr
          real, dimension(n, n) :: A, A_tilde, vr
          real, dimension(1, n) :: vl
          real, dimension(4*n) :: work
          real, dimension(n) :: wr, wi
-         complex*16, dimension(n, n) :: vecs
-         complex*16, dimension(n) :: vals
+         complex(kind=KIND(0.0d0)), dimension(n, n) :: vecs
+         complex(kind=KIND(0.0d0)), dimension(n) :: vals
          integer :: i
-         integer, dimension(n) :: idx
       
       !     --> Compute the eigendecomposition of A.
          lda = n
@@ -198,12 +197,12 @@
       
          implicit none
          integer :: n
-         complex*16, dimension(n) :: vals
-         complex*16, dimension(n, n) :: vecs
+         complex(kind=KIND(0.0d0)), dimension(n) :: vals
+         complex(kind=KIND(0.0d0)), dimension(n, n) :: vecs
          real, dimension(n) :: norm
          real :: temp_real
-         complex*16 :: temp_complex
-         complex*16, dimension(n) :: temp_n
+         complex(kind=KIND(0.0d0)) :: temp_complex
+         complex(kind=KIND(0.0d0)), dimension(n) :: temp_n
          integer :: k, l
       
       !     ----- Sorting the eigenvalues according to their norm -----
@@ -270,7 +269,7 @@
       !     Last edit : March 22nd 2021 by JC Loiseau.
       
          implicit none
-         character*1 :: trans = "N"
+         character(len=1) :: trans = "N"
          integer :: m, n, nrhs, lda, ldb, lwork, info
          real, dimension(m, n) :: A, A_tilde
          real, dimension(m) :: b, b_tilde
