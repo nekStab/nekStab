@@ -10,7 +10,7 @@ c-----------------------------------------------------------------------
       !if(istep.eq.0)then !change defaults
       xLspg = 5
       xRspg = 5
-      spng_st = 1.7!; call bcast(spng_str, wdsize)
+      spng_st = 1.7!; call bcast(spng_st, wdsize)
       k_dim = 200
       schur_tgt = 2
       maxmodes = 2 
