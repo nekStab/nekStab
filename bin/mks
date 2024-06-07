@@ -38,13 +38,14 @@ if command -v mpiifort >/dev/null 2>&1; then
         CC="mpiicx"
 
         CFLAGS+=" -w -Wno-unused-command-line-argument"
-        FFLAGS+=" -xHost -mkl"
-
+        FFLAGS+=" -xHost"
 
         # Check the link line advisor for the correct flags with MKL
         # https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html
 
-        USR_LFLAGS+=" -i8 -I${MKLROOT}/include  -Wl,--start-group ${MKLROOT}/lib/libmkl_intel_ilp64.a ${MKLROOT}/lib/libmkl_sequential.a ${MKLROOT}/lib/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
+        export PPLIST="VENDOR_BLAS"
+        FFLAGS+=" -mkl"
+        USR_LFLAGS+=" -I${MKLROOT}/include  -Wl,--start-group ${MKLROOT}/lib/libmkl_intel_ilp64.a ${MKLROOT}/lib/libmkl_sequential.a ${MKLROOT}/lib/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
 
 
     else # mpiifort
@@ -55,10 +56,11 @@ if command -v mpiifort >/dev/null 2>&1; then
         # FFLAGS+=" -fp-model source" 
         # FFLAGS+=" -fp-model fast=2"  
         # FFLAGS+=" -no-prec-div"  
+        # FFLAGS+=" -diag-disable 6375  
 
-        # export PPLIST="VENDOR_BLAS"
-        # FFLAGS+=" -mkl"
-        # USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
+        export PPLIST="VENDOR_BLAS"
+        FFLAGS+=" -mkl"
+        USR_LFLAGS+="-I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
 
     fi
 
@@ -86,8 +88,8 @@ else
     FFLAGS+=" -ffixed-form"             # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native"            # Enables all instruction subsets supported by the local machine.
-    FFLAGS+=" -g"                       # Enables debugging information.
-    FFLAGS+=" -fbacktrace"              # Provides a backtrace in case of errors, useful for debugging.
+    #FFLAGS+=" -g"                       # Enables debugging information.
+    #FFLAGS+=" -fbacktrace"              # Provides a backtrace in case of errors, useful for debugging.
     USR_LFLAGS+=" -llapack -lblas"
 # -Wall -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -std=f2008 -pedantic -fbacktrace
 
