@@ -97,7 +97,7 @@
       end subroutine activate_sponge
       !--------------------------------------------------------------------
       subroutine spng_init
-
+      
          implicit none
          include 'SIZE'
          include 'TOTAL'

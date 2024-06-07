@@ -37,7 +37,7 @@
          real, dimension(n) :: wr, wi
          real, dimension(3*n) :: work
          logical, dimension(n) :: bwork
-         complex(kind=KIND(0.0d0)), dimension(n) :: vals
+         complex(kind=kind(0.0d0)), dimension(n) :: vals
       
          external select_eigvals
       
@@ -143,8 +143,8 @@
          real, dimension(1, n) :: vl
          real, dimension(4*n) :: work
          real, dimension(n) :: wr, wi
-         complex(kind=KIND(0.0d0)), dimension(n, n) :: vecs
-         complex(kind=KIND(0.0d0)), dimension(n) :: vals
+         complex(kind=kind(0.0d0)), dimension(n, n) :: vecs
+         complex(kind=kind(0.0d0)), dimension(n) :: vals
          integer :: i
       
       !     --> Compute the eigendecomposition of A.
@@ -197,12 +197,12 @@
       
          implicit none
          integer :: n
-         complex(kind=KIND(0.0d0)), dimension(n) :: vals
-         complex(kind=KIND(0.0d0)), dimension(n, n) :: vecs
+         complex(kind=kind(0.0d0)), dimension(n) :: vals
+         complex(kind=kind(0.0d0)), dimension(n, n) :: vecs
          real, dimension(n) :: norm
          real :: temp_real
-         complex(kind=KIND(0.0d0)) :: temp_complex
-         complex(kind=KIND(0.0d0)), dimension(n) :: temp_n
+         complex(kind=kind(0.0d0)) :: temp_complex
+         complex(kind=kind(0.0d0)), dimension(n) :: temp_n
          integer :: k, l
       
       !     ----- Sorting the eigenvalues according to their norm -----
