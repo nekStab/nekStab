@@ -1,0 +1,119 @@
+
+      real, parameter :: CURV_RADIUS = 3.333333333d0      ! Radius of curvature
+      real, parameter :: PIII = 4.0d0*atan(1.0d0)           ! Pi
+      real, parameter :: LENGTH = 2.0d0*PIII*CURV_RADIUS    ! length of the pipe
+      real, parameter :: DIAM = 2.0d0                     ! helix diameter
+      integer, parameter :: NSLICES = 100                    ! number of streamwise slices
+      integer, parameter :: NELF = 108 !225 (hi res)        ! number of elements in the cross-stream plane
+      !dP/dS = dPo/Ds + dp1dsr*(dPo/Ds*e^i*omega*t) -> zero iamg -> cos wave
+      real, parameter :: dp0ds = 0.0794600D0 ! pressure gradient
+      real, parameter :: dp1dsr = 0.0d0
+
+
+
+      real, parameter :: WOMERSLEY = 38.0d0 ! Womersley number
+      real, parameter :: dp1dsi = 0.0d0 ! purely imag leads to sin wave
+      real, parameter :: PITCH_S = 0.0d0 ! pitch of the helix (0 for torus)
+      logical, parameter :: IFHELICAL = .FALSE. ! switch for toroidal/helical pipes
+
+
+
+      real pulse_T            !< @var period of pulsation
+      real omega              !< @var frequency of pulsation
+      real qflow
+      real ox(lx1,ly1,lz1,lelv)
+      real oy(lx1,ly1,lz1,lelv)
+      real an_phi, sweep, rad, radm
+      real xax(lx1,ly1,lz1,lelv), yax(lx1,ly1,lz1,lelv), 
+     $     zax(lx1,ly1,lz1,lelv)
+      real vx_tper(lx1,ly1,lz1,lelv), vy_tper(lx1,ly1,lz1,lelv), 
+     $     vz_tper(lx1,ly1,lz1,lelv)
+      real t_tper( lx1,ly1,lz1,lelt)
+
+      common /OGEOM/ ox, oy
+      common /HELICAL/ an_phi, sweep, rad, radm, xax, yax, zax 
+      common /PERIODIC_DATA/ vx_tper,vy_tper,vz_tper,t_tper
+      common /PULSE/ Qflow, pulse_T, omega 
+
+      integer cnht_id
+      character*(*) cnht_name
+      parameter(cnht_name='CNHT')
+      logical cnht_ifinit
+      integer cnht_sec_id
+
+      ! CNHT_SC = 0.33655800E+01         ! Norm scaling factor
+      ! CNHT_SV = 0.10000000E+01         ! Velocity scaling factor (Pareto curve)
+      ! CNHT_ST = 0.10000000E+01         ! Temperature scaling factor (Pareto curve)
+      ! CNHT_GX = 0.00000000E+00         ! X component of gravitational field
+      ! CNHT_GY = 0.10000000E+01         ! Y component of gravitational field
+
+      real cnht_sc                !< @var scaling factors for the norm --> m2/(s2K2)
+      integer cnht_sc_id
+      real cnht_sv                !< @var scaling factors for velocity for the Pareto curve
+      integer cnht_sv_id
+      real cnht_st                !< @var scaling factors for temperature for the Pareto curve
+      integer cnht_st_id
+      real cnht_gx                !< @var x component of gravitational field
+      integer cnht_gx_id
+      real cnht_gy                !< @var y component of gravitational field
+      integer cnht_gy_id
+      real cnht_gz                !< @var z component of gravitational field
+      integer cnht_gz_id
+      real cnht_Ra, cnht_Pr
+      common /cnhti/ cnht_id, cnht_sec_id, cnht_sc_id, cnht_sv_id,
+     $              cnht_st_id, cnht_gx_id, cnht_gy_id, cnht_gz_id
+
+      common /cnhtr/ cnht_sc, cnht_sv, cnht_st, cnht_gx, cnht_gy, 
+     $               cnht_gz, cnht_Ra, cnht_Pr
+      
+      common /cnhtl/ cnht_ifinit
+
+      integer bconv_nkeys
+      parameter (bconv_nkeys = 5)
+      character*132 bconv_dictkey(bconv_nkeys)
+      data
+     $  bconv_dictkey(1)  / '_BOOSTCONV' /      ! section name
+     $  bconv_dictkey(2)  / 'boostFreq' /       ! BC_FREQ
+     $  bconv_dictkey(3)  / 'residualTol' /     ! BC_TOL
+     $  bconv_dictkey(4)  / 'on' /              ! IFBOOSTCONV
+     $  bconv_dictkey(5)  / 'verbose' /         ! IFBOOSTVERBOSE
+
+      integer bconv_n3dkeys
+      parameter (bconv_n3dkeys = 0)
+      integer bconv_l3dkey(bconv_n3dkeys)
+      integer N_BC
+      parameter (N_BC = 25)
+      REAL VINX_BC,VINY_BC,VINZ_BC,TIN_BC,VOUTX_BC,VOUTY_BC,
+     $	     VOUTZ_BC,TOUT_BC
+
+      COMMON /INOUT/ VINX_BC (LX1,LY1,LZ1,LELV,N_BC),
+     $	     VINY_BC (LX1,LY1,LZ1,LELV,N_BC),
+     $	     VINZ_BC (LX1,LY1,LZ1,LELV,N_BC),
+     $	     TIN_BC (LX1,LY1,LZ1,LELT,N_BC),
+     $	     VOUTX_BC(LX1,LY1,LZ1,LELV,N_BC),
+     $	     VOUTY_BC(LX1,LY1,LZ1,LELV,N_BC),
+     $	     VOUTZ_BC(LX1,LY1,LZ1,LELV,N_BC),
+     $	     TOUT_BC(LX1,LY1,LZ1,LELT,N_BC)
+   
+      REAL VXOLD,VYOLD,VZOLD,TOLD,DVX,DVY,DVZ,DTBC
+     $       ,VXOL1,VYOL1,VZOL1,TOL1
+
+      COMMON /BC_DATA/ VXOLD(LX1,LY1,LZ1,LELV),
+     $	     VYOLD(LX1,LY1,LZ1,LELV),
+     $	     VZOLD(LX1,LY1,LZ1,LELV),
+     $	     TOLD(LX1,LY1,LZ1,LELT),
+     $	     DVX(LX1,LY1,LZ1,LELV),
+     $	     DVY(LX1,LY1,LZ1,LELV),
+     $	     DVZ(LX1,LY1,LZ1,LELV),
+     $	     DTBC(LX1,LY1,LZ1,LELT),
+     $	     VXOL1(LX1,LY1,LZ1,LELV),
+     $	     VYOL1(LX1,LY1,LZ1,LELV),
+     $	     VZOL1(LX1,LY1,LZ1,LELV),
+     $	     TOL1(LX1,LY1,LZ1,LELT)
+
+      integer BC_FREQ
+      real BC_TOL
+      logical IFBOOSTCONV,IFBOOSTVERBOSE
+      COMMON/INTBC/ BC_FREQ
+      COMMON/REALBC/ BC_TOL
+      COMMON/LOGBC/ IFBOOSTCONV,IFBOOSTVERBOSE
