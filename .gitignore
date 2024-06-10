@@ -23,6 +23,7 @@ aIm*
 session*
 SESSION*
 makefile
+makefile_usr.inc
 .state
 vor*
 vox*
@@ -30,7 +31,6 @@ KRY*
 *.swp
 NEKSTAB.inc
 *~
-makefile_usr.inc
 *.pyc
 .cache
 __pycache__
