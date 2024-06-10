@@ -57,6 +57,10 @@ if command -v mpiifort >/dev/null 2>&1; then
         FFLAGS+=" -no-prec-div"  
         # FFLAGS+=" -diag-disable 6375  
 
+        # FFLAGS+=" -diag-disable=10441  
+
+
+
         export PPLIST="VENDOR_BLAS"
         FFLAGS+=" -mkl=sequential" # we are using LP64 and NOT 64bit integer in ILP64
         # static link
