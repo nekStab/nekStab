@@ -1,9 +1,11 @@
 [GENERAL]
-startFrom = BF_Re1900_tpjet0.f00001
+#startFrom = BF_Re1900_tpjet0.f00001
+startFrom = BF_tpjet0.f00001
 stopAt = endTime
 endTime = 1.666666666667
 
-userParam01 = 2.2 # Newton-GMRES forced periodic orbits
+#userParam01 = 2.2 # Newton-GMRES forced periodic orbits
+userParam01 = 3.11 # Newton-GMRES forced periodic orbits
 userParam05 = 0.600000  #forced frequency (St_D)
 userParam07 = 128 # k_dim
 
@@ -15,11 +17,7 @@ targetCFL = 0.5
 writeControl = runTime #timeStep
 writeInterval = 100.
 writeDoublePrecision = no
-
 dealiasing = yes
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
 
 [PROBLEMTYPE]
 axiSymmetry = yes

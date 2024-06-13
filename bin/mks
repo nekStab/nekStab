@@ -1,5 +1,7 @@
 #!/bin/bash
 set -a # export all variables and functions defined in the script
+ulimit -s unlimited # set the stack size to unlimited
+ulimit -c unlimited # set the core file size to unlimited 
 
 # Compiler and architecture settings
 FC="mpif90"   # default (changed from mpif77)
@@ -23,7 +25,7 @@ if command -v mpiifort >/dev/null 2>&1; then
     FC="mpiifort"
     CC="mpiicc"
 
-    #https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/fixed.html 
+    # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/fixed.html 
     FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
     
     # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/extend-source.html
@@ -43,44 +45,42 @@ if command -v mpiifort >/dev/null 2>&1; then
         # https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html
 
         export PPLIST="VENDOR_BLAS"
+
         FFLAGS+=" -qmkl=sequential" # we are using LP64 and NOT double precision integer ILP64
+
+        # we use static link
         USR_LFLAGS+=" -I${MKLROOT}/include  -Wl,--start-group ${MKLROOT}/lib/libmkl_intel_lp64.a ${MKLROOT}/lib/libmkl_sequential.a ${MKLROOT}/lib/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
 
 
     else # mpiifort
 
         echo "Using Intel Compiler Classic..."
-        #FFLAGS+=" -xHost" # comment if already included
+        # FFLAGS+=" -xHost" # comment if already included
         
         # FFLAGS+=" -fp-model source" 
-        FFLAGS+=" -fp-model fast=2"  
-        FFLAGS+=" -no-prec-div"  
-        # FFLAGS+=" -diag-disable 6375  
-
+        # FFLAGS+=" -fp-model fast=2"  
+        # FFLAGS+=" -no-prec-div"  
+        
+        # FFLAGS+=" -diag-disable=6375  
         # FFLAGS+=" -diag-disable=10441  
 
-
-
         export PPLIST="VENDOR_BLAS"
-        FFLAGS+=" -mkl=sequential" # we are using LP64 and NOT 64bit integer in ILP64
-        # static link
-        USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
 
-        # dynamic link
-        # USR_LFLAGS+=" -I${MKLROOT}/include -L${MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl"
+        FFLAGS+=" -mkl=sequential" # we are using LP64 and NOT 64bit integer in ILP64
+
+        # we use static link
+        USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
 
     fi
 
     # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/g-002.html
-    # FFLAGS+=" -g3" # Enables stack tracing.
-    # FFLAGS+=" -traceback" # Enables stack tracing.
-
-    #https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/debug-linux-and-macos.html
-    #FFLAGS+=" -debug all" # Enables all debugging information.
-    # FFLAGS+=" -debug extended" # Enables all runtime checks.
+    # FFLAGS+=" -g3 -traceback" # Enables stack tracing.
 
     # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/fpe-all.html
-    #FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
+    # FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
+
+    # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/debug-linux-and-macos.html
+    # FFLAGS+=" -debug extended" # Enables all runtime checks.
 
     # https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-0/check.html
     # FFLAGS+=" -check all,nobounds,nouninit" # Nek500 fails for array subscript/character substring expressions and uninitialized variables.
@@ -99,14 +99,9 @@ else
     FFLAGS+=" -ffixed-form"             # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native"            # Enables all instruction subsets supported by the local machine.
-    #FFLAGS+=" -g"                       # Enables debugging information.
-    #FFLAGS+=" -fbacktrace"              # Provides a backtrace in case of errors, useful for debugging.
-    USR_LFLAGS+=" -llapack -lblas"
-# -Wall -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -std=f2008 -pedantic -fbacktrace
+    #FFLAGS+=" -g fbacktrace"           # Enables debugging information.
 
-
-# https://people.ucsc.edu/~imay1/_static/AM129_F22/chapters/chapt02/ch02_fortran_flags.html
-    #FFLAGS+=" -fanalyzer" # Enable the Clang Static Analyzer for code analysis
+    # FFLAGS+=" -fanalyzer" # Enable the Clang Static Analyzer for code analysis
     # FFLAGS+=" -Ofast" # Enable aggressive optimization level for maximum performance
     # FFLAGS+=" -ffast-math" # Enable fast math optimizations for floating-point operations
     # FFLAGS+=" -funsafe-math-optimizations" # Enable unsafe math optimizations for improved performance
@@ -114,6 +109,12 @@ else
     # comment Nek5000/core/makenek.inc:226 with : sed -i '226s/^/#/' $HOME/nextStab/Nek5000/core/makenek.inc
     #FFLAGS+=" -std=legacy -w" # Provides a backtrace in case of errors, useful for debugging.
     #FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
+
+    USR_LFLAGS+=" -llapack -lblas"
+
+    # Linking with OPENBLAS instead of LAPACK/BLAS (optional)
+    # USR_LFLAGS+=" -I/usr/local/opt/openblas/include -L/usr/local/opt/openblas/lib -lopenblas"
+
 
 fi
 #-------------------------------------------------------------------------------
@@ -136,29 +137,6 @@ Linux)
     esac
     ;;
 esac
-#-------------------------------------------------------------------------------
-# Linking with LAPACK and BLAS
-#-------------------------------------------------------------------------------
-# Lapack is a library of linear algebra routines.
-# Blas (Basic Linear Algebra Subprograms) is used by Lapack.
-# if [ "$FC" = "mpif90" ]; then
-#     if ldconfig -p | grep -q libopenblas; then
-#         echo "OpenBLAS exists in path, using it:"
-        #  export USR_LFLAGS+=" -lopenblas"
-         #find $CONDA_PREFIX -name libopenblas*
-        # export USR_LFLAGS+=" -L/home/rfrantz/miniforge3/pkgs/openblas-0.3.27-pthreads_h7a3da1a_0/lib/"
-
-        
-
-#         # export USR_LFLAGS+=" -L/usr/local/opt/openblas/lib"
-#         # export FFLAGS+=" -I/usr/local/opt/openblas/include"
-#     else
-# echo "OpenBLAS does not exist, using LAPACK and BLAS:"
-# export USR_LFLAGS+=" -llapack -lblas"
-#     fi
-# fi
-#-------------------------------------------------------------------------------
-# LD="$FC" # linker !
 #-------------------------------------------------------------------------------
 # Final Preparations
 #-------------------------------------------------------------------------------

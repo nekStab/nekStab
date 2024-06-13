@@ -371,115 +371,6 @@
       
       end subroutine krylov_schur
       
-      !-----------------------------------------------------------------------
-      
-      subroutine schur_condensation(mstart, H, Q, ksize)
-      
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-      
-      !     =================================================
-      !     =====                                       =====
-      !     ===== Declaration of the required variables =====
-      !     =====                                       =====
-      !     =================================================
-      
-         integer, intent(inout) :: mstart
-         integer, intent(in) :: ksize
-      
-      !     ----- Krylov basis V for the projection M*V = V*H -----
-      
-         type(krylov_vector), dimension(ksize + 1) :: Q
-         real, dimension(lv, ksize + 1) :: qx, qy, qz
-         real, dimension(lp, ksize + 1) :: qp
-         real, dimension(lt, ldimt, ksize + 1) :: qt
-      
-      !     ----- Upper Hessenberg matrix -----
-      
-         real, dimension(ksize + 1, ksize) :: H
-         real, dimension(ksize) :: b_vec
-      
-      !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-      
-         complex(kind=kind(0.0d0)), dimension(ksize) :: vals
-      
-      !     ----- Miscellaneous -----
-         integer :: i, m
-         logical, dimension(ksize) :: selected
-      
-      !     ----- Schur and Hessenberg decomposition -----
-         real, dimension(ksize, ksize) :: vecs
-      
-      !     --> Initialize arrays.
-         b_vec = 0.0d0; b_vec(ksize) = H(ksize + 1, ksize)
-         vals = (0.0d0, 0.0d0); vecs = 0.0d0
-      
-      !     --> Perform the Schur decomposition.
-         call schur(H(1:ksize, 1:ksize), vecs, vals, ksize)
-      
-      !     --> Partition the eigenvalues in wanted / unwanted.
-         call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, ksize)
-         if (nid == 0) write (6, *) mstart, 'Ritz eigenpairs have been selected.'
-      
-      !     --> Re-order the Schur decomposition based on the partition.
-         call ordschur(H(1:ksize, 1:ksize), vecs, selected, ksize)
-      
-      !     --> Zero-out the unwanted blocks of the Schur matrix.
-         H(1:mstart, mstart + 1:ksize) = 0.0d0
-         H(mstart + 1:ksize + 1, :) = 0.0d0
-      
-      !     --> Re-order the Krylov basis accordingly.
-         do i = 1, k_dim + 1
-            qx(:, i) = Q(i)%vx(:)
-            qy(:, i) = Q(i)%vy(:)
-            if (if3D) qz(:, i) = Q(i)%vz(:)
-            if (ifpo) qp(:, i) = Q(i)%pr(:)
-            if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
-            if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
-            end do
-            end if
-         end do
-         qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
-         qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
-         if (if3D) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
-         if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
-         if (ifto) qt(:, 1, 1:ksize) = matmul(qt(:, 1, 1:ksize), vecs)
-         if (ldimt > 1) then
-         do m = 2, ldimt
-            if (ifpsco(m - 1)) qt(:, m, 1:ksize) = matmul(qt(:, m, 1:ksize), vecs)
-         end do
-         end if
-      
-      !     --> Update the Schur matrix with b.T @ Q corresponding to
-      !     the residual beta in the new basis.
-         b_vec = matmul(b_vec, vecs)
-         H(mstart + 1, :) = b_vec
-      
-      !     --> Add the last generated Krylov vector as the new starting one.
-         mstart = mstart + 1
-      
-         call nopcopy(qx(:, mstart), qy(:, mstart), qz(:, mstart), qp(:, mstart), qt(:, :, mstart),
-     $   qx(:, ksize + 1), qy(:, ksize + 1), qz(:, ksize + 1), qp(:, ksize + 1), qt(:, :, ksize + 1))
-         do i = 1, k_dim + 1
-            Q(i)%vx(:) = qx(:, i)
-            Q(i)%vy(:) = qy(:, i)
-            if (if3D) Q(i)%vz(:) = qz(:, i)
-            if (ifpo) Q(i)%pr(:) = qp(:, i)
-            if (ifto) Q(i)%t(:, 1) = qt(:, 1, i)
-            if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) Q(i)%t(:, m) = qt(:, m, i)
-            end do
-            end if
-         end do
-      
-         return
-      end subroutine schur_condensation
-      
       !----------------------------------------------------------------------
       
       subroutine outpost_ks(vals, vecs, Q, residual, converged)
@@ -700,6 +591,115 @@
       
          return
       end subroutine outpost_ks
+      
+      !-----------------------------------------------------------------------
+      
+      subroutine schur_condensation(mstart, H, Q, ksize)
+      
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+      
+      !     =================================================
+      !     =====                                       =====
+      !     ===== Declaration of the required variables =====
+      !     =====                                       =====
+      !     =================================================
+      
+         integer, intent(inout) :: mstart
+         integer, intent(in) :: ksize
+      
+      !     ----- Krylov basis V for the projection M*V = V*H -----
+      
+         type(krylov_vector), dimension(ksize + 1) :: Q
+         real, dimension(lv, ksize + 1) :: qx, qy, qz
+         real, dimension(lp, ksize + 1) :: qp
+         real, dimension(lt, ldimt, ksize + 1) :: qt
+      
+      !     ----- Upper Hessenberg matrix -----
+      
+         real, dimension(ksize + 1, ksize) :: H
+         real, dimension(ksize) :: b_vec
+      
+      !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
+      
+         complex(kind=kind(0.0d0)), dimension(ksize) :: vals
+      
+      !     ----- Miscellaneous -----
+         integer :: i, m
+         logical, dimension(ksize) :: selected
+      
+      !     ----- Schur and Hessenberg decomposition -----
+         real, dimension(ksize, ksize) :: vecs
+      
+      !     --> Initialize arrays.
+         b_vec = 0.0d0; b_vec(ksize) = H(ksize + 1, ksize)
+         vals = (0.0d0, 0.0d0); vecs = 0.0d0
+      
+      !     --> Perform the Schur decomposition.
+         call schur(H(1:ksize, 1:ksize), vecs, vals, ksize)
+      
+      !     --> Partition the eigenvalues in wanted / unwanted.
+         call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, ksize)
+         if (nid == 0) write (6, *) mstart, 'Ritz eigenpairs have been selected.'
+      
+      !     --> Re-order the Schur decomposition based on the partition.
+         call ordschur(H(1:ksize, 1:ksize), vecs, selected, ksize)
+      
+      !     --> Zero-out the unwanted blocks of the Schur matrix.
+         H(1:mstart, mstart + 1:ksize) = 0.0d0
+         H(mstart + 1:ksize + 1, :) = 0.0d0
+      
+      !     --> Re-order the Krylov basis accordingly.
+         do i = 1, k_dim + 1
+            qx(:, i) = Q(i)%vx(:)
+            qy(:, i) = Q(i)%vy(:)
+            if (if3D) qz(:, i) = Q(i)%vz(:)
+            if (ifpo) qp(:, i) = Q(i)%pr(:)
+            if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
+            if (ldimt > 1) then
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
+            end do
+            end if
+         end do
+         qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
+         qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
+         if (if3D) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
+         if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
+         if (ifto) qt(:, 1, 1:ksize) = matmul(qt(:, 1, 1:ksize), vecs)
+         if (ldimt > 1) then
+         do m = 2, ldimt
+            if (ifpsco(m - 1)) qt(:, m, 1:ksize) = matmul(qt(:, m, 1:ksize), vecs)
+         end do
+         end if
+      
+      !     --> Update the Schur matrix with b.T @ Q corresponding to
+      !     the residual beta in the new basis.
+         b_vec = matmul(b_vec, vecs)
+         H(mstart + 1, :) = b_vec
+      
+      !     --> Add the last generated Krylov vector as the new starting one.
+         mstart = mstart + 1
+      
+         call nopcopy(qx(:, mstart), qy(:, mstart), qz(:, mstart), qp(:, mstart), qt(:, :, mstart),
+     $   qx(:, ksize + 1), qy(:, ksize + 1), qz(:, ksize + 1), qp(:, ksize + 1), qt(:, :, ksize + 1))
+         do i = 1, k_dim + 1
+            Q(i)%vx(:) = qx(:, i)
+            Q(i)%vy(:) = qy(:, i)
+            if (if3D) Q(i)%vz(:) = qz(:, i)
+            if (ifpo) Q(i)%pr(:) = qp(:, i)
+            if (ifto) Q(i)%t(:, 1) = qt(:, 1, i)
+            if (ldimt > 1) then
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) Q(i)%t(:, m) = qt(:, m, i)
+            end do
+            end if
+         end do
+      
+         return
+      end subroutine schur_condensation
       
       !-----------------------------------------------------------------------
       
