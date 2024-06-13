@@ -55,3 +55,4 @@ examples/cylinder/stability/direct/NOS*.f*
 examples/torus/torus0.*
 examples/torus_full/strtorus0.*
 *__genmod.f90
+nek5000.dbg
