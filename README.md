@@ -37,7 +37,7 @@ brew install mpich gfortran wget git cmake htop
 ```bash
 git clone --depth=50 https://github.com/nekStab/nekStab.git
 cd nekStab
-./Nek5000clone.sh
+./Nek5000setup.sh
 ```
 
 Run **vim $HOME/.bashrc** and add the following :
@@ -46,6 +46,8 @@ export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
 export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
+ulimit -s unlimited
+ulimit -c unlimited
 ```
 
 Computing the fixed point for the cylinder flow example using the Newton-Krylov solver on 4 processors is as simple as
@@ -53,10 +55,6 @@ Computing the fixed point for the cylinder flow example using the Newton-Krylov 
 Go to a given example folder and compile the code:
 ```bash
 cd ~/nekStab/examples/cylinder/baseflow/newton  
-./cmpile.sh all
-```
-alternatively you can compile with _makeneks_ followed by the case name:
-```bash
 makeneks 1cyl
 ```
 
