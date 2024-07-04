@@ -2,13 +2,13 @@ c-----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
       include 'TOTAL'
+
       call nekStab_drive
       call hpts
-      return
+      
       end
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
-      implicit none
       include 'SIZE'
       include 'TOTAL'
 
@@ -22,7 +22,6 @@ c-----------------------------------------------------------------------
         ifdyntol = .true. ; call bcast(ifdyntol,lsize)
       endif
 
-      return
       end
 c-----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)
@@ -38,7 +37,6 @@ c-----------------------------------------------------------------------
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
-      return
       end
 c-----------------------------------------------------------------------
       subroutine useric (ix,iy,iz,ieg)
@@ -60,7 +58,6 @@ c-----------------------------------------------------------------------
          temp = 0.0d0
       endif
 
-      return
       end
 c-----------------------------------------------------------------------
       subroutine userbc (ix,iy,iz,iside,ieg)
@@ -81,8 +78,6 @@ c-----------------------------------------------------------------------
          uz = 0.0d0
          temp = 0.0d0
       endif
-
-      return
       end
 c-----------------------------------------------------------------------
       subroutine usrdat

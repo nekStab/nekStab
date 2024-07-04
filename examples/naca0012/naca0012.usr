@@ -1,0 +1,120 @@
+#include "experimental/meshsmoother.f"
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab_drive
+      call hpts
+
+      end
+c-----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if(istep.eq.0)then !change nekStab defaults
+
+        xLspg = uparam(8); call bcast(xLspg , wdsize)
+        xRspg = uparam(9); call bcast(xRspg , wdsize)
+        spng_st = uparam(10);  call bcast(spng_st, wdsize)
+
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        maxmodes = 6 ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
+        ifdyntol = .true. ; call bcast(ifdyntol,lsize) ! speedup Newton
+
+      endif
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      call setbc(1,1,'v  ')   ! set bcID 1 to inlet for field 1 (velocity)
+      call setbc(2,1,'O  ')   ! set bcID 2 to outlet for field 1 (velocity)
+      call setbc(3,1,'SYM')   ! set bcID 3 to symm for field 1 (velocity)
+      call setbc(4,1,'W  ')   ! set bcID 4 to wall for field 1 (velocity)
+
+    !   call meshsmoother
+
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      end

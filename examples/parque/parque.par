@@ -1,0 +1,55 @@
+#
+# nek parameter file
+#
+
+[GENERAL]
+stopAt = endTime
+endTime = 150.0
+variableDt = yes
+targetCFL = 0.1
+writeControl = runTime
+writeInterval = 1.0
+
+userParam01 = 1.0    #diametro [m]
+userParam02 = 1.0    #velocidad media [m/s]
+userParam03 = 0.5669 #coefeciente thrust
+userParam04 = 4.5    #altura capa limite [m]
+userParam05 = 0.0002 #roughness height [m]
+userParam06 = 0.7041 #ctprima fila A
+userParam07 = 0.8099 #ctprima fila B
+userParam08 = 1.0015 #ctprima fila C
+userParam09 = 0.9286 #ctprima fila D
+userParam10 = 0.8799 #ctprima fila E
+userParam11 = 0.9496 #ctprima fila F
+userParam12 = 0.9269 #ctprima fila G
+userParam13 = 0.8768 #ctprima fila H
+userParam14 = 0.8831 #ctprima fila I
+userParam15 = 0.8899 #ctprima fila J
+
+[VELOCITY]
+density = 1.0        #kg/m3
+viscosity = -22500.0  #kg/m-s
+residualTol = 1.0e-6
+
+[PROBLEMTYPE]
+equation = incompNS
+variableProperties = yes
+stressFormulation = yes
+
+[MESH]
+numberOfBCFields = 1
+
+[SCALAR01]
+solver = none
+
+#tke
+[SCALAR02]
+density = 1.0
+diffusivity = -22500.0
+residualTol = 1.0e-6
+
+#tau
+[SCALAR03]
+density = 1.0
+diffusivity = -22500.0
+residualTol = 1.0e-6
