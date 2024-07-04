@@ -1,0 +1,1418 @@
+      include "experimental/rans_komg.f"
+      !include "experimental/rans_wallfunctions.f"
+c-----------------------------------------------------------------------
+#define INTP_NMAX 1000
+#define LPART INTP_NMAX /* max number of particles per MPI rank */
+      
+      real function dist2(x1,y1,z1,x2,y2,z2)
+      real x1,y1,z1,x2,y2,z2
+      dist2 = (x2-x1)**2+(y2-y1)**2+(z2-z1)**2
+      return
+      end
+
+      real function dist(x1,y1,z1,x2,y2,z2)
+      real x1,y1,z1,x2,y2,z2
+      dist = sqrt((x2-x1)**2+(y2-y1)**2+(z2-z1)**2)
+      return
+      end
+
+      real function dist2d(y1,z1,y2,z2)
+      real y1,z1,y2,z2
+      dist2d = sqrt((y2-y1)**2+(z2-z1)**2)
+      return
+      end
+
+      real function dist1d(x1,x2)
+      real x1,x2
+      dist1d = abs(x2-x1)
+      return
+      end
+
+      real function R1(x1,xtu)
+      real x1,xtu,pi,dx2,dy2,dz2,delx,alpha,del,r6
+      pi = 4.0*atan(1.0)
+      dx2 = 0.03571**2         !Espaciamiento en x cerca de la turbina
+      dy2 = (0.0214/0.15)**2  !Espaciamiento en y cerca de la turbina
+      dz2 = 0.02964**2        !Espaciamiento en z cerca de la turbina
+      delx = sqrt(dx2)
+      alpha = 1.3
+      del = alpha*sqrt(dx2+dy2+dz2)
+      r6 = sqrt(6.0)
+      R1 = (erf(r6*(x1-xtu+delx/2.)/del)-erf(r6*(x1-xtu-delx/2.)/del))
+     $     *(1.0/(2.0*delx))
+      return
+      end
+
+      real function R2(y1,z1,ytu,ztu,Dtu)
+      real y1,z1,ytu,ztu,Dtu,pi,dx2,dy2,dz2,alpha,del,r6
+      pi = 4.0*atan(1.0)
+      dx2 = 0.03571**2           !Espaciamiento en x cerca de la turbina
+      dy2 = (0.0214/0.15)**2    !Espaciamiento en y cerca de la turbina
+      dz2 = 0.02964**2          !Espaciamiento en z cerca de la turbina
+      alpha = 1.3
+      del = alpha*sqrt(dx2+dy2+dz2)
+      r6 = sqrt(6.0)
+      R2 = (1.0-erf(r6*(dist2d(y1,z1,ytu,ztu)-Dtu/2.0)/del))
+     $      *(1.0/(2.0*pi*(Dtu/2.0)**2))
+      return
+      end
+
+      real function perfilIt(z1,Dtu)
+      real z1,Dtu,B1,A1,delta,vk,zh,z0l0
+      zh = 0.83*Dtu
+      B1 = 1.6
+      A1 = 1.25
+      delta = 3.0
+      vk = 0.4
+      z0l0 = 0.0002
+      if (z1<0.1) then
+            perfilIt= 0.0914
+      else
+            perfilIt = (vk*(B1-A1*log10(z1/delta))**(0.5))/log(zh/z0l0)
+      endif
+      return
+      end
+
+      real function kturb(Iturb,umedia)
+      real Iturb,umedia
+      kturb = 1.5*(umedia*Iturb)**2
+      return
+      end
+
+      real function tasadis(kturb,longmezcla)
+      real kturb,longmezcla,C_mu
+      C_mu = 0.09
+      tasadis = C_mu*(kturb**1.5)/longmezcla
+      return
+      end
+
+c----------------------------------------------------------------------
+
+c Subrutina descaradamente robada de hemi.usr para evaluar el campo de
+c velocidad en el listado de puntos xyz
+
+      subroutine interp_v(uvw,xyz,n)
+c
+c     evaluate velocity for list of points xyz
+c
+      include 'SIZE'
+      include 'TOTAL'
+      
+      real uvw(ldim,n),xyz(ldim,n)
+      
+      real    rwk(INTP_NMAX,ldim+1) ! r, s, t, dist2
+      integer iwk(INTP_NMAX,3)      ! code, proc, el
+      save    rwk, iwk
+      
+      integer intp_h
+      save    intp_h
+
+      common /rwk_intp/ 
+     $       fwrk(lx1*ly1*lz1*lelt,ldim),
+     $       fpts(ldim*INTP_NMAX),
+     $       pts(ldim*INTP_NMAX)
+      
+      integer icalld,e
+      save    icalld
+      data    icalld /0/
+
+      nxyz  = nx1*ny1*nz1
+      ntot  = nxyz*nelt
+
+      if (n.gt.INTP_NMAX) call exitti ('n > INTP_NMAX in interp_v!$',n)
+      
+      if (nelgt.ne.nelgv) call exitti
+     $   ('nelgt.ne.nelgv not yet supported in interp_v!$',nelgv)
+
+      do i=1,n				! ? not moving -> save?
+            pts(i)     = xyz(1,i)
+            pts(i + n) = xyz(2,i)
+            if (if3d) pts(i + n*2) = xyz(3,i)
+      enddo
+
+      if (icalld.eq.0) then
+            icalld = 1
+            call interp_setup(intp_h,0.0,0,nelt)
+      endif
+
+      ! pack working array
+      call opcopy(fwrk(1,1),fwrk(1,2),fwrk(1,3),vx,vy,vz)
+
+      ! interpolate
+      call interp_nfld(fpts,fwrk,ndim,pts(1),pts(1+n),pts(2*n+1),
+     $                 n,iwk,rwk,INTP_NMAX,.true.,intp_h)
+
+      do i=1,n
+            uvw(1,i) = fpts(i)
+            uvw(2,i) = fpts(i + n)
+            if(if3d) uvw(3,i) = fpts(i + n*2)
+      enddo
+
+c      call interp_free(intp_h)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp(ix,iy,iz,eg) ! set variable properties
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      
+      integer ix,iy,iz,e,eg
+      
+      common /rans_usr/ ifld_tke, ifld_tau, m_id
+      integer ifld_tke,ifld_tau, m_id
+      
+      real rans_mut,rans_mutsk,rans_mutso,rans_turbPrandtl
+      real mu_t,Pr_t
+      
+      e = gllel(eg)
+      
+      Pr_t=rans_turbPrandtl()
+      mu_t=rans_mut(ix,iy,iz,e)
+      
+      if(ifield.eq.1) then
+            udiff  = cpfld(ifield,1)+mu_t
+            utrans = cpfld(ifield,2)
+      else if(ifield.eq.2) then
+            udiff  = cpfld(ifield,1)+mu_t*cpfld(ifield,2)/
+     $      (Pr_t*cpfld(1,2))
+            utrans = cpfld(ifield,2)
+      else if(ifield.eq.ifld_tke) then
+            udiff  = cpfld(1,1)+rans_mutsk(ix,iy,iz,e)
+            utrans = cpfld(1,2)
+      else if(ifield.eq.ifld_tau) then
+            udiff  = cpfld(1,1)+rans_mutso(ix,iy,iz,e)
+            utrans = cpfld(1,2)
+      end if
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf(ix,iy,iz,eg) ! set acceleration term
+c
+c     Note: this is an acceleration term, NOT a force!
+c     Thus, ffx will subsequently be multiplied by rho(x,t).
+c
+c      implicit none
+
+      integer ix,iy,iz,eg
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer e
+
+      real xtA,xtB,xtC,xtD,xtE,xtF,xtG,xtH,xtI,xtJ,yt1,yt2,yt3,
+     $ deltay,zt1,Dt1,Rt1,Uin,UsumaA1,UsumaA2,
+     $ UsumaA3,UsumaB1,UsumaB2,UsumaB3,UsumaC1,UsumaC2,UsumaC3,
+     $ UsumaD1,UsumaD2,UsumaD3,UsumaE1,UsumaE2,UsumaE3,UsumaF1,
+     $ UsumaF2,UsumaF3,UsumaG1,UsumaG2,UsumaG3,UsumaH1,UsumaH2,
+     $ UsumaH3,UsumaI1,UsumaI2,UsumaI3,UsumaJ1,UsumaJ2,UsumaJ3,
+     $ UpromA1,UpromA2,UpromA3,UpromB1,UpromB2,UpromB3,UpromC1,
+     $ UpromC2,UpromC3,UpromD1,UpromD2,UpromD3,UpromE1,UpromE2,
+     $ UpromE3,UpromF1,UpromF2,UpromF3,UpromG1,UpromG2,UpromG3,
+     $ UpromH1,UpromH2,UpromH3,UpromI1,UpromI2,UpromI3,UpromJ1,
+     $ UpromJ2,UpromJ3,
+     $ ftA1,ftA2,ftA3,ftB1,ftB2,ftB3,ftC1,ftC2,ftC3,ftD1,ftD2,ftD3,
+     $ ftE1,ftE2,ftE3,ftF1,ftF2,ftF3,ftG1,ftG2,ftG3,ftH1,ftH2,ftH3,
+     $ ftI1,ftI2,ftI3,ftJ1,ftJ2,ftJ3,CtA,CtB,CtC,CtD,CtE,CtF,CtG,
+     $ CtH,CtI,CtJ
+
+      integer last_tstep,k1,k2,k3,ipA,ipB,ipC,ipD,
+     $ ipE,ipF,ipG,ipH,ipI,ipJ
+
+      real uvw(3,510)
+      
+      real posiciones(3,510)
+
+      save uvw,last_tstep
+
+      e = gllel(eg)
+
+      Dt1 = uparam(1)
+      Uin = uparam(2)
+      Rt1 = Dt1/2.0
+
+      xtA = 5.0*Dt1
+      xtB = 10.0*Dt1
+      xtC = 15.0*Dt1
+      xtD = 20.0*Dt1
+      xtE = 25.0*Dt1
+      xtF = 30.0*Dt1
+      xtG = 35.0*Dt1
+      xtH = 40.0*Dt1
+      xtI = 45.0*Dt1
+      xtJ = 50.0*Dt1
+      yt1 = 2.0*Dt1
+      deltay = 4.0*Dt1
+      zt1 = 0.83*Dt1
+
+      do ipA=1,3
+            posiciones(1,1+17*(ipA-1))= xtA                              !Fila A
+            posiciones(2,1+17*(ipA-1))= yt1+(ipA-1)*deltay
+            posiciones(3,1+17*(ipA-1))= zt1
+
+            posiciones(1,2+17*(ipA-1))= xtA
+            posiciones(2,2+17*(ipA-1))= yt1-Rt1+(ipA-1)*deltay
+            posiciones(3,2+17*(ipA-1))= zt1
+
+            posiciones(1,3+17*(ipA-1))= xtA
+            posiciones(2,3+17*(ipA-1))= yt1-Rt1/2.0+(ipA-1)*deltay
+            posiciones(3,3+17*(ipA-1))= zt1
+
+            posiciones(1,4+17*(ipA-1))= xtA
+            posiciones(2,4+17*(ipA-1))= yt1+Rt1+(ipA-1)*deltay
+            posiciones(3,4+17*(ipA-1))= zt1 
+
+            posiciones(1,5+17*(ipA-1))= xtA
+            posiciones(2,5+17*(ipA-1))= yt1+Rt1/2.0+(ipA-1)*deltay
+            posiciones(3,5+17*(ipA-1))= zt1 
+
+            posiciones(1,6+17*(ipA-1))= xtA
+            posiciones(2,6+17*(ipA-1))= yt1+(ipA-1)*deltay
+            posiciones(3,6+17*(ipA-1))= zt1-Rt1
+
+            posiciones(1,7+17*(ipA-1))= xtA
+            posiciones(2,7+17*(ipA-1))= yt1+(ipA-1)*deltay
+            posiciones(3,7+17*(ipA-1))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipA-1))= xtA
+            posiciones(2,8+17*(ipA-1))= yt1+(ipA-1)*deltay
+            posiciones(3,8+17*(ipA-1))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipA-1))= xtA
+            posiciones(2,9+17*(ipA-1))= yt1+(ipA-1)*deltay
+            posiciones(3,9+17*(ipA-1))= zt1+Rt1
+
+            posiciones(1,10+17*(ipA-1))= xtA
+            posiciones(2,10+17*(ipA-1))= yt1-Rt1/sqrt(8.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,10+17*(ipA-1))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipA-1))= xtA
+            posiciones(2,11+17*(ipA-1))= yt1-Rt1/sqrt(8.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,11+17*(ipA-1))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipA-1))= xtA
+            posiciones(2,12+17*(ipA-1))= yt1+Rt1/sqrt(8.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,12+17*(ipA-1))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipA-1))= xtA
+            posiciones(2,13+17*(ipA-1))= yt1+Rt1/sqrt(8.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,13+17*(ipA-1))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipA-1))= xtA
+            posiciones(2,14+17*(ipA-1))= yt1-Rt1/sqrt(2.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,14+17*(ipA-1))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipA-1))= xtA
+            posiciones(2,15+17*(ipA-1))= yt1-Rt1/sqrt(2.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,15+17*(ipA-1))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipA-1))= xtA
+            posiciones(2,16+17*(ipA-1))= yt1+Rt1/sqrt(2.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,16+17*(ipA-1))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipA-1))= xtA
+            posiciones(2,17+17*(ipA-1))= yt1+Rt1/sqrt(2.0)
+     $      +(ipA-1)*deltay
+            posiciones(3,17+17*(ipA-1))= zt1+Rt1/sqrt(2.0)
+      
+      enddo
+
+      do ipB=1,3
+            posiciones(1,1+17*(ipB+2))= xtB                              !Fila B
+            posiciones(2,1+17*(ipB+2))= yt1+(ipB-1)*deltay
+            posiciones(3,1+17*(ipB+2))= zt1
+
+            posiciones(1,2+17*(ipB+2))= xtB
+            posiciones(2,2+17*(ipB+2))= yt1-Rt1+(ipB-1)*deltay
+            posiciones(3,2+17*(ipB+2))= zt1
+
+            posiciones(1,3+17*(ipB+2))= xtB
+            posiciones(2,3+17*(ipB+2))= yt1-Rt1/2.0+(ipB-1)*deltay
+            posiciones(3,3+17*(ipB+2))= zt1
+
+            posiciones(1,4+17*(ipB+2))= xtB
+            posiciones(2,4+17*(ipB+2))= yt1+Rt1+(ipB-1)*deltay
+            posiciones(3,4+17*(ipB+2))= zt1 
+
+            posiciones(1,5+17*(ipB+2))= xtB
+            posiciones(2,5+17*(ipB+2))= yt1+Rt1/2.0+(ipB-1)*deltay
+            posiciones(3,5+17*(ipB+2))= zt1 
+
+            posiciones(1,6+17*(ipB+2))= xtB
+            posiciones(2,6+17*(ipB+2))= yt1+(ipB-1)*deltay
+            posiciones(3,6+17*(ipB+2))= zt1-Rt1
+
+            posiciones(1,7+17*(ipB+2))= xtB
+            posiciones(2,7+17*(ipB+2))= yt1+(ipB-1)*deltay
+            posiciones(3,7+17*(ipB+2))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipB+2))= xtB
+            posiciones(2,8+17*(ipB+2))= yt1+(ipB-1)*deltay
+            posiciones(3,8+17*(ipB+2))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipB+2))= xtB
+            posiciones(2,9+17*(ipB+2))= yt1+(ipB-1)*deltay
+            posiciones(3,9+17*(ipB+2))= zt1+Rt1
+
+            posiciones(1,10+17*(ipB+2))= xtB
+            posiciones(2,10+17*(ipB+2))= yt1-Rt1/sqrt(8.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,10+17*(ipB+2))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipB+2))= xtB
+            posiciones(2,11+17*(ipB+2))= yt1-Rt1/sqrt(8.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,11+17*(ipB+2))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipB+2))= xtB
+            posiciones(2,12+17*(ipB+2))= yt1+Rt1/sqrt(8.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,12+17*(ipB+2))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipB+2))= xtB
+            posiciones(2,13+17*(ipB+2))= yt1+Rt1/sqrt(8.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,13+17*(ipB+2))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipB+2))= xtB
+            posiciones(2,14+17*(ipB+2))= yt1-Rt1/sqrt(2.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,14+17*(ipB+2))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipB+2))= xtB
+            posiciones(2,15+17*(ipB+2))= yt1-Rt1/sqrt(2.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,15+17*(ipB+2))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipB+2))= xtB
+            posiciones(2,16+17*(ipB+2))= yt1+Rt1/sqrt(2.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,16+17*(ipB+2))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipB+2))= xtB
+            posiciones(2,17+17*(ipB+2))= yt1+Rt1/sqrt(2.0)
+     $      +(ipB-1)*deltay
+            posiciones(3,17+17*(ipB+2))= zt1+Rt1/sqrt(2.0)
+
+      enddo
+
+      do ipC=1,3
+            posiciones(1,1+17*(ipC+5))= xtC                              !Fila C
+            posiciones(2,1+17*(ipC+5))= yt1+(ipC-1)*deltay
+            posiciones(3,1+17*(ipC+5))= zt1
+
+            posiciones(1,2+17*(ipC+5))= xtC
+            posiciones(2,2+17*(ipC+5))= yt1-Rt1+(ipC-1)*deltay
+            posiciones(3,2+17*(ipC+5))= zt1
+
+            posiciones(1,3+17*(ipC+5))= xtC
+            posiciones(2,3+17*(ipC+5))= yt1-Rt1/2.0+(ipC-1)*deltay
+            posiciones(3,3+17*(ipC+5))= zt1
+
+            posiciones(1,4+17*(ipC+5))= xtC
+            posiciones(2,4+17*(ipC+5))= yt1+Rt1+(ipC-1)*deltay
+            posiciones(3,4+17*(ipC+5))= zt1 
+
+            posiciones(1,5+17*(ipC+5))= xtC
+            posiciones(2,5+17*(ipC+5))= yt1+Rt1/2.0+(ipC-1)*deltay
+            posiciones(3,5+17*(ipC+5))= zt1 
+
+            posiciones(1,6+17*(ipC+5))= xtC
+            posiciones(2,6+17*(ipC+5))= yt1+(ipC-1)*deltay
+            posiciones(3,6+17*(ipC+5))= zt1-Rt1
+
+            posiciones(1,7+17*(ipC+5))= xtC
+            posiciones(2,7+17*(ipC+5))= yt1+(ipC-1)*deltay
+            posiciones(3,7+17*(ipC+5))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipC+5))= xtC
+            posiciones(2,8+17*(ipC+5))= yt1+(ipC-1)*deltay
+            posiciones(3,8+17*(ipC+5))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipC+5))= xtC
+            posiciones(2,9+17*(ipC+5))= yt1+(ipC-1)*deltay
+            posiciones(3,9+17*(ipC+5))= zt1+Rt1
+
+            posiciones(1,10+17*(ipC+5))= xtC
+            posiciones(2,10+17*(ipC+5))= yt1-Rt1/sqrt(8.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,10+17*(ipC+5))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipC+5))= xtC
+            posiciones(2,11+17*(ipC+5))= yt1-Rt1/sqrt(8.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,11+17*(ipC+5))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipC+5))= xtC
+            posiciones(2,12+17*(ipC+5))= yt1+Rt1/sqrt(8.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,12+17*(ipC+5))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipC+5))= xtC
+            posiciones(2,13+17*(ipC+5))= yt1+Rt1/sqrt(8.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,13+17*(ipC+5))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipC+5))= xtC
+            posiciones(2,14+17*(ipC+5))= yt1-Rt1/sqrt(2.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,14+17*(ipC+5))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipC+5))= xtC
+            posiciones(2,15+17*(ipC+5))= yt1-Rt1/sqrt(2.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,15+17*(ipC+5))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipC+5))= xtC
+            posiciones(2,16+17*(ipC+5))= yt1+Rt1/sqrt(2.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,16+17*(ipC+5))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipC+5))= xtC
+            posiciones(2,17+17*(ipC+5))= yt1+Rt1/sqrt(2.0)
+     $      +(ipC-1)*deltay
+            posiciones(3,17+17*(ipC+5))= zt1+Rt1/sqrt(2.0)
+      enddo
+
+      do ipD=1,3
+            posiciones(1,1+17*(ipD+8))= xtD                              !Fila D
+            posiciones(2,1+17*(ipD+8))= yt1+(ipD-1)*deltay
+            posiciones(3,1+17*(ipD+8))= zt1
+
+            posiciones(1,2+17*(ipD+8))= xtD
+            posiciones(2,2+17*(ipD+8))= yt1-Rt1+(ipD-1)*deltay
+            posiciones(3,2+17*(ipD+8))= zt1
+
+            posiciones(1,3+17*(ipD+8))= xtD
+            posiciones(2,3+17*(ipD+8))= yt1-Rt1/2.0+(ipD-1)*deltay
+            posiciones(3,3+17*(ipD+8))= zt1
+
+            posiciones(1,4+17*(ipD+8))= xtD
+            posiciones(2,4+17*(ipD+8))= yt1+Rt1+(ipD-1)*deltay
+            posiciones(3,4+17*(ipD+8))= zt1 
+
+            posiciones(1,5+17*(ipD+8))= xtD
+            posiciones(2,5+17*(ipD+8))= yt1+Rt1/2.0+(ipD-1)*deltay
+            posiciones(3,5+17*(ipD+8))= zt1 
+
+            posiciones(1,6+17*(ipD+8))= xtD
+            posiciones(2,6+17*(ipD+8))= yt1+(ipD-1)*deltay
+            posiciones(3,6+17*(ipD+8))= zt1-Rt1
+
+            posiciones(1,7+17*(ipD+8))= xtD
+            posiciones(2,7+17*(ipD+8))= yt1+(ipD-1)*deltay
+            posiciones(3,7+17*(ipD+8))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipD+8))= xtD
+            posiciones(2,8+17*(ipD+8))= yt1+(ipD-1)*deltay
+            posiciones(3,8+17*(ipD+8))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipD+8))= xtD
+            posiciones(2,9+17*(ipD+8))= yt1+(ipD-1)*deltay
+            posiciones(3,9+17*(ipD+8))= zt1+Rt1
+
+            posiciones(1,10+17*(ipD+8))= xtD
+            posiciones(2,10+17*(ipD+8))= yt1-Rt1/sqrt(8.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,10+17*(ipD+8))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipD+8))= xtD
+            posiciones(2,11+17*(ipD+8))= yt1-Rt1/sqrt(8.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,11+17*(ipD+8))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipD+8))= xtD
+            posiciones(2,12+17*(ipD+8))= yt1+Rt1/sqrt(8.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,12+17*(ipD+8))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipD+8))= xtD
+            posiciones(2,13+17*(ipD+8))= yt1+Rt1/sqrt(8.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,13+17*(ipD+8))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipD+8))= xtD
+            posiciones(2,14+17*(ipD+8))= yt1-Rt1/sqrt(2.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,14+17*(ipD+8))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipD+8))= xtD
+            posiciones(2,15+17*(ipD+8))= yt1-Rt1/sqrt(2.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,15+17*(ipD+8))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipD+8))= xtD
+            posiciones(2,16+17*(ipD+8))= yt1+Rt1/sqrt(2.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,16+17*(ipD+8))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipD+8))= xtD
+            posiciones(2,17+17*(ipD+8))= yt1+Rt1/sqrt(2.0)
+     $      +(ipD-1)*deltay
+            posiciones(3,17+17*(ipD+8))= zt1+Rt1/sqrt(2.0)
+      enddo
+
+      do ipE=1,3
+            posiciones(1,1+17*(ipE+11))= xtE                              !Fila E
+            posiciones(2,1+17*(ipE+11))= yt1+(ipE-1)*deltay
+            posiciones(3,1+17*(ipE+11))= zt1
+
+            posiciones(1,2+17*(ipE+11))= xtE
+            posiciones(2,2+17*(ipE+11))= yt1-Rt1+(ipE-1)*deltay
+            posiciones(3,2+17*(ipE+11))= zt1
+
+            posiciones(1,3+17*(ipE+11))= xtE
+            posiciones(2,3+17*(ipE+11))= yt1-Rt1/2.0+(ipE-1)*deltay
+            posiciones(3,3+17*(ipE+11))= zt1
+
+            posiciones(1,4+17*(ipE+11))= xtE
+            posiciones(2,4+17*(ipE+11))= yt1+Rt1+(ipE-1)*deltay
+            posiciones(3,4+17*(ipE+11))= zt1 
+
+            posiciones(1,5+17*(ipE+11))= xtE
+            posiciones(2,5+17*(ipE+11))= yt1+Rt1/2.0+(ipE-1)*deltay
+            posiciones(3,5+17*(ipE+11))= zt1 
+
+            posiciones(1,6+17*(ipE+11))= xtE
+            posiciones(2,6+17*(ipE+11))= yt1+(ipE-1)*deltay
+            posiciones(3,6+17*(ipE+11))= zt1-Rt1
+
+            posiciones(1,7+17*(ipE+11))= xtE
+            posiciones(2,7+17*(ipE+11))= yt1+(ipE-1)*deltay
+            posiciones(3,7+17*(ipE+11))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipE+11))= xtE
+            posiciones(2,8+17*(ipE+11))= yt1+(ipE-1)*deltay
+            posiciones(3,8+17*(ipE+11))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipE+11))= xtE
+            posiciones(2,9+17*(ipE+11))= yt1+(ipE-1)*deltay
+            posiciones(3,9+17*(ipE+11))= zt1+Rt1
+
+            posiciones(1,10+17*(ipE+11))= xtE
+            posiciones(2,10+17*(ipE+11))= yt1-Rt1/sqrt(8.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,10+17*(ipE+11))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipE+11))= xtE
+            posiciones(2,11+17*(ipE+11))= yt1-Rt1/sqrt(8.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,11+17*(ipE+11))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipE+11))= xtE
+            posiciones(2,12+17*(ipE+11))= yt1+Rt1/sqrt(8.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,12+17*(ipE+11))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipE+11))= xtE
+            posiciones(2,13+17*(ipE+11))= yt1+Rt1/sqrt(8.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,13+17*(ipE+11))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipE+11))= xtE
+            posiciones(2,14+17*(ipE+11))= yt1-Rt1/sqrt(2.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,14+17*(ipE+11))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipE+11))= xtE
+            posiciones(2,15+17*(ipE+11))= yt1-Rt1/sqrt(2.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,15+17*(ipE+11))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipE+11))= xtE
+            posiciones(2,16+17*(ipE+11))= yt1+Rt1/sqrt(2.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,16+17*(ipE+11))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipE+11))= xtE
+            posiciones(2,17+17*(ipE+11))= yt1+Rt1/sqrt(2.0)
+     $      +(ipE-1)*deltay
+            posiciones(3,17+17*(ipE+11))= zt1+Rt1/sqrt(2.0)
+      enddo
+
+      do ipF=1,3
+            posiciones(1,1+17*(ipF+14))= xtF                              !Fila F
+            posiciones(2,1+17*(ipF+14))= yt1+(ipF-1)*deltay
+            posiciones(3,1+17*(ipF+14))= zt1
+
+            posiciones(1,2+17*(ipF+14))= xtF
+            posiciones(2,2+17*(ipF+14))= yt1-Rt1+(ipF-1)*deltay
+            posiciones(3,2+17*(ipF+14))= zt1
+
+            posiciones(1,3+17*(ipF+14))= xtF
+            posiciones(2,3+17*(ipF+14))= yt1-Rt1/2.0+(ipF-1)*deltay
+            posiciones(3,3+17*(ipF+14))= zt1
+
+            posiciones(1,4+17*(ipF+14))= xtF
+            posiciones(2,4+17*(ipF+14))= yt1+Rt1+(ipF-1)*deltay
+            posiciones(3,4+17*(ipF+14))= zt1 
+
+            posiciones(1,5+17*(ipF+14))= xtF
+            posiciones(2,5+17*(ipF+14))= yt1+Rt1/2.0+(ipF-1)*deltay
+            posiciones(3,5+17*(ipF+14))= zt1 
+
+            posiciones(1,6+17*(ipF+14))= xtF
+            posiciones(2,6+17*(ipF+14))= yt1+(ipF-1)*deltay
+            posiciones(3,6+17*(ipF+14))= zt1-Rt1
+
+            posiciones(1,7+17*(ipF+14))= xtF
+            posiciones(2,7+17*(ipF+14))= yt1+(ipF-1)*deltay
+            posiciones(3,7+17*(ipF+14))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipF+14))= xtF
+            posiciones(2,8+17*(ipF+14))= yt1+(ipF-1)*deltay
+            posiciones(3,8+17*(ipF+14))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipF+14))= xtF
+            posiciones(2,9+17*(ipF+14))= yt1+(ipF-1)*deltay
+            posiciones(3,9+17*(ipF+14))= zt1+Rt1
+
+            posiciones(1,10+17*(ipF+14))= xtF
+            posiciones(2,10+17*(ipF+14))= yt1-Rt1/sqrt(8.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,10+17*(ipF+14))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipF+14))= xtF
+            posiciones(2,11+17*(ipF+14))= yt1-Rt1/sqrt(8.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,11+17*(ipF+14))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipF+14))= xtF
+            posiciones(2,12+17*(ipF+14))= yt1+Rt1/sqrt(8.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,12+17*(ipF+14))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipF+14))= xtF
+            posiciones(2,13+17*(ipF+14))= yt1+Rt1/sqrt(8.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,13+17*(ipF+14))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipF+14))= xtF
+            posiciones(2,14+17*(ipF+14))= yt1-Rt1/sqrt(2.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,14+17*(ipF+14))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipF+14))= xtF
+            posiciones(2,15+17*(ipF+14))= yt1-Rt1/sqrt(2.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,15+17*(ipF+14))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipF+14))= xtF
+            posiciones(2,16+17*(ipF+14))= yt1+Rt1/sqrt(2.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,16+17*(ipF+14))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipF+14))= xtF
+            posiciones(2,17+17*(ipF+14))= yt1+Rt1/sqrt(2.0)
+     $      +(ipF-1)*deltay
+            posiciones(3,17+17*(ipF+14))= zt1+Rt1/sqrt(2.0)
+      enddo
+
+      do ipG=1,3
+            posiciones(1,1+17*(ipG+17))= xtG                              !Fila G
+            posiciones(2,1+17*(ipG+17))= yt1+(ipG-1)*deltay
+            posiciones(3,1+17*(ipG+17))= zt1
+
+            posiciones(1,2+17*(ipG+17))= xtG
+            posiciones(2,2+17*(ipG+17))= yt1-Rt1+(ipG-1)*deltay
+            posiciones(3,2+17*(ipG+17))= zt1
+
+            posiciones(1,3+17*(ipG+17))= xtG
+            posiciones(2,3+17*(ipG+17))= yt1-Rt1/2.0+(ipG-1)*deltay
+            posiciones(3,3+17*(ipG+17))= zt1
+
+            posiciones(1,4+17*(ipG+17))= xtG
+            posiciones(2,4+17*(ipG+17))= yt1+Rt1+(ipG-1)*deltay
+            posiciones(3,4+17*(ipG+17))= zt1 
+
+            posiciones(1,5+17*(ipG+17))= xtG
+            posiciones(2,5+17*(ipG+17))= yt1+Rt1/2.0+(ipG-1)*deltay
+            posiciones(3,5+17*(ipG+17))= zt1 
+
+            posiciones(1,6+17*(ipG+17))= xtG
+            posiciones(2,6+17*(ipG+17))= yt1+(ipG-1)*deltay
+            posiciones(3,6+17*(ipG+17))= zt1-Rt1
+
+            posiciones(1,7+17*(ipG+17))= xtG
+            posiciones(2,7+17*(ipG+17))= yt1+(ipG-1)*deltay
+            posiciones(3,7+17*(ipG+17))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipG+17))= xtG
+            posiciones(2,8+17*(ipG+17))= yt1+(ipG-1)*deltay
+            posiciones(3,8+17*(ipG+17))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipG+17))= xtG
+            posiciones(2,9+17*(ipG+17))= yt1+(ipG-1)*deltay
+            posiciones(3,9+17*(ipG+17))= zt1+Rt1
+
+            posiciones(1,10+17*(ipG+17))= xtG
+            posiciones(2,10+17*(ipG+17))= yt1-Rt1/sqrt(8.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,10+17*(ipG+17))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipG+17))= xtG
+            posiciones(2,11+17*(ipG+17))= yt1-Rt1/sqrt(8.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,11+17*(ipG+17))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipG+17))= xtG
+            posiciones(2,12+17*(ipG+17))= yt1+Rt1/sqrt(8.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,12+17*(ipG+17))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipG+17))= xtG
+            posiciones(2,13+17*(ipG+17))= yt1+Rt1/sqrt(8.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,13+17*(ipG+17))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipG+17))= xtG
+            posiciones(2,14+17*(ipG+17))= yt1-Rt1/sqrt(2.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,14+17*(ipG+17))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipG+17))= xtG
+            posiciones(2,15+17*(ipG+17))= yt1-Rt1/sqrt(2.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,15+17*(ipG+17))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipG+17))= xtG
+            posiciones(2,16+17*(ipG+17))= yt1+Rt1/sqrt(2.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,16+17*(ipG+17))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipG+17))= xtG
+            posiciones(2,17+17*(ipG+17))= yt1+Rt1/sqrt(2.0)
+     $      +(ipG-1)*deltay
+            posiciones(3,17+17*(ipG+17))= zt1+Rt1/sqrt(2.0)
+      enddo
+
+      do ipH=1,3
+            posiciones(1,1+17*(ipH+20))= xtH                              !Fila H
+            posiciones(2,1+17*(ipH+20))= yt1+(ipH-1)*deltay
+            posiciones(3,1+17*(ipH+20))= zt1
+
+            posiciones(1,2+17*(ipH+20))= xtH
+            posiciones(2,2+17*(ipH+20))= yt1-Rt1+(ipH-1)*deltay
+            posiciones(3,2+17*(ipH+20))= zt1
+
+            posiciones(1,3+17*(ipH+20))= xtH
+            posiciones(2,3+17*(ipH+20))= yt1-Rt1/2.0+(ipH-1)*deltay
+            posiciones(3,3+17*(ipH+20))= zt1
+
+            posiciones(1,4+17*(ipH+20))= xtH
+            posiciones(2,4+17*(ipH+20))= yt1+Rt1+(ipH-1)*deltay
+            posiciones(3,4+17*(ipH+20))= zt1 
+
+            posiciones(1,5+17*(ipH+20))= xtH
+            posiciones(2,5+17*(ipH+20))= yt1+Rt1/2.0+(ipH-1)*deltay
+            posiciones(3,5+17*(ipH+20))= zt1 
+
+            posiciones(1,6+17*(ipH+20))= xtH
+            posiciones(2,6+17*(ipH+20))= yt1+(ipH-1)*deltay
+            posiciones(3,6+17*(ipH+20))= zt1-Rt1
+
+            posiciones(1,7+17*(ipH+20))= xtH
+            posiciones(2,7+17*(ipH+20))= yt1+(ipH-1)*deltay
+            posiciones(3,7+17*(ipH+20))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipH+20))= xtH
+            posiciones(2,8+17*(ipH+20))= yt1+(ipH-1)*deltay
+            posiciones(3,8+17*(ipH+20))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipH+20))= xtH
+            posiciones(2,9+17*(ipH+20))= yt1+(ipH-1)*deltay
+            posiciones(3,9+17*(ipH+20))= zt1+Rt1
+
+            posiciones(1,10+17*(ipH+20))= xtH
+            posiciones(2,10+17*(ipH+20))= yt1-Rt1/sqrt(8.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,10+17*(ipH+20))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipH+20))= xtH
+            posiciones(2,11+17*(ipH+20))= yt1-Rt1/sqrt(8.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,11+17*(ipH+20))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipH+20))= xtH
+            posiciones(2,12+17*(ipH+20))= yt1+Rt1/sqrt(8.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,12+17*(ipH+20))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipH+20))= xtH
+            posiciones(2,13+17*(ipH+20))= yt1+Rt1/sqrt(8.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,13+17*(ipH+20))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipH+20))= xtH
+            posiciones(2,14+17*(ipH+20))= yt1-Rt1/sqrt(2.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,14+17*(ipH+20))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipH+20))= xtH
+            posiciones(2,15+17*(ipH+20))= yt1-Rt1/sqrt(2.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,15+17*(ipH+20))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipH+20))= xtH
+            posiciones(2,16+17*(ipH+20))= yt1+Rt1/sqrt(2.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,16+17*(ipH+20))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipH+20))= xtH
+            posiciones(2,17+17*(ipH+20))= yt1+Rt1/sqrt(2.0)
+     $      +(ipH-1)*deltay
+            posiciones(3,17+17*(ipH+20))= zt1+Rt1/sqrt(2.0)
+      enddo
+      
+      do ipI=1,3
+            posiciones(1,1+17*(ipI+23))= xtI                              !Fila I
+            posiciones(2,1+17*(ipI+23))= yt1+(ipI-1)*deltay
+            posiciones(3,1+17*(ipI+23))= zt1
+
+            posiciones(1,2+17*(ipI+23))= xtI
+            posiciones(2,2+17*(ipI+23))= yt1-Rt1+(ipI-1)*deltay
+            posiciones(3,2+17*(ipI+23))= zt1
+
+            posiciones(1,3+17*(ipI+23))= xtI
+            posiciones(2,3+17*(ipI+23))= yt1-Rt1/2.0+(ipI-1)*deltay
+            posiciones(3,3+17*(ipI+23))= zt1
+
+            posiciones(1,4+17*(ipI+23))= xtI
+            posiciones(2,4+17*(ipI+23))= yt1+Rt1+(ipI-1)*deltay
+            posiciones(3,4+17*(ipI+23))= zt1 
+
+            posiciones(1,5+17*(ipI+23))= xtI
+            posiciones(2,5+17*(ipI+23))= yt1+Rt1/2.0+(ipI-1)*deltay
+            posiciones(3,5+17*(ipI+23))= zt1 
+
+            posiciones(1,6+17*(ipI+23))= xtI
+            posiciones(2,6+17*(ipI+23))= yt1+(ipI-1)*deltay
+            posiciones(3,6+17*(ipI+23))= zt1-Rt1
+
+            posiciones(1,7+17*(ipI+23))= xtI
+            posiciones(2,7+17*(ipI+23))= yt1+(ipI-1)*deltay
+            posiciones(3,7+17*(ipI+23))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipI+23))= xtI
+            posiciones(2,8+17*(ipI+23))= yt1+(ipI-1)*deltay
+            posiciones(3,8+17*(ipI+23))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipI+23))= xtI
+            posiciones(2,9+17*(ipI+23))= yt1+(ipI-1)*deltay
+            posiciones(3,9+17*(ipI+23))= zt1+Rt1
+
+            posiciones(1,10+17*(ipI+23))= xtI
+            posiciones(2,10+17*(ipI+23))= yt1-Rt1/sqrt(8.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,10+17*(ipI+23))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipI+23))= xtI
+            posiciones(2,11+17*(ipI+23))= yt1-Rt1/sqrt(8.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,11+17*(ipI+23))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipI+23))= xtI
+            posiciones(2,12+17*(ipI+23))= yt1+Rt1/sqrt(8.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,12+17*(ipI+23))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipI+23))= xtI
+            posiciones(2,13+17*(ipI+23))= yt1+Rt1/sqrt(8.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,13+17*(ipI+23))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipI+23))= xtI
+            posiciones(2,14+17*(ipI+23))= yt1-Rt1/sqrt(2.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,14+17*(ipI+23))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipI+23))= xtI
+            posiciones(2,15+17*(ipI+23))= yt1-Rt1/sqrt(2.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,15+17*(ipI+23))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipI+23))= xtI
+            posiciones(2,16+17*(ipI+23))= yt1+Rt1/sqrt(2.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,16+17*(ipI+23))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipI+23))= xtI
+            posiciones(2,17+17*(ipI+23))= yt1+Rt1/sqrt(2.0)
+     $      +(ipI-1)*deltay
+            posiciones(3,17+17*(ipI+23))= zt1+Rt1/sqrt(2.0)
+      enddo
+
+      do ipJ=1,3
+            posiciones(1,1+17*(ipJ+26))= xtJ                              !Fila J
+            posiciones(2,1+17*(ipJ+26))= yt1+(ipJ-1)*deltay
+            posiciones(3,1+17*(ipJ+26))= zt1
+
+            posiciones(1,2+17*(ipJ+26))= xtJ
+            posiciones(2,2+17*(ipJ+26))= yt1-Rt1+(ipJ-1)*deltay
+            posiciones(3,2+17*(ipJ+26))= zt1
+
+            posiciones(1,3+17*(ipJ+26))= xtJ
+            posiciones(2,3+17*(ipJ+26))= yt1-Rt1/2.0+(ipJ-1)*deltay
+            posiciones(3,3+17*(ipJ+26))= zt1
+
+            posiciones(1,4+17*(ipJ+26))= xtJ
+            posiciones(2,4+17*(ipJ+26))= yt1+Rt1+(ipJ-1)*deltay
+            posiciones(3,4+17*(ipJ+26))= zt1 
+
+            posiciones(1,5+17*(ipJ+26))= xtJ
+            posiciones(2,5+17*(ipJ+26))= yt1+Rt1/2.0+(ipJ-1)*deltay
+            posiciones(3,5+17*(ipJ+26))= zt1 
+
+            posiciones(1,6+17*(ipJ+26))= xtJ
+            posiciones(2,6+17*(ipJ+26))= yt1+(ipJ-1)*deltay
+            posiciones(3,6+17*(ipJ+26))= zt1-Rt1
+
+            posiciones(1,7+17*(ipJ+26))= xtJ
+            posiciones(2,7+17*(ipJ+26))= yt1+(ipJ-1)*deltay
+            posiciones(3,7+17*(ipJ+26))= zt1-Rt1/2.0
+
+            posiciones(1,8+17*(ipJ+26))= xtJ
+            posiciones(2,8+17*(ipJ+26))= yt1+(ipJ-1)*deltay
+            posiciones(3,8+17*(ipJ+26))= zt1+Rt1/2.0
+
+            posiciones(1,9+17*(ipJ+26))= xtJ
+            posiciones(2,9+17*(ipJ+26))= yt1+(ipJ-1)*deltay
+            posiciones(3,9+17*(ipJ+26))= zt1+Rt1
+
+            posiciones(1,10+17*(ipJ+26))= xtJ
+            posiciones(2,10+17*(ipJ+26))= yt1-Rt1/sqrt(8.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,10+17*(ipJ+26))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,11+17*(ipJ+26))= xtJ
+            posiciones(2,11+17*(ipJ+26))= yt1-Rt1/sqrt(8.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,11+17*(ipJ+26))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,12+17*(ipJ+26))= xtJ
+            posiciones(2,12+17*(ipJ+26))= yt1+Rt1/sqrt(8.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,12+17*(ipJ+26))= zt1-Rt1/sqrt(8.0)
+
+            posiciones(1,13+17*(ipJ+26))= xtJ
+            posiciones(2,13+17*(ipJ+26))= yt1+Rt1/sqrt(8.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,13+17*(ipJ+26))= zt1+Rt1/sqrt(8.0)
+
+            posiciones(1,14+17*(ipJ+26))= xtJ
+            posiciones(2,14+17*(ipJ+26))= yt1-Rt1/sqrt(2.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,14+17*(ipJ+26))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,15+17*(ipJ+26))= xtJ
+            posiciones(2,15+17*(ipJ+26))= yt1-Rt1/sqrt(2.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,15+17*(ipJ+26))= zt1+Rt1/sqrt(2.0)
+
+            posiciones(1,16+17*(ipJ+26))= xtJ
+            posiciones(2,16+17*(ipJ+26))= yt1+Rt1/sqrt(2.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,16+17*(ipJ+26))= zt1-Rt1/sqrt(2.0)
+
+            posiciones(1,17+17*(ipJ+26))= xtJ
+            posiciones(2,17+17*(ipJ+26))= yt1+Rt1/sqrt(2.0)
+     $      +(ipJ-1)*deltay
+            posiciones(3,17+17*(ipJ+26))= zt1+Rt1/sqrt(2.0)
+      enddo
+
+      if (istep.eq.1) then !1er tstep: inicializacion
+            last_tstep = 1
+            return
+
+      elseif (istep.ne.last_tstep) then !detectar cambio de tstep -> muestrear velocidad
+
+            last_tstep = istep
+            call interp_v(uvw,posiciones,510)
+      endif
+
+      UsumaA1 = 0.0
+      UsumaA2 = 0.0
+      UsumaA3 = 0.0
+      UsumaB1 = 0.0
+      UsumaB2 = 0.0
+      UsumaB3 = 0.0
+      UsumaC1 = 0.0
+      UsumaC2 = 0.0
+      UsumaC3 = 0.0
+      UsumaD1 = 0.0
+      UsumaD2 = 0.0
+      UsumaD3 = 0.0
+      UsumaE1 = 0.0
+      UsumaE2 = 0.0
+      UsumaE3 = 0.0
+      UsumaF1 = 0.0
+      UsumaF2 = 0.0
+      UsumaF3 = 0.0
+      UsumaG1 = 0.0
+      UsumaG2 = 0.0
+      UsumaG3 = 0.0
+      UsumaH1 = 0.0
+      UsumaH2 = 0.0
+      UsumaH3 = 0.0
+      UsumaI1 = 0.0
+      UsumaI2 = 0.0
+      UsumaI3 = 0.0
+      UsumaJ1 = 0.0
+      UsumaJ2 = 0.0
+      UsumaJ3 = 0.0
+
+      do k1=1,17
+            UsumaA1 = UsumaA1 + uvw(1,k1)
+            UsumaB1 = UsumaB1 + uvw(1,51+k1)
+            UsumaC1 = UsumaC1 + uvw(1,102+k1)
+            UsumaD1 = UsumaD1 + uvw(1,153+k1)
+            UsumaE1 = UsumaE1 + uvw(1,204+k1)
+            UsumaF1 = UsumaF1 + uvw(1,255+k1)
+            UsumaG1 = UsumaG1 + uvw(1,306+k1)
+            UsumaH1 = UsumaH1 + uvw(1,357+k1)
+            UsumaI1 = UsumaI1 + uvw(1,408+k1)
+            UsumaJ1 = UsumaJ1 + uvw(1,459+k1)
+      enddo
+
+      do k2=18,34
+            UsumaA2 = UsumaA2 + uvw(1,k2)
+            UsumaB2 = UsumaB2 + uvw(1,51+k2)
+            UsumaC2 = UsumaC2 + uvw(1,102+k2)
+            UsumaD2 = UsumaD2 + uvw(1,153+k2)
+            UsumaE2 = UsumaE2 + uvw(1,204+k2)
+            UsumaF2 = UsumaF2 + uvw(1,255+k2)
+            UsumaG2 = UsumaG2 + uvw(1,306+k2)
+            UsumaH2 = UsumaH2 + uvw(1,357+k2)
+            UsumaI2 = UsumaI2 + uvw(1,408+k2)
+            UsumaJ2 = UsumaJ2 + uvw(1,459+k2)
+      enddo
+
+      do k3=35,51
+            UsumaA3 = UsumaA3 + uvw(1,k3)
+            UsumaB3 = UsumaB3 + uvw(1,51+k3)
+            UsumaC3 = UsumaC3 + uvw(1,102+k3)
+            UsumaD3 = UsumaD3 + uvw(1,153+k3)
+            UsumaE3 = UsumaE3 + uvw(1,204+k3)
+            UsumaF3 = UsumaF3 + uvw(1,255+k3)
+            UsumaG3 = UsumaG3 + uvw(1,306+k3)
+            UsumaH3 = UsumaH3 + uvw(1,357+k3)
+            UsumaI3 = UsumaI3 + uvw(1,408+k3)
+            UsumaJ3 = UsumaJ3 + uvw(1,459+k3)
+      enddo
+
+      UpromA1 = UsumaA1/17.0
+      UpromA2 = UsumaA2/17.0
+      UpromA3 = UsumaA3/17.0
+      UpromB1 = UsumaB1/17.0
+      UpromB2 = UsumaB2/17.0
+      UpromB3 = UsumaB3/17.0
+      UpromC1 = UsumaC1/17.0
+      UpromC2 = UsumaC2/17.0
+      UpromC3 = UsumaC3/17.0
+      UpromD1 = UsumaD1/17.0
+      UpromD2 = UsumaD2/17.0
+      UpromD3 = UsumaD3/17.0
+      UpromE1 = UsumaE1/17.0
+      UpromE2 = UsumaE2/17.0
+      UpromE3 = UsumaE3/17.0
+      UpromF1 = UsumaF1/17.0
+      UpromF2 = UsumaF2/17.0
+      UpromF3 = UsumaF3/17.0
+      UpromG1 = UsumaG1/17.0
+      UpromG2 = UsumaG2/17.0
+      UpromG3 = UsumaG3/17.0
+      UpromH1 = UsumaH1/17.0
+      UpromH2 = UsumaH2/17.0
+      UpromH3 = UsumaH3/17.0
+      UpromI1 = UsumaI1/17.0
+      UpromI2 = UsumaI2/17.0
+      UpromI3 = UsumaI3/17.0
+      UpromJ1 = UsumaJ1/17.0
+      UpromJ2 = UsumaJ2/17.0
+      UpromJ3 = UsumaJ3/17.0
+      CtA = uparam(6)
+      CtB = uparam(7)
+      CtB = uparam(8)
+      CtB = uparam(9)
+      CtB = uparam(10)
+      CtB = uparam(11)
+      CtB = uparam(12)
+      CtB = uparam(13)
+      CtB = uparam(14)
+      CtB = uparam(15)
+
+      ftA1 = (-0.5)*CtA*(UpromA1**2)*(pi*(Dt1/2.0)**2)
+      ftA2 = (-0.5)*CtA*(UpromA2**2)*(pi*(Dt1/2.0)**2)
+      ftA3 = (-0.5)*CtA*(UpromA3**2)*(pi*(Dt1/2.0)**2)
+      ftB1 = (-0.5)*CtB*(UpromB1**2)*(pi*(Dt1/2.0)**2)
+      ftB2 = (-0.5)*CtB*(UpromB2**2)*(pi*(Dt1/2.0)**2)
+      ftB3 = (-0.5)*CtB*(UpromB3**2)*(pi*(Dt1/2.0)**2)
+      ftC1 = (-0.5)*CtC*(UpromC1**2)*(pi*(Dt1/2.0)**2)
+      ftC2 = (-0.5)*CtC*(UpromC2**2)*(pi*(Dt1/2.0)**2)
+      ftC3 = (-0.5)*CtC*(UpromC3**2)*(pi*(Dt1/2.0)**2)
+      ftD1 = (-0.5)*CtD*(UpromD1**2)*(pi*(Dt1/2.0)**2)
+      ftD2 = (-0.5)*CtD*(UpromD2**2)*(pi*(Dt1/2.0)**2)
+      ftD3 = (-0.5)*CtD*(UpromD3**2)*(pi*(Dt1/2.0)**2)
+      ftE1 = (-0.5)*CtE*(UpromE1**2)*(pi*(Dt1/2.0)**2)
+      ftE2 = (-0.5)*CtE*(UpromE2**2)*(pi*(Dt1/2.0)**2)
+      ftE3 = (-0.5)*CtE*(UpromE3**2)*(pi*(Dt1/2.0)**2)
+      ftF1 = (-0.5)*CtF*(UpromF1**2)*(pi*(Dt1/2.0)**2)
+      ftF2 = (-0.5)*CtF*(UpromF2**2)*(pi*(Dt1/2.0)**2)
+      ftF3 = (-0.5)*CtF*(UpromF3**2)*(pi*(Dt1/2.0)**2)
+      ftG1 = (-0.5)*CtG*(UpromG1**2)*(pi*(Dt1/2.0)**2)
+      ftG2 = (-0.5)*CtG*(UpromG2**2)*(pi*(Dt1/2.0)**2)
+      ftG3 = (-0.5)*CtG*(UpromG3**2)*(pi*(Dt1/2.0)**2)
+      ftH1 = (-0.5)*CtH*(UpromH1**2)*(pi*(Dt1/2.0)**2)
+      ftH2 = (-0.5)*CtH*(UpromH2**2)*(pi*(Dt1/2.0)**2)
+      ftH3 = (-0.5)*CtH*(UpromH3**2)*(pi*(Dt1/2.0)**2)
+      ftI1 = (-0.5)*CtI*(UpromI1**2)*(pi*(Dt1/2.0)**2)
+      ftI2 = (-0.5)*CtI*(UpromI2**2)*(pi*(Dt1/2.0)**2)
+      ftI3 = (-0.5)*CtI*(UpromI3**2)*(pi*(Dt1/2.0)**2)
+      ftJ1 = (-0.5)*CtJ*(UpromJ1**2)*(pi*(Dt1/2.0)**2)
+      ftJ2 = (-0.5)*CtJ*(UpromJ2**2)*(pi*(Dt1/2.0)**2)
+      ftJ3 = (-0.5)*CtJ*(UpromJ3**2)*(pi*(Dt1/2.0)**2)
+
+      yt2 = yt1+4.0*Dt1
+      yt3 = yt1+8.0*Dt1
+
+      ffx = ftA1*R1(x,xtA)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftA2*R1(x,xtA)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftA3*R1(x,xtA)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftB1*R1(x,xtB)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftB2*R1(x,xtB)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftB3*R1(x,xtB)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftC1*R1(x,xtC)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftC2*R1(x,xtC)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftC3*R1(x,xtC)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftD1*R1(x,xtD)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftD2*R1(x,xtD)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftD3*R1(x,xtD)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftE1*R1(x,xtE)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftE2*R1(x,xtE)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftE3*R1(x,xtE)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftF1*R1(x,xtF)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftF2*R1(x,xtF)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftF3*R1(x,xtF)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftG1*R1(x,xtG)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftG2*R1(x,xtG)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftG3*R1(x,xtG)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftH1*R1(x,xtH)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftH2*R1(x,xtH)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftH3*R1(x,xtH)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftI1*R1(x,xtI)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftI2*R1(x,xtI)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftI3*R1(x,xtI)*R2(y,z,yt3,zt1,Dt1)
+     $ +ftJ1*R1(x,xtJ)*R2(y,z,yt1,zt1,Dt1)
+     $ +ftJ2*R1(x,xtJ)*R2(y,z,yt2,zt1,Dt1)
+     $ +ftJ3*R1(x,xtJ)*R2(y,z,yt3,zt1,Dt1)
+      
+      t(ix,iy,iz,e,2) = ffx*bm1(ix,iy,iz,e)
+
+      ffy = 0.0
+      ffz = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq(ix,iy,iz,eg) ! set source term
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      common /rans_usr/ ifld_tke, ifld_tau, m_id
+      integer ifld_tke,ifld_tau, m_id
+
+      real rans_kSrc,rans_omgSrc
+      real rans_kDiag,rans_omgDiag
+
+      integer ie,ix,iy,iz,eg
+      ie = gllel(eg)
+
+      if (ifield.eq.2) then
+        qvol = 0.0 
+        avol = 0.0
+      else if (ifield.eq.ifld_tke) then
+        qvol = rans_kSrc  (ix,iy,iz,ie)
+        avol = rans_kDiag (ix,iy,iz,ie)
+      else if (ifield.eq.ifld_tau) then
+        qvol = rans_omgSrc (ix,iy,iz,ie)
+        avol = rans_omgDiag(ix,iy,iz,ie)
+      end if
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc(ix,iy,iz,iside,eg) ! set up boundary conditions
+c
+c     NOTE ::: This subroutine MAY NOT be called by every process
+c
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+c
+      integer ix,iy,iz,iside,e,eg
+      character*3 cb1
+  
+      real Dt1,u_inf,deltacl,uas,vk,z0l0,I_t,perfilIt,k_t,kturb,
+     $ lmezcla,e_t,tasadis
+      common /rans_usr/ ifld_tke, ifld_tau, m_id
+      integer ifld_tke,ifld_tau, m_id
+      
+      e = gllel(eg)
+      cb1 = cbc(iside,e,1) !velocity boundary condition
+
+      Dt1 = uparam(1)
+      u_inf = uparam(2)
+      deltacl = uparam(4)
+      z0l0 = uparam(5)
+      lmezcla = 0.22*deltacl
+      uas = 0.048
+      vk = 0.4
+      
+      ux   = uas*log((z+z0l0)/z0l0)/vk
+      uy   = 0.0
+      uz   = 0.0
+      temp = 0.0
+      
+      if(ifield.eq.ifld_tke) then
+            temp = kturb(perfilIt(z,Dt1),u_inf)
+      else if(ifield.eq.ifld_tau) then
+            temp = kturb(perfilIt(z,Dt1),u_inf)/
+     $      tasadis(kturb(perfilIt(z,Dt1),u_inf),lmezcla)
+      end if
+
+      if(cb1.eq.'W  ') then
+        if(ifield.eq.ifld_tke) then
+          temp = 0.0
+        else if(ifield.eq.ifld_tau) then
+          temp = 0.0
+        end if
+      end if
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric(ix,iy,iz,eg) ! set up initial conditions
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer ix,iy,iz,e,eg
+      real Dt1,u_inf,deltacl,z0l0,I_t,perfilIt,k_t,kturb,vk,
+     $ lmezcla,e_t,tasadis,uas
+      
+      common /rans_usr/ ifld_tke, ifld_tau, m_id
+      integer ifld_tke,ifld_tau, m_id
+      
+      e = gllel(eg)
+
+      Dt1 = uparam(1)
+      u_inf = uparam(2)
+      deltacl = uparam(4)
+      z0l0 = uparam(5)
+      uas = 0.048
+      vk = 0.4
+      lmezcla = 0.22*deltacl
+      
+      ux   = uas*log((z+z0l0)/z0l0)/vk
+      uy   = 0.0
+      uz   = 0.0
+      temp = 0.0
+
+      if(ifield.eq.ifld_tke) temp = kturb(perfilIt(z,Dt1),u_inf)
+      if(ifield.eq.ifld_tau) temp = kturb(perfilIt(z,Dt1),u_inf)/
+     $           tasadis(kturb(perfilIt(z,Dt1),u_inf),lmezcla)
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk()
+
+c      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userqtl ! Set thermal divergence
+
+      call userqtl_scig 
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat()   ! This routine to modify element vertices
+
+c      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      return
+      end
+
+c-----------------------------------------------------------------------
+      subroutine usrdat2()  ! This routine to modify mesh coordinates
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      real wd
+      common /walldist/ wd(lx1,ly1,lz1,lelv)
+
+      common /rans_usr/ ifld_tke, ifld_tau, m_id
+      integer ifld_tke,ifld_tau, m_id
+
+      integer w_id
+      real coeffs(30) !array for passing your own coeffs
+      logical ifcoeffs
+
+      ifld_tke = 4 !address of tke equation in t array
+      ifld_tau = 5 !address of omega equation in t array
+      ifcoeffs =.false. !set to true to pass your own coeffs
+
+C     Supported models:
+c     m_id = 0 !regularized standard k-omega (no wall functions)
+c     m_id = 1 !regularized low-Re k-omega (no wall functions)
+c     m_id = 2 !regularized standard k-omega SST (no wall functions)
+c     m_id = 3 !Not supported
+      m_id = 4 !standard k-tau
+c     m_id = 5 !low Re k-tau 
+c     m_id = 6 !standard k-tau SST
+
+C     Wall distance function:
+c     w_id = 0 ! user specified
+c     w_id = 1 ! cheap_dist (path to wall, may work better for periodic boundaries)
+      w_id = 2 ! distf (coordinate difference, provides smoother function)
+
+      call rans_init(ifld_tke,ifld_tau,ifcoeffs,coeffs,w_id,wd,m_id)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3()
+
+c      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      return
+      end

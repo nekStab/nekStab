@@ -1,10 +1,15 @@
 #!/bin/bash
 set -a # export all variables and functions defined in the script
 
-# Set system resources only if not on macOS (otherwise Lapack/Blas will not work)
-if [[ $(uname -s) != "Darwin" ]]; then
-    ulimit -s unlimited # set the stack size to unlimited
-    ulimit -c unlimited # set the core file size to unlimited
+# Check if the script is called with the "clean" argument
+if [[ $1 == "clean" ]]; then
+    echo "Cleaning up build files..."
+    make clean
+    echo "Removing session and log files..."
+    rm -f SESSION.NAME *log* makefile makefile_usr.inc NEKSTAB.inc *.mod
+    rm -f KRY* HES*
+    echo "Cleanup completed."
+    exit 0
 fi
 
 # Fetch version information to print in the initialisation message
@@ -25,26 +30,24 @@ if command -v mpiifort >/dev/null 2>&1; then
     FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
     FFLAGS+=" -extend-source" # Accepts line with longer than 72 characters (132 characters)
 
-    if command -v mpiifx >/dev/null 2>&1; then
+    # if command -v mpiifx >/dev/null 2>&1; then ### EXPERIMENTAL ! 
 
-        echo "Using Intel oneAPI Compiler ..." # LLVM compiler
+    # CRASHING  Error in generalev, info=           7           6          -1
 
-        # Found LLVM compiler so we use it
-        FC="mpiifx"
-        CC="mpiicx"
+    #     echo "Using Intel oneAPI Compiler ..." # LLVM compiler
 
-        CFLAGS+=" -w -Wno-unused-command-line-argument"
-        FFLAGS+=" -xHost"
+    #     # Found LLVM compiler so we use it
+    #     FC="mpiifx"
+    #     CC="mpiicx"
 
-        # Check the link line advisor for the correct flags with MKL
-        # https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html
+    #     # Check the link line advisor for the correct flags with MKL
+    #     # https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html
 
-        export PPLIST="VENDOR_BLAS"
-        FFLAGS+=" -qmkl=sequential" # using LP64 and NOT double precision integer ILP64
-        USR_LFLAGS+=" -I${MKLROOT}/include  -Wl,--start-group ${MKLROOT}/lib/libmkl_intel_lp64.a ${MKLROOT}/lib/libmkl_sequential.a ${MKLROOT}/lib/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
+    #     export PPLIST="VENDOR_BLAS"
+    #     FFLAGS+=" -qmkl=sequential -I${MKLROOT}/include" # using LP64 and NOT double precision integer ILP64
+    #     USR_LFLAGS+=" -Wl,--start-group ${MKLROOT}/lib/libmkl_intel_lp64.a ${MKLROOT}/lib/libmkl_sequential.a ${MKLROOT}/lib/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
 
-
-    else # mpiifort
+    # else # mpiifort
 
         echo "Using Intel Compiler Classic..."
         # FFLAGS+=" -xHost" # comment if already included
@@ -63,10 +66,10 @@ if command -v mpiifort >/dev/null 2>&1; then
         # CFLAGS+=" -diag-disable=10441"
 
         export PPLIST="VENDOR_BLAS"
-        FFLAGS+=" -mkl=sequential" # using LP64 and NOT 64bit integer in ILP64
-        USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
+        FFLAGS+=" -mkl=sequential -I${MKLROOT}/include" # using LP64 and NOT 64bit integer in ILP64
+        USR_LFLAGS+=" -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
 
-    fi
+    # fi # LLVM compiler
 
     # Ricardo's debugging flags
     # FFLAGS+=" -g3 -traceback" # Enables stack tracing.
@@ -80,11 +83,10 @@ else # GCC
 
     if [[ $(uname -s) == "Darwin" ]]; then
         FC="mpif77" # macOS with arm crashes with mpif90
-        CC="mpicc"
     else
-        FC="mpif90"
-        CC="mpicc"
+        FC="mpif90" # otherwise we use mpif90
     fi
+    CC="mpicc"
 
     echo "Compiler found: $(which $FC)"
     echo "$($FC --version | head -n1)"
@@ -123,7 +125,7 @@ Darwin)
     x86_64)
         ;;
     arm64)
-        # FFLAGS+=" -mcmodel=small" # no support for large
+        FFLAGS+=" -mcmodel=small" # no support for large
         ;;
     esac
     ;;
@@ -191,7 +193,7 @@ if [ -f "$FILE" ]; then
     if grep -q "^include .*makefile_nekStab" "$FILE"; then
         # The include line is in the file, replace it
         if [[ $(uname -s) == "Darwin" ]]; then
-            sed -i '' "s|^include .*makefile_nekStab|$INCLUDE_LINE|" "$FILE"        
+            sed -i '' "s|^include .*makefile_nekStab|$INCLUDE_LINE|" "$FILE"
         else
             sed -i "s|^include .*makefile_nekStab|$INCLUDE_LINE|" "$FILE"
         fi
@@ -207,17 +209,12 @@ fi
 : ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
-if [[ $1 != "clean" ]]; then
- $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
- set -o pipefail
- touch $1.usr 
- make -j4 2>&1 | tee -a build.log
- set +o pipefail
-fi
+$NEK_SOURCE_ROOT/bin/nekconfig -build-dep
+set -o pipefail
+touch $1.usr 
+make -j4 2>&1 | tee -a build.log
+set +o pipefail
 
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
     mv *.mod obj
-fi
-if [ $(ls *.smod 2>/dev/null | wc -l) -gt 0 ]; then
-    mv *.smod obj
 fi

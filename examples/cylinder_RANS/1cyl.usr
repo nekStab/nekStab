@@ -13,8 +13,8 @@ c-----------------------------------------------------------------------
             schur_tgt = 0 ; call bcast(schur_tgt,isize)
             maxmodes = 10 ; call bcast(maxmodes,isize)
             ifres = .false. ; call bcast(ifres,lsize)
-            ifvor = .true. ; call bcast(ifvor,lsize)
-            ifvox = .true. ; call bcast(ifvox,lsize)
+            ifvor = .false. ; call bcast(ifvor,lsize)
+            ifvox = .false. ; call bcast(ifvox,lsize)
             ifdyntol = .false. ; call bcast(ifdyntol,lsize)
             iffindiff = .true. ; call bcast(iffindiff,lsize)
 
