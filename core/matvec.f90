@@ -1,54 +1,71 @@
       subroutine prepare_linearized_solver
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
       
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
+      call nekgsync
       
-         call nekgsync
+      if (nid .eq. 0) write(6,*) 'Preparing linearized solver...'
+
+      ! Enforce single perturbation mode
+      if (param(31) .gt. 1) then
+      if (nid .eq. 0) then
+      write(6,*) 'ERROR: nekStab not ready for multiple perturbation modes.'
+      write(6,*) 'Setting number of perturbations to 1.'
+      endif
+      endif
+      param(31) = 1 ; npert = param(31)
+      if (nid .eq. 0) write(6,*) 'Number of perturbations set to:', npert
+
+      ! Adjust time step and number of steps if end time is specified
+      if (param(10) .gt. 0) then
+      if (nid .eq. 0) then
+      write(6,*) 'End time specified:', param(10)
+      write(6,*) 'Current time:', time
+      write(6,*) 'Recomputing dt and nsteps to match end time...'
+      endif
       
-      !     --> Force only single perturbation mode.
-         if (param(31) > 1) then
-            write (6, *) 'not ready for npert >1 : Stopping.'
-            call nek_end
-         end if
-         param(31) = 1; npert = param(31)
+      ! Compute maximum allowable time step based on CFL condition
+      call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
+      if (nid .eq. 0) write(6,*) 'Maximum spatial restriction:', ctarg
       
-      !     --> Force deactivate OIFS.
-         if (ifchar) write (6, *) 'OIFS not working with linearized solver.'
-         ifchar = .false.; call bcast(ifchar, lsize)
+      ! Calculate time step based on CFL target
+      dt = param(26) / ctarg
       
-      !     --> Enforce CFL target for EXTk
-         if (param(26) > 1.0) then
-            write (6, *) "Forcing target CFL to 0.5!"
-            param(26) = 0.5d0
-         end if
+      ! Calculate number of steps needed to reach end time
+      nsteps = ceiling(param(10) / dt)
       
-      !     --> Set nsteps/endTime accordingly.
-         if (param(10) > 0) then
-            if (nid == 0) write (6, *) 'param(10),time=', param(10), time
-            if (nid == 0) write (6, *) 'endTime specified! Recomputing dt and nsteps to match endTime'
-            call compute_cfl(ctarg, vx, vy, vz, 1.0d0) ! ctarg contains the sum ( ux_i / dx_i )
-            if (nid == 0) write (6, *) 'max spatial restriction:', ctarg
-            dt = param(26)/ctarg ! dt given target CFL
-            nsteps = ceiling(param(10)/dt) ! computing a safe value of nsteps
-            dt = param(10)/nsteps ! reducing dt to match param(10)
-            if (nid == 0) write (6, *) ' new timeStep dt=', dt
-            if (nid == 0) write (6, *) ' new numSteps nsteps=', nsteps
-            if (nid == 0) write (6, *) ' resulting sampling period =', nsteps*dt
-            param(12) = dt
-            call compute_cfl(ctarg, vx, vy, vz, dt) ! C=sum(ux_i/dx_i)*dt
-            if (nid == 0) write (6, *) ' current CFL and target=', ctarg, param(26)
-            lastep = 0             ! subs1.f:279
-            fintim = nsteps*dt
-         end if
+      ! Adjust time step to exactly reach end time
+      dt = param(10) / nsteps
       
-      !     --> Force constant time step.
-         param(12) = -abs(param(12))
+      if (nid .eq. 0) then
+      write(6,*) 'Adjusted time step dt =', dt
+      write(6,*) 'Number of steps nsteps =', nsteps
+      write(6,*) 'Total simulation time =', nsteps * dt
+      endif
       
-      !     --> Broadcast parameters.
-         call bcast(param, 200*wdsize)
+      ! Update parameters
+      param(12) = dt
+      lastep = 0
+      fintim = nsteps * dt
       
-         return
+      ! Recalculate actual CFL
+      call compute_cfl(ctarg, vx, vy, vz, dt)
+      if (nid .eq. 0) write(6,*) 'Actual CFL:', ctarg
+      endif
+      
+      ! Force constant time step
+      param(12) = -abs(param(12))
+      if (nid .eq. 0) write(6,*) 'Constant time step enforced, dt =', abs(param(12))
+      
+      ! Broadcast updated parameters to all processes
+      call bcast(param, 200*wdsize)
+      
+      call nekgsync ! ensures that all processes reachbefore any can proceed further
+      
+      if (nid .eq. 0) write(6,*) 'Linearized solver preparation complete.'
+      
+      return
       end subroutine prepare_linearized_solver
       
       !-----------------------------------------------------------------------
