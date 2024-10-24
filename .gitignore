@@ -56,3 +56,7 @@ examples/torus/torus0.*
 examples/torus_full/strtorus0.*
 *__genmod.f90
 nek5000.dbg
+examples/torus_full/BF_torus0.f00001
+examples/slot_FST/03250_slot0.f00001
+examples/slot_FST/03200_slot0.f00001
+examples/slot_FST/34_slot0.f00001

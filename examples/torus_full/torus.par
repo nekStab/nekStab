@@ -1,40 +1,51 @@
 #
 # nek parameter file
 #
-[GENERAL] 
-startFrom = 0
+[GENERAL]
+startFrom = BF_torus0.f00001
 stopAt = endTime
-endTime = 1000.
+endTime = 1.0
 
 dt = 0
 timeStepper = bdf3
 variableDt = yes
-targetCFL = 0.45
+targetCFL = 0.5
+
+userParam01 = 3.1 #1.1 #2.0 #3.1
+userParam02 = 0
+userParam04 = 0.1 # >0 in Akervik
+userParam05 = 0.084 # 0.08292451591
+userParam07 = 200
 
 writeControl = runTime
-writeInterval = 1.
+writeInterval = 100.
 writeDoublePrecision = no
 dealiasing = yes
-filtering = hpfrt
-filterModes = 2
-filterWeight = 5.0
+
+filtering = explicit
+filterweight = 0.01
+filtercutoffratio = 0.84
+
+#filtering = hpfrt
+#filterModes = 2
+#filterWeight = 5.0
 
 [PROBLEMTYPE]
-cyclicBoundaries = yes
+cyclicboundaries = yes
 
 [MESH]
 writeToFieldFile = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 0.100000E-06
+residualTol = 1.0E-10
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 0.100000E-08
+residualTol = 1.0E-10
 residualProj = yes
 density = 1.0
-viscosity = -1700.0
+viscosity = -1650.0
 advection = yes
 writeToFieldFile = yes

@@ -1,22 +1,18 @@
-
-      real, parameter :: CURV_RADIUS = 3.333333333d0      ! Radius of curvature
-      real, parameter :: PIII = 4.0d0*atan(1.0d0)           ! Pi
-      real, parameter :: LENGTH = 2.0d0*PIII*CURV_RADIUS    ! length of the pipe
-      real, parameter :: DIAM = 2.0d0                     ! helix diameter
-      integer, parameter :: NSLICES = 100                    ! number of streamwise slices
-      integer, parameter :: NELF = 108 !225 (hi res)        ! number of elements in the cross-stream plane
-      !dP/dS = dPo/Ds + dp1dsr*(dPo/Ds*e^i*omega*t) -> zero iamg -> cos wave
-      real, parameter :: dp0ds = 0.0794600D0 ! pressure gradient
+      real, parameter :: curv_radius = 3.3333333333333335d0
+      real, parameter :: piii = 4.0d0*atan(1.0d0)
+      real, parameter :: length = 2.0d0*piii*curv_radius
+      
+      integer, parameter :: nslices = 100
+      integer, parameter :: nelf = 108
+      
+      real, parameter :: dp0ds = 0.079505d0
+      
       real, parameter :: dp1dsr = 0.0d0
-
-
-
-      real, parameter :: WOMERSLEY = 38.0d0 ! Womersley number
+      real, parameter :: womersley = 38.0d0 ! Womersley number
+      real, parameter :: diam = 2.0d0 ! pipe diameter
       real, parameter :: dp1dsi = 0.0d0 ! purely imag leads to sin wave
-      real, parameter :: PITCH_S = 0.0d0 ! pitch of the helix (0 for torus)
-      logical, parameter :: IFHELICAL = .FALSE. ! switch for toroidal/helical pipes
-
-
+      real, parameter :: pitch_s = 0.0d0 ! pitch of the helix (0 for torus)
+      logical, parameter :: ifhelical = .false. ! switch for toroidal/helical pipes
 
       real pulse_T            !< @var period of pulsation
       real omega              !< @var frequency of pulsation

@@ -10,12 +10,11 @@
 
       ! BASIC
       parameter (ldim=3)               ! domain dimension (2 or 3)
-      parameter (lx1=06)!06,08,10,12   ! GLL points per element along each direction
-      parameter (lxd=09)!09,12,15,18   ! GL  points for 
-      parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
-                                     
+      parameter (lx1=08)!06,08,10,12   ! GLL points per element along each direction
+      parameter (lxd=12)!09,12,15,18   ! GL  points for 
       parameter (lelg=10800)            ! max number of global elements
-      parameter (lpmin=20)             ! min number of MPI ranks 
+      parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)              
+      parameter (lpmin=40)             ! min number of MPI ranks 
       parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
       parameter (ldimt=1)              ! max auxiliary fields (temperature + scalars)
 
@@ -28,8 +27,8 @@
       parameter (toteq=1)              ! max number of conserved scalars in CMT
       parameter (nsessmax=1)           ! max sessions to NEKNEK
       parameter (lxo=lx1)              ! max GLL points on output (lxo>=lx1)
-      parameter (mxprev=20)            ! max dim of projection space
-      parameter (lgmres=30)            ! max dim Krylov space
+      parameter (mxprev=40)            ! max dim of projection space
+      parameter (lgmres=40)            ! max dim Krylov space
       parameter (lorder=3)             ! max order in time
       parameter (lx1m=lx1)               ! GLL points mesh solver
       parameter (lfdm=0)               ! unused 

@@ -1,0 +1,32 @@
+#!/bin/bash 
+##SBATCH --partition=cpu_p1
+##SBATCH --partition=prepost
+##SBATCH --partition=archive
+##SBATCH --partition=compilation
+##SBATCH --qos qos_cpu-t3 # max 20h 1200 nodes
+##SBATCH --qos qos_cpu-t4 # max 100h 32nodes
+##SBATCH --qos qos_cpu-dev
+#SBATCH -J tor_full
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=40
+#SBATCH --hint=nomultithread
+#SBATCH --exclusive
+#SBATCH -A vpo@cpu
+##SBATCH --mail-user=rasfrantz@gmail.com
+##SBATCH --mail-type=ALL
+#SBATCH --time=20:00:00
+#SBATCH --output=logfile
+#SBATCH --error=logerror
+
+cd ${SLURM_SUBMIT_DIR}
+module purge
+module load intel-oneapi-all
+set -x
+
+ulimit -s unlimited
+ulimit -c unlimited
+
+export CASE='torus'
+echo $CASE > SESSION.NAME
+echo $SLURM_SUBMIT_DIR'/' >>  SESSION.NAME
+srun -n $SLURM_NTASKS ./nek5000
