@@ -3,7 +3,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      call nekStab
+      call nekStab_drive
 
       return
       end
@@ -14,12 +14,14 @@ c-----------------------------------------------------------------------
 
       if(istep.eq.0)then !change defaults
 
-        !xLspg = uparam(8); call bcast(xLspg , wdsize)
-        !xRspg = uparam(9); call bcast(xRspg , wdsize)
+        xLspg   = 2.0d0; call bcast(xLspg, wdsize) ! x left
+        xRspg   = 20.0d0; call bcast(xRspg, wdsize) ! x right   
+        acc_spg = 0.333d0; call bcast(acc_spg, wdsize)
+        spng_st = 1.7d0;  call bcast(spng_st, wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
         schur_tgt = 0 ; call bcast(schur_tgt,isize)
-        maxmodes = 2 ; call bcast(maxmodes,isize)
+        maxmodes = 10 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
