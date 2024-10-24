@@ -3,7 +3,7 @@ startFrom = BF_cav0.f00001
 stopAt = endTime
 endTime = 1 # ~ (1/0.34)/6 according to Nyquist theorem
 
-userParam01 = 3.1   # 0:DNS, 2:Newton, 3.1: Eigenproblem
+userParam01 = 2.0   # 0:DNS, 2:Newton, 3.1: Eigenproblem
 userParam07 = 100  # Krylov base lenght (from 80-200) 
 
 dt = 0
@@ -16,11 +16,11 @@ writeInterval = 100.
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-6
+residualTol = 1.0E-10
 residualProj = yes
 
 [VELOCITY]
-residualTol = 1.0E-9
+residualTol = 1.0E-10
 residualProj = yes
 density = 1.0
-viscosity = -1950.0
+viscosity = -2500.0
