@@ -1,0 +1,131 @@
+!-----------------------------------------------------------------------
+! OTD Module Configuration Parameters
+!-----------------------------------------------------------------------
+      integer otd_nusric     ! Number of perturbation IC fields to read
+      integer otd_iostep     ! IO frequency for OTD module (fields)
+      integer otd_rststp     ! IO frequency for OTD basis (restart)
+      integer otd_prntsp     ! Print frequency for OTD module (Lr)
+      integer otd_gsstep     ! Frequency for GS orthonormalization
+      integer startOTD       ! Timestep to start OTD computation
+      real    otd_FTLEpd     ! Time horizon for FTLE computation
+      real    OTDrsttime     ! OTD restart time
+      logical otd_ifFTLE     ! Compute FTLEs?
+      logical otd_ifvlog     ! .true. for verbose logging
+      logical otd_debug      ! .true. for debugging mode
+      logical gsstep_override ! Override gsstep
+
+! Configuration common blocks
+      common /otd_rprmi/ otd_nusric, otd_iostep, otd_rststp,
+     $                   otd_prntsp, otd_gsstep
+      common /otd_rprml/ otd_ifFTLE, otd_ifvlog, otd_debug
+      common /otd_rprmr/ otd_FTLEpd
+      common /OTD_start/ startOTD
+      common /OTD_time/  OTDrsttime
+      common /OTD_log/   gsstep_override
+
+!-----------------------------------------------------------------------
+! Perturbation Fields and Initial Conditions
+!-----------------------------------------------------------------------
+      real vxpic(lx1*ly1*lz1*lelv,lpert)
+      real vypic(lx1*ly1*lz1*lelv,lpert)
+      real vzpic(lx1*ly1*lz1*lelv,lpert)
+      common /OTD_IC/ vxpic, vypic, vzpic
+
+!-----------------------------------------------------------------------
+! Linearized Operator Components
+!-----------------------------------------------------------------------
+! Convective terms
+      real convx(lx1*ly1*lz1*lelv,lpert)
+      real convy(lx1*ly1*lz1*lelv,lpert)
+      real convz(lx1*ly1*lz1*lelv,lpert)
+! Pressure gradient terms
+      real gradpx(lx1*ly1*lz1*lelv,lpert)
+      real gradpy(lx1*ly1*lz1*lelv,lpert)
+      real gradpz(lx1*ly1*lz1*lelv,lpert)
+! Diffusion terms
+      real diffx(lx1*ly1*lz1*lelv,lpert)
+      real diffy(lx1*ly1*lz1*lelv,lpert)
+      real diffz(lx1*ly1*lz1*lelv,lpert)
+      
+      common /OTD_Lup/ convx, convy, convz,
+     $                 gradpx, gradpy, gradpz,
+     $                 diffx, diffy, diffz
+
+!-----------------------------------------------------------------------
+! Linearized NS Operator and Reduced Forms
+!-----------------------------------------------------------------------
+      real Lux (lx1*ly1*lz1*lelv,lpert)    ! x direction
+      real Luy (lx1*ly1*lz1*lelv,lpert)    ! y direction
+      real Luz (lx1*ly1*lz1*lelv,lpert)    ! z direction
+      real Lr  (lpert,lpert)               ! reduced operator
+      real Lsym(lpert,lpert)               ! symmetrized reduced operator
+      integer idx(lpert)                   ! mode indices
+      common /OTD_Lu/ Lux, Luy, Luz, Lr, Lsym, idx
+
+!-----------------------------------------------------------------------
+! OTD Forcing and Modes
+!-----------------------------------------------------------------------
+! Additional forcing terms
+      real OTDfx(lx1*ly1*lz1*lelv,lpert)  ! x direction
+      real OTDfy(lx1*ly1*lz1*lelv,lpert)  ! y direction
+      real OTDfz(lx1*ly1*lz1*lelv,lpert)  ! z direction
+      common /OTD_frc/ OTDfx, OTDfy, OTDfz
+
+! OTD modes (real and imaginary parts)
+      real OTDmrx(lx1*ly1*lz1*lelv,lpert)  ! real part, x dir
+      real OTDmry(lx1*ly1*lz1*lelv,lpert)  ! real part, y dir
+      real OTDmrz(lx1*ly1*lz1*lelv,lpert)  ! real part, z dir
+      real OTDmix(lx1*ly1*lz1*lelv,lpert)  ! imaginary part, x dir
+      real OTDmiy(lx1*ly1*lz1*lelv,lpert)  ! imaginary part, y dir
+      real OTDmiz(lx1*ly1*lz1*lelv,lpert)  ! imaginary part, z dir
+      common /OTD_modes/ OTDmrx, OTDmry, OTDmrz,
+     $                   OTDmix, OTDmiy, OTDmiz
+
+!-----------------------------------------------------------------------
+! FTLE and Related Parameters
+!-----------------------------------------------------------------------
+      real phi_rot(lpert,lpert)            ! Internal rotation matrix
+      common /OTD_phirot/ phi_rot
+
+      real FTLEv(lpert)                    ! FTLE vector
+      real trapz(lpert)                    ! time integral
+      real phi(lpert,lpert)                ! Fundamental solution matrix
+      integer pcount                       ! count number of periods
+      common /OTD_FTLEr/ FTLEv, trapz, Phi
+      common /OTD_FTLEi/ pcount
+
+!-----------------------------------------------------------------------
+! LAPACK Arrays and Parameters
+!-----------------------------------------------------------------------
+! Eigenvalue/vector storage
+      real EIGR(lpert)                     ! real part of eigenvalues
+      real EIGI(lpert)                     ! imaginary part of eigenvalues
+      real EVR(lpert,lpert)                ! matrix of right eigenvectors
+      real EVRR(lpert,lpert)               ! real part of right EVs
+      real EVRI(lpert,lpert)               ! imag part of right EVs
+      real EVL(lpert,lpert)                ! matrix of left eigenvectors
+      real OSIGMA(lpert)                   ! eigenvalues of symm operator
+      real VMATX(lpert,lpert)              ! left singular vectors
+      real VMATXT(lpert,lpert)             ! transpose of right sing vecs
+      real RCL(lpert)                      ! recip cond num left sing vecs
+      real RCR(lpert)                      ! recip cond num right sing vecs
+      common /OTD_dgeev/ EIGR, EIGI, EVR, EVL, EVRR, EVRI,
+     $                   OSIGMA, VMATX, VMATXT, RCL, RCR
+
+! Work arrays and dimensions
+      integer LWORKR, LWORKI, LWORKC
+      parameter (LWORKR = 5*LPERT*LPERT+4*LPERT+3*LPERT)
+      parameter (LWORKI = 3*LPERT*2+11*LPERT)
+      parameter (LWORKC = 2*LPERT+LPERT)
+
+      real    RWORK(LWORKR)
+      integer IWORK(LWORKI)
+      complex CWORK(LWORKC)
+
+! Temporary arrays
+      real   ALU(LPERT,LPERT)              ! cond_wrapper
+      real   SINGV(LPERT)                  ! lsq_wrapper
+
+      common /rlpvec/ RWORK, ALU, SINGV
+      common /ilpvec/ IWORK
+      common /clpvec/ CWORK

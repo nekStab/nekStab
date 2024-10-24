@@ -1,0 +1,153 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+      include 'OTD'
+
+      ! IC check
+      real ubic(lx1,ly1,lz1,lelv)
+     $ ,   vbic(lx1,ly1,lz1,lelv)
+     $ ,   wbic(lx1,ly1,lz1,lelv)
+     $ ,   upic(lx1*ly1*lz1*lelv,lpert)
+     $ ,   vpic(lx1*ly1*lz1*lelv,lpert)
+     $ ,   wpic(lx1*ly1*lz1*lelv,lpert)
+      common /bpic/ ubic,vbic,wbic
+     $ ,            upic,vpic,wpic
+
+      integer     i
+      character*1 str
+      character*3 oname
+
+      call nekStab_drive
+
+      !     Outpost initial conditions
+      if (istep.eq.0) then
+        call outpost(ubic,vbic,wbic,pr,t,'ibf')
+        do i=1,npert
+          write(str,'(I1)') i
+          oname = 'ip'//trim(str)
+          call outpost(upic(1,i),vpic(1,i),wpic(1,i),pr,t,oname)
+        enddo
+      endif
+
+      call run_OTD
+      end
+c-----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'OTD'
+      
+      if(istep.eq.0)then !change defaults
+
+        !xLspg = uparam(8); call bcast(xLspg , wdsize)
+        !xRspg = uparam(9); call bcast(xRspg , wdsize)
+        !spng_st = uparam(10);  call bcast(spng_st, wdsize)
+
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 2 ; call bcast(schur_tgt,isize)
+        maxmodes = 2 ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
+
+        otd_nusric = 0
+        otd_iostep = 1
+        otd_rststp = 1
+        otd_prntsp = 1
+        otd_gsstep = 1 !frequency of reorthonormalization higher frequency in the beginning, then at iostep 
+        otd_FTLEpd = 0.0 !put the period 
+        otd_ifFTLE = .true.
+        call otd_init
+
+      endif
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      include 'OTD'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      !call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+      !if we need to add forcing, compose before constructing OTD
+      call set_OTD_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+         if(x.gt.-1.and.x.lt.1)temp=1.0d0 !cylinder with T
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+      end

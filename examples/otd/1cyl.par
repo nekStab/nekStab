@@ -1,0 +1,39 @@
+[GENERAL]
+startFrom = BF_1cyl0.f00001
+
+stopAt = endTime
+endTime = 100.0
+
+## grep and plot -> Lr | Re
+
+userParam01 = 0 # Direct
+userParam07 = 92 # k_dim
+userParam08 = 5   # Sponge left side
+userParam09 = 5   # Sponge right side
+userParam10 = 0 # Sponge streght
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = no
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-7
+residualProj = no
+density = 1.0
+viscosity = -50.0

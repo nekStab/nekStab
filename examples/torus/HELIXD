@@ -1,14 +1,26 @@
+      !curvature delta = 0.3 -> curv_radius 1/delta
       real, parameter :: curv_radius = 3.3333333333333335d0
-      real, parameter :: length = 1.0d0
+
+      real, parameter :: length = 1.0d0      
       integer, parameter :: nslices = 5
       integer, parameter :: nelf = 108
-      real, parameter :: dp0ds = 0.079505d0
-      real, parameter :: dp1dsr = 0.0d0
-      real, parameter :: womersley = 38.0d0 ! Womersley number
+
       real, parameter :: diam = 2.0d0 ! pipe diameter
-      real, parameter :: dp1dsi = 0.0d0 ! purely imag leads to sin wave
       real, parameter :: pitch_s = 0.0d0 ! pitch of the helix (0 for torus)
       logical, parameter :: ifhelical = .false. ! switch for toroidal/helical pipes
+      real, parameter :: piii = 4.0d0*atan(1.0d0)
+    
+      ! steady case -> Fourier component 0
+      real, parameter :: dp0ds = 0.079505d0 ! -> Re=1650.0 
+      real, parameter :: dp1dsr = 0.0d0
+      real, parameter :: dp1dsi = 0.0d0
+      real, parameter :: womersley = 0.0d0
+      
+      !pulsed case
+      !real, parameter :: dp0ds  = 0.159786157399786d0
+      !real, parameter :: dp1dsr = 0.012993982565043d0
+      !real, parameter :: dp1dsi = 0.154452897033316d0
+      !real, parameter :: womersley = 38.0d0
 
       real pulse_T            !< @var period of pulsation
       real omega              !< @var frequency of pulsation
