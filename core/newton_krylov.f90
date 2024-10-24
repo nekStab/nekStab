@@ -1,167 +1,212 @@
-      subroutine newton_krylov
-      
-      !     Implementation of a simple Newton-Krylov solver for fixed point
-      !     computation using a time-stepper formulation. The resolution of
-      !     the linear system for each Newton iteration is sovled by means
-      !     of GMRES.
-      
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-      
-      !     ----- Right-hand side vector for Newton solver.
-         type(krylov_vector) :: f
-      
-      !     ----- Current estimate of the solution.
-         type(krylov_vector) :: q
-      
-      !     ----- Newton correction obtained from GMRES.
-         type(krylov_vector) :: dq
-      
-      !     ----- Miscellaneous
-         integer :: i, maxiter_newton, maxiter_gmres, calls
-         real :: tol, residual, tottime
-      
-         integer, save :: calls_counter
-         data calls_counter/0/
-      
-         logical, save :: dyntolinit
-      
-         real, save :: dtol
-         data dtol/0.0d0/
-      
-      ! if (iffindiff) then
-      !    tol = 1e-6 ; dtol = 1e-6
-      ! else
-         if (dtol == 0.0d0) then
-            dtol = max(param(21), param(22))
-            if (nid == 0) write (6, *) 'Saving user specified tolerance:', dtol
+      subroutine newton_krylov()
+      use krylov_subspace
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+!     ----- Krylov vectors
+      type(krylov_vector) :: f  ! Right-hand side vector for Newton solver
+      type(krylov_vector) :: q  ! Current estimate of the solution
+      type(krylov_vector) :: dq ! Newton correction obtained from GMRES
+
+!     ----- Iteration parameters
+      integer :: i, j, k, maxiter_newton, maxiter_gmres, calls
+      real :: tol, residual, tottime
+
+!     ----- Counters and flags
+      integer, save :: calls_counter = 0
+      logical, save :: dyntolinit = .false.
+      real, save :: dtol = 0.0d0
+
+!     ----- Initialize tolerance
+      if (dtol == 0.0d0) then
+         dtol = max(param(21), param(22))
+         if (nid == 0) then
+            write(6, *) 'Initializing tolerance:'
+            write(6, *) '  User specified tolerance:', dtol
          end if
+      end if
+      tol = max(param(21), param(22))
+
+!     ----- Set iteration limits
+      maxiter_newton = 100
+      maxiter_gmres = 100
+
+!     ----- Open output files
+      if (istep == 0 .and. nid == 0) then
+         write(6, *) 'Opening output files for residuals'
+         
+!     File for overall residual data
+!     Columns: calls_counter, tottime, residual
+         open(unit=886, file='residu.dat', status='replace')
+         
+!     File for Newton iteration residuals
+!     Columns: i (iteration number), residual
+         open(unit=887, file='residu_newton.dat', status='replace')
+         
+!     File for GMRES iteration residuals (opened and closed in ts_gmres subroutine)
+!     Columns: iteration, residual (written in ts_gmres)
+         open(unit=888, file='residu_gmres.dat', status='replace')
+         close(888)
+         
+!     File for Arnoldi iteration data (opened and closed in arnoldi subroutine)
+!     Columns: iteration, data (written in arnoldi)
+         open(unit=889, file='residu_arnoldi.dat', status='replace')
+         close(889)
+      end if
+
+!     ----- Initialize arrays
+      if (nid == 0) write(6, *) 'Initializing Krylov vectors'
+      call k_zero(f)
+      call k_zero(dq)
+
+!     ----- Copy initial condition
+      if (nid == 0) write(6, *) 'Copying initial condition'
+      call nopcopy(q%vx, q%vy, q%vz, q%pr, q%t, vx, vy, vz, pr, t)
+
+!     ----- Newton iteration
+      if (nid == 0) write(6, *) 'Starting Newton iterations'
+      newton: do i = 1, maxiter_newton
+      if (nid == 0) write(6, *) 'Newton iteration:', i
+
+!     Set time
+      if (i == 1) then
+         q%time = param(10)     ! First guess from endTime in .par
+         if (nid == 0) write(6, *) '  Setting initial time:', q%time
+      else
+         param(10) = q%time     ! Other guesses included in nwt field
+         if (nid == 0) write(6, *) '  Updating time:', q%time
+      end if
+
+!     Setup/Update the nek-parameters for the Newton solver
+      if (nid == 0) write(6, *) '  Preparing linearized solver'
+      call prepare_linearized_solver ! Compute nsteps
+
+!     Outpost current estimate of the solution
+      if (nid == 0) write(6, *) '  Outposting current solution estimate'
+      time = q%time
+      if (uparam(1) == 2.0) time = real(i) ! Ease visualization in paraview
+      if (uparam(1) == 2.2) time = real(i) * q%time
+      call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, 'nwt')
+      time = q%time             ! Restore
+
+!     Allocate nonlinear solution variable for natural or forced UPO
+      if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
+      if (nid == 0) then
+         write(6, *) '  Allocating orbit for GMRES'
+         write(6, *) '    Number of steps:', nsteps
+      end if
+      allocate(uor(lv, nsteps), vor(lv, nsteps))
+      if (if3d) then
+         allocate(wor(lv, nsteps))
+      else
+         allocate(wor(1, 1))
+      end if
+      if (ifto .or. ldimt > 1) allocate(tor(lt, nsteps, ldimt))
+      end if
+
+!     Variable tolerances for speed up
+      if (ifdyntol .and. dyntolinit) then
+         if (nid == 0) write(6, *) '  Adjusting tolerance dynamically'
+         call spec_tole(residual, dtol)
+      end if
+      tol = max(param(21), param(22))
+      if (nid == 0) write(6, *) '  Current tolerance:', tol
+
+!     Compute rhs of Newton iteration f(q)
+      if (nid == 0) write(6, *) '  Computing nonlinear forward map'
+      call nonlinear_forward_map(f, q)
+      calls_counter = calls_counter + nsteps
+      tottime = tottime + nsteps * dt
+
+!     Check residual || f(q) ||
+      if (nid == 0) write(6, *) '  Calculating residual'
+      call k_norm(residual, f)
+      residual = residual ** 2
+
+!     --> Outpost residual fields (optional)
+      time = q%time             ! adjust
+      if (uparam(1) == 2.0) time = real(i) ! to ease visu in paraview
+      if (uparam(1) == 2.2) time = real(i)*q%time ! to ease visu in paraview
+      call outpost2(f%vx, f%vy, f%vz, f%pr, f%t, nof, 'res')
+      time = q%time             ! restore
+      
+!     Output iteration information
+      if (nid == 0) then
+         write(6, "('  NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)") i, maxiter_newton, residual
+         write(6, *) '             Tolerance target:', tol
+         write(886, "(I6,2E15.7)") calls_counter, tottime, residual
+         write(887, "(I6,1E15.7)") i, residual
+      end if
+
+!     Check for convergence
+      if (residual < dtol) then
+         if (nid == 0) write(6, *) '  Convergence achieved, exiting Newton loop'
+         exit newton
+      end if
+
+!     Adjust tolerance if needed
+      if (ifdyntol .and. .not. dyntolinit) then
+         if (nid == 0) write(6, *) '  Initializing dynamic tolerance'
+         call spec_tole(residual, dtol)
+         dyntolinit = .true.
          tol = max(param(21), param(22))
-      !endif
-      
-         maxiter_newton = 100; maxiter_gmres = 100
-      
-         if (istep == 0 .and. nid == 0) then
-            open (unit=886, file='residu.dat', status='replace')
-            open (unit=887, file='residu_newton.dat', status='replace')
-            open (unit=888, file='residu_gmres.dat', status='replace'); close (888)
-            open (unit=889, file='residu_arnoldi.dat', status='replace'); close (889)
+      end if
+
+!     Solve the linear system
+      if (nid == 0) write(6, *) '  Solving linear system with GMRES'
+      call ts_gmres(f, dq, maxiter_gmres, k_dim, calls)
+      calls_counter = calls_counter + calls
+      tottime = tottime + calls * dt
+
+!     Update Newton solution
+      if (nid == 0) write(6, *) '  Updating Newton solution'
+      call k_sub2(q, dq)
+
+!     Deallocate nonlinear solution variable
+      if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
+      if (nid == 0) write(6, *) '  Deallocating orbit storage'
+      deallocate(uor, vor, wor)
+      if (ifto .or. ldimt > 1) deallocate(tor)
+      end if
+      end do newton
+
+!     Output final results
+      if (nid == 0 .and. i <= maxiter_newton) then
+         close(886)
+         close(887)
+         if (i == maxiter_newton) then
+            write(6, *) 'Reached maxiter_newto. STOPPING! (verify convergence)'
+         else
+            if (uparam(1) == 2) then
+               write(6, *) 'NEWTON finished successfully after', i, 'iterations.'
+            elseif (uparam(1) == 2.1) then
+               write(6, *) 'NEWTON UPO finished successfully', i, 'iterations.'
+               write(6, *) ' period found:', time, 1.0d0/time
+            elseif (uparam(1) == 2.2) then
+               write(6, *) 'NEWTON for forced UPO finished successfully', i, 'iterations.'
+               write(6, *) ' period found:', time, 1.0d0/time
+            end if
+            write(6, *) 'Calls to the linearized solver: ', calls_counter
+            write(6, *) 'Total nondimensional time:', tottime
+            if (ifdyntol) write(6, *) 'ifdyntol active!'
          end if
-      
-      !     --> Initialize arrays.
-         call k_zero(f); call k_zero(dq)
-      
-      !     --> Copy initial condition.
-         call nopcopy(q%vx, q%vy, q%vz, q%pr, q%t, vx, vy, vz, pr, t)
-      
-      !     --> Newton iteration.
-         newton: do i = 1, maxiter_newton
-      
-      !     --> Set time.
-            if (i == 1) then            !first guess always come from endTime in .par
-               q%time = param(10)
-            else                      ! other guesses are include in nwt field
-               param(10) = q%time
-            end if
-      
-      !     --> Setup/Update the nek-parameters for the Newton solver.
-            call prepare_linearized_solver ! compute nsteps
-      
-      !     --> Outpost current estimate of the solution
-            time = q%time             ! adjust
-            if (uparam(1) == 2.0) time = real(i) ! to ease visu in paraview
-            if (uparam(1) == 2.2) time = real(i)*q%time ! to ease visu in paraview
-            call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, 'nwt')
-            time = q%time             ! restore
-      
-      !     --> Allocate nonlinear solution variable only for natural or forced UPO!
-            if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
-               if (nid == 0) write (6, *) 'ALLOCATING ORBIT FOR GMRES WITH NSTEPS:', nsteps
-               allocate (uor(lv, nsteps), vor(lv, nsteps))
-               if (if3d) then
-                  allocate (wor(lv, nsteps))
-               else
-                  allocate (wor(1, 1))
-               end if
-               if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
-            end if
-      !     --> Variable tolerances for speed up!
-            if (ifdyntol .and. dyntolinit) call spec_tole(residual, dtol) ! compute first nonlinear solution with target tol
-            tol = max(param(21), param(22))
-      
-      !     --> Compute rhs of Newton iteration f(q).
-            call nonlinear_forward_map(f, q)
-            calls_counter = calls_counter + nsteps
-            tottime = tottime + nsteps*dt
-      
-      !     --> Check residual || f(q) ||
-            call k_norm(residual, f); residual = residual**2
-      !     write(*, *) "RESIDUAL ", residual
-      
-            if (nid == 0) then
-               write (6, "(' NEWTON  - Iteration:',I3,'/',I3,' residual:',E15.7)") i, maxiter_newton, residual
-               write (6, *) '           Tolerance target:', tol
-               write (886, "(I6,2E15.7)") calls_counter, tottime, residual ! 'residu.dat'
-               write (887, "(I6,1E15.7)") i, residual ! 'residu_newton.dat'
-            end if
-      
-            if (residual < dtol) exit newton
-      
-            if (ifdyntol .and. .not. dyntolinit) then ! adjust only after veryfing the initial condition (just first time)
-               call spec_tole(residual, dtol); dyntolinit = .true.
-               tol = max(param(21), param(22))
-            end if
-      
-      !     --> Solve the linear system.
-            call ts_gmres(f, dq, maxiter_gmres, k_dim, calls)
-            calls_counter = calls_counter + calls
-            tottime = tottime + calls*dt
-      
-      !     --> Update Newton solution.
-            call k_sub2(q, dq)
-      
-      !     --> Deallocate nonlinear solution variable!
-            if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
-               deallocate (uor, vor, wor)
-               if (ifto .or. ldimt > 1) deallocate (tor)
-            end if
-      
-         end do newton
-      
-         if (nid == 0 .and. i <= maxiter_newton) then
-            close (886); close (887)
-            if (i == maxiter_newton) then
-               write (6, *) 'reached maxiter_newton! STOPPING! (verify convergence)'
-            else
-               if (uparam(1) == 2) then
-                  write (6, *) 'NEWTON finished successfully after', i, 'iterations.'
-               elseif (uparam(1) == 2.1) then
-                  write (6, *) 'NEWTON UPO finished successfully', i, 'iterations.'
-                  write (6, *) ' period found:', time, 1.0d0/time
-               elseif (uparam(1) == 2.2) then
-                  write (6, *) 'NEWTON for forced UPO finished successfully', i, 'iterations.'
-                  write (6, *) ' period found:', time, 1.0d0/time
-               end if
-      
-               write (6, *) 'calls to the linearized solver: ', calls_counter
-               write (6, *) 'total nondimensional time:', tottime
-               if (ifdyntol) write (6, *) 'ifdyntol active!'
-            end if
-         end if
-         if (residual < dtol) then
-      
-            param(63) = 1          ! Enforce 64-bit output
-            call bcast(param, 200*wdsize)
-            call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, "BF_")
-            param(63) = 0          ! Enforce 32-bit output
-            call bcast(param, 200*wdsize)
-            call outpost_vort(vx, vy, vz, 'BFV')
-      
-         end if
-         return
-      end subroutine newton_krylov
+      end if
+
+!     Output solution if converged
+      if (residual < dtol) then
+         if (nid == 0) write(6, *) 'Outputting converged solution'
+         param(63) = 1          ! Enforce 64-bit output
+         call bcast(param, 200*wdsize)
+         call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, "BF_")
+         param(63) = 0          ! Enforce 32-bit output
+         call bcast(param, 200*wdsize)
+         call outpost_vort(vx, vy, vz, 'BFV')
+      end if
+
+      if (nid == 0) write(6, *) 'newton_krylov subroutine completed'
+      return
+      end subroutine
       
       !-----------------------------------------------------------------------
       
@@ -411,7 +456,7 @@
          real, intent(in) :: residual, dtol
          real :: nwtol
       
-         nwtol = 10**(log10(residual) - 2)  ! Always two decades smaller
+         nwtol = 10**(log10(residual) - 1) ! Always two decades smaller
       
          if (nid == 0) then
             write (6, *) 'Current residual:', residual
@@ -423,7 +468,7 @@
             call set_solv_tole(dtol)
             if (nid == 0) write (6, *) 'Forcing user specified tolerance:', dtol
          else
-            nwtol = min(nwtol, 1e-4)  ! Never exceed a tolerance of 1e-4
+            nwtol = min(nwtol, 1e-4) ! Never exceed a tolerance of 1e-4
             call set_solv_tole(nwtol)
             if (nwtol == 1e-4 .and. nid == 0) then
                write (6, *) 'Forcing minimal tolerances:', nwtol

@@ -406,7 +406,7 @@
          integer :: i, m
          real :: speriod, trim, spurious_tol!, glmin, glmax
          real :: alpha, alpha_r, alpha_i, beta, old_uparam1
-         real :: norma_Re, norma_Im
+         real :: norma_Re, norma_Im, omega
          complex :: log_transform
          logical ifto_sav, ifpo_sav
       
@@ -503,10 +503,13 @@
       !       cycle  ! skip this iteration if all real parts are zero
       !    end if !
       
-               if (nid == 0) write (6, *) 'Outposting eigenvector:', i, '/', maxmodes
-               if (nid == 0) write (6, *) '  sigma=', real(log_transform(vals(i)))/speriod
-               if (nid == 0) write (6, *) '  omega=', aimag(log_transform(vals(i)))/speriod
-               if (nid == 0) write (6, *) '      f=', (aimag(log_transform(vals(i)))/speriod)/2.0d0*pi
+               if (nid == 0) then
+                  write (6, '(A, I0, A, I0)') 'Outposting eigenvector: ', i, ' / ', maxmodes
+                  write (6, '(A, E15.7)') '  sigma = ', real(log_transform(vals(i))) / speriod
+                  omega = aimag(log_transform(vals(i))) / speriod
+                  write (6, '(A, E15.7)') '  omega = ', omega
+                  write (6, '(A, E15.7)') '      f = ', omega / (8.0d0 * atan(1.0d0))
+               end if
                outp = outp + 1
       
       !     --> Outpost only the converged part of the log-transformed spectrum.
