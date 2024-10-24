@@ -106,7 +106,9 @@
       
             call copy(bm1s, bm1, nv) ! never comment this !
             ifbfcv = .false.
-      
+            
+            if(spng_st>0) call activate_sponge
+
             nof = 0
             scal = .false.
             do i = 1, size(ifpsco)
@@ -155,7 +157,7 @@
             call nekStab_comment   ! print comments
             call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
             call nekStab_enstrophy(vx, vy, vz, t, 'total_enstrophy.dat', glob_skip)
-            if (lastep == 1) call nek_end
+            !if (lastep == 1) call nek_end -> this is done by Nek5000
       
          case (1)                   ! fixed points computation
       
@@ -243,6 +245,9 @@
             if (uparam(01) == 4.41 .or. uparam(01) == 4.42) call ts_steady_force_sensitivity
             if (uparam(01) == 4.43) call delta_forcing
       
+      !     -----> Animate mode # 4 steps in period; 'd' for direct, 'a' for adjoint.
+            if (uparam(01) == 4.5) call animate_mode(4,'d')
+
             call nek_end
       
          end select
