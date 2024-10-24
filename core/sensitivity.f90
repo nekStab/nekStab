@@ -532,3 +532,73 @@
          return
       end subroutine delta_forcing
       !-----------------------------------------------------------------------
+      subroutine animate_mode(num_steps, mode)
+
+         !  Animate the eigenmode by computing and outputting snapshots
+         !  of the perturbation field at different phases of the period.
+      
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         type(krylov_vector) :: Re, Im, Re_sin, Im_cos
+         character(len=80) :: filename
+         character(len=*), intent(in) :: mode  ! 'd' or 'a'
+         real :: frequency, omega
+         integer, intent(in) :: num_steps
+         integer :: i
+
+         if (nid == 0) then
+            write (6, *) 'Animating mode function in mode:', mode
+            write (6, *) 'Number of steps:', num_steps
+         end if
+
+         frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
+         omega = 8.0d0*atan(1.0d0) * frequency  ! omega = 2 * pi * f
+
+         ! Load real and imaginary parts of the mode
+         if (mode == 'd') then
+            write(filename, '(a,a,a)') 'dRe', trim(SESSION), '0.f00001'
+            call load_fld(filename)
+            call nopcopy(Re%vx, Re%vy, Re%vz, Re%pr, Re%t, vx, vy, vz, pr, t)
+
+            write(filename, '(a,a,a)') 'dIm', trim(SESSION), '0.f00001'
+            call load_fld(filename)
+            call nopcopy(Im%vx, Im%vy, Im%vz, Im%pr, Im%t, vx, vy, vz, pr, t)
+
+         else if (mode == 'a') then
+
+            write(filename, '(a,a,a)') 'aRe', trim(SESSION), '0.f00001'
+            call load_fld(filename)
+            call nopcopy(Re%vx, Re%vy, Re%vz, Re%pr, Re%t, vx, vy, vz, pr, t)
+
+            write(filename, '(a,a,a)') 'aIm', trim(SESSION), '0.f00001'
+            call load_fld(filename)
+            call nopcopy(Im%vx, Im%vy, Im%vz, Im%pr, Im%t, vx, vy, vz, pr, t)
+
+         else
+
+            write (6, *) "Invalid mode type. Use 'd' or 'a'."
+            return
+
+         end if
+
+         ! Loop over num_steps to create snapshots
+         do i = 1, num_steps
+
+            time = i * (param(10) / num_steps)
+         
+            if (nid == 0) then
+               write (6, '(A, I0, A, F8.4, A, I0)') 'i: ', i, ', time: ', time, ', n: ', num_steps
+               write (6, '(A, F8.4, A, F8.4, A, F8.4, A)') 'Time/param(10): ', time / param(10), ' (', time, ' / ', param(10), ') [time/period]'
+            end if
+
+            call k_copy(Re_sin, Re) ; call k_cmult(Re_sin,  cos(omega * time))
+            call k_copy(Im_cos, Im) ; call k_cmult(Im_cos, -sin(omega * time))
+            call k_add2(Re_sin, Im_cos)
+            call outpost2(Re_sin%vx, Re_sin%vy, Re_sin%vz, Re_sin%pr, Re_sin%t, nof, trim(mode)//'Q_')
+         
+         end do
+
+      end subroutine animate_mode
