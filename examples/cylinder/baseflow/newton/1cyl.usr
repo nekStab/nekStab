@@ -3,7 +3,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      call nekStab
+      call nekStab_drive
 
       return
       end

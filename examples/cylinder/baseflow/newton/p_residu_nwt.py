@@ -1,19 +1,12 @@
 #!/usr/bin/env python
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
 import numpy as np
-from numpy import pi
-import scipy as sp
-import os
 import os.path
-import csv
-import pickle
 params = {'text.usetex': False,
           'font.size': 8,
           'legend.fontsize': 8,
           'legend.handlelength': 2.5,}
 plt.rcParams.update(params)
-plt.style.use('seaborn-white')
 
 formt = 'png'
 ajust = 'tight'

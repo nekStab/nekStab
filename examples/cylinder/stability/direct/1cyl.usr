@@ -2,10 +2,7 @@ c-----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
       include 'TOTAL'
-
       call nekStab_drive
-
-      return
       end
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
@@ -26,8 +23,6 @@ c-----------------------------------------------------------------------
         ifvox = .false. ; call bcast(ifvox,lsize)
 
       endif
-
-      return
       end
 c-----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)
@@ -42,7 +37,6 @@ c-----------------------------------------------------------------------
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
-      return
       end
 c-----------------------------------------------------------------------
       subroutine useric (ix,iy,iz,ieg)
@@ -63,8 +57,6 @@ c-----------------------------------------------------------------------
          uz = 0.0d0
          temp = 0.0d0
       endif
-
-      return
       end
 c-----------------------------------------------------------------------
       subroutine userbc (ix,iy,iz,iside,ieg)
@@ -88,29 +80,6 @@ c-----------------------------------------------------------------------
          uz = 0.0d0
          temp = 0.0d0
       endif
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine uservp (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      udiff = 0.0d0
-      utrans = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine userq (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      qvol = 0.0d0
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine usrdat
-      return
       end
 c-----------------------------------------------------------------------
       subroutine usrdat2
@@ -140,10 +109,4 @@ c-----------------------------------------------------------------------
       enddo
       enddo
       endif
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine usrdat3
-      return
       end
