@@ -84,6 +84,27 @@ else
     echo "Skipping modification."
 fi
 
+# Modify core/makenek.inc
+read -p "Do you want to patch FFLAGS+= in core/makenek.inc? (y/n): " confirm_makenek
+if [ "$confirm_makenek" == "y" ] || [ "$confirm_makenek" == "Y" ]; then
+    echo "Modifying core/makenek.inc..."
+    FILE_PATH="core/makenek.inc"
+    cp "$FILE_PATH" "${FILE_PATH}.original"
+    if [ "$OS" == "Linux" ]; then
+        sed -i 's/FFLAGS\+\=$FCPP $FR8 $FF77 $FFLAGS/FFLAGS=$FCPP $FR8 $FF77 $FFLAGS/' "$FILE_PATH"
+    elif [ "$OS" == "Darwin" ]; then
+        sed -i '' 's/FFLAGS\+\=$FCPP $FR8 $FF77 $FFLAGS/FFLAGS=$FCPP $FR8 $FF77 $FFLAGS/' "$FILE_PATH"
+    fi
+    if cmp -s "$FILE_PATH" "${FILE_PATH}.original"; then
+        echo "No match found in $FILE_PATH. No replacement made."
+    else
+        echo "Line in $FILE_PATH successfully replaced."
+    fi
+    rm "${FILE_PATH}.original"
+else
+    echo "Skipping modification."
+fi
+
 # Build genmap and genbox tools
 read -p "Do you want to build genmap and genbox tools? (y/n): " confirm
 if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
