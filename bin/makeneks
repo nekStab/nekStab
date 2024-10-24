@@ -6,7 +6,7 @@ if [[ $1 == "clean" ]]; then
     echo "Cleaning up build files..."
     make clean
     echo "Removing session and log files..."
-    rm -f SESSION.NAME *log* makefile makefile_usr.inc NEKSTAB.inc *.mod
+    rm -f SESSION.NAME *log* makefile NEKSTAB.inc *.mod
     rm -f KRY* HES*
     echo "Cleanup completed."
     exit 0
@@ -15,6 +15,7 @@ fi
 # Fetch version information to print in the initialisation message
 N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
 NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
+FFLAGS="" # ensure empty here
 
 #-------------------------------------------------------------------------------
 # Compiler Detection
@@ -66,13 +67,13 @@ if command -v mpiifort >/dev/null 2>&1; then
         # CFLAGS+=" -diag-disable=10441"
 
         export PPLIST="VENDOR_BLAS"
-        FFLAGS+=" -mkl=sequential -I${MKLROOT}/include" # using LP64 and NOT 64bit integer in ILP64
+        FFLAGS+=" -qmkl=sequential -I${MKLROOT}/include" # using LP64 and NOT 64bit integer in ILP64
         USR_LFLAGS+=" -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
 
     # fi # LLVM compiler
 
     # Ricardo's debugging flags
-    # FFLAGS+=" -g3 -traceback" # Enables stack tracing.
+    FFLAGS+=" -g3 -traceback" # Enables stack tracing.
     # FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
     # FFLAGS+=" -debug extended" # Enables all runtime checks.
     # FFLAGS+=" -check all,nobounds,nouninit" # Nek500 fails for array subscript/character substring expressions and uninitialized variables.
@@ -82,7 +83,8 @@ if command -v mpiifort >/dev/null 2>&1; then
 else # GCC
 
     if [[ $(uname -s) == "Darwin" ]]; then
-        FC="mpif77" # macOS with arm crashes with mpif90
+        # FC="mpif77" # macOS with arm crashes with mpif90
+        FC="mpif90" # macOS Sequoia is ok with mpif90
     else
         FC="mpif90" # otherwise we use mpif90
     fi
@@ -91,18 +93,23 @@ else # GCC
     echo "Compiler found: $(which $FC)"
     echo "$($FC --version | head -n1)"
 
-    FFLAGS+=" -ffixed-form"             # Enables fixed-form source code, necessary as we mix .f90 files.
+    FFLAGS+="-ffixed-form"             # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
 
-    # FFLAGS+=" -g fbacktrace"           # Enables debugging information.
+    FFLAGS+=" -g -fbacktrace"           # Enables debugging information.
     # FFLAGS+=" -fanalyzer" # Enable the Clang Static Analyzer for code analysis
     # FFLAGS+=" -Ofast" # Enable aggressive optimization level for maximum performance
     # FFLAGS+=" -ffast-math" # Enable fast math optimizations for floating-point operations
     # FFLAGS+=" -funsafe-math-optimizations" # Enable unsafe math optimizations for improved performance
 
+    # FFLAGS+=" -ffpe-trap=invalid,zero,overflow" # Floating point exception trapping.
+    # FFLAGS+=" -fcheck=all" # Enables all runtime checks.
+    # FFLAGS+=" -fcheck=all -fno-bounds-check -finit-real=snan" # Check all, no bounds, uninitialized variables.
+    # FFLAGS+=" -Wall -Wextra -Wno-unused-parameter -Wno-missing-prototypes -Wno-missing-declarations" # Warning flags.
+    # FFLAGS+=" -std=f2018" # Adhere strictly to the standards of f90/f95/f03/f08/f15.
+
     # comment Nek5000/core/makenek.inc:226 with : sed -i '226s/^/#/' $HOME/nextStab/Nek5000/core/makenek.inc
-    #FFLAGS+=" -std=legacy -w" # Provides a backtrace in case of errors, useful for debugging.
-    #FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
+    #FFLAGS+=" -std=legacy -Wall -Wno-analyzer-out-of-bounds" # Provides a backtrace in case of errors, useful for debugging.
 
     export PPLIST="VENDOR_BLAS"
     if [[ $(uname -s) == "Darwin" ]]; then
@@ -143,7 +150,6 @@ esac
 # Final Preparations
 #-------------------------------------------------------------------------------
 FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
-export FFLAGS
 
 # User-specified object files
 USR="krylov_subspace.o"
@@ -164,7 +170,7 @@ USR+=" nek_vectors.o"
 
 # Check if the makefile_usr file exists and source it
 if [ -f "makefile_usr" ]; then
-    source makefile_usr
+    source makefile_usr # add a case-specific custom one here !
 fi
 export USR
 
@@ -173,8 +179,8 @@ echo "Nek5000 version: $N_VERSION"
 echo "nekStab version: $NS_VERSION"
 echo "preparing compilation with: $(
     which $FC
-    echo $FFLAGS $USR_LFLAGS
-)"
+    echo "FFLAGS="$FFLAGS
+    echo "USR_LFLAGS="$USR_LFLAGS)"
 
 # Update makefile and static variables
 cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
@@ -182,27 +188,49 @@ cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
 # appends `include 'NEKSTAB.inc'` to `SIZE` if not present.
 FILE="SIZE"
 INCLUDE_LINE="include 'NEKSTAB.inc'" # respect spaces
-grep -q "^ *$INCLUDE_LINE" "SIZE" || echo -e "\n      $INCLUDE_LINE" >> "$FILE"
+
+# Check if the include line is present in the file
+if grep -q "^ *$INCLUDE_LINE" "$FILE"; then
+    echo "Include line '$INCLUDE_LINE' is already present in '$FILE'."
+else
+    echo "Include line '$INCLUDE_LINE' not found in '$FILE'. Appending the include line."
+
+    # Append the include line to the file
+    echo -e "\n$INCLUDE_LINE" >> "$FILE"
+
+    # Verify the addition
+    if grep -q "^ *$INCLUDE_LINE" "$FILE"; then
+        echo "Include line '$INCLUDE_LINE' successfully appended to '$FILE'."
+    else
+        echo "Error: Failed to append the include line to '$FILE'."
+    fi
+fi
 
 # Define the file and the include line
 FILE="makefile_usr.inc"
 INCLUDE_LINE="include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab"
+
 # Check if the file exists
 if [ -f "$FILE" ]; then
+    echo "File $FILE exists."
+
     # Check if an include line for makefile_nekStab is in the file
-    if grep -q "^include .*makefile_nekStab" "$FILE"; then
+    if grep -q "^include .*/makefile_nekStab" "$FILE"; then
+        echo "Updating include path for makefile_nekStab found in $FILE."
+
         # The include line is in the file, replace it
         if [[ $(uname -s) == "Darwin" ]]; then
-            sed -i '' "s|^include .*makefile_nekStab|$INCLUDE_LINE|" "$FILE"
+            echo "Running on macOS. Using macOS-specific sed command to update $FILE."
+            sed -i '' "s|^include .*/makefile_nekStab|$INCLUDE_LINE|" "$FILE"
         else
-            sed -i "s|^include .*makefile_nekStab|$INCLUDE_LINE|" "$FILE"
+            sed -i "s|^include .*/makefile_nekStab|$INCLUDE_LINE|" "$FILE"
         fi
     else
-        # The include line is not in the file, append it
+        echo "Appending include line for makefile_nekStab not found in $FILE."
         echo -e "\n$INCLUDE_LINE" >>"$FILE"
     fi
 else
-    # The file does not exist, create it with the include line
+    echo "File $FILE does not exist. Creating $FILE with the include line."
     echo "$INCLUDE_LINE" >"$FILE"
 fi
 
@@ -214,7 +242,6 @@ set -o pipefail
 touch $1.usr 
 make -j4 2>&1 | tee -a build.log
 set +o pipefail
-
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
     mv *.mod obj
 fi
