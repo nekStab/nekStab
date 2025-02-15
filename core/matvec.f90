@@ -2,7 +2,7 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-            
+      
          if (nid == 0) write (6, *) 'Preparing linearized solver...'
       
       ! Enforce single perturbation mode
@@ -535,7 +535,7 @@
       subroutine newton_linearized_map(f, q)
       
          use krylov_subspace
-         
+      
          implicit none
          include 'SIZE'
          include 'TOTAL'

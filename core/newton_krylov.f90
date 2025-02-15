@@ -461,7 +461,7 @@
          real :: nwtol                 ! New computed tolerance
          real, parameter :: min_tol = 1.0d-4  ! Minimum allowed tolerance
          real, parameter :: relaxation_factor = 0.1d0  ! Relaxation factor for new tolerance
-           
+      
       ! Compute new tolerance with safety checks
          nwtol = max(min(residual*relaxation_factor, min_tol), dtol)
       

@@ -52,7 +52,7 @@
          if (uparam(1) == 2.1) then
             alpha = alpha + p%time*q%time
          end if
-            
+      
          return
       end subroutine k_dot
       

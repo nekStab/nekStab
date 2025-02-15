@@ -749,9 +749,9 @@
                end do
                write (101, '(1E15.7)') sum(integrals(1:9))
                write (101, '(1E15.7)') sum(integrals(1:9)) - integrals(10)
-               close(101)
+               close (101)
             end if ! nid == 0
-
+      
          end do
       
          return
@@ -870,4 +870,3 @@
          return
       end subroutine compute_laplacian
       !----------------------------------------------------------------------
-      
