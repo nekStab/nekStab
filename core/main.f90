@@ -6,29 +6,29 @@
          include 'SIZE'
          include 'TOTAL'
       
-         k_dim = 100               ! standard value, increas  in .usr
-         schur_tgt = 2             ! schur target for schur step factorizaiton
-         eigen_tol = 1.0e-6        ! tolerance for eigenmodes convergence
-         schur_del = 0.10d0        !
-         maxmodes = 20             ! max number of converged modes to disk
-         glob_skip = 10            ! global energy computation skip frequency
-         findiff_order = 1         ! finite difference order for the Frechet derivative
-         epsilon_base = 1.0e-6     ! finite difference perturbation scale parameter
+         k_dim = 100 ! standard value, increas  in .usr
+         schur_tgt = 2 ! schur target for schur step factorizaiton
+         eigen_tol = 1.0e-6 ! tolerance for eigenmodes convergence
+         schur_del = 0.10d0 !
+         maxmodes = 20 ! max number of converged modes to disk
+         glob_skip = 10 ! global energy computation skip frequency
+         findiff_order = 1 ! finite difference order for the Frechet derivative
+         epsilon_base = 1.0e-6 ! finite difference perturbation scale parameter
       
-         bst_skp = 10              ! boostconv skip iterations
-         bst_snp = 10              ! bootsconv residual subspace matrix size
+         bst_skp = 10 ! boostconv skip iterations
+         bst_snp = 10 ! bootsconv residual subspace matrix size
       
-         ifres = .false.          ! outpost restart files (KRY*, HES*)
-         ifvor = .false.          ! outpost vorticity (vor* omega_x,omega_y,omega_z components)
-         ifvox = .false.          ! outpost vortex (vox*: q,lambda2,omega criterions)
-         ifldbf = .true.           ! load base flow for stability computations
-         ifbf2D = .false.          ! force 2D base flow solution
-         ifstorebase = .true.      ! store base flow for Floquet analysis (dynamic allocated)
-         ifdyntol = .false.        ! dynamical tolerances for SFD and Newton (potential speed-up)
+         ifres = .false. ! outpost restart files (KRY*, HES*)
+         ifvor = .false. ! outpost vorticity (vor* omega_x,omega_y,omega_z components)
+         ifvox = .false. ! outpost vortex (vox*: q,lambda2,omega criterions)
+         ifldbf = .true. ! load base flow for stability computations
+         ifbf2D = .false. ! force 2D base flow solution
+         ifstorebase = .true. ! store base flow for Floquet analysis (dynamic allocated)
+         ifdyntol = .false. ! dynamical tolerances for SFD and Newton (potential speed-up)
       
-         ifseed_nois = .true.      ! noise as initial seed
-         ifseed_symm = .false.     ! symmetry initial seed
-         ifseed_load = .false.     ! loading initial seed (e.g. Re_ )
+         ifseed_nois = .true. ! noise as initial seed
+         ifseed_symm = .false. ! symmetry initial seed
+         ifseed_load = .false. ! loading initial seed (e.g. Re_ )
       !  Note: if ifseed_* all are false, 'useric' subroutine prescribes the initial seed
       
       !  Define here the probe position for zero-crossing vertical velocity analysis !
@@ -112,10 +112,10 @@
             nof = 0
             scal = .false.
             do i = 1, size(ifpsco)
-            if (ifpsco(i) .eqv. .true.) then
-               scal = .true.
-               nof = nof + 1
-            end if
+               if (ifpsco(i) .eqv. .true.) then
+                  scal = .true.
+                  nof = nof + 1
+               end if
             end do
             if (ifto .eqv. .true. .or. scal .eqv. .true.) then
                if (nid == 0) write (6, *) 'Scalars found:'
@@ -145,7 +145,7 @@
       
          select case (floor(uparam(1)))
       
-         case (0)                   ! DNS
+         case (0) ! DNS
       
             if (uparam(1) == 0.1) then ! Linearized DNS
                ifbase = .true.; call bcast(ifbase, lsize)
@@ -156,16 +156,16 @@
                if (ifoutfld) call outpost2(vxp, vyp, vzp, prp, tp, nof, 'pr_')
             end if
       
-            call nekStab_outpost   ! outpost vorticity
-            call nekStab_comment   ! print comments
+            call nekStab_outpost ! outpost vorticity
+            call nekStab_comment ! print comments
             call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
             call nekStab_enstrophy(vx, vy, vz, t, 'total_enstrophy.dat', glob_skip)
       !if (lastep == 1) call nek_end -> this is done by Nek5000
       
-         case (1)                   ! fixed points computation
+         case (1) ! fixed points computation
       
-            call nekStab_outpost   ! outpost vorticity
-            call nekStab_comment   ! print comments
+            call nekStab_outpost ! outpost vorticity
+            call nekStab_comment ! print comments
       
             if (uparam(1) == 1.1) then
                call SFD
@@ -193,23 +193,23 @@
       
       ! Conditional statements for each Newton-Krylov case
             if (nid == 0) then
-            if (isNewtonFP) then
-               write (6, *) 'Newton-Krylov for fixed points...'
-            elseif (isNewtonPO) then
-               write (6, *) 'Newton-Krylov for UPOs...'
-            elseif (isNewtonPO_T) then
-               write (6, *) 'Newton-Krylov for forced UPOs...'
-            else
-               write (6, *) 'Unrecognized option...'
-               call nek_end
-            end if
+               if (isNewtonFP) then
+                  write (6, *) 'Newton-Krylov for fixed points...'
+               elseif (isNewtonPO) then
+                  write (6, *) 'Newton-Krylov for UPOs...'
+               elseif (isNewtonPO_T) then
+                  write (6, *) 'Newton-Krylov for forced UPOs...'
+               else
+                  write (6, *) 'Unrecognized option...'
+                  call nek_end
+               end if
             end if
       
       ! Proceed with Newton-Krylov computation
             call newton_krylov
             call nek_end
       
-         case (3)                   ! eigenvalue problem
+         case (3) ! eigenvalue problem
       
             isDirect = (uparam(1) == 3.1)
             isFloquetDirect = (uparam(1) == 3.11)
@@ -227,7 +227,7 @@
             end if
             call nek_end
       
-         case (4)                   ! in postprocessing.f
+         case (4) ! in postprocessing.f
       
             if (uparam(01) == 4.0) then ! all
                call stability_energy_budget

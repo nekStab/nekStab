@@ -4,7 +4,7 @@
       ! RESPECT 72 CHAR LIMIT PER LINE
       
       ! Parameters
-      integer, parameter :: ncoef = 4  ! Number of coefficients for finite difference
+      integer, parameter :: ncoef = 4 ! Number of coefficients for finite difference
       
       ! Character variables
       character(len=1) :: evop

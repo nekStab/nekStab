@@ -45,17 +45,17 @@
          character(len=60) :: filename
          itervp = 0
          do k = 1, fst_numk
-         do j = 1, fst_nmodes
-            itervp = itervp + 1
-            write (filename, '(A,I3.3,A)') 'FST_data/velocity', itervp, '.dat'
-            open (200, file=trim(filename), form='formatted', status='unknown')
-            read (200, *) npointModes
-            do i = 1, npointModes
-               read (200, *) umodes(i, 1, itervp), umodes(i, 2, itervp), umodes(i, 3, itervp),
+            do j = 1, fst_nmodes
+               itervp = itervp + 1
+               write (filename, '(A,I3.3,A)') 'FST_data/velocity', itervp, '.dat'
+               open (200, file=trim(filename), form='formatted', status='unknown')
+               read (200, *) npointModes
+               do i = 1, npointModes
+                  read (200, *) umodes(i, 1, itervp), umodes(i, 2, itervp), umodes(i, 3, itervp),
      $   umodes(i, 4, itervp), umodes(i, 5, itervp), umodes(i, 6, itervp), umodes(i, 7, itervp)
+               end do
+               close (200)
             end do
-            close (200)
-         end do
          end do
       end subroutine initModes
       !----------------------------------------------------------------------
@@ -68,27 +68,27 @@
       
          npointBC = 0
          do e = 1, nelv
-         do f = 1, 2*ndim
+            do f = 1, 2*ndim
       
-            if (cbc(f, e, 1) == 'v  ') then
-               call facind(i0, i1, j0, j1, k0, k1, nx1, ny1, nz1, f)
-               do i = i0, i1
-               do j = j0, j1
-               do k = k0, k1
-                  npointBC = npointBC + 1
-                  pointBC(npointBC, 1) = i
-                  pointBC(npointBC, 2) = j
-                  pointBC(npointBC, 3) = k
-                  pointBC(npointBC, 4) = e
-                  pointBC(npointBC, 5) = xm1(i, j, k, e)
-                  pointBC(npointBC, 6) = ym1(i, j, k, e)
-                  pointBC(npointBC, 7) = zm1(i, j, k, e)
-               end do
-               end do
-               end do
-            end if
+               if (cbc(f, e, 1) == 'v  ') then
+                  call facind(i0, i1, j0, j1, k0, k1, nx1, ny1, nz1, f)
+                  do i = i0, i1
+                     do j = j0, j1
+                        do k = k0, k1
+                           npointBC = npointBC + 1
+                           pointBC(npointBC, 1) = i
+                           pointBC(npointBC, 2) = j
+                           pointBC(npointBC, 3) = k
+                           pointBC(npointBC, 4) = e
+                           pointBC(npointBC, 5) = xm1(i, j, k, e)
+                           pointBC(npointBC, 6) = ym1(i, j, k, e)
+                           pointBC(npointBC, 7) = zm1(i, j, k, e)
+                        end do
+                     end do
+                  end do
+               end if
       
-         end do
+            end do
          end do
       end subroutine defineBC
       !----------------------------------------------------------------------
@@ -103,34 +103,34 @@
       
          itervp = 0
          do kvalue = 1, fst_numk
-         do j = 1, fst_nmodes
-            itervp = itervp + 1
+            do j = 1, fst_nmodes
+               itervp = itervp + 1
       
       !SPLINE SECOND DERIVATE
-            call spline(umodes(1, 1, 1), umodes(1, 2, itervp), npointModes, 1e30, 1e30, y1(1))
-            call spline(umodes(1, 1, 1), umodes(1, 3, itervp), npointModes, 1e30, 1e30, y2(1))
-            call spline(umodes(1, 1, 1), umodes(1, 4, itervp), npointModes, 1e30, 1e30, y3(1))
-            call spline(umodes(1, 1, 1), umodes(1, 5, itervp), npointModes, 1e30, 1e30, y4(1))
-            call spline(umodes(1, 1, 1), umodes(1, 6, itervp), npointModes, 1e30, 1e30, y5(1))
-            call spline(umodes(1, 1, 1), umodes(1, 7, itervp), npointModes, 1e30, 1e30, y6(1))
+               call spline(umodes(1, 1, 1), umodes(1, 2, itervp), npointModes, 1e30, 1e30, y1(1))
+               call spline(umodes(1, 1, 1), umodes(1, 3, itervp), npointModes, 1e30, 1e30, y2(1))
+               call spline(umodes(1, 1, 1), umodes(1, 4, itervp), npointModes, 1e30, 1e30, y3(1))
+               call spline(umodes(1, 1, 1), umodes(1, 5, itervp), npointModes, 1e30, 1e30, y4(1))
+               call spline(umodes(1, 1, 1), umodes(1, 6, itervp), npointModes, 1e30, 1e30, y5(1))
+               call spline(umodes(1, 1, 1), umodes(1, 7, itervp), npointModes, 1e30, 1e30, y6(1))
       
       !     INTERPOLATING VALUES
-            do i = 1, npointBC
-               yint = pointBC(i, 6)
-               call splint(umodes(1, 1, 1), umodes(1, 2, itervp), y1(1), npointModes, yint, uint1)
-               call splint(umodes(1, 1, 1), umodes(1, 3, itervp), y2(1), npointModes, yint, uint2)
-               call splint(umodes(1, 1, 1), umodes(1, 4, itervp), y3(1), npointModes, yint, uint3)
-               call splint(umodes(1, 1, 1), umodes(1, 5, itervp), y4(1), npointModes, yint, uint4)
-               call splint(umodes(1, 1, 1), umodes(1, 6, itervp), y5(1), npointModes, yint, uint5)
-               call splint(umodes(1, 1, 1), umodes(1, 7, itervp), y6(1), npointModes, yint, uint6)
-               umodesBC(i, 1, itervp) = uint1
-               umodesBC(i, 2, itervp) = uint2
-               umodesBC(i, 3, itervp) = uint3
-               umodesBC(i, 4, itervp) = uint4
-               umodesBC(i, 5, itervp) = uint5
-               umodesBC(i, 6, itervp) = uint6
+               do i = 1, npointBC
+                  yint = pointBC(i, 6)
+                  call splint(umodes(1, 1, 1), umodes(1, 2, itervp), y1(1), npointModes, yint, uint1)
+                  call splint(umodes(1, 1, 1), umodes(1, 3, itervp), y2(1), npointModes, yint, uint2)
+                  call splint(umodes(1, 1, 1), umodes(1, 4, itervp), y3(1), npointModes, yint, uint3)
+                  call splint(umodes(1, 1, 1), umodes(1, 5, itervp), y4(1), npointModes, yint, uint4)
+                  call splint(umodes(1, 1, 1), umodes(1, 6, itervp), y5(1), npointModes, yint, uint5)
+                  call splint(umodes(1, 1, 1), umodes(1, 7, itervp), y6(1), npointModes, yint, uint6)
+                  umodesBC(i, 1, itervp) = uint1
+                  umodesBC(i, 2, itervp) = uint2
+                  umodesBC(i, 3, itervp) = uint3
+                  umodesBC(i, 4, itervp) = uint4
+                  umodesBC(i, 5, itervp) = uint5
+                  umodesBC(i, 6, itervp) = uint6
+               end do
             end do
-         end do
          end do
       end subroutine interpolateModes
       !----------------------------------------------------------------------
@@ -204,7 +204,7 @@
                end do
       
                call rzero(turbu_aux(1, 1), npointBC)
-               call addcol3(turbu_aux(1, 1), umodesBC(1, 1, itervp), auxcos(1), npointBC)  !a = a+b*c
+               call addcol3(turbu_aux(1, 1), umodesBC(1, 1, itervp), auxcos(1), npointBC) !a = a+b*c
                call addcol3(turbu_aux(1, 1), umodesBC(1, 2, itervp), auxsin(1), npointBC)
                call rzero(turbu_aux(1, 2), npointBC)
                call addcol3(turbu_aux(1, 2), umodesBC(1, 3, itervp), auxcos(1), npointBC)
@@ -280,7 +280,7 @@
       !       a=(xa(khi)-x)/h
       !       b=(x-xa(klo))/h
       !       y=a*ya(klo)+b*ya(khi)+
-      !     $         ((a**3-a)*y2a(klo)+(b**3-b)*y2a(khi))*(h**2)/6.
+      !     $                        ((a**3-a)*y2a(klo)+(b**3-b)*y2a(khi))*(h**2)/6.
       
       !       return
       !       END SUBROUTINE splint
@@ -303,10 +303,10 @@
       
          allocate (u(n))
       
-         if (yp1 > 0.99e30) then  ! Natural spline
+         if (yp1 > 0.99e30) then ! Natural spline
             y2(1) = 0.0
             u(1) = 0.0
-         else  ! First derivative
+         else ! First derivative
             y2(1) = -0.5
             u(1) = (3.0/(x(2) - x(1)))*((y(2) - y(1))/(x(2) - x(1)) - yp1)
          end if
@@ -361,16 +361,16 @@
          khi = n
       
          do
-         if (khi - klo > 1) then
-            k = (khi + klo)/2
-            if (xa(k) > x) then
-               khi = k
+            if (khi - klo > 1) then
+               k = (khi + klo)/2
+               if (xa(k) > x) then
+                  khi = k
+               else
+                  klo = k
+               end if
             else
-               klo = k
+               exit
             end if
-         else
-            exit
-         end if
          end do
       
          h = xa(khi) - xa(klo)

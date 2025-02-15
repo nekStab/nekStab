@@ -47,9 +47,9 @@
          if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, nv)
          if (ifto) alpha = alpha + glsc3(pt(:, 1), bm1s, qt(:, 1), nt)
          if (ldimt > 1) then
-         do m = 2, ldimt
-            if (ifpsco(m - 1)) alpha = alpha + glsc3(pt(:, m), bm1s, qt(:, m), nt)
-         end do
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) alpha = alpha + glsc3(pt(:, m), bm1s, qt(:, m), nt)
+            end do
          end if
       
          return
@@ -72,7 +72,7 @@
          alpha = sqrt(alpha)
       
       end subroutine norm
-           
+      
       !-----------------------------------------------------------------------
       
       subroutine krylov_schur
@@ -117,7 +117,7 @@
       
       !     ----- Loading baseflow from disk (optional) -----
       
-         if (ifldbf) then            !skip loading if single run
+         if (ifldbf) then !skip loading if single run
             if (nid == 0) write (*, *) 'Loading base flow from disk:'
             write (filename, '(a,a,a)') 'BF_', trim(SESSION), '0.f00001'
             call load_fld(filename)
@@ -135,9 +135,9 @@
          if (istep == 0 .and. (
      $   uparam(1) == 3.11 .or. ! Floquet direct
      $   uparam(1) == 3.21 .or. ! Floquet adjoint
-     $   uparam(1) == 3.31    ! Floquet direct-adjoint
+     $   uparam(1) == 3.31 ! Floquet direct-adjoint
      $   )) then
-         param(10) = time         ! upo period in field
+         param(10) = time ! upo period in field
          if (nid == 0) write (6, *) 'Floquet mode !!!'
          if (nid == 0) write (6, *) ' getting endTime from file: endTime=', param(10)
          end if
@@ -151,15 +151,15 @@
       
       !     ----- Creates seed vector for the Krylov subspace -----
       
-            if (ifseed_nois) then    ! noise as initial seed
+            if (ifseed_nois) then ! noise as initial seed
       
                if (nid == 0) write (6, *) 'Filling fields with noise...'
                call op_add_noise(wrk2%vx, wrk2%vy, wrk2%vz)
                if (ifto) call add_noise_scal(wrk2%t(:, 1), 9.0e4, 3.0e3, 4.0e5)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call add_noise_scal(wrk2%t(:, m), 9.0e1*m, 3.0e2*m, 4.0e1*m)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call add_noise_scal(wrk2%t(:, m), 9.0e1*m, 3.0e2*m, 4.0e1*m)
+                  end do
                end if
                call k_normalize(wrk2, alpha)
       !call outpost2(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, nof, 'NOS')
@@ -214,19 +214,19 @@
                write (filename, '(a,a,i4.4)') 'HES', trim(SESSION), mstart
       
                open (67, file=trim(filename), status='unknown', form='formatted')
-
+      
                if (k_dim < mstart) then !subsampling
                   do i = 1, k_dim + 1
                      do j = 1, mstart
-                  if (j <= k_dim) read (67, "(1E15.7)") H(i, j)
+                        if (j <= k_dim) read (67, "(1E15.7)") H(i, j)
                      end do
                   end do
                else
       
-               read (67, *) ((H(i, j), j=1, mstart), i=1, mstart + 1)
+                  read (67, *) ((H(i, j), j=1, mstart), i=1, mstart + 1)
       
                end if
-
+      
                close (67)
                write (6, *) 'Broadcast H matrix to all procs...'
       
@@ -246,7 +246,7 @@
       !     close(67)
       !     endif
       
-            mstart = mstart + 1        !careful here!
+            mstart = mstart + 1 !careful here!
             call load_files(Q, mstart, k_dim + 1, 'KRY')
             if (nid == 0) write (6, *) 'Restart fields loaded to memory!'
       
@@ -295,7 +295,7 @@
             case (1:)
                if (converged_eigenvalues >= schur_tgt) then ! Krylov-Schur factorization completed.
                   converged = .true.
-               else                ! Apply Schur condensation before restarting the factorization.
+               else ! Apply Schur condensation before restarting the factorization.
                   schur_cnt = schur_cnt + 1
                   if (nid == 0) write (6, *) 'Starting Schur condensation phase.', schur_cnt
                   call schur_condensation(mstart, H, Q, k_dim)
@@ -320,10 +320,10 @@
          if (nid == 0) write (6, *) 'Converged eigenvalues: ', converged_eigenvalues
       
          if (converged_eigenvalues > 0) then
-         if (nid == 0) then
-            write (6, *) 'Exporting modes...'
-         end if
-         call outpost_ks(vals, vecs, Q, residual, converged_eigenvalues)
+            if (nid == 0) then
+               write (6, *) 'Exporting modes...'
+            end if
+            call outpost_ks(vals, vecs, Q, residual, converged_eigenvalues)
          end if
       
          if (nid == 0) write (6, *) 'Eigenproblem solver finished.'
@@ -370,7 +370,7 @@
       
       ! Miscellaneous variables
          integer :: i, m
-         real :: speriod, trim, spurious_tol!, glmin, glmax
+         real :: speriod, trim, spurious_tol !, glmin, glmax
          real :: alpha, alpha_r, alpha_i, beta, old_uparam1
          real :: norma_Re, norma_Im, omega
          complex :: log_transform
@@ -395,9 +395,9 @@
          fich3 = 'Spectre_NS'//trim(evop)//'_conv.dat'
       
          if (nid == 0) then
-            ! Open files with error checking
-            open (unit=10, file=fich1, form='formatted', status='unknown')            
-            open (unit=20, file=fich2, form='formatted', status='unknown')            
+      ! Open files with error checking
+            open (unit=10, file=fich1, form='formatted', status='unknown')
+            open (unit=20, file=fich2, form='formatted', status='unknown')
             open (unit=30, file=fich3, form='formatted', status='unknown')
          end if
       
@@ -410,9 +410,9 @@
             if (ifpo) qp(:, i) = Q(i)%pr(:)
             if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
             if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
-            end do
+               do m = 2, ldimt
+                  if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
+               end do
             end if
       
             if (nid == 0) then
@@ -445,9 +445,9 @@
                if (ifpo) fp_cp(:) = matmul(qp(:, 1:k_dim), vecs(:, i))
                if (ifto) fp_ct(:, 1) = matmul(qt(:, 1, 1:k_dim), vecs(:, i))
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) fp_ct(:, m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))
-               end do ! m = 2,ldimt
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) fp_ct(:, m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))
+                  end do ! m = 2,ldimt
                end if !ldimt.gt.1
       
       !        normalization to unit-norm (volume integral of FP*conj(FP) = 1.)
@@ -524,7 +524,7 @@
       !
             filename = 'Spectre_'//trim(evop)//'.info'
             open (844, file=filename, action='write', status='replace')
-
+      
             write (844, '(A,A)') 'Nek5000 version:', NVERSION
             write (844, '(A,A)') 'nekStab version:', NSVERSION
             write (844, '(A)') '[mesh]'
@@ -630,9 +630,9 @@
             if (ifpo) qp(:, i) = Q(i)%pr(:)
             if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
             if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
-            end do
+               do m = 2, ldimt
+                  if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
+               end do
             end if
          end do
          qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
@@ -641,9 +641,9 @@
          if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
          if (ifto) qt(:, 1, 1:ksize) = matmul(qt(:, 1, 1:ksize), vecs)
          if (ldimt > 1) then
-         do m = 2, ldimt
-            if (ifpsco(m - 1)) qt(:, m, 1:ksize) = matmul(qt(:, m, 1:ksize), vecs)
-         end do
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) qt(:, m, 1:ksize) = matmul(qt(:, m, 1:ksize), vecs)
+            end do
          end if
       
       !     --> Update the Schur matrix with b.T @ Q corresponding to
@@ -664,9 +664,9 @@
             if (ifpo) Q(i)%pr(:) = qp(:, i)
             if (ifto) Q(i)%t(:, 1) = qt(:, 1, i)
             if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) Q(i)%t(:, m) = qt(:, m, i)
-            end do
+               do m = 2, ldimt
+                  if (ifpsco(m - 1)) Q(i)%t(:, m) = qt(:, m, i)
+               end do
             end if
          end do
       
@@ -742,7 +742,7 @@
       
          return
       end subroutine select_eigenvalues
-
+      
       !     ------------------------------------------------------------------------------------
       
       subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
@@ -795,7 +795,7 @@
       !     call whereyouwant("KRY", k) ! for restart of newton solver
       !     endif
       
-         time = time*k           !order in ParaView
+         time = time*k !order in ParaView
          call outpost2(f_xr, f_yr, f_zr, f_pr, f_tr, nof, "KRY")
       
       !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.

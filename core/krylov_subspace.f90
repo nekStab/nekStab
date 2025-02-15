@@ -43,9 +43,9 @@
       !     --> Potential energy.
          if (ifto) alpha = alpha + glsc3(p%t(:, 1), bm1s, q%t(:, 1), nt)
          if (ldimt > 1) then
-         do m = 2, ldimt
-            if (ifpsco(m - 1)) alpha = alpha + glsc3(p%t(:, m), bm1s, q%t(:, m), nt)
-         end do
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) alpha = alpha + glsc3(p%t(:, m), bm1s, q%t(:, m), nt)
+            end do
          end if
       
       !     --> Time component.
@@ -185,9 +185,9 @@
             if (if3d) qz(:, i) = Q(i)%vz(:)
             if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
             if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
-            end do
+               do m = 2, ldimt
+                  if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
+               end do
             end if
             time_comp(i) = Q(i)%time
          end do
@@ -200,9 +200,9 @@
          if (if3d) dq%vz(:) = matmul(qz(:, :), yvec(:))
          if (ifto) dq%t(:, 1) = matmul(qt(:, :, 1), yvec(:))
          if (ldimt > 1) then
-         do m = 2, ldimt
-            if (ifpsco(m - 1)) dq%t(:, m) = matmul(qt(:, :, m), yvec(:))
-         end do
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) dq%t(:, m) = matmul(qt(:, :, m), yvec(:))
+            end do
          end if
          dq%time = dot_product(time_comp(:), yvec(:))
       

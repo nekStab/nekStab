@@ -157,13 +157,13 @@
          vals = wr*(1.0d0, 0.0d0) + wi*(0.0d0, 1.0d0)
          vecs = vr*(1.0d0, 0.0d0)
       
-         do i = 1, n - 1  ! Process pairs up to n-1 to avoid buffer overflow
-         if (wi(i) > 0) then
-            vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0) + vr(:, i + 1)*(0.0d0, 1.0d0)
-            vecs(:, i + 1) = vr(:, i)*(1.0d0, 0.0d0) - vr(:, i + 1)*(0.0d0, 1.0d0)
+         do i = 1, n - 1 ! Process pairs up to n-1 to avoid buffer overflow
+            if (wi(i) > 0) then
+               vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0) + vr(:, i + 1)*(0.0d0, 1.0d0)
+               vecs(:, i + 1) = vr(:, i)*(1.0d0, 0.0d0) - vr(:, i + 1)*(0.0d0, 1.0d0)
       !else if (wi(i) == 0) then ! redundant code since it's handled by the initialization
       !   vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0)
-         end if
+            end if
          end do
       
       !     --> Sort the eigenvalues and eigenvectors by decreasing magnitudes.
@@ -206,19 +206,19 @@
          temp_n = (0.0d0, 0.0d0)
          norm = sqrt(real(vals)**2 + aimag(vals)**2)
          do k = 1, n - 1
-         do l = k + 1, n
-         if (norm(k) < norm(l)) then
-            temp_real = norm(k)
-            temp_complex = vals(k)
-            temp_n = vecs(:, k)
-            norm(k) = norm(l)
-            norm(l) = temp_real
-            vals(k) = vals(l)
-            vals(l) = temp_complex
-            vecs(:, k) = vecs(:, l)
-            vecs(:, l) = temp_n
-         end if
-         end do
+            do l = k + 1, n
+               if (norm(k) < norm(l)) then
+                  temp_real = norm(k)
+                  temp_complex = vals(k)
+                  temp_n = vecs(:, k)
+                  norm(k) = norm(l)
+                  norm(l) = temp_real
+                  vals(k) = vals(l)
+                  vals(l) = temp_complex
+                  vecs(:, k) = vecs(:, l)
+                  vecs(:, l) = temp_n
+               end if
+            end do
          end do
          return
       end subroutine sort_eigendecomp
