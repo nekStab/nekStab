@@ -675,7 +675,7 @@
       
       !-----------------------------------------------------------------------
       
-      subroutine select_eigenvalues2(selected, converged_eigenvalues, vals, delta, nev, n)
+      subroutine select_eigenvalues(selected, converged_eigenvalues, vals, delta, nev, n)
       !     This function selects the eigenvalues to be placed in the upper left corner
       !     during the Schur condensation phase.
       !
@@ -739,31 +739,6 @@
          end if
       
          converged_eigenvalues = count(selected)
-      
-         return
-      end subroutine select_eigenvalues2
-      
-
-       subroutine select_eigenvalues(vals, vecs, k_dim, k_sel, idx)
-         implicit none
-         complex(kind=8), dimension(k_dim), intent(in) :: vals
-         complex(kind=8), dimension(k_dim, k_dim), intent(in) :: vecs
-         integer, intent(in) :: k_dim, k_sel
-         integer, dimension(k_sel), intent(out) :: idx
-      
-         integer :: i
-         real, dimension(k_dim) :: tmp_vals
-      
-      ! Copy absolute values to temporary array
-         do i = 1, k_dim
-            tmp_vals(i) = abs(vals(i))
-         end do
-      
-      ! Find indices of largest eigenvalues
-         do i = 1, k_sel
-            idx(i) = maxloc(tmp_vals, dim=1)
-            tmp_vals(idx(i)) = -1.0  ! Mark as used
-         end do
       
          return
       end subroutine select_eigenvalues
