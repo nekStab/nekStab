@@ -52,11 +52,7 @@ if command -v mpiifort >/dev/null 2>&1; then
 
         echo "Using Intel Compiler Classic..."
         # FFLAGS+=" -xHost" # comment if already included
-        
-        # FFLAGS+=" -fp-model source" 
-        # FFLAGS+=" -fp-model fast=2"  
-        # FFLAGS+=" -no-prec-div"  
-        
+               
         # for other older Intel compilers
         # FFLAGS+=" -diag-disable=6375  
         # FFLAGS+=" -diag-disable=10441  
@@ -82,12 +78,7 @@ if command -v mpiifort >/dev/null 2>&1; then
 
 else # GCC
 
-    if [[ $(uname -s) == "Darwin" ]]; then
-        # FC="mpif77" # macOS with arm crashes with mpif90
-        FC="mpif90" # macOS Sequoia is ok with mpif90
-    else
-        FC="mpif90" # otherwise we use mpif90
-    fi
+    FC="mpif90"
     CC="mpicc"
 
     echo "Compiler found: $(which $FC)"
@@ -97,12 +88,8 @@ else # GCC
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
 
     FFLAGS+=" -g -fbacktrace"           # Enables debugging information.
-    # FFLAGS+=" -ffpe-trap=invalid,zero,overflow" # Floating point exception trapping.
-    # FFLAGS+=" -fcheck=all" # Enables all runtime checks.
-    # FFLAGS+=" -fcheck=all -fno-bounds-check -finit-real=snan" # Check all, no bounds, uninitialized variables.
-    # FFLAGS+=" -Wall -Wextra -Wno-unused-parameter -Wno-missing-prototypes -Wno-missing-declarations" # Warning flags.
-    # FFLAGS+=" -std=f2018" # Adhere strictly to the standards of f90/f95/f03/f08/f15.
 
+    # Better debug options #
     # comment Nek5000/core/makenek.inc:226 with : sed -i '226s/^/#/' $HOME/nextStab/Nek5000/core/makenek.inc
     #FFLAGS+=" -std=legacy -Wall -Wno-analyzer-out-of-bounds" # Provides a backtrace in case of errors, useful for debugging.
 
