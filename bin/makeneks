@@ -1,21 +1,99 @@
 #!/bin/bash
 set -a # export all variables and functions defined in the script
 
-# Check if the script is called with the "clean" argument
-if [[ $1 == "clean" ]]; then
+# Initialize flags
+debug=false
+fresh=false
+target=""
+
+# Function to show usage
+show_usage () {
+    echo "Usage: $0 [case] [--debug] [--fresh]"
+    echo "  case     : Case name to compile"
+    echo "  --debug  : Enable debug mode"
+    echo "  --fresh  : Clean before compilation"
+    exit 1
+}
+
+# Function to manage compiler flags
+manage_compiler_flags () {
+    local action=$1
+    local makenek_inc="$NEK_SOURCE_ROOT/core/makenek.inc"
+    
+    if [ ! -f "$makenek_inc" ]; then
+        echo "Warning: makenek.inc not found at $makenek_inc"
+        return
+    fi
+    
+    case $action in
+        "enable_debug")
+            echo "Removing -w flag for debug mode"
+            if [[ $(uname -s) == "Darwin" ]]; then
+                sed -i '' 's/FF77="-w -std=legacy"/FF77=" -std=legacy"/' "$makenek_inc"
+            else
+                sed -i 's/FF77="-w -std=legacy"/FF77=" -std=legacy"/' "$makenek_inc"
+            fi
+            ;;
+        "restore")
+            echo "Restoring original compiler flags"
+            if [[ $(uname -s) == "Darwin" ]]; then
+                sed -i '' 's/FF77=" -std=legacy"/FF77="-w -std=legacy"/' "$makenek_inc"
+            else
+                sed -i 's/FF77=" -std=legacy"/FF77="-w -std=legacy"/' "$makenek_inc"
+            fi
+            ;;
+    esac
+}
+
+# Parse command line arguments
+# First argument should be the case name if not an option
+if [[ $1 != --* && $1 != "" ]]; then
+    target="$1"
+    shift
+fi
+
+# Parse remaining options
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug)
+            debug=true
+            shift
+            ;;
+        --fresh)
+            fresh=true
+            shift
+            ;;
+        --help|-h)
+            show_usage
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_usage
+            ;;
+    esac
+done
+
+# Handle fresh (clean) operation if requested
+if [ "$fresh" = true ]; then
     echo "Cleaning up build files..."
     make clean
     echo "Removing session and log files..."
     rm -f SESSION.NAME *log* makefile NEKSTAB.inc *.mod
     rm -f KRY* HES*
     echo "Cleanup completed."
-    exit 0
+    manage_compiler_flags "restore"
 fi
 
 # Fetch version information to print in the initialisation message
 N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
 NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
 FFLAGS="" # ensure empty here
+
+# Handle debug mode
+if [ "$debug" = true ]; then
+    echo "Debug mode enabled"
+    manage_compiler_flags "enable_debug"
+fi
 
 #-------------------------------------------------------------------------------
 # Compiler Detection
@@ -68,13 +146,17 @@ if command -v mpiifort >/dev/null 2>&1; then
 
     # fi # LLVM compiler
 
-    # Ricardo's debugging flags
-    FFLAGS+=" -g3 -traceback" # Enables stack tracing.
-    # FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
-    # FFLAGS+=" -debug extended" # Enables all runtime checks.
-    # FFLAGS+=" -check all,nobounds,nouninit" # Nek500 fails for array subscript/character substring expressions and uninitialized variables.
-    # FFLAGS+=" -warn all,noexternal,nointerfaces -diag-enable remark" 
-    # FFLAGS+=" -stand f18" # adhere strictly to the standards of f90/f95/f03/f08/f15 
+    # Handle debug mode
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled " # Ricardo's debugging flags
+        FFLAGS+=" -g3 -traceback" # Enables stack tracing.
+        # FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
+        # FFLAGS+=" -debug extended" # Enables all runtime checks.
+        # FFLAGS+=" -check all,nobounds,nouninit" # Nek500 fails for array subscript/character substring expressions and uninitialized variables.
+        # FFLAGS+=" -warn all,noexternal,nointerfaces -diag-enable remark" 
+        # FFLAGS+=" -stand f18" # adhere strictly to the standards of f90/f95/f03/f08/f15 
+    fi
+
 
 else # GCC
 
@@ -84,15 +166,16 @@ else # GCC
     echo "Compiler found: $(which $FC)"
     echo "$($FC --version | head -n1)"
 
-    FFLAGS+="-ffixed-form"             # Enables fixed-form source code, necessary as we mix .f90 files.
+    FFLAGS+="-ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
 
-    FFLAGS+=" -g -fbacktrace"           # Enables debugging information.
-
-    # Better debug options #
-    # comment Nek5000/core/makenek.inc:226 with : sed -i '226s/^/#/' $HOME/nextStab/Nek5000/core/makenek.inc
-    #FFLAGS+=" -std=legacy -Wall -Wno-analyzer-out-of-bounds" # Provides a backtrace in case of errors, useful for debugging.
-
+    if [ "$debug" = true ]; then # Handle debug mode
+        echo "Debug mode enabled"
+        FFLAGS+=" -g -fbacktrace" # Enables debugging information.
+        # Add debug flags for GCC # -frecursive to stop max-stack-var-size
+        FFLAGS+=" -Wall -Wno-analyzer-out-of-bounds -Wno-zerotrip -frecursive" # Additional flags for debugging
+        echo "Added debug flags to FFLAGS"
+    fi
     CFLAGS=" -w"
 
     export PPLIST="VENDOR_BLAS"
@@ -220,7 +303,7 @@ fi
 
 : ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
 set +a -e
-$NEK_SOURCE_ROOT/bin/nekconfig $@
+$NEK_SOURCE_ROOT/bin/nekconfig "$target"
 $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
 set -o pipefail
 touch $1.usr 
@@ -228,4 +311,9 @@ make -j4 2>&1 | tee -a build.log
 set +o pipefail
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
     mv *.mod obj
+fi
+
+# Restore original compiler flags if debug mode was enabled
+if [ "$debug" = true ]; then
+    manage_compiler_flags "restore"
 fi

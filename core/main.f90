@@ -52,6 +52,17 @@
          call bcast(eigen_tol, wdsize) ! wdsize for real
          call bcast(schur_del, wdsize)
          call bcast(epsilon_base, wdsize)
+         call bcast(xck, wdsize)
+         call bcast(yck, wdsize)
+         call bcast(zck, wdsize)
+         call bcast(xLspg, wdsize)
+         call bcast(xRspg, wdsize)
+         call bcast(yLspg, wdsize)
+         call bcast(yRspg, wdsize)
+         call bcast(zLspg, wdsize)
+         call bcast(zRspg, wdsize)
+         call bcast(acc_spg, wdsize)
+         call bcast(spng_st, wdsize)
       
          call bcast(schur_tgt, isize) ! isize for integer
          call bcast(maxmodes, isize)

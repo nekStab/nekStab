@@ -106,11 +106,11 @@
                   if (nid == 0) write (6, *) ' Converged base flow to:', tol
                   ifbfcv = .true.
                   call bcast(ifbfcv, lsize)
-                  param(63) = 1 ! Enforce 64-bit output
-                  call bcast(param, 200*wdsize)
-                  call outpost(vx, vy, vz, pr, t, 'BF_')
-                  param(63) = 0 ! Enforce 32-bit output
-                  call bcast(param, 200*wdsize)
+                  param(63) = 1.0d0 ! Enforce 64-bit output
+                  call bcast(param(63), wdsize)
+                  call outpost2(vx, vy, vz, pr, t, nof, 'BF_')
+                  param(63) = 0.0d0 ! Reset to 32-bit output
+                  call bcast(param(63), wdsize)
                   call outpost_vort(vx, vy, vz, 'BFV')
                end if
       
@@ -202,11 +202,11 @@
                if (nid == 0) write (6, *) ' Converged base flow to:', res
                ifbfcv = .true.
                call bcast(ifbfcv, lsize)
-               param(63) = 1
-               call bcast(param, 200*wdsize)
+               param(63) = 1.0d0 ! Enforce 64-bit output
+               call bcast(param(63), wdsize)
                call outpost2(vx, vy, vz, pr, t, nof, 'BF_')
-               param(63) = 0
-               call bcast(param, 200*wdsize)
+               param(63) = 0.0d0 ! Reset to 32-bit output
+               call bcast(param(63), wdsize)
                call outpost_vort(vx, vy, vz, 'BFV')
             end if
       
@@ -252,11 +252,11 @@
                if (nid == 0) write (6, *) ' Converged base flow to:', tol
                ifbfcv = .true.
                call bcast(ifbfcv, lsize)
-               param(63) = 1 ! Enforce 64-bit output
-               call bcast(param, 200*wdsize)
-               call outpost(vx, vy, vz, pr, t, 'BF_')
-               param(63) = 0 ! Enforce 32-bit output
-               call bcast(param, 200*wdsize)
+               param(63) = 1.0d0 ! Enforce 64-bit output
+               call bcast(param(63), wdsize)
+               call outpost2(vx, vy, vz, pr, t, nof, 'BF_')
+               param(63) = 0.0d0 ! Reset to 32-bit output
+               call bcast(param(63), wdsize)
             end if
       
          end if
