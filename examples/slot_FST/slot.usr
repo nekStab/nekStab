@@ -72,7 +72,7 @@ c-----------------------------------------------------------------------
       !if(istep.eq.0) call gfldr("1cyl0.fXXXXX") !interpolate old solution
 
       if(istep.eq.0) time=0.0d0 !reset time
-      call nekStab_drive
+      call nekStab
       call hpts
       !call fst
 

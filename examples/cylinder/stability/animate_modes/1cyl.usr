@@ -2,7 +2,7 @@ c-----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
       include 'TOTAL'
-      call nekStab_drive
+      call nekStab
       end
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
