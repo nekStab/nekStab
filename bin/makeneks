@@ -97,11 +97,6 @@ else # GCC
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
 
     FFLAGS+=" -g -fbacktrace"           # Enables debugging information.
-    # FFLAGS+=" -fanalyzer" # Enable the Clang Static Analyzer for code analysis
-    # FFLAGS+=" -Ofast" # Enable aggressive optimization level for maximum performance
-    # FFLAGS+=" -ffast-math" # Enable fast math optimizations for floating-point operations
-    # FFLAGS+=" -funsafe-math-optimizations" # Enable unsafe math optimizations for improved performance
-
     # FFLAGS+=" -ffpe-trap=invalid,zero,overflow" # Floating point exception trapping.
     # FFLAGS+=" -fcheck=all" # Enables all runtime checks.
     # FFLAGS+=" -fcheck=all -fno-bounds-check -finit-real=snan" # Check all, no bounds, uninitialized variables.
@@ -110,6 +105,8 @@ else # GCC
 
     # comment Nek5000/core/makenek.inc:226 with : sed -i '226s/^/#/' $HOME/nextStab/Nek5000/core/makenek.inc
     #FFLAGS+=" -std=legacy -Wall -Wno-analyzer-out-of-bounds" # Provides a backtrace in case of errors, useful for debugging.
+
+    CFLAGS=" -w"
 
     export PPLIST="VENDOR_BLAS"
     if [[ $(uname -s) == "Darwin" ]]; then
@@ -152,21 +149,21 @@ esac
 FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 
 # User-specified object files
-USR="krylov_subspace.o"
-USR+=" matvec.o"
-USR+=" quicksort.o"
+USR="nek_vectors.o"
+USR+=" krylov_subspace.o"
 USR+=" krylov_decomposition.o"
+USR+=" quicksort.o"
+USR+=" matvec.o"
 USR+=" eigensolvers.o"
 USR+=" lapack_wrapper.o"
 USR+=" fixedp.o"
+USR+=" forcing.o"
 USR+=" main.o"
 USR+=" utils.o"
 USR+=" IO.o"
 USR+=" postproc.o"
 USR+=" newton_krylov.o"
 USR+=" sensitivity.o"
-USR+=" forcing.o"
-USR+=" nek_vectors.o"
 
 # Check if the makefile_usr file exists and source it
 if [ -f "makefile_usr" ]; then
