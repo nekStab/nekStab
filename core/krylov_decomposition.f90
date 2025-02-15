@@ -33,7 +33,6 @@
       !     Upper Hessenberg matrix resulting from the Arnoldi factorization of the linearized
       !     Navier-Stokes operator.
       !
-      !     Last edit : April 3rd 2020 by JC Loiseau.
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -41,18 +40,19 @@
       
       !     ----- Miscellaneous -----
          real :: alpha
-         integer :: mstart, mend, ksize !, mstep moved to NEKSTAB.inc
+         integer, intent(in) :: mstart, mend, ksize
       
       !     ----- Timer -----
-         real :: eetime0, eetime1, telapsed, tmiss, dnekclock
+         real :: eetime0, eetime1, telapsed, tmiss, avg_time
+         real, external :: dnekclock
       
       !     ----- Orthogonal residual f = w - (Q,w)*Q -----
          type(krylov_vector) :: f
       !     ----- Krylov basis V for the projection MQ = QH -----
-         type(krylov_vector), dimension(ksize + 1) :: Q
+         type(krylov_vector), dimension(ksize + 1), intent(inout) :: Q
       
       !     ----- Upper Hessenberg matrix -----
-         real, dimension(ksize + 1, ksize) :: H
+         real, dimension(ksize + 1, ksize), intent(out) :: H
       
       !     ----- Check k_dim -----
          if (ksize == 0) then
@@ -64,11 +64,12 @@
          call k_zero(f); alpha = 0.0d0
       
       !     --> Arnoldi factorization.
+         eetime0 = dnekclock() ! Start time for entire process
          do mstep = mstart, mend
       
-            if (nid == 0) write (6, *) 'iteration current and total:', mstep, '/', mend
-      
-            eetime0 = dnekclock()
+            if (mstart < mend) then
+               if (nid == 0) write (6, "('        ARNOLDI - Starting iteration ',I3,'/',I3)") mstep, mend
+            end if
       
       !     --> Matrix-vector product f = M * v (e.g. calling the linearized Navier-Stokes solver).
             call matvec(f, Q(mstep))
@@ -79,19 +80,21 @@
       !     --> Add the residual vector as the new Krylov vector.
             call k_copy(Q(mstep + 1), f)
       
-      !     --> Save checkpoint for restarting/run-time analysis.
-            if (ifres) call arnoldi_checkpoint(f%vx, f%vy, f%vz, f%pr, f%t, H(1:mstep + 1, 1:mstep), mstep)
-      
-      !     --> Output timing statistics
-            eetime1 = dnekclock(); telapsed = (eetime1 - eetime0)/3600.0d0; tmiss = telapsed*(ksize - mstep)
+      !     --> Save checkpoint for restarting/run-time analysis. #  --> not in newton !
+            if (ifres .and. (mstart < mend)) call arnoldi_checkpoint(f%vx, f%vy, f%vz, f%pr, f%t, H(1:mstep + 1, 1:mstep), mstep)
       
             if (nid == 0) then
-               write (6, "(' Time per iteration/remaining:',I3,'h ',I2,'min /',I3,'h ',I2,'min')")
-     $   int(telapsed), ceiling((telapsed - int(telapsed))*60.0d0),
-     $   int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
-               print *, ''
+               if (mstart == mend) then
+                  write (6, "('        ARNOLDI - Finished iteration ',I3,'/',I3)") mstep, mend
+               else
+                  eetime1 = dnekclock()
+                  telapsed = (eetime1 - eetime0)/3600.0d0
+                  avg_time = telapsed/mstep ! Average time per iteration
+                  tmiss = avg_time*(mend - mstep) ! More accurate ETA based on average
+                  write (6, "('        ARNOLDI - Finished iteration:',I3,'/',I3,' elapsed:',I3,'h',I2,'m / ETA:',I3,'h',I2,'m')")
+     $   mstep, mend, int(telapsed), ceiling((telapsed - int(telapsed))*60.0d0), int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
+               end if
             end if
-      
          end do
       
          return
@@ -137,11 +140,12 @@
          integer, intent(in) :: k
          real, dimension(k + 1, k), intent(inout) :: H
       
-         type(krylov_vector), dimension(k) :: q
-         type(krylov_vector) :: f, wrk
+         type(krylov_vector), dimension(k), intent(in) :: q
+         type(krylov_vector), intent(inout) :: f
+         type(krylov_vector) :: wrk
       
-         integer i
-         real alpha, beta
+         integer :: i
+         real :: alpha, beta
       
          call k_norm(beta, f)
       

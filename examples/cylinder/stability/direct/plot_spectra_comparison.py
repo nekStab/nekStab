@@ -18,7 +18,7 @@ fig_width = 4.3
 fig_height = 3.4
 
 # Color cycle for multiple spectra
-colors = ['k', 'b', 'r', 'g', 'm', 'c', 'y']
+colors = ['r', 'b', 'g', 'g', 'm', 'c', 'y']
 markers = ['o', 's', '^', '<', 'p', 'v', '>']
 
 class Spectre(object):
@@ -118,14 +118,20 @@ if __name__ == "__main__":
     plt.ylim(-1.1, 1.1)
     plt.ylabel(r"$\Im (\mu)$")
 
-    # Plot reference H spectra
+    # Plot reference H spectra first (background)
     plotted = False
     for i, ref_path in enumerate(ref_dir):
         ref_h = os.path.join(ref_path, "Spectre_Hd.dat")
         if os.path.exists(ref_h):
             f_ref = Spectre(ref_h)
-            plot_H(plt, f_ref.R, f_ref.I, f_ref.r, 8, colors[i], markers[i], ref_path)
+            plot_H(plt, f_ref.R, f_ref.I, f_ref.r, 4, colors[i], markers[i], ref_path)
             plotted = True
+
+    # Plot current directory H spectrum last (on top)
+    if os.path.exists("Spectre_Hd.dat"):
+        f_current = Spectre("Spectre_Hd.dat")
+        plot_H(plt, f_current.R, f_current.I, f_current.r, 12, "k", "*", "current")
+        plotted = True
 
     if plotted:
         plt.legend(loc="best", fontsize=6)
@@ -141,14 +147,20 @@ if __name__ == "__main__":
     plt.xlabel(r"$f=\omega/2\pi$")
     plt.ylim(-0.4, 0.05)
 
-    # Plot reference NS spectra
+    # Plot reference NS spectra first (background)
     plotted = False
     for i, ref_path in enumerate(ref_dir):
         ref_ns = os.path.join(ref_path, "Spectre_NSd.dat")
         if os.path.exists(ref_ns):
             f_ref = Spectre(ref_ns)
-            plot_NS(plt, f_ref.R, f_ref.I, f_ref.r, True, 8, colors[i], markers[i], ref_path)
+            plot_NS(plt, f_ref.R, f_ref.I, f_ref.r, True, 4, colors[i], markers[i], ref_path)
             plotted = True
+
+    # Plot current directory NS spectrum last (on top)
+    if os.path.exists("Spectre_NSd.dat"):
+        f_current = Spectre("Spectre_NSd.dat")
+        plot_NS(plt, f_current.R, f_current.I, f_current.r, True, 12, "k", "*", "current")
+        plotted = True
 
     if plotted:
         plt.legend(loc="best", fontsize=6)
