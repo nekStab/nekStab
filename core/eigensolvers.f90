@@ -38,7 +38,7 @@
       
          real, intent(out) :: alpha
          real :: glsc3
-         integer m
+         integer :: m
       
          nv = nx1*ny1*nz1*nelv
          nt = nx1*ny1*nz1*nelt
@@ -72,49 +72,7 @@
          alpha = sqrt(alpha)
       
       end subroutine norm
-      
-      !----------------------------------------------------------------------
-      
-      subroutine normalize(qx, qy, qz, qp, qt, alpha)
-      
-      !     This function normalizes the state vector [qx, qy, qz, qp]^T where
-      !     qx, qy and qz are the streamwise, cross-stream and spanwise velocity
-      !     components while qp is the corresponding pressure field.
-      !
-      !     INPUTS / OUTPUTS
-      !     ----------------
-      !
-      !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
-      !     Arrays storing the velocity components.
-      !
-      !     qp : nek array of size lp = lx2*ly2*lz2*lelt
-      !     Array storing the corresponding pressure field.
-      !
-      !     alpha : real
-      !     Norm of the vector.
-      !
-      !     Last edit : April 2nd 2020 by JC Loiseau.
-      
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-      
-         real, dimension(lv), intent(inout) :: qx, qy, qz
-         real, dimension(lp), intent(inout) :: qp
-         real, dimension(lv, ldimt), intent(inout) :: qt
-         real, intent(out) :: alpha
-         real :: beta
-      
-      !     --> Compute the user-defined norm.
-         call norm(qx, qy, qz, qp, qt, alpha)
-         beta = 1.0d0/alpha
-      
-      !     --> Normalize the vector.
-         call nopcmult(qx, qy, qz, qp, qt, beta)
-      
-      end subroutine normalize
-      
+           
       !-----------------------------------------------------------------------
       
       subroutine krylov_schur
@@ -150,8 +108,12 @@
          allocate (H(k_dim + 1, k_dim), b_vec(1, k_dim), vals(k_dim), vecs(k_dim, k_dim), residual(k_dim))
       
          time = 0.0d0
-         H(:, :) = 0.0d0; b_vec = 0.0d0; residual = 0.0d0
-         call k_zero(Q(1:k_dim + 1))
+         H(:, :) = 0.0d0
+         b_vec = 0.0d0
+         residual = 0.0d0
+         do i = 1, k_dim + 1
+            call k_zero(Q(i))
+         end do
       
       !     ----- Loading baseflow from disk (optional) -----
       
@@ -252,19 +214,19 @@
                write (filename, '(a,a,i4.4)') 'HES', trim(SESSION), mstart
       
                open (67, file=trim(filename), status='unknown', form='formatted')
-      
+
                if (k_dim < mstart) then !subsampling
-               do i = 1, k_dim + 1
-               do j = 1, mstart
+                  do i = 1, k_dim + 1
+                     do j = 1, mstart
                   if (j <= k_dim) read (67, "(1E15.7)") H(i, j)
-               end do
-               end do
+                     end do
+                  end do
                else
       
                read (67, *) ((H(i, j), j=1, mstart), i=1, mstart + 1)
       
                end if
-      
+
                close (67)
                write (6, *) 'Broadcast H matrix to all procs...'
       
@@ -366,9 +328,13 @@
       
          if (nid == 0) write (6, *) 'Eigenproblem solver finished.'
       
-      !     --> Deallocation.
-         deallocate (Q)
-         deallocate (H, b_vec, vals, vecs)
+      !--> Deallocation.
+         if (allocated(Q)) deallocate (Q)
+         if (allocated(H)) deallocate (H)
+         if (allocated(b_vec)) deallocate (b_vec)
+         if (allocated(vals)) deallocate (vals)
+         if (allocated(vecs)) deallocate (vecs)
+         if (allocated(residual)) deallocate (residual)
       
       end subroutine krylov_schur
       
@@ -411,9 +377,9 @@
          logical ifto_sav, ifpo_sav
       
       ! File handling variables
-         character(len=80) :: filename
-         character(len=20) :: fich1, fich2, fich3, fmt2, fmt3, fmt4, fmt5, fmt6
-         character(len=3) :: nRe, nIm, nRv
+         character(len=80) filename
+         character(len=20) fich1, fich2, fich3, fmt2, fmt3, fmt4, fmt5, fmt6
+         character(len=3) nRe, nIm, nRv
          integer :: outp
       
          nv = nx1*ny1*nz1*nelv
@@ -429,9 +395,10 @@
          fich3 = 'Spectre_NS'//trim(evop)//'_conv.dat'
       
          if (nid == 0) then
-            open (unit=10, file=fich1, form='formatted')
-            open (unit=20, file=fich2, form='formatted')
-            open (unit=30, file=fich3, form='formatted')
+            ! Open files with error checking
+            open (unit=10, file=fich1, form='formatted', status='unknown')            
+            open (unit=20, file=fich2, form='formatted', status='unknown')            
+            open (unit=30, file=fich3, form='formatted', status='unknown')
          end if
       
       ! outpost full spectrum (including spurious modes)
@@ -451,6 +418,7 @@
             if (nid == 0) then
       
       !outpost the eigenspectrum of the Hessenberg matrix.
+      
                write (10, "(3E15.7)") real(vals(i)), aimag(vals(i)), residual(i)
       
       !outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
@@ -493,10 +461,10 @@
                alpha = alpha_r**2 + alpha_i**2
                beta = 1.0d0/sqrt(alpha)
       
-               call norm_grad(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), norma_Re)
-               call norm_grad(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), norma_Im)
-               if (nid == 0) write (6, *) '  grad norm Re/Im:', norma_Re, norma_Im
-               if (nid == 0) write (6, *)
+      !call norm_grad(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), norma_Re)
+      !call norm_grad(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), norma_Im)
+      !if (nid == 0) write (6, *) '  grad norm Re/Im:', norma_Re, norma_Im
+      !if (nid == 0) write (6, *)
       
       !    if (norma_Re > 1.1 .or. norma_Im > 1.1) then
       !       if (nid == 0) write (6, *) ' Skipping spurious (non-physical) eigenvector:', i, real(vals(i)), aimag(vals(i))
@@ -556,7 +524,7 @@
       !
             filename = 'Spectre_'//trim(evop)//'.info'
             open (844, file=filename, action='write', status='replace')
-      
+
             write (844, '(A,A)') 'Nek5000 version:', NVERSION
             write (844, '(A,A)') 'nekStab version:', NSVERSION
             write (844, '(A)') '[mesh]'
@@ -590,7 +558,6 @@
             write (844, fmt2) 'schur iterations=', schur_cnt
             write (844, fmt2) 'outp=       ', outp
             close (844)
-      
          end if
       
          return
@@ -708,7 +675,7 @@
       
       !-----------------------------------------------------------------------
       
-      subroutine select_eigenvalues(selected, converged_eigenvalues, vals, delta, nev, n)
+      subroutine select_eigenvalues2(selected, converged_eigenvalues, vals, delta, nev, n)
       !     This function selects the eigenvalues to be placed in the upper left corner
       !     during the Schur condensation phase.
       !
@@ -774,8 +741,33 @@
          converged_eigenvalues = count(selected)
       
          return
-      end subroutine select_eigenvalues
+      end subroutine select_eigenvalues2
       
+
+       subroutine select_eigenvalues(vals, vecs, k_dim, k_sel, idx)
+         implicit none
+         complex(kind=8), dimension(k_dim), intent(in) :: vals
+         complex(kind=8), dimension(k_dim, k_dim), intent(in) :: vecs
+         integer, intent(in) :: k_dim, k_sel
+         integer, dimension(k_sel), intent(out) :: idx
+      
+         integer :: i
+         real, dimension(k_dim) :: tmp_vals
+      
+      ! Copy absolute values to temporary array
+         do i = 1, k_dim
+            tmp_vals(i) = abs(vals(i))
+         end do
+      
+      ! Find indices of largest eigenvalues
+         do i = 1, k_sel
+            idx(i) = maxloc(tmp_vals, dim=1)
+            tmp_vals(idx(i)) = -1.0  ! Mark as used
+         end do
+      
+         return
+      end subroutine select_eigenvalues
+
       !     ------------------------------------------------------------------------------------
       
       subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
