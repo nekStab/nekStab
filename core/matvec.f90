@@ -1,71 +1,71 @@
       subroutine prepare_linearized_solver
-      implicit none
-      include 'SIZE'
-      include 'TOTAL'
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
       
-      call nekgsync
+         call nekgsync
       
-      if (nid .eq. 0) write(6,*) 'Preparing linearized solver...'
-
+         if (nid == 0) write (6, *) 'Preparing linearized solver...'
+      
       ! Enforce single perturbation mode
-      if (param(31) .gt. 1) then
-      if (nid .eq. 0) then
-      write(6,*) 'ERROR: nekStab not ready for multiple perturbation modes.'
-      write(6,*) 'Setting number of perturbations to 1.'
-      endif
-      endif
-      param(31) = 1 ; npert = param(31)
-      if (nid .eq. 0) write(6,*) 'Number of perturbations set to:', npert
-
+         if (param(31) > 1) then
+         if (nid == 0) then
+            write (6, *) 'ERROR: nekStab not ready for multiple perturbation modes.'
+            write (6, *) 'Setting number of perturbations to 1.'
+         end if
+         end if
+         param(31) = 1; npert = param(31)
+         if (nid == 0) write (6, *) 'Number of perturbations set to:', npert
+      
       ! Adjust time step and number of steps if end time is specified
-      if (param(10) .gt. 0) then
-      if (nid .eq. 0) then
-      write(6,*) 'End time specified:', param(10)
-      write(6,*) 'Current time:', time
-      write(6,*) 'Recomputing dt and nsteps to match end time...'
-      endif
+         if (param(10) > 0) then
+         if (nid == 0) then
+            write (6, *) 'End time specified:', param(10)
+            write (6, *) 'Current time:', time
+            write (6, *) 'Recomputing dt and nsteps to match end time...'
+         end if
       
       ! Compute maximum allowable time step based on CFL condition
-      call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
-      if (nid .eq. 0) write(6,*) 'Maximum spatial restriction:', ctarg
+         call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
+         if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
       
       ! Calculate time step based on CFL target
-      dt = param(26) / ctarg
+         dt = param(26)/ctarg
       
       ! Calculate number of steps needed to reach end time
-      nsteps = ceiling(param(10) / dt)
+         nsteps = ceiling(param(10)/dt)
       
       ! Adjust time step to exactly reach end time
-      dt = param(10) / nsteps
+         dt = param(10)/nsteps
       
-      if (nid .eq. 0) then
-      write(6,*) 'Adjusted time step dt =', dt
-      write(6,*) 'Number of steps nsteps =', nsteps
-      write(6,*) 'Total simulation time =', nsteps * dt
-      endif
+         if (nid == 0) then
+            write (6, *) 'Adjusted time step dt =', dt
+            write (6, *) 'Number of steps nsteps =', nsteps
+            write (6, *) 'Total simulation time =', nsteps*dt
+         end if
       
       ! Update parameters
-      param(12) = dt
-      lastep = 0
-      fintim = nsteps * dt
+         param(12) = dt
+         lastep = 0
+         fintim = nsteps*dt
       
       ! Recalculate actual CFL
-      call compute_cfl(ctarg, vx, vy, vz, dt)
-      if (nid .eq. 0) write(6,*) 'Actual CFL:', ctarg
-      endif
+         call compute_cfl(ctarg, vx, vy, vz, dt)
+         if (nid == 0) write (6, *) 'Actual CFL:', ctarg
+         end if
       
       ! Force constant time step
-      param(12) = -abs(param(12))
-      if (nid .eq. 0) write(6,*) 'Constant time step enforced, dt =', abs(param(12))
+         param(12) = -abs(param(12))
+         if (nid == 0) write (6, *) 'Constant time step enforced, dt =', abs(param(12))
       
       ! Broadcast updated parameters to all processes
-      call bcast(param, 200*wdsize)
+         call bcast(param, 200*wdsize)
       
-      call nekgsync ! ensures that all processes reachbefore any can proceed further
+         call nekgsync ! ensures that all processes reachbefore any can proceed further
       
-      if (nid .eq. 0) write(6,*) 'Linearized solver preparation complete.'
+         if (nid == 0) write (6, *) 'Linearized solver preparation complete.'
       
-      return
+         return
       end subroutine prepare_linearized_solver
       
       !-----------------------------------------------------------------------

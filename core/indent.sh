@@ -1,54 +1,70 @@
 #!/bin/bash
 
-# Not working as we need to respect fixed format style due to legacy nek5000 code
-# for ext in f90 f; do
-#   for f in *."$ext"; do
-#     [ -f "$f" ] || continue
-#     echo "Indenting $f"
-#     emacs -batch "$f" --eval '(indent-region (point-min) (point-max) nil)' -f save-buffer 2> /dev/null
-#   done
-# done
+# Determine the OS type for compatible sed in-place editing
+if [[ "$(uname)" == "Darwin" ]]; then
+    SED_INPLACE=('sed' '-i' '')
+else
+    SED_INPLACE=('sed' '-i')
+fi
 
-#conda install fprettify
-#pip install fprettify
+# Function to check if file is Fortran source
+is_fortran_file() {
+    local file="$1"
+    # Check if file has .f90 extension or is a known include file
+    if [[ "$file" == *.f90 ]] || \
+       [[ "$file" == *"NEKSTAB"* ]]; then
+        return 0
+    fi
+    return 1
+}
 
-# Directory to process
-dir="./"
-
-# Find all .f90 files in the directory
-find "$dir" -type f -name "*.f90" | while read file; do
+# Function to process a single file
+process_file() {
+    local file="$1"
     echo "Processing file: $file"
 
-    #echo "Converting tabs to spaces..."
-    expand -t 4 "$file" >"$file.expanded"
-    mv "$file.expanded" "$file"
+    # Convert tabs to spaces
+    expand -t 4 "$file" > "${file}.expanded"
+    mv "${file}.expanded" "$file"
 
-    #echo "Removing trailing spaces..."
-    sed -i 's/[ \t]*$//' "$file"
+    # Remove trailing spaces and tabs
+    "${SED_INPLACE[@]}" 's/[[:space:]]*$//' "$file"
 
-    #echo "Removing leading whitespaces..."
-    sed -i 's/^[ \t]*//' "$file"
+    # Remove leading spaces and tabs
+    "${SED_INPLACE[@]}" 's/^[[:space:]]*//' "$file"
 
-    #echo "Running fprettify..."
+    # Run fprettify
     fprettify "$file" --case 1 1 1 1 --enable-decl --enable-replacements --c-relations
 
-    # Fixed Form Fortran, which was used in older versions of Fortran (Fortran 77 and earlier)
-    # the first 6 columns of each line have special meaning:
-    # - Column 1: Used for a comment if the line starts with a `C` or `*`.
-    # - Columns 2-5: Used for statement labels (for `GOTO` statements, etc.).
-    # - Column 6: Used for line continuation if the line starts with any character.
+    # Add 6 leading spaces to all lines
+    "${SED_INPLACE[@]}" 's/^/      /' "$file"
 
-    #echo "Adding 6 leading spaces to all lines..."
-    sed -i 's/^/      /' "$file"
-
-    #echo "Fixing the number of spaces before $ to 5 for lines starting with $..."
-    awk '{sub(/[ \t]+\$/, "     $   "); print}' "$file" >temp && mv temp "$file"
+    # Fix the number of spaces before $ to 5 for lines starting with $
+    awk '{sub(/[[:space:]]+\$/, "     $   "); print}' "$file" > temp && mv temp "$file"
 
     echo "Done processing file: $file"
     echo ""
-done
+}
+
+# Check if a filename is provided as an argument
+if [[ $# -eq 1 ]]; then
+    FILE="$1"
+    if [[ -f "$FILE" ]] && is_fortran_file "$FILE"; then
+        process_file "$FILE"
+    else
+        echo "Error: Provided file does not exist or is not a Fortran file."
+        exit 1
+    fi
+else
+    # Find and process all Fortran files in the current directory and subdirectories
+    find . -type f | while read -r file; do
+        if is_fortran_file "$file"; then
+            process_file "$file"
+        fi
+    done
+fi
 
 echo "Deleting backup files..."
-find "$dir" -type f -name "*.f90~" -delete
+find . -type f -name "*~" -delete
 
 echo "All done."
