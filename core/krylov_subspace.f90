@@ -52,10 +52,7 @@
          if (uparam(1) == 2.1) then
             alpha = alpha + p%time*q%time
          end if
-      
-      !     --> Check integrity.
-      !  if (isnan(alpha)) call nek_end
-      
+            
          return
       end subroutine k_dot
       

@@ -200,9 +200,9 @@
                end do
                end if
                call k_normalize(wrk2, alpha)
-              !call outpost2(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, nof, 'NOS')
+      !call outpost2(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, nof, 'NOS')
                call matvec(wrk, wrk2)
-              !call outpost2(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%t, nof, 'NOS')
+      !call outpost2(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%t, nof, 'NOS')
       
             elseif (ifseed_symm) then ! symmetry initial seed
       
@@ -246,28 +246,28 @@
             mstart = int(uparam(2))
       
             if (nid == 0) then
-
+      
                write (6, *) 'Restarting from:', mstart
                write (6, '(a,a,i4.4)') ' Loading Hessenberg matrix: HES', trim(SESSION), mstart
                write (filename, '(a,a,i4.4)') 'HES', trim(SESSION), mstart
       
                open (67, file=trim(filename), status='unknown', form='formatted')
-               
-                if (k_dim < mstart) then !subsampling
-                    do i = 1, k_dim + 1
-                        do j = 1, mstart
-                            if (j <= k_dim) read (67, "(1E15.7)") H(i, j)
-                        end do
-                    end do
-                else
-
-                    read (67, *) ((H(i, j), j=1, mstart), i=1, mstart + 1)
-            
-                end if
-            
-                close (67)
-                write (6, *) 'Broadcast H matrix to all procs...'
-            
+      
+               if (k_dim < mstart) then !subsampling
+               do i = 1, k_dim + 1
+               do j = 1, mstart
+                  if (j <= k_dim) read (67, "(1E15.7)") H(i, j)
+               end do
+               end do
+               else
+      
+               read (67, *) ((H(i, j), j=1, mstart), i=1, mstart + 1)
+      
+               end if
+      
+               close (67)
+               write (6, *) 'Broadcast H matrix to all procs...'
+      
             end if !nid.eq.0
             call bcast(H, (k_dim + 1)*k_dim*wdsize) !broadcast H matrix to all procs
       
@@ -343,17 +343,17 @@
       
          end do
       
-        !  if (nid == 0) open (unit=99, file="orthonormality.dat")
-        !  do i = 1, k_dim
-        !     call k_norm(alpha, Q(i))
-        !     if (nid == 0) write (99, '("Norm of the ", I4, "th mode = ", F20.14)') i, alpha
-        !     do j = i + 1, k_dim
-        !        call k_dot(alpha, q(i), q(j))
-        !        if (nid == 0) write (99, '("Orthogonality between mode ", I4, " and mode ", I4, " = ", E15.7)') i, j, alpha
-        !     end do
-        !     if (nid == 0) write (99, *)
-        !  end do
-        !  if (nid == 0) close (unit=99)
+      !  if (nid == 0) open (unit=99, file="orthonormality.dat")
+      !  do i = 1, k_dim
+      !     call k_norm(alpha, Q(i))
+      !     if (nid == 0) write (99, '("Norm of the ", I4, "th mode = ", F20.14)') i, alpha
+      !     do j = i + 1, k_dim
+      !        call k_dot(alpha, q(i), q(j))
+      !        if (nid == 0) write (99, '("Orthogonality between mode ", I4, " and mode ", I4, " = ", E15.7)') i, j, alpha
+      !     end do
+      !     if (nid == 0) write (99, *)
+      !  end do
+      !  if (nid == 0) close (unit=99)
       
          if (nid == 0) write (6, *) 'Converged eigenvalues: ', converged_eigenvalues
       
@@ -483,7 +483,7 @@
                end if !ldimt.gt.1
       
       !        normalization to unit-norm (volume integral of FP*conj(FP) = 1.)
-               call norm( real(fp_cx),  real(fp_cy),  real(fp_cz),  real(fp_cp),  real(fp_ct), alpha_r)
+               call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
                call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), alpha_i)
       
                if (nid == 0) write (6, *) 'Checking eigenvector', i
@@ -505,10 +505,10 @@
       
                if (nid == 0) then
                   write (6, '(A, I0, A, I0)') 'Outposting eigenvector: ', i, ' / ', maxmodes
-                  write (6, '(A, E15.7)') '  sigma = ', real(log_transform(vals(i))) / speriod
-                  omega = aimag(log_transform(vals(i))) / speriod
+                  write (6, '(A, E15.7)') '  sigma = ', real(log_transform(vals(i)))/speriod
+                  omega = aimag(log_transform(vals(i)))/speriod
                   write (6, '(A, E15.7)') '  omega = ', omega
-                  write (6, '(A, E15.7)') '      f = ', omega / (8.0d0 * atan(1.0d0))
+                  write (6, '(A, E15.7)') '      f = ', omega/(8.0d0*atan(1.0d0))
                end if
                outp = outp + 1
       
@@ -687,9 +687,9 @@
       !     --> Add the last generated Krylov vector as the new starting one.
          mstart = mstart + 1
       
-         call nopcopy(qx(:, mstart),    qy(:, mstart),    qz(:, mstart),    qp(:, mstart),    qt(:, :, mstart),
-     $                qx(:, ksize + 1), qy(:, ksize + 1), qz(:, ksize + 1), qp(:, ksize + 1), qt(:, :, ksize + 1))
-
+         call nopcopy(qx(:, mstart), qy(:, mstart), qz(:, mstart), qp(:, mstart), qt(:, :, mstart),
+     $   qx(:, ksize + 1), qy(:, ksize + 1), qz(:, ksize + 1), qp(:, ksize + 1), qt(:, :, ksize + 1))
+      
          do i = 1, k_dim + 1
             Q(i)%vx(:) = qx(:, i)
             Q(i)%vy(:) = qy(:, i)
@@ -836,16 +836,16 @@
       
       !     --> Compute the residual (assume H results from classical Arnoldi factorization).
          residual = abs(H(k + 1, k)*vecs(k, :))
-
+      
       ! ------> Enforce minimum value of machine epsilon
          where (residual < epsilon(1.0d0)) residual = epsilon(1.0d0)
-
+      
          converged_eigenvalues = count(residual < eigen_tol)
-
+      
          if (nid == 0) then
-
+      
       !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
-            
+      
             write (filename, '(A,A,i4.4,A)') 'Spectre_H', evop, k, '.dat'
             write (6, *) 'Writing Hessenberg matrix eigenspectrum to', filename
       
@@ -854,13 +854,13 @@
             close (67)
       
       !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
-            
+      
             write (filename, '(A,A,i4.4,A)') 'Spectre_NS', evop, k, '.dat'
             write (6, *) 'Writing log-transformed eigenspectrum to', filename
-
+      
             open (67, file=trim(filename), status='unknown', form='formatted')
             write (67, '(3E15.7)') (real(log_transform(vals(i)))/(dt*nsteps),
-     $                             aimag(log_transform(vals(i)))/(dt*nsteps), residual(i), i = 1, k)
+     $   aimag(log_transform(vals(i)))/(dt*nsteps), residual(i), i = 1, k)
             close (67)
       
       !     --> Outpost the Hessenberg matrix for restarting purposes (if needed).
@@ -873,7 +873,7 @@
       
       !     --> Write to logfile the current number of converged eigenvalues.
             write (6, *) 'converged eigenvalues:', converged_eigenvalues, 'target:', schur_tgt !keep small caps to ease grep
-
+      
          end if
       
       !   if (schur_tgt > 0 .and. converged_eigenvalues >= schur_tgt) then
