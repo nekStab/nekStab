@@ -99,7 +99,7 @@
                print *, '  / __ \ / _ \ / //_/\__ \ / __// __ `// __ \'
                print *, ' / / / //  __// ,<  ___/ // /_ / /_/ // /_/ /'
                print *, '/_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/ '
-               print *, 'COPYRIGHT (c) 2020-2024 DynFluid Laboratoire Paris ', NSVERSION
+               print *, 'COPYRIGHT (c) 2020-2025 DynFluid Laboratoire Paris ', NSVERSION
                print *, 'Nek5000 ', NVERSION
                print *, ''
             end if
@@ -246,7 +246,9 @@
             if (uparam(01) == 4.43) call delta_forcing
       
       !     -----> Animate mode # 4 steps in period; 'd' for direct, 'a' for adjoint.
-            if (uparam(01) == 4.5) call animate_mode(4, 'd')
+            if (uparam(01) == 4.50) call animate_mode_only(int(uparam(7)), 'd')
+            if (uparam(01) == 4.51) call animate_mode(int(uparam(7)), 'd') ! + base flow deformation
+            if (uparam(01) == 4.52) call animate_mode_Floquet(int(uparam(7)), 'd')
       
             call nek_end
       

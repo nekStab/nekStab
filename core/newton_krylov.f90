@@ -423,18 +423,18 @@
       
       !-----------------------------------------------------------------------
       
-      subroutine set_solv_tole(new_tol) ! set solver tolerances
+      subroutine set_nek5000_tolerances(solver_tol) ! set solver tolerances
          implicit none
          include 'SIZE'
          include 'TOTAL'
       
-         real, intent(in) :: new_tol  ! New tolerance value to be set
-         if (nid == 0) write (6, *) 'ifdyntol Changing tol from', param(21), 'to', abs(new_tol)
+         real, intent(in) :: solver_tol  ! New tolerance value to be set
+         if (nid == 0) write (6, *) 'ifdyntol Changing tol from', param(21), 'to', abs(solver_tol)
       
       ! Set both param(21) and param(22) to the absolute value of the new tolerance.
       ! Broadcast these changes to all nodes.
-         param(21) = abs(new_tol); call bcast(param(21), wdsize)
-         param(22) = abs(new_tol); call bcast(param(22), wdsize)
+         param(21) = abs(solver_tol); call bcast(param(21), wdsize)
+         param(22) = abs(solver_tol); call bcast(param(22), wdsize)
       
       ! Update TOLPDF and TOLHDF with the new tolerance and broadcast the changes.
          TOLPDF = param(21); call bcast(TOLPDF, wdsize)
@@ -444,35 +444,29 @@
          restol(:) = param(22); call bcast(restol, (ldimt1 + 1)*wdsize)
          atol(:) = param(22); call bcast(atol, (ldimt1 + 1)*wdsize)
       
-      end subroutine set_solv_tole
+      end subroutine set_nek5000_tolerances
       
       !-----------------------------------------------------------------------
       
-      subroutine spec_tole(residual, dtol) ! Tolerance scheduling
-      ! Progressively tighten tolerances to minimize computational time
+      subroutine spec_tole(residual, dtol)
+      ! Dynamic tolerance scheduling for Newton-GMRES solver
+      ! Progressively tightens tolerances to minimize computational time
+      ! while maintaining convergence stability
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         real, intent(in) :: residual, dtol
-         real :: nwtol
       
-         nwtol = 10**(log10(residual) - 1) ! Always two decades smaller
+         real, intent(in) :: residual  ! Current residual norm
+         real, intent(in) :: dtol      ! Target/minimum tolerance
+         real :: nwtol                 ! New computed tolerance
+         real, parameter :: min_tol = 1.0d-4  ! Minimum allowed tolerance
+         real, parameter :: relaxation_factor = 0.1d0  ! Relaxation factor for new tolerance
+           
+      ! Compute new tolerance with safety checks
+         nwtol = max(min(residual*relaxation_factor, min_tol), dtol)
       
-         if (nid == 0) then
-            write (6, *) 'Current residual:', residual
-            write (6, *) 'New tolerance:', nwtol
-            write (6, *) 'Target tolerance:', dtol
-         end if
+         if (nid == 0) write (6, '(A,3E15.7)') 'TOLERANCE: Current residual / New tolerance / Target:', residual, nwtol, dtol
       
-         if (nwtol <= dtol) then
-            call set_solv_tole(dtol)
-            if (nid == 0) write (6, *) 'Forcing user specified tolerance:', dtol
-         else
-            nwtol = min(nwtol, 1e-4) ! Never exceed a tolerance of 1e-4
-            call set_solv_tole(nwtol)
-            if (nwtol == 1e-4 .and. nid == 0) then
-               write (6, *) 'Forcing minimal tolerances:', nwtol
-            end if
-         end if
+         call set_nek5000_tolerances(nwtol)
       
       end subroutine spec_tole

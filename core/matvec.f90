@@ -2,9 +2,7 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
-         call nekgsync
-      
+            
          if (nid == 0) write (6, *) 'Preparing linearized solver...'
       
       ! Enforce single perturbation mode
@@ -56,12 +54,12 @@
       
       ! Force constant time step
          param(12) = -abs(param(12))
-         if (nid == 0) write (6, *) 'Constant time step enforced, dt =', abs(param(12))
+         if (nid == 0) write (6, *) 'Constant time step enforced, dt =', -param(12)
       
       ! Broadcast updated parameters to all processes
          call bcast(param, 200*wdsize)
       
-         call nekgsync ! ensures that all processes reachbefore any can proceed further
+         call nekgsync ! ensures that all processes reach before any can proceed further
       
          if (nid == 0) write (6, *) 'Linearized solver preparation complete.'
       
@@ -537,7 +535,7 @@
       subroutine newton_linearized_map(f, q)
       
          use krylov_subspace
-      
+         
          implicit none
          include 'SIZE'
          include 'TOTAL'

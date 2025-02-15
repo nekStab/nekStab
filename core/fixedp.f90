@@ -196,7 +196,7 @@
                   write (6, *) ' Casacub. cutoff, gain:', cutoff, gain
                end if
             end if
-            if (ifdyntol .and. mod(istep, 20) == 0 .and. res > 0) call set_solv_tole(res/20.0)
+            if (ifdyntol .and. mod(istep, 20) == 0 .and. res > 0) call set_nek5000_tolerances(res/20.0)
       
             if (istep > 100 .and. res < dtol) then
                if (nid == 0) write (6, *) ' Converged base flow to:', res

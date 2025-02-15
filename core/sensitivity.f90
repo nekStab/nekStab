@@ -532,7 +532,7 @@
          return
       end subroutine delta_forcing
       !-----------------------------------------------------------------------
-      subroutine animate_mode(num_steps, mode)
+      subroutine animate_mode_only(num_steps, mode)
       
       !  Animate the eigenmode by computing and outputting snapshots
       !  of the perturbation field at different phases of the period.
@@ -601,4 +601,299 @@
       
          end do
       
+      end subroutine animate_mode_only
+      !-----------------------------------------------------------------------
+      subroutine compute_omegaR(vx_in, vy_in, vz_in, omegaR)
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+      
+         integer, parameter :: nxyz = lx1*ly1*lz1
+         real, intent(in), dimension(lx1, ly1, lz1, lelv) :: vx_in, vy_in, vz_in
+         real, intent(out), dimension(lx1, ly1, lz1, lelv) :: omegaR
+         real, dimension(lx1, ly1, lz1, lelv) :: norm_a, norm_b, eps_field
+         real, dimension(lx1*ly1*lz1, ldim, ldim) :: gije
+         real, dimension(ldim, ldim) :: ss, oo
+         real omegaR_max, omegaR_min, glmax, glmin
+         real, save :: omega, optimal_eps = 2.0d0
+         real :: eps = 0.0d0
+         integer ie, l, i, j, iter
+      
+         do ie = 1, nelv
+            call comp_gije(gije, vx_in(1, 1, 1, ie), vy_in(1, 1, 1, ie), vz_in(1, 1, 1, ie), ie)
+            do l = 1, nxyz; do j = 1, ldim; do i = 1, ldim
+                  ss(i, j) = 0.50d0*(gije(l, i, j) + gije(l, j, i))
+                  oo(i, j) = 0.50d0*(gije(l, i, j) - gije(l, j, i))
+               end do; end do
+               norm_a(l, 1, 1, ie) = (norm2(ss)**2)**2
+               norm_b(l, 1, 1, ie) = (norm2(oo)**2)**2
+               eps_field = norm_b(l, 1, 1, ie) - norm_a(l, 1, 1, ie)
+            end do
+         end do
+      
+         if (optimal_eps >= 1.0d0) then
+      
+            eps = glmax(eps_field, nv)*0.001d0
+            if (nid == 0) write (6, *) 'Initial eps = ', eps
+      
+            do iter = 1, 20
+            do ie = 1, nelv
+            do l = 1, nxyz
+               omegaR(l, 1, 1, ie) = norm_b(l, 1, 1, ie)/(norm_a(l, 1, 1, ie) + norm_b(l, 1, 1, ie) + eps)
+            end do
+            end do
+      
+            omegaR_max = glmax(omegaR, nv)
+            if (abs(omegaR_max - 1.0d0) < 1.0e-8) exit
+      
+            omegaR_min = glmin(omegaR, nv)
+            if (nid == 0) write (6, *) 'Iteration ', iter, ': omegaR min,max:', omegaR_min, omegaR_max
+      
+            if (omegaR_max > 1.0d0) then
+               if (nid == 0) write (6, *) 'Increasing eps: ', eps
+               eps = eps*2.0d0
+            else if (omegaR_max < 1.0d0) then
+               if (nid == 0) write (6, *) 'Decreasing eps: ', eps
+               eps = eps*0.50d0
+            end if
+      
+            optimal_eps = eps
+            if (nid == 0) write (6, *) 'Final eps value: ', optimal_eps
+            call bcast(optimal_eps, wdsize)
+            end do ! iter
+         end if ! optimal_eps
+      
+         do ie = 1, nelv; do l = 1, nxyz
+               omegaR(l, 1, 1, ie) = norm_b(l, 1, 1, ie)/(norm_a(l, 1, 1, ie) + norm_b(l, 1, 1, ie) + optimal_eps)
+            end do; end do
+      
+         omegaR_min = glmin(omegaR, nv); omegaR_max = glmax(omegaR, nv)
+         if (nid == 0) write (6, '(A,3ES12.4)') 'eps, omegaR min,max:', optimal_eps, omegaR_min, omegaR_max
+         if (omegaR_max > 1.05d0) then
+            optimal_eps = 2.0d0
+         else if (omegaR_max < -0.05d0) then
+            optimal_eps = 2.0d0
+         end if
+      
+         call smooth_field(omegaR) ! smoothing causes out of bound values
+         do ie = 1, nelv; do l = 1, nxyz ! clip [0,1] (tested on cylinder, produce better results)
+               omegaR(l, 1, 1, ie) = min(1.0d0, max(0.0d0, merge(0.0d0,
+     $   omegaR(l, 1, 1, ie), abs(omegaR(l, 1, 1, ie)) < epsilon(1.0d0))))
+            end do; end do
+      
+      end subroutine compute_omegaR
+      !-----------------------------------------------------------------------
+      subroutine animate_mode(num_of_files, mode)
+      
+      !  Animate the eigenmode by computing and outputting snapshots
+      !  of the perturbation field at different phases of the period.
+      
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+      
+         integer, intent(in) :: num_of_files
+         character(len=*), intent(in) :: mode  ! 'd' or 'a'
+      
+         type(krylov_vector), save :: BF, Re, Im
+         type(krylov_vector) :: Re_cos, Im_sin
+         real, save :: frequency, omega, sigma, u_max, A0
+         character(len=80) :: filename
+         real :: glmax, amplitude
+         integer :: i
+      
+         if (nid == 0) then
+            write (6, *) 'Animating mode function in mode:', mode
+            write (6, *) 'Number of steps:', num_of_files
+      
+            open (unit=10, file='Spectre_NSd_conv.dat', status='old', action='read')
+            read (10, '(2E15.7)') sigma, omega ! omegaR_min is recycle as dummy
+            close (10)
+            omega = abs(omega) ! if omega is read as negative
+            write (6, *) 'Read sigma, omega value from file: ', sigma, omega
+      
+         end if
+         call bcast(sigma, wdsize)
+         call bcast(omega, wdsize)
+      
+      ! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
+      ! frequency = omega / (8.0d0*atan(1.0d0))  ! f = omega / (2 * pi)
+      ! omega = 8.0d0*atan(1.0d0) * frequency  ! omega = 2 * pi * f
+      
+         call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
+         call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
+         ifto = .true.
+         call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
+      
+      !u_max = glmax(vx, nv)
+         A0 = 1.0e-3
+         sigma = 1.0e-1 ! force a value of sigma
+      
+      !u_max = glmax(vx, nv)
+      !A0 = (2.0*u_max) / exp(sigma*fintim)
+      
+         if (mode == 'd') then ! Load real and imaginary parts of the mode
+            call k_load(Re, 'dRe')
+            call k_load(Im, 'dIm')
+         else if (mode == 'a') then
+            call k_load(Re, 'aRe')
+            call k_load(Im, 'aIm')
+         end if
+      
+      ! Loop over num_of_files to create snapshots
+         do i = 1, num_of_files
+      
+            time = i*(param(10)/num_of_files)
+      
+            if (nid == 0) then
+               write (6, '(A, I0, A, F8.4, A, I0)') 'i: ', i, ', time: ', time, ', n: ', num_of_files
+               write (6, '(A, F8.4, A, F8.4, A, F8.4, A)') 'Time/param(10): ',
+     $   time/param(10), ' (', time, ' / ', param(10), ') [time/period]'
+            end if
+      
+            ifto = .true.
+      
+            call k_copy(Re_cos, Re); call k_cmult(Re_cos, +cos(omega*time))
+            call k_copy(Im_sin, Im); call k_cmult(Im_sin, -sin(omega*time))
+            call k_add2(Re_cos, Im_sin)
+      
+            call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
+            call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qm')
+      
+            amplitude = A0*exp(sigma*time)
+            if (nid == 0) write (6, *) 'Amplitude: ', A0, amplitude
+      
+            call k_cmult(Re_cos, amplitude)
+            call k_add2(Re_cos, BF)
+            call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
+            call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qb')
+      
+         end do
+      
       end subroutine animate_mode
+      !-----------------------------------------------------------------------
+      subroutine animate_mode_Floquet(num_of_files, mode)
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+      
+         integer, intent(in) :: num_of_files
+         character(len=*), intent(in) :: mode  ! 'd' or 'a'
+      
+         type(krylov_vector), save :: BF, Re, Im
+         type(krylov_vector) :: Re_cos, Im_sin
+         real, save :: frequency, omega, sigma, u_max, A0
+         character(len=80) :: filename
+         real :: glmax, amplitude, period
+         integer :: i, iosteps, nfiles
+         integer, save :: counter = 1
+      
+         if (nid == 0) then
+            write (6, *) 'Animating mode function in mode:', mode
+            write (6, *) 'Number of steps:', num_of_files
+      
+            open (unit=10, file='Spectre_NSd_conv.dat', status='old', action='read')
+            read (10, '(2E15.7)') sigma, omega ! omegaR_min is recycle as dummy
+            close (10)
+            omega = abs(omega) ! if omega is read as negative
+            write (6, *) 'Read sigma, omega value from file: ', sigma, omega
+      
+         end if
+         call bcast(sigma, wdsize)
+         call bcast(omega, wdsize)
+      
+         A0 = 1.0e-3
+         sigma = 1.0e-1 ! force a value of sigma
+      
+         if (mode == 'd') then ! Load real and imaginary parts of the mode
+            call k_load(Re, 'dRe')
+            call k_load(Im, 'dIm')
+         else if (mode == 'a') then
+            call k_load(Re, 'aRe')
+            call k_load(Im, 'aIm')
+         end if
+      
+         period = 8.0d0*atan(1.0d0)/omega ! period of leading mode
+         fintim = 1.0d0*period ! add more periods here !
+      ! compute for fintim and not period, as we might have n periods
+         timeio = fintim/dble(num_of_files)
+      
+         call load_fld('BF_'//trim(SESSION)//'0.f00001') ! load velocity field to compute ctarg
+         call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
+         if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
+      
+         dt = param(26)/ctarg ! param(26) is the max CFL specified by the user
+         nsteps = ceiling(fintim/dt)
+         dt = fintim/dble(nsteps)
+      
+         iosteps = nsteps/num_of_files
+         if (iosteps*num_of_files /= nsteps) then
+            nsteps = num_of_files*ceiling(dble(nsteps)/dble(num_of_files))
+            dt = period/dble(nsteps)
+            iosteps = nsteps/num_of_files
+         end if
+      
+         timeio = dt*dble(iosteps)
+         nfiles = num_of_files
+      
+         if (nid == 0) then
+            write (6, '(A,E15.7)') 'Time step:', dt
+            write (6, '(A,I8)') 'Total steps:', nsteps
+            write (6, '(A,I8)') 'Steps between outputs:', iosteps
+            write (6, '(A,I8)') 'Number of files to output:', nfiles
+            write (6, '(A,E15.7)') 'Output interval:', timeio
+         end if
+      
+         call compute_cfl(ctarg, vx, vy, vz, dt)
+         if (nid == 0) write (6, '(A,E15.7)') 'Final CFL:', ctarg
+      
+         lastep = 0
+         param(10) = period
+         param(12) = -abs(dt)
+         param(14) = timeio
+         param(15) = 0.0d0
+      
+         call bcast(param, 200*wdsize)
+         time = 0.0d0
+         do istep = 1, nsteps
+            call nek_advance
+            if (istep >= nsteps) lastep = 1
+            call check_ioinfo
+            call set_outfld
+      
+            call hpts
+            call nekStab_torque('lift_drag.dat', 1)
+            if (ifoutfld) then
+      
+               if (nid == 0) then
+                  write (6, *) 'mywrite counter, time, dt, fintim:', counter, time, dt, fintim
+                  write (6, *) 'mywrite counter*timeio:', counter*timeio, counter*timeio - time
+                  write (6, *) 'mywrite istep*nsteps:', istep*dt, istep*dt - time
+               end if
+               counter = counter + 1
+               call compute_omegaR(vx, vy, vz, t(1, 1, 1, 1, 1))
+               ifto = .true.
+      
+               call k_copy(Re_cos, Re); call k_cmult(Re_cos, +cos(omega*time))
+               call k_copy(Im_sin, Im); call k_cmult(Im_sin, -sin(omega*time))
+               call k_add2(Re_cos, Im_sin)
+               call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
+               call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qm')
+               amplitude = A0*exp(sigma*time)
+               if (nid == 0) write (6, *) 'Amplitude: ', A0, amplitude
+               call k_cmult(Re_cos, amplitude)
+               call k_add2(Re_cos, BF)
+               call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
+               call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qb')
+            end if
+      
+            call prepost(ifoutfld, 'his')
+            call in_situ_check()
+            if (lastep == 1) exit
+         end do
+      
+      end subroutine animate_mode_Floquet
+      !-----------------------------------------------------------------------

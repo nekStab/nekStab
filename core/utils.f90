@@ -20,7 +20,7 @@
          if (chkmin == chk(m)) then
             procmin = 1
             posiz = m
-            print *, 'Point found: ', m
+            print *, 'Point found: ', m ! do not use nid = 0 as it could be any rank with this value !
          end if
          end do
          return
