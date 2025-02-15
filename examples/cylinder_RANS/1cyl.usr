@@ -28,7 +28,7 @@ c-----------------------------------------------------------------------
          include 'SIZE'
          include 'TOTAL'
 
-         call nekStab_drive
+         call nekStab
          call hpts
 
          !if (nid.eq.0) write (6, *) 'St_cutoff=',1.0d0/(2.0d0*param(26))

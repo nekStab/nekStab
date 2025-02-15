@@ -136,7 +136,7 @@
       
       end subroutine nekStab_init
       !---------------------------------------------------------------------
-      subroutine nekStab_drive
+      subroutine nekStab
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -252,5 +252,5 @@
       
          end select
       
-      end subroutine nekStab_drive
+      end subroutine nekStab
       !---------------------------------------------------------------------
