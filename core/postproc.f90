@@ -57,11 +57,11 @@
             do l = 1, nxyz
       
                do j = 1, ldim
-               do i = 1, ldim
+                  do i = 1, ldim
       !     --> Compute the symmetric and antisymmetric component.
-                  ss(i, j) = 0.50d0*(gije(l, i, j) + gije(l, j, i))
-                  oo(i, j) = 0.50d0*(gije(l, i, j) - gije(l, j, i))
-               end do
+                     ss(i, j) = 0.50d0*(gije(l, i, j) + gije(l, j, i))
+                     oo(i, j) = 0.50d0*(gije(l, i, j) - gije(l, j, i))
+                  end do
                end do
       
       !     --> Compute the Frobenius norm
@@ -90,7 +90,7 @@
          common/mygrad/mygi
          nxyz = lx1*ly1*lz1
          n = nxyz*nelv
-         do ie = 1, nelv              ! Compute velocity gradient tensor
+         do ie = 1, nelv ! Compute velocity gradient tensor
             call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
             do l = 1, nxyz
                call compute_symmetric(A, l)
@@ -113,7 +113,7 @@
          common/mygrad/mygi
          nxyz = lx1*ly1*lz1
          n = nxyz*nelv
-         do ie = 1, nelv              ! Compute velocity gradient tensor
+         do ie = 1, nelv ! Compute velocity gradient tensor
             call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
             do l = 1, nxyz
                call compute_symmetric(l2(l, 1, 1, ie), l)
@@ -134,7 +134,7 @@
          common/mygrad/mygi
          nxyz = lx1*ly1*lz1
          n = nxyz*nelv
-         do ie = 1, nelv              ! Compute velocity gradient tensor
+         do ie = 1, nelv ! Compute velocity gradient tensor
             call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
             do l = 1, nxyz
                call compute_antisymmetric(l2(l, 1, 1, ie), l)
@@ -195,10 +195,10 @@
             call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
             do l = 1, nxyz
                call compute_firstInv(P1, l)
-               P1 = -P1              !negative sign
+               P1 = -P1 !negative sign
                call compute_secondInv(Q1, l)
                call compute_thirdInv(R1, l)
-               R1 = -R1              !negative sign
+               R1 = -R1 !negative sign
                Q = Q1 - (P1**2)/3
                R = R1 + (P1**3)*2/27 - P1*Q1/3
                l2(l, 1, 1, ie) = (R/2)**2 + (Q/3)**3
@@ -248,56 +248,56 @@
       
          nxyz = lx1*ly1*lz1
          n = nxyz*nelv
-         if (if3d) then            ! 3D CASE
-         do ie = 1, nelv
+         if (if3d) then ! 3D CASE
+            do ie = 1, nelv
       !     Compute velocity gradient tensor
-            call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
-            do l = 1, nxyz
-               call compute_firstInv(P1, l)
-               P1 = -P1           !negative sign
-               call compute_secondInv(Q1, l)
-               call compute_thirdInv(R1, l)
-               R1 = -R1           !negative sign
+               call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
+               do l = 1, nxyz
+                  call compute_firstInv(P1, l)
+                  P1 = -P1 !negative sign
+                  call compute_secondInv(Q1, l)
+                  call compute_thirdInv(R1, l)
+                  R1 = -R1 !negative sign
       !     Q=Q1-(P1**2)/3
-               R = R1 + (P1**3)*2/27 - P1*Q1/3
+                  R = R1 + (P1**3)*2/27 - P1*Q1/3
       !     Delta = (R/2)**2+(Q/3)**3
-               call cubicLambdaCi(P1, Q1, R1, lambdaCi)
+                  call cubicLambdaCi(P1, Q1, R1, lambdaCi)
       
-               l2(l, 1, 1, ie) = lambdaCi
+                  l2(l, 1, 1, ie) = lambdaCi
+               end do
             end do
-         end do
-         elseif (ifaxis) then      ! AXISYMMETRIC CASE
-         if (nid == 0) write (6, *)
+         elseif (ifaxis) then ! AXISYMMETRIC CASE
+            if (nid == 0) write (6, *)
      $   'ABORT:no compute_swirling axisymmetric support for now'
-         call exitt
-         else                      ! 2D CASE
-         do ie = 1, nelv
+            call exitt
+         else ! 2D CASE
+            do ie = 1, nelv
       !     Compute velocity gradient tensor
-            call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
-            do l = 1, nxyz
-               call compute_firstInv(P1, l)
-               P1 = -P1           !negative sign
+               call comp_gije(mygi, vx(1, 1, 1, ie), vy(1, 1, 1, ie), vz(1, 1, 1, ie), ie)
+               do l = 1, nxyz
+                  call compute_firstInv(P1, l)
+                  P1 = -P1 !negative sign
       !     call compute_secondInv(Q1,l)
       !     Q1=0.
-               call compute_thirdInv(R1, l)
-               R1 = -R1           !negative sign
+                  call compute_thirdInv(R1, l)
+                  R1 = -R1 !negative sign
       !     Q=Q1-(P1**2)/3
       !     R=R1+(P1**3)*2/27-P1*Q1/3
       !     Delta = (R/2)**2+(Q/3)**3
-               call quadLambdaCi(P1, R1, lambdaCi)
+                  call quadLambdaCi(P1, R1, lambdaCi)
       
-               l2(l, 1, 1, ie) = lambdaCi
+                  l2(l, 1, 1, ie) = lambdaCi
+               end do
             end do
-         end do
       
          end if
       
          call filter_s0(l2, 0.5, 1, 'vortx')
       
          do ie = 1, nelv
-         do l = 1, nxyz
-            l2(l, 1, 1, ie) = l2(l, 1, 1, ie)*l2(l, 1, 1, ie)
-         end do
+            do l = 1, nxyz
+               l2(l, 1, 1, ie) = l2(l, 1, 1, ie)*l2(l, 1, 1, ie)
+            end do
          end do
       
          return
@@ -315,9 +315,9 @@
          integer l
          common/mygrad/mygi
          B = 0.0d0
-         if (if3d) then              ! 3D CASE
+         if (if3d) then ! 3D CASE
             B = ((mygi(l, 1, 2) + mygi(l, 2, 1))**2 + (mygi(l, 1, 3) + mygi(l, 3, 1))**2 + (mygi(l, 2, 3) + mygi(l, 3, 2))**2)/4
-         else                      ! 2D CASE
+         else ! 2D CASE
             B = ((mygi(l, 1, 2) + mygi(l, 2, 1))**2)/4
          end if
          return
@@ -332,10 +332,10 @@
          integer l
          common/mygrad/mygi
          A = 0.0d0; B = 0.0d0
-         if (if3d) then              ! 3D CASE
+         if (if3d) then ! 3D CASE
             B = ((mygi(l, 1, 2) + mygi(l, 2, 1))**2 + (mygi(l, 1, 3) + mygi(l, 3, 1))**2 + (mygi(l, 2, 3) + mygi(l, 3, 2))**2)/4
             A = B + (mygi(l, 1, 1)**2 + mygi(l, 2, 2)**2 + mygi(l, 3, 3)**2)/2
-         else                      ! 2D CASE
+         else ! 2D CASE
             B = ((mygi(l, 1, 2) + mygi(l, 2, 1))**2)/4
             A = B + (mygi(l, 1, 1)**2 + mygi(l, 2, 2)**2)/2
          end if
@@ -356,12 +356,12 @@
          real mygi(lxyz, ldim, ldim), a
          integer l
          common/mygrad/mygi
-         if (if3d) then              ! 3D CASE
+         if (if3d) then ! 3D CASE
             a = (mygi(l, 1, 1) + mygi(l, 2, 2) + mygi(l, 3, 3))
-         elseif (ifaxis) then        ! AXISYMMETRIC CASE
+         elseif (ifaxis) then ! AXISYMMETRIC CASE
             if (nid == 0) write (6, *) 'ABORT: compute_firstInv axisymmetric support for now'
             call exitt
-         else                      ! 2D CASE
+         else ! 2D CASE
             a = (mygi(l, 1, 1) + mygi(l, 2, 2))
          end if
          return
@@ -383,14 +383,14 @@
          real a
          integer l
          common/mygrad/mygi
-         if (if3d) then            ! 3D CASE
+         if (if3d) then ! 3D CASE
             a = (mygi(l, 2, 2)*mygi(l, 3, 3) - mygi(l, 2, 3)*mygi(l, 3, 2))
      $   +(mygi(l, 1, 1)*mygi(l, 2, 2) - mygi(l, 1, 2)*mygi(l, 2, 1))
      $   +(mygi(l, 3, 3)*mygi(l, 1, 1) - mygi(l, 1, 3)*mygi(l, 3, 1))
-         elseif (ifaxis) then      ! AXISYMMETRIC CASE
+         elseif (ifaxis) then ! AXISYMMETRIC CASE
             if (nid == 0) write (6, *) 'ABORT: compute_secondInv axisymmetric support for now'
             call exitt
-         else                      ! 2D CASE
+         else ! 2D CASE
             a = (mygi(l, 1, 1) + mygi(l, 2, 2))*(mygi(l, 1, 1) + mygi(l, 2, 2))
      $   -2*mygi(l, 1, 2)*mygi(l, 2, 1) - mygi(l, 1, 1)*mygi(l, 1, 1) - mygi(l, 2, 2)*mygi(l, 2, 2)
          end if
@@ -415,17 +415,17 @@
          real a
          integer l
          common/mygrad/mygi
-         if (if3d) then            ! 3D CASE
+         if (if3d) then ! 3D CASE
             a = -mygi(l, 1, 1)*(mygi(l, 2, 3)*mygi(l, 3, 2)
      $   -mygi(l, 2, 2)*mygi(l, 3, 3))
      $   -mygi(l, 1, 2)*(mygi(l, 2, 1)*mygi(l, 3, 3)
      $   -mygi(l, 3, 1)*mygi(l, 2, 3))
      $   -mygi(l, 1, 3)*(mygi(l, 3, 1)*mygi(l, 2, 2)
      $   -mygi(l, 2, 1)*mygi(l, 3, 2))
-         elseif (ifaxis) then      ! AXISYMMETRIC CASE
+         elseif (ifaxis) then ! AXISYMMETRIC CASE
             if (nid == 0) write (6, *) 'ABORT: compute_thirdInv axisymmetric support for now'
             call exitt
-         else                      ! 2D CASE
+         else ! 2D CASE
             a = mygi(l, 1, 1)*mygi(l, 2, 2) - mygi(l, 1, 2)*mygi(l, 2, 1)
       
          end if
@@ -490,7 +490,7 @@
          if (d >= 0.) then
             lci = 0.
          else
-            f = sqrt(abs(d))       !sign(abs(d)**(1.0/2.0), d)
+            f = sqrt(abs(d)) !sign(abs(d)**(1.0/2.0), d)
             x1 = -b/2./a + f*ci/2./a
             lci = aimag(x1)
          end if
@@ -583,7 +583,7 @@
             call avg1(pavg, pr, alpha, beta, nto2, 'prm ', ifverbose)
             call avg1(tavg, t(1, 1, 1, 1, 1), alpha, beta, ntot, 'tm ', ifverbose)
       
-            if (ifstatis) then       !compute fluctuations
+            if (ifstatis) then !compute fluctuations
       !     compute averages E(X^2)
                call avg2(urms, vx, alpha, beta, ntot, 'ums ', ifverbose)
                call avg2(vrms, vy, alpha, beta, ntot, 'vms ', ifverbose)
@@ -611,9 +611,9 @@
          if ((mod(istep, iastep) == 0 .and. istep > 1) .or. lastep == 1) then
       
             time_temp = time
-            time = atime      ! Output the duration of this avg
+            time = atime ! Output the duration of this avg
             dtmp = param(63)
-            param(63) = 1          ! Enforce 64-bit output
+            param(63) = 1 ! Enforce 64-bit output
       
       !     mean fluctuation fields
             ifto = .false.; ifpo = .false.
@@ -635,7 +635,7 @@
       
             param(63) = dtmp
             atime = 0.
-            time = time_temp      ! Restore clock
+            time = time_temp ! Restore clock
       
          end if
          timel = time
@@ -664,7 +664,7 @@
          integer :: i, j, k, mode, n
          character(len=80) :: filename
          character(len=6) :: mode_str ! Assuming mode will not exceed 6 digits
-         character(len=3) :: mode_str2  ! Length 3 to hold 'K' and two digits
+         character(len=3) :: mode_str2 ! Length 3 to hold 'K' and two digits
       
          n = nx1*ny1*nz1*nelv
       

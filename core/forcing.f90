@@ -46,14 +46,14 @@
          iel = gllel(ieg)
          if (jp == 0) temp = temp + fct(ix, iy, iz, iel, m)
       
-         if (spng_st /= 0) then   !!!HERE SPONGE STRENGHT ALWAYS UNITY!
+         if (spng_st /= 0) then !!!HERE SPONGE STRENGHT ALWAYS UNITY!
       
       ! compute the corresponding index in the pertubation arrays
             ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
       
-            if (jp == 0) then      ! dns ! t(1,1,1,1,ifield-1)
+            if (jp == 0) then ! dns ! t(1,1,1,1,ifield-1)
                temp = temp + spng_fn(ip)*(spng_vt(ip, m) - t(ix, iy, iz, iel, m))
-            else                   ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
+            else ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
                temp = temp - spng_fn(ip)*tp(ip, m, jp)
             end if
       
@@ -201,13 +201,13 @@
                      elseif (rtmp < xxmax_c) then ! rise
                         arg = (rtmp - xxmax)/spng_wr(il)
                         rtmp = mth_stepf(arg)
-                     else             ! constant
+                     else ! constant
                         rtmp = 1.0d0
                      end if
                      spng_fn(jl) = max(spng_fn(jl), rtmp)
                   end do
-               end if                  ! xxmax.le.xxmin
-            end if                     ! spng_w(il).gt.0.0
+               end if ! xxmax.le.xxmin
+            end if ! spng_w(il).gt.0.0
          end do
       
          ltmp = ifto; ltmp2 = ifpo

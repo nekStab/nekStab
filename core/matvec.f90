@@ -7,49 +7,49 @@
       
       ! Enforce single perturbation mode
          if (param(31) > 1) then
-         if (nid == 0) then
-            write (6, *) 'ERROR: nekStab not ready for multiple perturbation modes.'
-            write (6, *) 'Setting number of perturbations to 1.'
-         end if
+            if (nid == 0) then
+               write (6, *) 'ERROR: nekStab not ready for multiple perturbation modes.'
+               write (6, *) 'Setting number of perturbations to 1.'
+            end if
          end if
          param(31) = 1; npert = param(31)
          if (nid == 0) write (6, *) 'Number of perturbations set to:', npert
       
       ! Adjust time step and number of steps if end time is specified
          if (param(10) > 0) then
-         if (nid == 0) then
-            write (6, *) 'End time specified:', param(10)
-            write (6, *) 'Current time:', time
-            write (6, *) 'Recomputing dt and nsteps to match end time...'
-         end if
+            if (nid == 0) then
+               write (6, *) 'End time specified:', param(10)
+               write (6, *) 'Current time:', time
+               write (6, *) 'Recomputing dt and nsteps to match end time...'
+            end if
       
       ! Compute maximum allowable time step based on CFL condition
-         call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
-         if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
+            call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
+            if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
       
       ! Calculate time step based on CFL target
-         dt = param(26)/ctarg
+            dt = param(26)/ctarg
       
       ! Calculate number of steps needed to reach end time
-         nsteps = ceiling(param(10)/dt)
+            nsteps = ceiling(param(10)/dt)
       
       ! Adjust time step to exactly reach end time
-         dt = param(10)/nsteps
+            dt = param(10)/nsteps
       
-         if (nid == 0) then
-            write (6, *) 'Adjusted time step dt =', dt
-            write (6, *) 'Number of steps nsteps =', nsteps
-            write (6, *) 'Total simulation time =', nsteps*dt
-         end if
+            if (nid == 0) then
+               write (6, *) 'Adjusted time step dt =', dt
+               write (6, *) 'Number of steps nsteps =', nsteps
+               write (6, *) 'Total simulation time =', nsteps*dt
+            end if
       
       ! Update parameters
-         param(12) = dt
-         lastep = 0
-         fintim = nsteps*dt
+            param(12) = dt
+            lastep = 0
+            fintim = nsteps*dt
       
       ! Recalculate actual CFL
-         call compute_cfl(ctarg, vx, vy, vz, dt)
-         if (nid == 0) write (6, *) 'Actual CFL:', ctarg
+            call compute_cfl(ctarg, vx, vy, vz, dt)
+            if (nid == 0) write (6, *) 'Actual CFL:', ctarg
          end if
       
       ! Force constant time step
@@ -196,8 +196,8 @@
          if (uparam(01) == 3.11) ifbase = .true. ! activate Floquet
          if (uparam(01) == 3.31) ifbase = .true. ! activate Floquet for intracycle transient growth
          if (uparam(01) == 2.1 .or. uparam(01) == 2.2) then
-            init = .true.            ! use stored baseflow if ifstorebase
-            ifbase = .true.          ! activate baseflow evolution for UPO
+            init = .true. ! use stored baseflow if ifstorebase
+            ifbase = .true. ! activate baseflow evolution for UPO
          end if
          if (ifstorebase .and. init) ifbase = .false. ! deactivte ifbase if baseflow stored
       
@@ -206,7 +206,7 @@
             allocate (uor(lv, nsteps), vor(lv, nsteps))
             if (if3d) then
                allocate (wor(lv, nsteps))
-            else                   ! 2D
+            else ! 2D
                allocate (wor(1, 1))
             end if
             if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
@@ -230,18 +230,18 @@
                call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
                if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
+                  end do
                end if
             elseif (ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
                if (nid == 0) write (6, *) 'using stored baseflow'
                call opcopy(vx, vy, vz, uor(:, istep), vor(:, istep), wor(:, istep))
                if (ifto) call copy(t(:, :, :, :, 1), tor(:, istep, 1), nt)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
+                  end do
                end if
             end if
          end do
@@ -310,8 +310,8 @@
          if (uparam(01) == 3.11) ifbase = .true. ! activate Floquet
          if (uparam(01) == 3.31) ifbase = .true. ! activate Floquet for intracycle transient growth
          if (uparam(01) == 2.1 .or. uparam(01) == 2.2) then
-            init = .true.          ! Use stored baseflow if ifstorebase.
-            ifbase = .true.        ! activate baseflow evolution for UPO.
+            init = .true. ! Use stored baseflow if ifstorebase.
+            ifbase = .true. ! activate baseflow evolution for UPO.
          end if
          if (ifstorebase .and. init) ifbase = .false. ! deactivate ifbase if baseflow stored.
       
@@ -320,7 +320,7 @@
             allocate (uor(lv, nsteps), vor(lv, nsteps))
             if (if3d) then
                allocate (wor(lv, nsteps))
-            else                   ! 2D
+            else ! 2D
                allocate (wor(1, 1))
             end if
             if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
@@ -361,18 +361,18 @@
                   call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
                   if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
                   if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-                  end do
+                     do m = 2, ldimt
+                        if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
+                     end do
                   end if
                elseif (i > 1 .and. ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
                   if (nid == 0) write (6, *) 'using stored baseflow'
                   call opcopy(vx, vy, vz, uor(:, istep), vor(:, istep), wor(:, istep))
                   if (ifto) call copy(t(:, :, :, :, 1), tor(:, istep, 1), nt)
                   if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
-                  end do
+                     do m = 2, ldimt
+                        if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
+                     end do
                   end if
                end if
             end do
@@ -435,7 +435,7 @@
             allocate (uor(lv, nsteps), vor(lv, nsteps))
             if (if3d) then
                allocate (wor(lv, nsteps))
-            else                   ! 2D
+            else ! 2D
                allocate (wor(1, 1))
             end if
             if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
@@ -461,9 +461,9 @@
                call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
                if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
+                  end do
                end if
       
             elseif (ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
@@ -471,9 +471,9 @@
                call opcopy(vx, vy, vz, uor(:, istep), vor(:, istep), wor(:, istep))
                if (ifto) call copy(t(:, :, :, :, 1), tor(:, istep, 1), nt)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
+                  end do
                end if
             end if
          end do

@@ -440,11 +440,11 @@
       !     --> Compute the scalar product between the direct and adjoint mode.
       call inner_product(alpha, vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe)
       call inner_product(beta, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm)
-      gamma = alpha + beta      ! Real part of the inner product
+      gamma = alpha + beta ! Real part of the inner product
       
       call inner_product(alpha, vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm)
       call inner_product(beta, vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe)
-      delta = alpha - beta      ! Complex part of the inner product
+      delta = alpha - beta ! Complex part of the inner product
       
       !     --> Bi-orthonormalize the adjoint mode.
       wk1_vx = (gamma*vx_aRe - delta*vx_aIm)/(gamma**2 + delta**2)
@@ -488,10 +488,10 @@
       !     J. Fluid Mech., vol 615, pp. 221-252, 2008.
          use krylov_subspace
          implicit none
-         include 'SIZE'            !
-         include 'INPUT'           ! IF3D
-         include 'PARALLEL'        ! GLLEL
-         include 'SOLN'            ! JP
+         include 'SIZE' !
+         include 'INPUT' ! IF3D
+         include 'PARALLEL' ! GLLEL
+         include 'SOLN' ! JP
       
          real, dimension(lv) :: vx_bf, vy_bf, vz_bf
          real, dimension(lv) :: fsrx, fsry, fsrz
@@ -544,44 +544,47 @@
       
          type(krylov_vector) :: Re, Im, Re_sin, Im_cos
          character(len=80) :: filename
-         character(len=*), intent(in) :: mode  ! 'd' or 'a'
-         real :: frequency, omega
+         character(len=*), intent(in) :: mode ! 'd' or 'a'
+         real :: frequency, omega, sigma, u_max, A0
          integer, intent(in) :: num_steps
          integer :: i
       
          if (nid == 0) then
             write (6, *) 'Animating mode function in mode:', mode
             write (6, *) 'Number of steps:', num_steps
+      
+            open (unit=10, file='Spectre_NSd_conv.dat', status='old', action='read')
+            read (10, '(2E15.7)') sigma, omega ! omegaR_min is recycle as dummy
+            close (10)
+            omega = abs(omega) ! if omega is read as negative
+            write (6, *) 'Read sigma, omega value from file: ', sigma, omega
+      
          end if
+         call bcast(sigma, wdsize)
+         call bcast(omega, wdsize)
       
-         frequency = 1.0/param(10)  ! f = 1 / T (T = period)
-         omega = 8.0d0*atan(1.0d0)*frequency  ! omega = 2 * pi * f
+      ! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
+      ! frequency = omega / (8.0d0*atan(1.0d0))  ! f = omega / (2 * pi)
+      ! omega = 8.0d0*atan(1.0d0) * frequency  ! omega = 2 * pi * f
       
-      ! Load real and imaginary parts of the mode
-         if (mode == 'd') then
-            write (filename, '(a,a,a)') 'dRe', trim(SESSION), '0.f00001'
-            call load_fld(filename)
-            call nopcopy(Re%vx, Re%vy, Re%vz, Re%pr, Re%t, vx, vy, vz, pr, t)
+         call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
+         call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
+         ifto = .true.
+         call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
       
-            write (filename, '(a,a,a)') 'dIm', trim(SESSION), '0.f00001'
-            call load_fld(filename)
-            call nopcopy(Im%vx, Im%vy, Im%vz, Im%pr, Im%t, vx, vy, vz, pr, t)
+      !u_max = glmax(vx, nv)
+         A0 = 1.0e-3
+         sigma = 1.0e-1 ! force a value of sigma
       
+      !u_max = glmax(vx, nv)
+      !A0 = (2.0*u_max) / exp(sigma*fintim)
+      
+         if (mode == 'd') then ! Load real and imaginary parts of the mode
+            call k_load(Re, 'dRe')
+            call k_load(Im, 'dIm')
          else if (mode == 'a') then
-      
-            write (filename, '(a,a,a)') 'aRe', trim(SESSION), '0.f00001'
-            call load_fld(filename)
-            call nopcopy(Re%vx, Re%vy, Re%vz, Re%pr, Re%t, vx, vy, vz, pr, t)
-      
-            write (filename, '(a,a,a)') 'aIm', trim(SESSION), '0.f00001'
-            call load_fld(filename)
-            call nopcopy(Im%vx, Im%vy, Im%vz, Im%pr, Im%t, vx, vy, vz, pr, t)
-      
-         else
-      
-            write (6, *) "Invalid mode type. Use 'd' or 'a'."
-            return
-      
+            call k_load(Re, 'aRe')
+            call k_load(Im, 'aIm')
          end if
       
       ! Loop over num_steps to create snapshots
@@ -591,7 +594,11 @@
       
             if (nid == 0) then
                write (6, '(A, I0, A, F8.4, A, I0)') 'i: ', i, ', time: ', time, ', n: ', num_steps
-           write (6, '(A, F8.4, A, F8.4, A, F8.4, A)') 'Time/param(10): ', time/param(10), ' (', time, ' / ', param(10), ') [time/period]'
+               write (6, '(A, F8.4, A, F8.4, A, F8.4, A)')
+     $   'Time/param(10): ', time/param(10),
+     $   ' (', time,
+     $   ' / ', param(10),
+     $   ') [time/period]'
             end if
       
             call k_copy(Re_sin, Re); call k_cmult(Re_sin, cos(omega*time))
@@ -623,9 +630,9 @@
          do ie = 1, nelv
             call comp_gije(gije, vx_in(1, 1, 1, ie), vy_in(1, 1, 1, ie), vz_in(1, 1, 1, ie), ie)
             do l = 1, nxyz; do j = 1, ldim; do i = 1, ldim
-                  ss(i, j) = 0.50d0*(gije(l, i, j) + gije(l, j, i))
-                  oo(i, j) = 0.50d0*(gije(l, i, j) - gije(l, j, i))
-               end do; end do
+                     ss(i, j) = 0.50d0*(gije(l, i, j) + gije(l, j, i))
+                     oo(i, j) = 0.50d0*(gije(l, i, j) - gije(l, j, i))
+                  end do; end do
                norm_a(l, 1, 1, ie) = (norm2(ss)**2)**2
                norm_b(l, 1, 1, ie) = (norm2(oo)**2)**2
                eps_field = norm_b(l, 1, 1, ie) - norm_a(l, 1, 1, ie)
@@ -638,29 +645,29 @@
             if (nid == 0) write (6, *) 'Initial eps = ', eps
       
             do iter = 1, 20
-            do ie = 1, nelv
-            do l = 1, nxyz
-               omegaR(l, 1, 1, ie) = norm_b(l, 1, 1, ie)/(norm_a(l, 1, 1, ie) + norm_b(l, 1, 1, ie) + eps)
-            end do
-            end do
+               do ie = 1, nelv
+                  do l = 1, nxyz
+                     omegaR(l, 1, 1, ie) = norm_b(l, 1, 1, ie)/(norm_a(l, 1, 1, ie) + norm_b(l, 1, 1, ie) + eps)
+                  end do
+               end do
       
-            omegaR_max = glmax(omegaR, nv)
-            if (abs(omegaR_max - 1.0d0) < 1.0e-8) exit
+               omegaR_max = glmax(omegaR, nv)
+               if (abs(omegaR_max - 1.0d0) < 1.0e-8) exit
       
-            omegaR_min = glmin(omegaR, nv)
-            if (nid == 0) write (6, *) 'Iteration ', iter, ': omegaR min,max:', omegaR_min, omegaR_max
+               omegaR_min = glmin(omegaR, nv)
+               if (nid == 0) write (6, *) 'Iteration ', iter, ': omegaR min,max:', omegaR_min, omegaR_max
       
-            if (omegaR_max > 1.0d0) then
-               if (nid == 0) write (6, *) 'Increasing eps: ', eps
-               eps = eps*2.0d0
-            else if (omegaR_max < 1.0d0) then
-               if (nid == 0) write (6, *) 'Decreasing eps: ', eps
-               eps = eps*0.50d0
-            end if
+               if (omegaR_max > 1.0d0) then
+                  if (nid == 0) write (6, *) 'Increasing eps: ', eps
+                  eps = eps*2.0d0
+               else if (omegaR_max < 1.0d0) then
+                  if (nid == 0) write (6, *) 'Decreasing eps: ', eps
+                  eps = eps*0.50d0
+               end if
       
-            optimal_eps = eps
-            if (nid == 0) write (6, *) 'Final eps value: ', optimal_eps
-            call bcast(optimal_eps, wdsize)
+               optimal_eps = eps
+               if (nid == 0) write (6, *) 'Final eps value: ', optimal_eps
+               call bcast(optimal_eps, wdsize)
             end do ! iter
          end if ! optimal_eps
       
@@ -695,7 +702,7 @@
          include 'TOTAL'
       
          integer, intent(in) :: num_of_files
-         character(len=*), intent(in) :: mode  ! 'd' or 'a'
+         character(len=*), intent(in) :: mode ! 'd' or 'a'
       
          type(krylov_vector), save :: BF, Re, Im
          type(krylov_vector) :: Re_cos, Im_sin
@@ -749,8 +756,11 @@
       
             if (nid == 0) then
                write (6, '(A, I0, A, F8.4, A, I0)') 'i: ', i, ', time: ', time, ', n: ', num_of_files
-               write (6, '(A, F8.4, A, F8.4, A, F8.4, A)') 'Time/param(10): ',
-     $   time/param(10), ' (', time, ' / ', param(10), ') [time/period]'
+               write (6, '(A, F8.4, A, F8.4, A, F8.4, A)')
+     $   'Time/param(10): ', time/param(10),
+     $   ' (', time,
+     $   ' / ', param(10),
+     $   ') [time/period]'
             end if
       
             ifto = .true.
@@ -781,7 +791,7 @@
          include 'TOTAL'
       
          integer, intent(in) :: num_of_files
-         character(len=*), intent(in) :: mode  ! 'd' or 'a'
+         character(len=*), intent(in) :: mode ! 'd' or 'a'
       
          type(krylov_vector), save :: BF, Re, Im
          type(krylov_vector) :: Re_cos, Im_sin

@@ -1,5 +1,5 @@
       !-----------------------------------------------------------------------c
-      subroutine tdf            !Time-delayed Feedback
+      subroutine tdf !Time-delayed Feedback
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -24,7 +24,7 @@
             norbit = ceiling(porbit/dt) ! computing a safe value of norbit
             if (nid == 0) write (6, *) ' Computing norbit=', norbit
       
-            dt = porbit/norbit   ! reducing dt to match forced orbit to machine accuracy
+            dt = porbit/norbit ! reducing dt to match forced orbit to machine accuracy
             param(12) = dt
       
             if (nid == 0) write (6, *) ' Adjusting timeStep dt=', dt
@@ -61,9 +61,9 @@
                call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
                if (ifto) call copy(tor(1, istep, 1), t(:, :, :, :, 1), nt)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(tor(1, istep, m), t(:, :, :, :, m), nt)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call copy(tor(1, istep, m), t(:, :, :, :, m), nt)
+                  end do
                end if
       
             else !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
@@ -74,25 +74,25 @@
                call opcmult(do1, do2, do3, gain) !f=fc*-chi
                call opadd2(fcx, fcy, fcz, do1, do2, do3) !FORCE HERE DO NOT COPY, ADD!
       
-               do i = 1, norbit - 1     !discard the i=1 solution
+               do i = 1, norbit - 1 !discard the i=1 solution
       
                   uor(:, i) = uor(:, i + 1)
                   vor(:, i) = vor(:, i + 1)
                   if (if3d) wor(:, i) = wor(:, i + 1)
                   if (ifto) tor(:, i, 1) = tor(:, i + 1, 1)
                   if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) tor(:, i, m) = tor(:, i + 1, m)
-                  end do
+                     do m = 2, ldimt
+                        if (ifpsco(m - 1)) tor(:, i, m) = tor(:, i + 1, m)
+                     end do
                   end if
       
                end do !store the last one
                call opcopy(uor(1, norbit), vor(1, norbit), wor(1, norbit), vx, vy, vz) !store solution
                if (ifto) call copy(tor(1, norbit, 1), t(:, :, :, :, 1), nt)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(tor(1, norbit, m), t(:, :, :, :, m), nt)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call copy(tor(1, norbit, m), t(:, :, :, :, m), nt)
+                  end do
                end if
       
                if (nid == 0) then
@@ -106,16 +106,16 @@
                   if (nid == 0) write (6, *) ' Converged base flow to:', tol
                   ifbfcv = .true.
                   call bcast(ifbfcv, lsize)
-                  param(63) = 1    ! Enforce 64-bit output
+                  param(63) = 1 ! Enforce 64-bit output
                   call bcast(param, 200*wdsize)
                   call outpost(vx, vy, vz, pr, t, 'BF_')
-                  param(63) = 0    ! Enforce 32-bit output
+                  param(63) = 0 ! Enforce 32-bit output
                   call bcast(param, 200*wdsize)
                   call outpost_vort(vx, vy, vz, 'BFV')
                end if
       
-            end if                  ! else
-         end if                     ! not init
+            end if ! else
+         end if ! not init
       
          return
       end subroutine TDF
@@ -252,10 +252,10 @@
                if (nid == 0) write (6, *) ' Converged base flow to:', tol
                ifbfcv = .true.
                call bcast(ifbfcv, lsize)
-               param(63) = 1       ! Enforce 64-bit output
+               param(63) = 1 ! Enforce 64-bit output
                call bcast(param, 200*wdsize)
                call outpost(vx, vy, vz, pr, t, 'BF_')
-               param(63) = 0       ! Enforce 32-bit output
+               param(63) = 0 ! Enforce 32-bit output
                call bcast(param, 200*wdsize)
             end if
       

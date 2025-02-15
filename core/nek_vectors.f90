@@ -18,9 +18,9 @@
          if (ifpo) call rzero(a4, lx2*ly2*lz2*nelv)
          if (ifto) call rzero(a5(1, 1), lx1*ly1*lz1*nelfld(2))
          if (ldimt > 1) then
-         do k = 1, npscal
-            if (ifpsco(k)) call rzero(a5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
-         end do
+            do k = 1, npscal
+               if (ifpsco(k)) call rzero(a5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
+            end do
          end if
          return
       end subroutine noprzero
@@ -43,9 +43,9 @@
          if (ifpo) call cmult(a4, c, lx2*ly2*lz2*nelv)
          if (ifto) call cmult(a5(1, 1), c, lx1*ly1*lz1*nelfld(2))
          if (ldimt > 1) then
-         do k = 1, npscal
-            if (ifpsco(k)) call cmult(a5(1, k + 1), c, lx1*ly1*lz1*nelfld(k + 2))
-         end do
+            do k = 1, npscal
+               if (ifpsco(k)) call cmult(a5(1, k + 1), c, lx1*ly1*lz1*nelfld(k + 2))
+            end do
          end if
          return
       end subroutine nopcmult
@@ -82,9 +82,9 @@
          if (ifpo) call axpby(a4, alpha, b4, beta, lx2*ly2*lz2*nelv)
          if (ifto) call axpby(a5(1, 1), alpha, b5(1, 1), beta, lx1*ly1*lz1*nelfld(2))
          if (ldimt > 1) then
-         do k = 1, npscal
-            if (ifpsco(k)) call axpby(a5(1, k + 1), alpha, b5(1, k + 1), beta, lx1*ly1*lz1*nelfld(k + 2))
-         end do
+            do k = 1, npscal
+               if (ifpsco(k)) call axpby(a5(1, k + 1), alpha, b5(1, k + 1), beta, lx1*ly1*lz1*nelfld(k + 2))
+            end do
          end if
          return
       end subroutine nopaxpby
@@ -110,9 +110,9 @@
          if (ifpo) call copy(a4, b4, lx2*ly2*lz2*nelv)
          if (ifto) call copy(a5(1, 1), b5(1, 1), lx1*ly1*lz1*nelfld(2))
          if (ldimt > 1) then
-         do k = 1, npscal
-            if (ifpsco(k)) call copy(a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
-         end do
+            do k = 1, npscal
+               if (ifpsco(k)) call copy(a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
+            end do
          end if
          return
       end subroutine nopcopy
@@ -138,9 +138,9 @@
          if (ifpo) call sub2(a4, b4, lx2*ly2*lz2*nelv)
          if (ifto) call sub2(a5(1, 1), b5(1, 1), lx1*ly1*lz1*nelfld(2))
          if (ldimt > 1) then
-         do k = 1, npscal
-            if (ifpsco(k)) call sub2(a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
-         end do
+            do k = 1, npscal
+               if (ifpsco(k)) call sub2(a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
+            end do
          end if
          return
       end subroutine nopsub2
@@ -171,9 +171,9 @@
          if (ifpo) call sub3(c4, a4, b4, lx2*ly2*lz2*nelv)
          if (ifto) call sub3(c5(1, 1), a5(1, 1), b5(1, 1), lx1*ly1*lz1*nelfld(2))
          if (ldimt > 1) then
-         do k = 1, npscal
-            if (ifpsco(k)) call sub3(c5(1, k + 1), a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
-         end do
+            do k = 1, npscal
+               if (ifpsco(k)) call sub3(c5(1, k + 1), a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
+            end do
          end if
          return
       end subroutine nopsub3
@@ -199,9 +199,9 @@
          if (ifpo) call add2(a4, b4, lx2*ly2*lz2*nelv)
          if (ifto) call add2(a5(1, 1), b5(1, 1), lx1*ly1*lz1*nelfld(2))
          if (ldimt > 1) then
-         do k = 1, npscal
-            if (ifpsco(k)) call add2(a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
-         end do
+            do k = 1, npscal
+               if (ifpsco(k)) call add2(a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
+            end do
          end if
          return
       end subroutine nopadd2

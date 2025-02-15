@@ -17,11 +17,11 @@
          end do
          chkmin = glmin(chk, n)
          do m = 1, n
-         if (chkmin == chk(m)) then
-            procmin = 1
-            posiz = m
-            print *, 'Point found: ', m ! do not use nid = 0 as it could be any rank with this value !
-         end if
+            if (chkmin == chk(m)) then
+               procmin = 1
+               posiz = m
+               print *, 'Point found: ', m ! do not use nid = 0 as it could be any rank with this value !
+            end if
          end do
          return
       end subroutine pointcheck
@@ -29,11 +29,11 @@
       subroutine add_noise_scal(qin, fc1, fc2, fc3)
          implicit none
          include 'SIZE'
-         include 'TSTEP'           ! TIME, DT
-         include 'PARALLEL'        ! LGLEL
-         include 'INPUT'           ! if3D
-         include 'SOLN'            ! VX, VY, VZ, VMULT
-         include 'GEOM'            ! XM1, YM1, ZM1
+         include 'TSTEP' ! TIME, DT
+         include 'PARALLEL' ! LGLEL
+         include 'INPUT' ! if3D
+         include 'SOLN' ! VX, VY, VZ, VMULT
+         include 'GEOM' ! XM1, YM1, ZM1
          real, intent(inout), dimension(lx1*ly1*lz1*lelt) :: qin
          real, intent(in) :: fc1, fc2, fc3
          real, dimension(lx1, ly1, lz1, lelt) :: q
@@ -43,17 +43,17 @@
          nt = nx1*ny1*nz1*nelt
          call copy(q(:, :, :, :), qin(:), nt)
          do iel = 1, nelv
-         do kl = 1, nz1
-         do jl = 1, ny1
-         do il = 1, nx1
-            ieg = lglel(iel)
-            xl(1) = xm1(il, jl, kl, iel)
-            xl(2) = ym1(il, jl, kl, iel)
-            if (if3D) xl(ndim) = zm1(il, jl, kl, iel)
-            q(il, jl, kl, iel) = q(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
-         end do
-         end do
-         end do
+            do kl = 1, nz1
+               do jl = 1, ny1
+                  do il = 1, nx1
+                     ieg = lglel(iel)
+                     xl(1) = xm1(il, jl, kl, iel)
+                     xl(2) = ym1(il, jl, kl, iel)
+                     if (if3D) xl(ndim) = zm1(il, jl, kl, iel)
+                     q(il, jl, kl, iel) = q(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
+                  end do
+               end do
+            end do
          end do
          call dssum(q, lx1, ly1, lz1)
          call col2(q, vmult, nt)
@@ -68,12 +68,12 @@
       subroutine op_add_noise(qx, qy, qz)
       !     input random number to fields
          implicit none
-         include 'SIZE'            ! NX1, NY1, NZ1, NELV, NID
-         include 'TSTEP'           ! TIME, DT
-         include 'PARALLEL'        ! LGLEL
-         include 'INPUT'           ! if3D
-         include 'SOLN'            ! VX, VY, VZ, VMULT
-         include 'GEOM'            ! XM1, YM1, ZM1
+         include 'SIZE' ! NX1, NY1, NZ1, NELV, NID
+         include 'TSTEP' ! TIME, DT
+         include 'PARALLEL' ! LGLEL
+         include 'INPUT' ! if3D
+         include 'SOLN' ! VX, VY, VZ, VMULT
+         include 'GEOM' ! XM1, YM1, ZM1
       
          real, dimension(lx1, ly1, lz1, lelv) :: qx, qy, qz
          integer iel, ieg, il, jl, kl, nv
@@ -81,28 +81,28 @@
          nv = nx1*ny1*nz1*nelv
       
          do iel = 1, NELV
-         do kl = 1, NZ1
-         do jl = 1, NY1
-         do il = 1, NX1
-            ieg = LGLEL(iel)
-            xl(1) = XM1(il, jl, kl, iel)
-            xl(2) = YM1(il, jl, kl, iel)
-            if (if3D) xl(NDIM) = ZM1(il, jl, kl, iel)
+            do kl = 1, NZ1
+               do jl = 1, NY1
+                  do il = 1, NX1
+                     ieg = LGLEL(iel)
+                     xl(1) = XM1(il, jl, kl, iel)
+                     xl(2) = YM1(il, jl, kl, iel)
+                     if (if3D) xl(NDIM) = ZM1(il, jl, kl, iel)
       
-            fc(1) = 3.0e4; fc(2) = -1.5e3; fc(3) = 0.5e5
-            qx(il, jl, kl, iel) = qx(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
+                     fc(1) = 3.0e4; fc(2) = -1.5e3; fc(3) = 0.5e5
+                     qx(il, jl, kl, iel) = qx(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
       
-            fc(1) = 2.3e4; fc(2) = 2.3e3; fc(3) = -2.0e5
-            qy(il, jl, kl, iel) = qy(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
+                     fc(1) = 2.3e4; fc(2) = 2.3e3; fc(3) = -2.0e5
+                     qy(il, jl, kl, iel) = qy(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
       
-            if (if3D) then
-               fc(1) = 2.e4; fc(2) = 1.e3; fc(3) = 1.e5
-               qz(il, jl, kl, iel) = qz(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
-            end if
+                     if (if3D) then
+                        fc(1) = 2.e4; fc(2) = 1.e3; fc(3) = 1.e5
+                        qz(il, jl, kl, iel) = qz(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
+                     end if
       
-         end do
-         end do
-         end do
+                  end do
+               end do
+            end do
          end do
       
       !     face averaging
@@ -148,23 +148,23 @@
       !     --> Create the initial velocity perturbation.
       
          do iel = 1, NELV
-         do kl = 1, NZ1
-         do jl = 1, NY1
-         do il = 1, NX1
+            do kl = 1, NZ1
+               do jl = 1, NY1
+                  do il = 1, NX1
       
-            ieg = LGLEL(iel)
-            x = XM1(il, jl, kl, iel)
-            y = YM1(il, jl, kl, iel)
-            if (if3D) z = ZM1(il, jl, kl, iel)
+                     ieg = LGLEL(iel)
+                     x = XM1(il, jl, kl, iel)
+                     y = YM1(il, jl, kl, iel)
+                     if (if3D) z = ZM1(il, jl, kl, iel)
       
       !     -> Construct the perturbation. ! Note: Spanwise invariant.
-            qx(il, jl, kl, iel) = cos(alpha*z)*sin(2.*pi*y)
-            qz(il, jl, kl, iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
-            qp(il, jl, kl, iel) = cos(alpha*z)*cos(2.*pi*y)
+                     qx(il, jl, kl, iel) = cos(alpha*z)*sin(2.*pi*y)
+                     qz(il, jl, kl, iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
+                     qp(il, jl, kl, iel) = cos(alpha*z)*cos(2.*pi*y)
       
-         end do
-         end do
-         end do
+                  end do
+               end do
+            end do
          end do
       
          amp = glsc3(qx, bm1, qx, ntot) + glsc3(qy, bm1, qy, ntot)
@@ -361,12 +361,12 @@
       !     if OIFS -> ifchar = .true. and CFL 2-5
       !     cases can have CFL > 1 in initial time steps
          if (courno > 10) then
-         if (nio == 0) then
-            write (6, *)
-            write (6, *) '    CFL > 10 stopping code'
-            write (6, *)
-         end if
-         call nek_end
+            if (nio == 0) then
+               write (6, *)
+               write (6, *) '    CFL > 10 stopping code'
+               write (6, *)
+            end if
+            call nek_end
          end if
          if (nio /= 0) return
       
@@ -593,7 +593,7 @@
             x2max = glmax(ym0(1, 1, 1, 1), nv)
             x3max = glmax(zm0(1, 1, 1, 1), nv)
             do i = 0, maxobj
-               dragpx(i) = 0       ! BIG CODE  :}
+               dragpx(i) = 0 ! BIG CODE  :}
                dragvx(i) = 0
                dragx(i) = 0
                dragpy(i) = 0
@@ -676,16 +676,16 @@
                torqz(0) = torqz(0) + torqz(i)
             end do
             do i = 1, nobj
-            if (nio == 0) then
-            if (if3d .or. ifaxis) then
-               write (737, "(i8,19E15.7)") istep, time,
+               if (nio == 0) then
+                  if (if3d .or. ifaxis) then
+                     write (737, "(i8,19E15.7)") istep, time,
      $   dragx(i), dragpx(i), dragvx(i), dragy(i), dragpy(i), dragvy(i), dragz(i), dragpz(i), dragvz(i),
      $   torqx(i), torqpx(i), torqvx(i), torqy(i), torqpy(i), torqvy(i), torqz(i), torqpz(i), torqvz(i)
-            else
-               write (737, "(i8,10E15.7)") istep, time,
+                  else
+                     write (737, "(i8,10E15.7)") istep, time,
      $   dragx(i), dragpx(i), dragvx(i), dragy(i), dragpy(i), dragvy(i), torqz(i), torqpz(i), torqvz(i)
-            end if
-            end if
+                  end if
+               end if
             end do
          end if
          return
@@ -699,9 +699,9 @@
          integer iel, ifc
       
          do iel = 1, nelt
-         do ifc = 1, 2*ndim
-            if (cbc(ifc, iel, 1) == 'W  ') boundaryID(ifc, iel) = 1
-         end do
+            do ifc = 1, 2*ndim
+               if (cbc(ifc, iel, 1) == 'W  ') boundaryID(ifc, iel) = 1
+            end do
          end do
       
          return
@@ -751,9 +751,9 @@
          end if
          if (velp(plor - 1) <= v_mean .and. velp(plor) >= v_mean) then !period found
       
-            p_old = p_now          !save old value
-            t_cross_old = t_cross  !save old value
-            t_cross = dtime        !update new value
+            p_old = p_now !save old value
+            t_cross_old = t_cross !save old value
+            t_cross = dtime !update new value
             p_now = t_cross - t_cross_old !compute period
       
             call opsub3(do1, do2, do3, vx, vy, vz, T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3)) !ub=v-vold
