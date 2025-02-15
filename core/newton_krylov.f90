@@ -5,8 +5,8 @@
          include 'TOTAL'
       
       !     ----- Krylov vectors
-         type(krylov_vector) :: f  ! Right-hand side vector for Newton solver
-         type(krylov_vector) :: q  ! Current estimate of the solution
+         type(krylov_vector) :: f ! Right-hand side vector for Newton solver
+         type(krylov_vector) :: q ! Current estimate of the solution
          type(krylov_vector) :: dq ! Newton correction obtained from GMRES
       
       !     ----- Iteration parameters
@@ -71,10 +71,10 @@
       
       !     Set time
             if (i == 1) then
-               q%time = param(10)     ! First guess from endTime in .par
+               q%time = param(10) ! First guess from endTime in .par
                if (nid == 0) write (6, *) '  Setting initial time:', q%time
             else
-               param(10) = q%time     ! Other guesses included in nwt field
+               param(10) = q%time ! Other guesses included in nwt field
                if (nid == 0) write (6, *) '  Updating time:', q%time
             end if
       
@@ -88,21 +88,21 @@
             if (uparam(1) == 2.0) time = real(i) ! Ease visualization in paraview
             if (uparam(1) == 2.2) time = real(i)*q%time
             call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, 'nwt')
-            time = q%time             ! Restore
+            time = q%time ! Restore
       
       !     Allocate nonlinear solution variable for natural or forced UPO
             if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
-            if (nid == 0) then
-               write (6, *) '  Allocating orbit for GMRES'
-               write (6, *) '    Number of steps:', nsteps
-            end if
-            allocate (uor(lv, nsteps), vor(lv, nsteps))
-            if (if3d) then
-               allocate (wor(lv, nsteps))
-            else
-               allocate (wor(1, 1))
-            end if
-            if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
+               if (nid == 0) then
+                  write (6, *) '  Allocating orbit for GMRES'
+                  write (6, *) '    Number of steps:', nsteps
+               end if
+               allocate (uor(lv, nsteps), vor(lv, nsteps))
+               if (if3d) then
+                  allocate (wor(lv, nsteps))
+               else
+                  allocate (wor(1, 1))
+               end if
+               if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
             end if
       
       !     Variable tolerances for speed up
@@ -125,11 +125,11 @@
             residual = residual**2
       
       !     --> Outpost residual fields (optional)
-            time = q%time             ! adjust
+            time = q%time ! adjust
             if (uparam(1) == 2.0) time = real(i) ! to ease visu in paraview
             if (uparam(1) == 2.2) time = real(i)*q%time ! to ease visu in paraview
             call outpost2(f%vx, f%vy, f%vz, f%pr, f%t, nof, 'res')
-            time = q%time             ! restore
+            time = q%time ! restore
       
       !     Output iteration information
             if (nid == 0) then
@@ -196,10 +196,10 @@
       !     Output solution if converged
          if (residual < dtol) then
             if (nid == 0) write (6, *) 'Outputting converged solution'
-            param(63) = 1          ! Enforce 64-bit output
+            param(63) = 1 ! Enforce 64-bit output
             call bcast(param, 200*wdsize)
             call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, "BF_")
-            param(63) = 0          ! Enforce 32-bit output
+            param(63) = 0 ! Enforce 32-bit output
             call bcast(param, 200*wdsize)
             call outpost_vort(vx, vy, vz, 'BFV')
          end if
@@ -402,9 +402,9 @@
                call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
                if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
                if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-               end do
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
+                  end do
                end if
             end if
          end do
@@ -428,7 +428,7 @@
          include 'SIZE'
          include 'TOTAL'
       
-         real, intent(in) :: solver_tol  ! New tolerance value to be set
+         real, intent(in) :: solver_tol ! New tolerance value to be set
          if (nid == 0) write (6, *) 'ifdyntol Changing tol from', param(21), 'to', abs(solver_tol)
       
       ! Set both param(21) and param(22) to the absolute value of the new tolerance.
@@ -456,11 +456,11 @@
          include 'SIZE'
          include 'TOTAL'
       
-         real, intent(in) :: residual  ! Current residual norm
-         real, intent(in) :: dtol      ! Target/minimum tolerance
-         real :: nwtol                 ! New computed tolerance
-         real, parameter :: min_tol = 1.0d-4  ! Minimum allowed tolerance
-         real, parameter :: relaxation_factor = 0.1d0  ! Relaxation factor for new tolerance
+         real, intent(in) :: residual ! Current residual norm
+         real, intent(in) :: dtol ! Target/minimum tolerance
+         real :: nwtol ! New computed tolerance
+         real, parameter :: min_tol = 1.0d-4 ! Minimum allowed tolerance
+         real, parameter :: relaxation_factor = 0.1d0 ! Relaxation factor for new tolerance
       
       ! Compute new tolerance with safety checks
          nwtol = max(min(residual*relaxation_factor, min_tol), dtol)
