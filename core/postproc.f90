@@ -20,8 +20,7 @@
          elseif (vortex == "assymetric") then
             call compute_assymetricVec(l2)
          else
-            if (nid == 0) write (6, *) "ABORT:unknown vortex determinant", vortex,
-     $   ". Please use one of: 'lambda2', 'q', 'delta', or 'swirling'"
+            if (nid == 0) write (6, *) "ABORT:unknown vortex type:", vortex
             call exitt
          end if
       
@@ -269,7 +268,7 @@
          end do
          elseif (ifaxis) then      ! AXISYMMETRIC CASE
          if (nid == 0) write (6, *)
-     $   'ABORT:no compute_swirling axialsymmetric support for now'
+     $   'ABORT:no compute_swirling axisymmetric support for now'
          call exitt
          else                      ! 2D CASE
          do ie = 1, nelv
@@ -360,7 +359,7 @@
          if (if3d) then              ! 3D CASE
             a = (mygi(l, 1, 1) + mygi(l, 2, 2) + mygi(l, 3, 3))
          elseif (ifaxis) then        ! AXISYMMETRIC CASE
-            if (nid == 0) write (6, *) 'ABORT: compute_firstInv axialsymmetric support for now'
+            if (nid == 0) write (6, *) 'ABORT: compute_firstInv axisymmetric support for now'
             call exitt
          else                      ! 2D CASE
             a = (mygi(l, 1, 1) + mygi(l, 2, 2))
@@ -389,7 +388,7 @@
      $   +(mygi(l, 1, 1)*mygi(l, 2, 2) - mygi(l, 1, 2)*mygi(l, 2, 1))
      $   +(mygi(l, 3, 3)*mygi(l, 1, 1) - mygi(l, 1, 3)*mygi(l, 3, 1))
          elseif (ifaxis) then      ! AXISYMMETRIC CASE
-            if (nid == 0) write (6, *) 'ABORT: compute_secondInv axialsymmetric support for now'
+            if (nid == 0) write (6, *) 'ABORT: compute_secondInv axisymmetric support for now'
             call exitt
          else                      ! 2D CASE
             a = (mygi(l, 1, 1) + mygi(l, 2, 2))*(mygi(l, 1, 1) + mygi(l, 2, 2))
@@ -424,8 +423,7 @@
      $   -mygi(l, 1, 3)*(mygi(l, 3, 1)*mygi(l, 2, 2)
      $   -mygi(l, 2, 1)*mygi(l, 3, 2))
          elseif (ifaxis) then      ! AXISYMMETRIC CASE
-            if (nid == 0) write (6, *)
-     $   'ABORT: compute_thirdInv axialsymmetric support for now'
+            if (nid == 0) write (6, *) 'ABORT: compute_thirdInv axisymmetric support for now'
             call exitt
          else                      ! 2D CASE
             a = mygi(l, 1, 1)*mygi(l, 2, 2) - mygi(l, 1, 2)*mygi(l, 2, 1)
@@ -751,8 +749,9 @@
                end do
                write (101, '(1E15.7)') sum(integrals(1:9))
                write (101, '(1E15.7)') sum(integrals(1:9)) - integrals(10)
-      
+               close(101)
             end if ! nid == 0
+
          end do
       
          return
@@ -871,3 +870,4 @@
          return
       end subroutine compute_laplacian
       !----------------------------------------------------------------------
+      

@@ -3,6 +3,7 @@
 *.png
 examples/*core*
 fort*
+*.fld01
 BFL*
 SPG*
 BMS*

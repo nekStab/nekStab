@@ -32,3 +32,24 @@
             call nopcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, Q(i)%pr, Q(i)%t, vx, vy, vz, pr, t)
          end do
       end subroutine load_files
+      !----------------------------------------------------------------------
+      subroutine k_load(Q, fname)
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+      
+         type(krylov_vector), intent(out) :: Q
+         character(len=*), intent(in) :: fname
+         character(len=60) :: filename
+      
+         if (index(fname, '.f') == 0) then
+            write (filename, '(2A)') trim(fname), trim(SESSION)//'0.f00001'
+         else
+            filename = fname
+         end if
+      
+         call load_fld(filename)
+         call nopcopy(Q%vx, Q%vy, Q%vz, Q%pr, Q%t, vx, vy, vz, pr, t)
+      
+      end subroutine k_load
