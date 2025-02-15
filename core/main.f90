@@ -140,7 +140,7 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-
+      
          if (istep == 0) call nekStab_init
       
          select case (floor(uparam(1)))

@@ -98,7 +98,7 @@
          real, dimension(n) :: work, wr, wi
          integer, dimension(1) :: iwork
       
-         !     --> Order the Schur decomposition.
+      !     --> Order the Schur decomposition.
          ldt = max(1, n)
          ldq = n
          lwork = max(1, n)
@@ -132,7 +132,7 @@
       !
       !     vals : n-dimensional complex array.
       !     Array containing the eigenvalues.
-      !      
+      !
          implicit none
          character(len=1) :: jobvl = "N", jobvr = "V"
          integer :: n, lwork, info, lda, ldvl, ldvr
@@ -144,7 +144,7 @@
          complex(kind=kind(0.0d0)), dimension(n) :: vals
          integer :: i
       
-         !     --> Compute the eigendecomposition of A.
+      !     --> Compute the eigendecomposition of A.
          lda = n
          ldvl = 1
          ldvr = n
@@ -152,23 +152,23 @@
          A_tilde = A
       
          call dgeev(jobvl, jobvr, n, A_tilde, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork, info)
-
+      
       !     --> Transform from real to complex arithmetic.
          vals = wr*(1.0d0, 0.0d0) + wi*(0.0d0, 1.0d0)
          vecs = vr*(1.0d0, 0.0d0)
       
          do i = 1, n - 1  ! Process pairs up to n-1 to avoid buffer overflow
-            if (wi(i) > 0) then
-               vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0) + vr(:, i + 1)*(0.0d0, 1.0d0)
-               vecs(:, i + 1) = vr(:, i)*(1.0d0, 0.0d0) - vr(:, i + 1)*(0.0d0, 1.0d0)
-            !else if (wi(i) == 0) then ! redundant code since it's handled by the initialization
-            !   vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0)
-            end if
+         if (wi(i) > 0) then
+            vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0) + vr(:, i + 1)*(0.0d0, 1.0d0)
+            vecs(:, i + 1) = vr(:, i)*(1.0d0, 0.0d0) - vr(:, i + 1)*(0.0d0, 1.0d0)
+      !else if (wi(i) == 0) then ! redundant code since it's handled by the initialization
+      !   vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0)
+         end if
          end do
-         
+      
       !     --> Sort the eigenvalues and eigenvectors by decreasing magnitudes.
          call sort_eigendecomp(vals, vecs, n)
-
+      
          return
       end subroutine eig
       
@@ -273,7 +273,7 @@
          real, dimension(n) :: x
          real, dimension(2*m*n) :: work
       
-         !     --> Solve the least-squares problem min || Ax - b ||_2.
+      !     --> Solve the least-squares problem min || Ax - b ||_2.
          nrhs = 1
          lda = m
          ldb = m
@@ -283,8 +283,8 @@
       
          call dgels(trans, m, n, nrhs, A_tilde, lda, b_tilde, ldb, work, lwork, info)
       
-         !     --> Return solution.
+      !     --> Return solution.
          x = b_tilde(1:n)
-         
+      
          return
       end subroutine lstsq

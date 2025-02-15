@@ -59,7 +59,7 @@
             if (nid == 0) write (6, *) 'Krylov base dimension == 0! Increase it.. STOP'
             call nek_end
          end if
-      
+
       !     --> Initialize arrays.
          call k_zero(f); alpha = 0.0d0
       
@@ -142,11 +142,6 @@
       
          integer i
          real alpha, beta
-      
-         real, dimension(k) :: h_vec
-      
-      ! --> Initialize array.
-         call rzero(h_vec, k)
       
          call k_norm(beta, f)
       
