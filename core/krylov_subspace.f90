@@ -80,7 +80,7 @@
       
       !     --> Compute the user-defined norm.
          call k_norm(alpha, p)
-         inv_alpha = 1.0d+00/alpha
+         inv_alpha = 1.0d0/alpha
       
       !     --> Normalize the vector.
          call k_cmult(p, inv_alpha)
@@ -93,8 +93,8 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         type(krylov_vector) :: p
-         real c
+         type(krylov_vector), intent(inout) :: p
+         real, intent(in) :: c
          call nopcmult(p%vx, p%vy, p%vz, p%pr, p%t, c)
          p%time = p%time*c
          return
@@ -105,7 +105,8 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         type(krylov_vector) :: p, q
+         type(krylov_vector), intent(inout) :: p
+         type(krylov_vector), intent(in) :: q
          call nopadd2(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = p%time + q%time
          return
@@ -116,7 +117,8 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         type(krylov_vector) :: p, q
+         type(krylov_vector), intent(inout) :: p
+         type(krylov_vector), intent(in) :: q
          call nopsub2(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = p%time - q%time
       
@@ -128,7 +130,8 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         type(krylov_vector) :: p, q, r
+         type(krylov_vector), intent(inout) :: p
+         type(krylov_vector), intent(in) :: q, r
          call nopsub3(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz,
      $   q%pr, q%t, r%vx, r%vy, r%vz, r%pr, r%t)
          p%time = q%time - r%time
@@ -140,9 +143,9 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         type(krylov_vector) :: p
+         type(krylov_vector), intent(inout) :: p
          call noprzero(p%vx, p%vy, p%vz, p%pr, p%t)
-         p%time = 0.0d+00
+         p%time = 0.0d0
          return
       end subroutine k_zero
       
@@ -151,7 +154,8 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         type(krylov_vector) :: p, q
+         type(krylov_vector), intent(out) :: p
+         type(krylov_vector), intent(in) :: q
          call nopcopy(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = q%time
          return
@@ -164,9 +168,9 @@
          include 'TOTAL'
       
          integer :: i, m, k
-         type(krylov_vector) :: dq
-         type(krylov_vector), dimension(k) :: Q
-         real, dimension(k) :: yvec
+         type(krylov_vector), intent(out) :: dq
+         type(krylov_vector), dimension(k), intent(in) :: Q
+         real, dimension(k), intent(in) :: yvec
       
          real, dimension(lv, k) :: qx, qy, qz
          real, dimension(lp, k) :: qp
