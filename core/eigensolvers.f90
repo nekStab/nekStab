@@ -371,10 +371,10 @@
       ! Miscellaneous variables
          integer :: i, m
          real :: speriod, trim, spurious_tol !, glmin, glmax
-         real :: alpha, alpha_r, alpha_i, beta, old_uparam1
-         real :: norma_Re, norma_Im, omega
+         real :: alpha, alpha_r, alpha_i, beta, old_uparam1, omega
+      !real :: norma_Re, norma_Im
          complex :: log_transform
-         logical ifto_sav, ifpo_sav
+      !logical ifto_sav, ifpo_sav
       
       ! File handling variables
          character(len=80) filename

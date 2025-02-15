@@ -195,7 +195,7 @@
          include 'TOTAL'
          real, intent(in) :: ux(lv), uy(lv), uz(lv)
          character(len=3) :: name
-         real wo1(lv), wo2(lv), wo3(lv), vort(lv, 3)
+         real wo1(lv), wo2(lv), vort(lv, 3)
          logical ifto_sav, ifpo_sav
       
          if (ifvor) then
@@ -554,7 +554,6 @@
          real ur, us, ut, vr, vs, vt, wr, ws, wt
          common/scruz/ur(lr), us(lr), ut(lr), vr(lr), vs(lr), vt(lr), wr(lr), ws(lr), wt(lr)
          common/cvflow_r/flow_rate, base_flow, domain_length, xsec, scale_vf
-         common/scrns/sij(lx1*ly1*lz1*6*lelv)
          common/scrcg/pm1(lx1, ly1, lz1, lelv)
          common/scrsf/xm0(lx1, ly1, lz1, lelt), ym0(lx1, ly1, lz1, lelt), zm0(lx1, ly1, lz1, lelt)
          nv = lx1*ly1*lz1*nelv

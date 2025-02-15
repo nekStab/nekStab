@@ -675,7 +675,9 @@
                omegaR(l, 1, 1, ie) = norm_b(l, 1, 1, ie)/(norm_a(l, 1, 1, ie) + norm_b(l, 1, 1, ie) + optimal_eps)
             end do; end do
       
-         omegaR_min = glmin(omegaR, nv); omegaR_max = glmax(omegaR, nv)
+         omegaR_min = glmin(omegaR, nv)
+         omegaR_max = glmax(omegaR, nv)
+      
          if (nid == 0) write (6, '(A,3ES12.4)') 'eps, omegaR min,max:', optimal_eps, omegaR_min, omegaR_max
          if (omegaR_max > 1.05d0) then
             optimal_eps = 2.0d0
@@ -685,8 +687,7 @@
       
          call smooth_field(omegaR) ! smoothing causes out of bound values
          do ie = 1, nelv; do l = 1, nxyz ! clip [0,1] (tested on cylinder, produce better results)
-               omegaR(l, 1, 1, ie) = min(1.0d0, max(0.0d0, merge(0.0d0,
-     $   omegaR(l, 1, 1, ie), abs(omegaR(l, 1, 1, ie)) < epsilon(1.0d0))))
+               omegaR(l, 1, 1, ie) = min(1.0d0, max(0.0d0, merge(0.0d0, omegaR(l, 1, 1, ie), abs(omegaR(l, 1, 1, ie)) < epsilon(1.0d0))))
             end do; end do
       
       end subroutine compute_omegaR
@@ -708,7 +709,7 @@
          type(krylov_vector) :: Re_cos, Im_sin
          real, save :: frequency, omega, sigma, u_max, A0
          character(len=80) :: filename
-         real :: glmax, amplitude
+         real :: amplitude
          integer :: i
       
          if (nid == 0) then
@@ -797,7 +798,7 @@
          type(krylov_vector) :: Re_cos, Im_sin
          real, save :: frequency, omega, sigma, u_max, A0
          character(len=80) :: filename
-         real :: glmax, amplitude, period
+         real :: amplitude, period
          integer :: i, iosteps, nfiles
          integer, save :: counter = 1
       

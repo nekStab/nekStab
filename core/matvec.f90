@@ -12,7 +12,7 @@
                write (6, *) 'Setting number of perturbations to 1.'
             end if
          end if
-         param(31) = 1; npert = param(31)
+         param(31) = int(1); npert = int(param(31)) ! param is real !
          if (nid == 0) write (6, *) 'Number of perturbations set to:', npert
       
       ! Adjust time step and number of steps if end time is specified
@@ -57,7 +57,7 @@
          if (nid == 0) write (6, *) 'Constant time step enforced, dt =', -param(12)
       
       ! Broadcast updated parameters to all processes
-         call bcast(param, 200*wdsize)
+         call bcast(param, 200*wdsize) ! broadcast all params
       
          call nekgsync ! ensures that all processes reach before any can proceed further
       

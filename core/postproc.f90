@@ -184,7 +184,7 @@
          parameter(lxyz=lx1*ly1*lz1)
          real l2(lx1, ly1, lz1, 1)
          real mygi(lxyz, ldim, ldim)
-         real P1, Q1, R1, Q, R, Delta
+         real P1, Q1, R1, R
          common/mygrad/mygi
       
          nxyz = lx1*ly1*lz1
@@ -199,9 +199,8 @@
                call compute_secondInv(Q1, l)
                call compute_thirdInv(R1, l)
                R1 = -R1 !negative sign
-               Q = Q1 - (P1**2)/3
                R = R1 + (P1**3)*2/27 - P1*Q1/3
-               l2(l, 1, 1, ie) = (R/2)**2 + (Q/3)**3
+               l2(l, 1, 1, ie) = (R/2)**2 + (Q1/3)**3
             end do
          end do
          call filter_s0(l2, 0.5, 1, 'vortx')
@@ -243,7 +242,7 @@
          parameter(lxyz=lx1*ly1*lz1)
          real l2(lx1, ly1, lz1, 1)
          real gije(lxyz, ldim, ldim), mygi(lxyz, ldim, ldim)
-         real P1, Q1, R1, Q, R, Delta, a1, a2, lambdaCi
+         real P1, Q1, R1, R, lambdaCi
          common/mygrad/mygi
       
          nxyz = lx1*ly1*lz1
