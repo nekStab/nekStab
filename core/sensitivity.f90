@@ -542,7 +542,7 @@
          include 'SIZE'
          include 'TOTAL'
       
-         type(krylov_vector) :: Re, Im, Re_sin, Im_cos
+         type(krylov_vector) :: BF, Re, Im, Re_sin, Im_cos
          character(len=80) :: filename
          character(len=*), intent(in) :: mode ! 'd' or 'a'
          real :: frequency, omega, sigma, u_max, A0
