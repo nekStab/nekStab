@@ -140,17 +140,20 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
+
          if (istep == 0) call nekStab_init
       
          select case (floor(uparam(1)))
       
          case (0)                   ! DNS
       
-            if (uparam(1) == 0.1) then
-               if (nid == 0) write (6, *) 'Linearized DNS'
-               ifpert = .true.; call bcast(ifpert, lsize)
+            if (uparam(1) == 0.1) then ! Linearized DNS
                ifbase = .true.; call bcast(ifbase, lsize)
+               ifpert = .true.; call bcast(ifpert, lsize)
+               param(31) = lpert; npert = int(param(31))
+               if (istep == 0) call op_add_noise(vxp, vyp, vzp)
+               if (nid == 0) write (6, *) 'Linearized+DNS: ifbase=,', ifbase, ' ifpert=', ifpert
+               if (ifoutfld) call outpost2(vxp, vyp, vzp, prp, tp, nof, 'pr_')
             end if
       
             call nekStab_outpost   ! outpost vorticity
