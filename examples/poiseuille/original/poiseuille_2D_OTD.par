@@ -1,0 +1,41 @@
+[GENERAL]
+#stopat = numSteps
+#numsteps = 1000 
+stopat = endTime
+endTime = 200.0
+#
+#dt = 5.0e-02
+variableDT = yes
+targetCFL = 0.4
+timestepper = bdf2
+writecontrol = runTime
+writeinterval = 5000  
+#writecontrol = timeStep
+#writeinterval = 50000 
+#dealiasing = yes
+#
+[PROBLEMTYPE]
+equation = incompLinNS
+numberOfPerturbations = 4
+solveBaseflow = no
+variableProperties = no
+#
+[PRESSURE]
+residualtol = 1e-8
+residualproj = no
+#
+[VELOCITY]
+residualtol = 1e-8
+residualproj = no
+density = 1
+viscosity = -5000.0
+#
+[_OTD]
+OTD_NUSRIC = 2
+OTD_IOSTEP = 50
+OTD_PRNTSP = 20
+OTD_GSSTEP = 10
+OTD_FTLEPD = 0.0
+OTD_IFFTLE = no
+OTD_IFVLOG = no 
+OTD_DEBUG  = no

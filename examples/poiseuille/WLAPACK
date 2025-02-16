@@ -1,0 +1,41 @@
+c     
+c     Common block for LAPACK work arrays
+c
+c     Required workspace:
+c
+c            |                    REAL                  |   INTEGER  | COMPLEX |
+c     --------------------------------------------------------------------------
+c     DGESDD |               5*N*N+4*N+3*N              |     8*N    |         |
+c      DGEEV |                    4*N                   |            |         |
+c     DGECON |                    4*N                   |      N     |         |
+c     ZGELSD | 10*N+2*N*S+8*N*L+3*S+MAX((S+1)**2,N*2+2) | 3*N*L+11*N |  2*N+N  |
+c     -------------------------------------------------------------------------- 
+c
+c     N - npert
+c     S - SMLSIZ (see LAPACK doc)
+c     L - NLVL   (see LAPACK doc)
+c      
+      
+c     Length of arrays 
+      integer LWORKR, LWORKI, LWORKC
+
+      parameter (LWORKR = 5*LPERT*LPERT+4*LPERT+3*LPERT )
+      parameter (LWORKI = 3*LPERT*2+11*LPERT            )
+      parameter (LWORKC = 2*LPERT+LPERT                 )
+
+c     Work arrays
+      real    RWORK(LWORKR)
+      integer IWORK(LWORKI)
+      complex CWORK(LWORKC)
+
+c     Temporary arrays
+      real   ALU   (LPERT,LPERT)   ! cond_wrapper
+      real   SINGV (LPERT)         ! lsq_wrapper
+      
+c     common block section
+      common /rlpvec/ RWORK, ALU, SINGV
+      common /ilpvec/ IWORK
+      common /clpvec/ CWORK
+
+
+      
