@@ -1,0 +1,173 @@
+!
+!     Definitions for OTD module
+!
+!     module id and name
+      integer otd_id
+      character*(*) otd_name
+      parameter(otd_name='OTD')
+!
+!     timer ids
+      integer otd_ttot_id    ! total time
+      integer otd_tini_id    ! initialisation time
+      integer otd_tGS_id     ! orthonormalisation time
+      integer otd_tgen_id    ! LU & forcing computation time
+      integer otd_tget_id    ! OTD mode computation time
+      integer otd_tFTLE_id   ! FTLE computation time
+      integer otd_tIO_id     ! IO time
+
+      common /otd_tmr_id/ otd_ttot_id,    otd_tini_id
+     $ ,                  otd_tGS_id  
+     $ ,                  otd_tgen_id,    otd_tget_id
+     $ ,                  otd_tFTLE_id,   otd_tIO_id
+
+!     initialisation flag
+      logical otd_ifinit
+!
+!     section id
+      integer otd_sec_id
+!
+      common /otd_id/ otd_id, otd_sec_id, otd_ifinit
+!
+!     runtime parameter section
+! IDs
+      integer otd_nusric_id, otd_iostep_id, otd_rststp_id, otd_prntsp_id
+     $ ,      otd_gsstep_id, otd_FTLEpd_id, otd_ifFTLE_id, otd_ifvlog_id
+     $ ,      otd_debug_id
+!
+      common /otd_rpmr_id/ otd_nusric_id
+     $ ,                   otd_iostep_id
+     $ ,                   otd_rststp_id
+     $ ,                   otd_prntsp_id
+     $ ,                   otd_gsstep_id
+     $ ,                   otd_FTLEpd_id
+     $ ,                   otd_ifFTLE_id
+     $ ,                   otd_ifvlog_id
+     $ ,                   otd_debug_id
+
+! runtime parameters
+      integer otd_nusric     ! Number of perturbation IC fields to read
+                             !  Perturbation IC field i must be named
+                             !     OTDIC_%02i.fld
+      integer otd_iostep     ! IO frequency for OTD module (fields)
+      integer otd_rststp     ! IO frequency for OTD basis (restart)
+      integer otd_prntsp     ! Print frequency for OTD module (Lr)
+      integer otd_gsstep     ! Frequency for GS orthonormalization
+      real    otd_FTLEpd     ! Time horizon for FTLE computation
+      logical otd_ifFTLE     ! Compute FTLEs?
+      logical otd_ifvlog     ! .true. for verbose logging
+      logical otd_debug      ! .true. for debugging mode
+!    
+      common /otd_rprmi/ otd_nusric
+     $ ,                 otd_iostep
+     $ ,                 otd_rststp
+     $ ,                 otd_prntsp
+     $ ,                 otd_gsstep
+      common /otd_rprml/ otd_ifFTLE
+     $ ,                 otd_ifvlog
+     $ ,                 otd_debug
+      common /otd_rprmr/ otd_FTLEpd
+!      
+!     module parameter section
+!
+! timestep at which to start OTD computation
+      integer startOTD
+      real    OTDrsttime
+!
+      common /OTD_start/ startOTD
+      common /OTD_time/  OTDrsttime
+!
+! override gsstep
+      logical gsstep_override
+!
+      common /OTD_log/   gsstep_override     
+!
+! perturbation ICs
+      real vxpic(lx1*ly1*lz1*lelv,lpert)
+     $ ,   vypic(lx1*ly1*lz1*lelv,lpert)
+     $ ,   vzpic(lx1*ly1*lz1*lelv,lpert)
+!
+      common /OTD_IC/ vxpic,vypic,vzpic
+!
+! elements of the linearized operator (for debugging)
+      real convx  (lx1*ly1*lz1*lelv,lpert)      ! convective term
+     $ ,   convy  (lx1*ly1*lz1*lelv,lpert)
+     $ ,   convz  (lx1*ly1*lz1*lelv,lpert)
+     $ ,   gradpx (lx1*ly1*lz1*lelv,lpert)      ! pressure gradient term
+     $ ,   gradpy (lx1*ly1*lz1*lelv,lpert)
+     $ ,   gradpz (lx1*ly1*lz1*lelv,lpert)
+     $ ,   diffx  (lx1*ly1*lz1*lelv,lpert)      ! diffusion term
+     $ ,   diffy  (lx1*ly1*lz1*lelv,lpert)
+     $ ,   diffz  (lx1*ly1*lz1*lelv,lpert)
+!
+      common /OTD_Lup/ convx,convy,convz
+     $ ,               gradpx,gradpy,gradpz
+     $ ,               diffx,diffy,diffz
+! DIAGNOSTICS
+      real convx1 (lx1*ly1*lz1*lelv,lpert)      ! convective term 1 (u.grad) Ub
+     $ ,   convy1 (lx1*ly1*lz1*lelv,lpert)
+     $ ,   convz1 (lx1*ly1*lz1*lelv,lpert)
+      real convx2 (lx1*ly1*lz1*lelv,lpert)      ! convective term 2 (Ub.grad) u
+     $ ,   convy2 (lx1*ly1*lz1*lelv,lpert)
+     $ ,   convz2 (lx1*ly1*lz1*lelv,lpert)
+      common /OTD_diagn/ convx1,convy1,convz1
+     $ ,                 convx2,convy2,convz2
+!      
+! linearized NS operator acting on the perturbations
+      real Lux (lx1*ly1*lz1*lelv,lpert)         ! x direction
+     $ ,   Luy (lx1*ly1*lz1*lelv,lpert)         ! y direction
+     $ ,   Luz (lx1*ly1*lz1*lelv,lpert)         ! z direction
+     $ ,   Lr  (lpert,lpert)                    ! reduced operator
+     $ ,   Lsym(lpert,lpert)                    ! symmetrized reduced operator
+      integer idx(lpert)                        ! mode indices
+!
+      common /OTD_Lu/ Lux,Luy,Luz,Lr,Lsym,idx
+!
+! Additional forcing for the OTD equations
+      real OTDfx (lx1*ly1*lz1*lelv,lpert)       ! x direction
+     $ ,   OTDfy (lx1*ly1*lz1*lelv,lpert)       ! y direction
+     $ ,   OTDfz (lx1*ly1*lz1*lelv,lpert)       ! z direction
+!
+      common /OTD_frc/ OTDfx,OTDfy,OTDfz
+!
+! OTD modes
+      real OTDmrx(lx1*ly1*lz1*lelv,lpert)       ! real part, x dir
+     $ ,   OTDmry(lx1*ly1*lz1*lelv,lpert)       ! real part, y dir
+     $ ,   OTDmrz(lx1*ly1*lz1*lelv,lpert)       ! real part, z dir
+     $ ,   OTDmix(lx1*ly1*lz1*lelv,lpert)       ! imaginary part, x dir
+     $ ,   OTDmiy(lx1*ly1*lz1*lelv,lpert)       ! imaginary part, y dir
+     $ ,   OTDmiz(lx1*ly1*lz1*lelv,lpert)       ! imaginary part, z dir
+!
+      common /OTD_modes/ OTDmrx,OTDmry,OTDmrz
+     $ ,                 OTDmix,OTDmiy,OTDmiz
+!
+! Internal rotation of the OTD subspace
+      real phi_rot(lpert,lpert)
+!
+      common /OTD_phirot/ phi_rot
+!
+! FTLEs
+      real FTLEv(lpert)                         ! FTLE vector
+      real trapz(lpert)                         ! time integral
+      real phi(lpert,lpert)                     ! Fundamental solution matrix
+      real period
+      integer pcount                            ! count number of periods
+!
+      common /OTD_FTLEr/ FTLEv, trapz, Phi
+      common /OTD_FTLEi/ pcount
+!      
+! LAPACK section
+      real EIGR  (lpert)        ! real part of eigenvalues
+     $ ,   EIGI  (lpert)        ! imaginary part of eigenvalues
+     $ ,   EVR   (lpert,lpert)  ! matrix of right eigenvectors
+     $ ,   EVRR  (lpert,lpert)  ! matrix of the real part of right EVs 
+     $ ,   EVRI  (lpert,lpert)  ! matrix of the imag part of right EVs 
+     $ ,   EVL   (lpert,lpert)  ! matrix of left eigenvectors
+     $ ,   OSIGMA(lpert)        ! eigenvalues of the symmetrized operator
+     $ ,   VMATX (lpert,lpert)  ! matrix of left singular vectors
+     $ ,   VMATXT(lpert,lpert)  ! transpose matrix of right singular vectors
+     $ ,   RCL   (lpert)        ! reciprocal condition number left singular vectors
+     $ ,   RCR   (lpert)        ! reciprocal condition number right singular vectors
+
+      common /OTD_dgeev/ EIGR,EIGI,EVR,EVL,EVRR,EVRI
+     $ ,                 OSIGMA,VMATX,VMATXT
+     $ ,                 RCL,RCR

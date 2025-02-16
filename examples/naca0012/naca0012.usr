@@ -1,12 +1,10 @@
-#include "experimental/meshsmoother.f"
+! #include "experimental/meshsmoother.f"
 c-----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
       include 'TOTAL'
-
       call nekStab
       call hpts
-
       end
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
@@ -86,24 +84,6 @@ c-----------------------------------------------------------------------
 
       end
 c-----------------------------------------------------------------------
-      subroutine uservp (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      udiff = 0.0d0
-      utrans = 0.0d0
-      end
-c-----------------------------------------------------------------------
-      subroutine userq (ix,iy,iz,ieg)
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      qvol = 0.0d0
-      end
-c-----------------------------------------------------------------------
-      subroutine usrdat
-      end
-c-----------------------------------------------------------------------
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
@@ -116,5 +96,3 @@ c-----------------------------------------------------------------------
 
       end
 c-----------------------------------------------------------------------
-      subroutine usrdat3
-      end
