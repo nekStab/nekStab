@@ -43,12 +43,12 @@
          nv = nx1*ny1*nz1*nelv
          nt = nx1*ny1*nz1*nelt
       
-         alpha = glsc3(px, bm1s, qx, nv) + glsc3(py, bm1s, qy, nv)
-         if (if3D) alpha = alpha + glsc3(pz, bm1s, qz, nv)
-         if (ifto) alpha = alpha + glsc3(pt(:, 1), bm1s, qt(:, 1), nt)
+         alpha = glsc3(px, qx, bm1s, nv) + glsc3(py, qy, bm1s, nv)
+         if (if3D) alpha = alpha + glsc3(pz, qz, bm1s, nv)
+         if (ifto) alpha = alpha + glsc3(pt(:, 1), qt(:, 1), bm1s, nt)
          if (ldimt > 1) then
             do m = 2, ldimt
-               if (ifpsco(m - 1)) alpha = alpha + glsc3(pt(:, m), bm1s, qt(:, m), nt)
+               if (ifpsco(m - 1)) alpha = alpha + glsc3(pt(:, m), qt(:, m), bm1s, nt)
             end do
          end if
       
@@ -114,6 +114,7 @@
          do i = 1, k_dim + 1
             call k_zero(Q(i))
          end do
+      !call k_zero(Q(1:k_dim + 1))
       
       !     ----- Loading baseflow from disk (optional) -----
       
@@ -356,8 +357,8 @@
          integer, intent(in) :: converged
       
       ! Krylov vectors
-         type(krylov_vector) :: qq, ff
-      
+         type(krylov_vector) :: qq
+         type(krylov_vector) :: ff
       ! Arrays for Krylov basis
          real, dimension(lv, k_dim + 1) :: qx, qy, qz
          real, dimension(lp, k_dim + 1) :: qp
@@ -395,7 +396,6 @@
          fich3 = 'Spectre_NS'//trim(evop)//'_conv.dat'
       
          if (nid == 0) then
-      ! Open files with error checking
             open (unit=10, file=fich1, form='formatted', status='unknown')
             open (unit=20, file=fich2, form='formatted', status='unknown')
             open (unit=30, file=fich3, form='formatted', status='unknown')

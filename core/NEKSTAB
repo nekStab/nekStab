@@ -12,7 +12,7 @@
       
       ! Logical variables for various stability flags
       logical :: ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm
-      logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol
+      logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol, ifotd
       logical :: iffindiff, isNekStabinit
       logical :: isDirect, isAdjoint, isTransientGrowth
       logical :: isFloquetDirect, isFloquetAdjoint
@@ -20,7 +20,7 @@
       
       common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois,
      $   ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol,
-     $   iffindiff, isNekStabinit, isDirect, isAdjoint, isTransientGrowth,
+     $   iffindiff, ifotd, isNekStabinit, isDirect, isAdjoint, isTransientGrowth,
      $   isFloquetDirect, isFloquetAdjoint, isFloquetTransientGrowth,
      $   isNewtonFP, isNewtonPO, isNewtonPO_T
       
@@ -71,3 +71,42 @@
       common/nStab_sponge/spng_fn, spng_vr, spng_vt, spng_st, spng_wl,
      $   spng_wr, spng_dl, spng_dr, bm1s, xLspg, xRspg, yLspg, yRspg,
      $   zLspg, zRspg, acc_spg
+      
+      !! OTD Specific mess !!
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: OTDfx, OTDfy, OTDfz
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: OTDmrx, OTDmry, OTDmrz, OTDmix, OTDmiy, OTDmiz
+      common/OTD_modes/OTDfx, OTDfy, OTDfz, OTDmrx, OTDmry, OTDmrz, OTDmix, OTDmiy, OTDmiz
+      
+      real :: otd_FTLEPeriod
+      integer :: otd_printStep, otd_gsStep
+      logical :: otd_computeFTLE, gsstep_override
+      common/OTD_params/otd_FTLEPeriod, otd_printStep, otd_gsStep, otd_computeFTLE, gsstep_override
+      
+      real, dimension(lx1, ly1, lz1, lelv) :: ubic, vbic, wbic
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: upic, vpic, wpic, vxpic, vypic, vzpic
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: convx, convy, convz, gradpx, gradpy, gradpz, diffx, diffy, diffz
+      common/OTD_oper/ubic, vbic, wbic, upic, vpic, wpic, vxpic, vypic, vzpic
+      common/OTD_oper/convx, convy, convz, gradpx, gradpy, gradpz, diffx, diffy, diffz
+      
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: otd_Lux, otd_Luy, otd_Luz
+      real, dimension(lpert, lpert) :: otd_Lr, phi_rot
+      integer, dimension(lpert) :: otd_idx
+      common/OTD_Lu/otd_Lux, otd_Luy, otd_Luz, otd_Lr, otd_idx, phi_rot
+      
+      real, dimension(lpert) :: FTLEv, LEintegral
+      common/OTD_FTLE/FTLEv, LEintegral
+      
+      real, dimension(lpert) :: EIGR, EIGI, OSIGMA, RCL, RCR
+      real, dimension(lpert, lpert) :: EVR, EVRR, EVRI, EVL, VMATX, VMATXT
+      common/OTD_dgeev/EIGR, EIGI, EVR, EVL, EVRR, EVRI, OSIGMA, VMATX, VMATXT, RCL, RCR
+      
+      integer, parameter :: LWORKR = 5*LPERT*LPERT + 4*LPERT + 3*LPERT
+      integer, parameter :: LWORKI = 3*LPERT*2 + 11*LPERT
+      integer, parameter :: LWORKC = 2*LPERT + LPERT
+      real, dimension(LWORKR) :: RWORK
+      integer, dimension(LWORKI) :: otd_IWORK
+      complex, dimension(LWORKC) :: CWORK
+      real, dimension(LPERT, LPERT) :: ALU, SINGV
+      common/rlpvec/RWORK, ALU, SINGV
+      common/ilpvec/otd_IWORK
+      common/clpvec/CWORK

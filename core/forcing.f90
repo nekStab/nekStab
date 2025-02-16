@@ -7,8 +7,7 @@
          integer ix, iy, iz, ieg
          integer iel, ip
       
-      ! local element number
-         iel = gllel(ieg)
+         iel = gllel(ieg) ! local element number
       
       ! here we add other forcings (SFD, TDF, if any)
          ffx = ffx + fcx(ix, iy, iz, iel)
@@ -28,6 +27,14 @@
                ffx = ffx - spng_fn(ip)*vxp(ip, jp) ! spng_st alaways = 1
                ffy = ffy - spng_fn(ip)*vyp(ip, jp) ! spng_st alaways = 1
                if (if3D) ffz = ffz - spng_fn(ip)*vzp(ip, jp) ! spng_st alaways = 1
+      
+               if (ifotd) then ! OTD forcing (note it has extra lpert size)
+                  ip = ix + lx1*((iy - 1) + ly1*((iz - 1) + lz1*(iel - 1)))
+                  ffx = ffx - otdfx(ip, jp)
+                  ffy = ffy - otdfy(ip, jp)
+                  if (if3D) ffz = ffz - otdfz(ip, jp)
+               end if ! ifotd
+      
             end if
       
          end if

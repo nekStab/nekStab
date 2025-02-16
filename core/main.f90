@@ -46,6 +46,11 @@
          acc_spg = 0.333d0; call bcast(acc_spg, wdsize) !percentage for the acceleration phase in the sponge (e.g. 1/3)
          spng_st = 0.0d0; call bcast(spng_st, wdsize)
       
+         ifotd = .false.; call bcast(ifotd, lsize)
+         otd_printStep = 100; call bcast(otd_printStep, isize)
+         otd_gsStep = 10; call bcast(otd_gsStep, isize)
+         otd_FTLEPeriod = 0.0; call bcast(otd_FTLEPeriod, wdsize)
+      
          evop = '_' ! initialize output prefix
       
       !     !Broadcast all defaults !
@@ -265,6 +270,9 @@
             if (uparam(01) == 4.52) call animate_mode_Floquet(int(uparam(7)), 'd')
       
             call nek_end
+      
+         case (5)
+            call otd
       
          end select
       
