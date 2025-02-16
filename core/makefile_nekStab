@@ -8,6 +8,7 @@ $(OBJDIR)/matvec.o:               $(NEKSTAB_SOURCE_ROOT)/core/matvec.f90        
 $(OBJDIR)/eigensolvers.o:         $(NEKSTAB_SOURCE_ROOT)/core/eigensolvers.f90         ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/lapack_wrapper.o:       $(NEKSTAB_SOURCE_ROOT)/core/lapack_wrapper.f90       ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/fixedp.o:               $(NEKSTAB_SOURCE_ROOT)/core/fixedp.f90               ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/otd.o:                  $(NEKSTAB_SOURCE_ROOT)/core/otd.f90                  ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/forcing.o:              $(NEKSTAB_SOURCE_ROOT)/core/forcing.f90              ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/main.o:                 $(NEKSTAB_SOURCE_ROOT)/core/main.f90                 ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/utils.o:                $(NEKSTAB_SOURCE_ROOT)/core/utils.f90                ;$(FC) -c $(FL2) $< -o $@

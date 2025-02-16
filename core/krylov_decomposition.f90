@@ -92,7 +92,8 @@
                   avg_time = telapsed/mstep ! Average time per iteration
                   tmiss = avg_time*(mend - mstep) ! More accurate ETA based on average
                   write (6, "('        ARNOLDI - Finished iteration:',I3,'/',I3,' elapsed:',I3,'h',I2,'m / ETA:',I3,'h',I2,'m')")
-     $   mstep, mend, int(telapsed), ceiling((telapsed - int(telapsed))*60.0d0), int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
+     $   mstep, mend, int(telapsed), ceiling((telapsed - int(telapsed))*60.0d0),
+     $   int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
                end if
             end if
          end do

@@ -36,15 +36,15 @@
          nv = nx1*ny1*nz1*nelv
          nt = nx1*ny1*nz1*nelt
       
-      !     --> Kinetic energy.
-         alpha = glsc3(p%vx, bm1s, q%vx, nv) + glsc3(p%vy, bm1s, q%vy, nv)
-         if (if3d) alpha = alpha + glsc3(p%vz, bm1s, q%vz, nv)
+      !     --> Kinetic energy. ! Note : glsc3(a,b,mult,n)
+         alpha = glsc3(p%vx, q%vx, bm1s, nv) + glsc3(p%vy, q%vy, bm1s, nv)
+         if (if3d) alpha = alpha + glsc3(p%vz, q%vz, bm1s, nv)
       
       !     --> Potential energy.
-         if (ifto) alpha = alpha + glsc3(p%t(:, 1), bm1s, q%t(:, 1), nt)
+         if (ifto) alpha = alpha + glsc3(p%t(:, 1), q%t(:, 1), bm1s, nt)
          if (ldimt > 1) then
             do m = 2, ldimt
-               if (ifpsco(m - 1)) alpha = alpha + glsc3(p%t(:, m), bm1s, q%t(:, m), nt)
+               if (ifpsco(m - 1)) alpha = alpha + glsc3(p%t(:, m), q%t(:, m), bm1s, nt)
             end do
          end if
       

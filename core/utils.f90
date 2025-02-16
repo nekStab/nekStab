@@ -65,8 +65,7 @@
          return
       end subroutine add_noise_scal
       !-----------------------------------------------------------------------
-      subroutine op_add_noise(qx, qy, qz)
-      !     input random number to fields
+      subroutine op_add_noise(qx, qy, qz) ! input random number to fields
          implicit none
          include 'SIZE' ! NX1, NY1, NZ1, NELV, NID
          include 'TSTEP' ! TIME, DT
@@ -134,11 +133,11 @@
          include "SIZE"
          include "TOTAL"
          real, dimension(lx1, ly1, lz1, lelv) :: qx, qy, qz, qp
-         integer iel, ieg, il, jl, kl, ntot
+         integer iel, ieg, il, jl, kl, nv
          real xlx, yly, zlz, alpha, x, y, z
          real glsc3, amp
       
-         ntot = NX1*NY1*NZ1*NELV
+         nv = NX1*NY1*NZ1*NELV
          xlx = xmx - xmn
          yly = ymx - ymn
          zlz = zmx - zmn
@@ -167,11 +166,11 @@
             end do
          end do
       
-         amp = glsc3(qx, bm1, qx, ntot) + glsc3(qy, bm1, qy, ntot)
-         if (if3D) amp = amp + glsc3(qz, bm1, qz, ntot)
+         amp = glsc3(qx, qx, bm1s, nv) + glsc3(qy, qy, bm1s, nv)
+         if (if3D) amp = amp + glsc3(qz, qz, bm1s, nv)
          amp = 1e-6/(0.50d0*amp)
          call opcmult(qx, qy, qz, amp)
-         call cmult(qp, amp, ntot)
+         call cmult(qp, amp, nv)
       
          return
       end subroutine add_symmetric_seed
@@ -244,35 +243,40 @@
       
          norma = 0.0d0
       
-         norma = norma + glsc3(dudx, bm1s, dudx, nv) + glsc3(dudy, bm1s, dudy, nv)
-         norma = norma + glsc3(dvdx, bm1s, dvdx, nv) + glsc3(dvdy, bm1s, dvdy, nv)
+         norma = norma + glsc3(dudx, dudx, bm1s, nv) + glsc3(dudy, dudy, bm1s, nv)
+         norma = norma + glsc3(dvdx, dvdx, bm1s, nv) + glsc3(dvdy, dvdy, bm1s, nv)
       
          if (if3D) then
-            norma = norma + glsc3(dudz, bm1s, dudz, nv)
-            norma = norma + glsc3(dvdz, bm1s, dvdz, nv)
-            norma = norma + glsc3(dwdx, bm1s, dwdx, nv)
-            norma = norma + glsc3(dwdy, bm1s, dwdy, nv)
-            norma = norma + glsc3(dwdz, bm1s, dwdz, nv)
+            norma = norma + glsc3(dudz, dudz, bm1s, nv)
+            norma = norma + glsc3(dvdz, dvdz, bm1s, nv)
+            norma = norma + glsc3(dwdx, dwdx, bm1s, nv)
+            norma = norma + glsc3(dwdy, dwdy, bm1s, nv)
+            norma = norma + glsc3(dwdz, dwdz, bm1s, nv)
          end if
       end subroutine norm_grad
       !-----------------------------------------------------------------------
       subroutine smooth_field(u)
+         implicit none
          include 'SIZE'
          include 'TOTAL'
-         real u(lx1, ly1, lz1, lelt)
-         ntot = lx1*ly1*lz1*nelv
+         real, intent(inout), dimension(lx1, ly1, lz1, lelt) :: u
+         integer :: ifld, nv
+         nv = lx1*ly1*lz1*nelv
       
       ! avg boundary - used in comp_vort3
-         call col2(u, bm1, ntot)
+         call col2(u, bm1, nv)
          call dssum(u, lx1, ly1, lz1)
-         call col2(u, binvm1, ntot)
-      
-      ! filter field
-      !weight, ncut, name
-         call filter_s0(u, 0.5, 1, 'field')
+         call col2(u, binvm1, nv)
       
       ! ensure continuous field that is in H1
          call dsavg(u) ! direct stiffness avg of u
+      
+      ! filter field
+         ifld = ifield
+         ifield = 1
+      !weight, ncut, name
+         call filter_s0(u, 0.5, 1, 'field')
+         ifield = ifld
       
          return
       end subroutine smooth_field
@@ -301,10 +305,7 @@
                call comp_vort3(vort, wo1, wo2, vx, vy, vz)
       
                call smooth_field(vort(:, 1))
-               call smooth_field(vort(:, 1))
                call smooth_field(vort(:, 2))
-               call smooth_field(vort(:, 2))
-               call smooth_field(vort(:, 3))
                call smooth_field(vort(:, 3))
       
                call outpost(vort(1, 1), vort(1, 2), vort(1, 3), pr, t, 'vor')
@@ -315,15 +316,12 @@
       
       !call vortex_core(vort(:, 1), 'lambda2')
       !call smooth_field(vort(:,1))
-      !call smooth_field(vort(:,1))
       
       !call vortex_core(vort(:, 2), 'q')
-      !call smooth_field(vort(:,2))
       !call smooth_field(vort(:,2))
       
                ifvo = .false.; ifto = .true.
                call vortex_core(vort(:, 3), 'omega')
-               call smooth_field(vort(:, 3))
                call smooth_field(vort(:, 3))
                call outpost(vort(:, 1), vort(:, 2), vort(:, 3), pr, vort(:, 3), 'omR')
                ifvo = .true.; ifto = .true.
@@ -481,10 +479,10 @@
          end if
       
          if (mod(istep, skip) == 0) then
-            uek = glsc3(px, bm1s, px, nv)
-            vek = glsc3(py, bm1s, py, nv)
-            if (if3d) wek = glsc3(pz, bm1s, pz, nv)
-            if (ifheat) pot = glsc3(pt(:, 1), bm1s, ym1, nt)
+            uek = glsc3(px, px, bm1s, nv)
+            vek = glsc3(py, py, bm1s, nv)
+            if (if3d) wek = glsc3(pz, pz, bm1s, nv)
+            if (ifheat) pot = glsc3(pt(:, 1), ym1, bm1s, nt)
             if (nid == 0) write (730, "(6E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek, pot*eek
          end if
       
@@ -518,9 +516,9 @@
       
          if (mod(istep, skip) == 0) then
             call comp_vort3(vort, wo1, wo2, px, py, pz)
-            uek = glsc3(vort(1, 1), bm1s, vort(1, 1), nv)
-            vek = glsc3(vort(1, 2), bm1s, vort(1, 2), nv)
-            if (if3d) wek = glsc3(vort(1, 3), bm1s, vort(1, 3), nv)
+            uek = glsc3(vort(1, 1), vort(1, 1), bm1s, nv)
+            vek = glsc3(vort(1, 2), vort(1, 2), bm1s, nv)
+            if (if3d) wek = glsc3(vort(1, 3), vort(1, 3), bm1s, nv)
             if (nid == 0) write (736, "(5E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek
       
          end if
@@ -554,6 +552,7 @@
          real ur, us, ut, vr, vs, vt, wr, ws, wt
          common/scruz/ur(lr), us(lr), ut(lr), vr(lr), vs(lr), vt(lr), wr(lr), ws(lr), wt(lr)
          common/cvflow_r/flow_rate, base_flow, domain_length, xsec, scale_vf
+      !common/scrns/sij(lx1*ly1*lz1*6*lelv)
          common/scrcg/pm1(lx1, ly1, lz1, lelv)
          common/scrsf/xm0(lx1, ly1, lz1, lelt), ym0(lx1, ly1, lz1, lelt), zm0(lx1, ly1, lz1, lelt)
          nv = lx1*ly1*lz1*nelv
