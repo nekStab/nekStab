@@ -18,7 +18,8 @@ should_clone="no"
 
 # Check for existing Nek5000 directory
 if [ -d "Nek5000" ]; then
-    read -p "Directory Nek5000 exists. Do you want to remove it? (y/n): " confirm
+    read -p "Directory Nek5000 exists. Do you want to remove it? (y/n) [y]: " confirm
+    confirm=${confirm:-y}
     if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
         echo "Removing Nek5000 directory..."
         rm -rf Nek5000
@@ -31,7 +32,8 @@ else
 fi
 
 # Install dependencies
-read -p "Do you want to install/update necessary packages? (y/n): " confirm
+read -p "Do you want to install/update necessary packages? (y/n) [n]: " confirm
+confirm=${confirm:-n}
 if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
     echo "Installing dependencies..."
     if [ "$OS" == "Linux" ]; then
@@ -50,7 +52,8 @@ fi
 
 # Clone Nek5000 repository
 if [ "$should_clone" == "yes" ]; then
-    read -p "Do you want to clone the Nek5000 repository? (y/n): " confirm
+    read -p "Do you want to clone the Nek5000 repository? (y/n) [y]: " confirm
+    confirm=${confirm:-y}
     if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
         echo "Cloning Nek5000 repository..."
         git clone https://github.com/Nek5000/Nek5000.git
@@ -64,49 +67,77 @@ else
 fi
 
 # Modify core/prepost.f
-read -p "Do you want to modify a line in core/prepost.f? (y/n): " confirm
+read -p "Do you want to modify a line in core/prepost.f? (y/n) [y]: " confirm
+confirm=${confirm:-y}
 if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
     echo "Modifying core/prepost.f..."
     FILE_PATH="core/prepost.f"
-    cp "$FILE_PATH" "${FILE_PATH}.original"
+    
+    # Show the current state
+    echo "=== Current state ==="
+    grep -n "save    nopen" "$FILE_PATH" || echo "Pattern not found!"
+    
+    # Make the replacement
     if [ "$OS" == "Linux" ]; then
         sed -i 's/save    nopen/common \/RES_WANT\/ nopen/g' "$FILE_PATH"
     elif [ "$OS" == "Darwin" ]; then
         sed -i '' 's/save    nopen/common \/RES_WANT\/ nopen/g' "$FILE_PATH"
     fi
-    if cmp -s "$FILE_PATH" "${FILE_PATH}.original"; then
-        echo "No match found in $FILE_PATH. No replacement made."
+    
+    # Show the result and verify
+    echo "=== Modified state ==="
+    if grep -n "common /RES_WANT/ nopen" "$FILE_PATH"; then
+        if grep -q "save    nopen" "$FILE_PATH"; then
+            echo "Warning: Original 'save' statement is still present!"
+            echo "Modification may have failed."
+        else
+            echo "Success: 'save' statement was replaced with 'common' block"
+        fi
     else
-        echo "Line in $FILE_PATH successfully replaced."
+        echo "Error: Could not find the modified line!"
     fi
-    rm "${FILE_PATH}.original"
 else
     echo "Skipping modification."
 fi
 
 # Modify core/makenek.inc
-read -p "Do you want to patch FFLAGS+= in core/makenek.inc? (y/n): " confirm_makenek
+read -p "Do you want to patch FFLAGS+= in core/makenek.inc? (y/n) [y]: " confirm_makenek
+confirm_makenek=${confirm_makenek:-y}
 if [ "$confirm_makenek" == "y" ] || [ "$confirm_makenek" == "Y" ]; then
     echo "Modifying core/makenek.inc..."
     FILE_PATH="core/makenek.inc"
-    cp "$FILE_PATH" "${FILE_PATH}.original"
+    
+    # Show the current state
+    echo "=== Current state ==="
+    grep -n '\-e.*FFLAGS.*+=.*FCPP' "$FILE_PATH" || echo "Pattern not found!"
+    
+    # Make the replacement
     if [ "$OS" == "Linux" ]; then
-        sed -i 's/FFLAGS\+\=$FCPP $FR8 $FF77 $FFLAGS/FFLAGS=$FCPP $FR8 $FF77 $FFLAGS/' "$FILE_PATH"
+        sed -i '/FFLAGS.*+=.*FCPP/ c\-e "s:^FFLAGS[ ]*+=.*:FFLAGS=$FCPP $FR8 $FF77 $FFLAGS:" \\' "$FILE_PATH"
     elif [ "$OS" == "Darwin" ]; then
-        sed -i '' 's/FFLAGS\+\=$FCPP $FR8 $FF77 $FFLAGS/FFLAGS=$FCPP $FR8 $FF77 $FFLAGS/' "$FILE_PATH"
+        sed -i '' '/FFLAGS.*+=.*FCPP/ c\-e "s:^FFLAGS[ ]*+=.*:FFLAGS=$FCPP $FR8 $FF77 $FFLAGS:" \\' "$FILE_PATH"
     fi
-    if cmp -s "$FILE_PATH" "${FILE_PATH}.original"; then
-        echo "No match found in $FILE_PATH. No replacement made."
+    
+    # Show the result and verify
+    echo "=== Modified state ==="
+    if grep -n '\-e.*FFLAGS.*FCPP' "$FILE_PATH"; then
+        # Check if the + was actually removed from the replacement part
+        if grep -q '\-e.*FFLAGS+=' "$FILE_PATH"; then
+            echo "Warning: FFLAGS+= is still present in the file!"
+            echo "Modification may have failed."
+        else
+            echo "Success: FFLAGS+= was replaced with FFLAGS="
+        fi
     else
-        echo "Line in $FILE_PATH successfully replaced."
+        echo "Error: Could not find the FFLAGS line after modification!"
     fi
-    rm "${FILE_PATH}.original"
 else
     echo "Skipping modification."
 fi
 
 # Build genmap and genbox tools
-read -p "Do you want to build genmap and genbox tools? (y/n): " confirm
+read -p "Do you want to build genmap and genbox tools? (y/n) [y]: " confirm
+confirm=${confirm:-y}
 if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
     echo "Building genmap and genbox tools..."
     cd tools
@@ -117,7 +148,8 @@ else
 fi
 
 # Add exports to shell configuration file
-read -p "Do you want to add necessary environment variables to your shell configuration file? (y/n): " confirm
+read -p "Do you want to add necessary environment variables to your shell configuration file? (y/n) [n]: " confirm
+confirm=${confirm:-n}
 if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
     # Get the current working directory
     nekstab_source_root=$(pwd)
