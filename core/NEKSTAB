@@ -89,9 +89,9 @@
       common/OTD_oper/convx, convy, convz, gradpx, gradpy, gradpz, diffx, diffy, diffz
       
       real, dimension(lx1*ly1*lz1*lelv, lpert) :: otd_Lux, otd_Luy, otd_Luz
-      real, dimension(lpert, lpert) :: otd_Lr, phi_rot
+      real, dimension(lpert, lpert) :: phi_rot, otd_Lr
       integer, dimension(lpert) :: otd_idx
-      common/OTD_Lu/otd_Lux, otd_Luy, otd_Luz, otd_Lr, otd_idx, phi_rot
+      common/OTD_Lu/otd_Lux, otd_Luy, otd_Luz, phi_rot, otd_Lr, otd_idx
       
       real, dimension(lpert) :: FTLEv, LEintegral
       common/OTD_FTLE/FTLEv, LEintegral
