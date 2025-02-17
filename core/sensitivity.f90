@@ -687,7 +687,8 @@
       
          call smooth_field(omegaR) ! smoothing causes out of bound values
          do ie = 1, nelv; do l = 1, nxyz ! clip [0,1] (tested on cylinder, produce better results)
-               omegaR(l, 1, 1, ie) = min(1.0d0, max(0.0d0, merge(0.0d0, omegaR(l, 1, 1, ie), abs(omegaR(l, 1, 1, ie)) < epsilon(1.0d0))))
+               omegaR(l, 1, 1, ie) = min(1.0d0, max(0.0d0, merge(0.0d0, omegaR(l, 1, 1, ie), 
+     $          abs(omegaR(l, 1, 1, ie)) < epsilon(1.0d0))))
             end do; end do
       
       end subroutine compute_omegaR
