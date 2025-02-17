@@ -129,18 +129,14 @@ if command -v mpiifort >/dev/null 2>&1; then
     # else # mpiifort
 
         echo "Using Intel Compiler Classic..."
-        # FFLAGS+=" -xHost" # comment if already included
+        FFLAGS+=" -xHost" # comment if already included
                
         # for other older Intel compilers
-        # FFLAGS+=" -diag-disable=6375  
-        # FFLAGS+=" -diag-disable=10441  
+        # FFLAGS+=" -diag-disable=6375"  
+        # FFLAGS+=" -diag-disable=10441" #ifort version 2021.10.0
+        # CFLAGS+=" -diag-disable=10441" #icc version 2021.10.0 
 
-        #for oneAPI 2023.1 and Classic compiler
-        # FFLAGS+=" -qmkl=sequential" # we are using LP64 and NOT 64bit integer in ILP64
-        # FFLAGS+=" -diag-disable=10441 -w"
-        # CFLAGS+=" -diag-disable=10441"
-
-        export PPLIST="VENDOR_BLAS"
+        export PPLIST="VENDOR_BLAS" # we are using LP64 and NOT 64bit integer in ILP64
         FFLAGS+=" -qmkl=sequential -I${MKLROOT}/include" # using LP64 and NOT 64bit integer in ILP64
         USR_LFLAGS+=" -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
 
@@ -176,7 +172,6 @@ else # GCC
         FFLAGS+=" -Wall -Wno-analyzer-out-of-bounds -Wno-zerotrip -frecursive" # Additional flags for debugging
         echo "Added debug flags to FFLAGS"
     fi
-    CFLAGS=" -w"
 
     export PPLIST="VENDOR_BLAS"
     if [[ $(uname -s) == "Darwin" ]]; then
@@ -189,6 +184,8 @@ else # GCC
     # USR_LFLAGS+=" -I/usr/local/opt/openblas/include -L/usr/local/opt/openblas/lib -lopenblas"
 
 fi
+CFLAGS=" -w" # supress C warnings 
+
 LD="$FC" # Linker (default to Fortran compiler)
 #-------------------------------------------------------------------------------
 # Architecture Detection
