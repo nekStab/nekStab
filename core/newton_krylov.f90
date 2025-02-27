@@ -1,20 +1,25 @@
       !-----------------------------------------------------------------------
-      ! newton_krylov: Main solver routine implementing Newton's method with GMRES for finding steady-state solutions or periodic orbits.
+      ! newton_krylov: Main solver routine implementing Newton's method with GMRES for
+      ! finding steady-state solutions or periodic orbits.
       !
-      ! The algorithm follows these steps:
-      ! 1. Initialize solver parameters and tolerances
-      ! 2. For each Newton iteration:
-      !    a. Compute nonlinear residual f(q)
-      !    b. Check convergence against target tolerance (dtol)
-      !    c. If using dynamic tolerances (ifdyntol), adjust GMRES tolerance and Nek5000 solver tolerances
-      !    d. Solve linear system using GMRES to get Newton step
-      !    e. Update solution: q = q - dq
-      ! 3. Output final solution if converged
+      ! Note: This file is compiled with -fixed flag, requiring fixed-format Fortran.
+      ! Line continuations must use '$' in column 6 instead of '&' despite .f90 extension.
+      !
+      ! The algorithm solves F(q) = q using Newton iteration:
+      ! 1. Compute residual: f = F(q) - q
+      ! 2. Solve linear system: J(q)dq = -f using GMRES
+      ! 3. Update solution: q = q - dq
+      ! 4. Repeat until ||f|| < dtol
+      !
+      ! Sign convention:
+      ! - Residual f = F(q) - q (computed in nonlinear_forward_map)
+      ! - GMRES solves J(q)δq = -f for the Newton step δq
+      ! - Update uses q = q - δq to move toward the fixed point
       !
       ! Key variables:
       ! - q: Current solution estimate
-      ! - f: Nonlinear residual f(q)
-      ! - dq: Newton correction step
+      ! - f: Nonlinear residual f(q) = F(q) - q
+      ! - dq: Newton correction step (δq)
       ! - dtol: Target tolerance for Newton convergence
       ! - tol: Current GMRES solver tolerance (may be relaxed if ifdyntol=true)
       !-----------------------------------------------------------------------
@@ -24,8 +29,6 @@
          include 'SIZE'
          include 'TOTAL'
       
-         real :: spec_tole ! Function declaration
-      
       !     ----- Krylov vectors
          type(krylov_vector) :: f ! Right-hand side vector for Newton solver
          type(krylov_vector) :: q ! Current estimate of the solution
@@ -33,7 +36,7 @@
       
       !     ----- Iteration parameters
          integer :: i, j, maxiter_newton, maxiter_gmres, calls
-         real :: residual, tol, gmres_target, tottime = 0.0d0
+         real :: residual, tol, tottime = 0.0d0
          real :: prev_residual = 0.0d0 ! Track previous iteration's residual
          real :: newton_start_time, newton_iter_time ! Timing for Newton iterations
          integer :: total_gmres_calls ! Track GMRES calls per Newton iteration
@@ -42,7 +45,8 @@
          integer, save :: k_out ! Store k from GMRES
          integer, save :: k_sum = 0 ! Accumulator for total k values across Newton iterations
          real, external :: dnekclock
-      
+         real :: spec_tole ! Function declaration
+
       !     ----- Call Counting Logic -----
       ! Each nonlinear solve costs nsteps calls (in nonlinear_forward_map)
       ! Each Arnoldi iteration costs nsteps calls (in ts_gmres)
@@ -58,23 +62,18 @@
       ! Total calls per Newton iteration = nsteps + (nsteps + 1) * (GMRES iterations + GMRES restarts)
       
          real, save :: dtol = 0.0d0 ! Target residual for Newton convergence
-         if (dtol == 0.0d0) then
-            ! Initialize counters at first call
+         if (dtol == 0.0d0) then ! Initialize counters at first call
             total_calls = 0
             nonlin_calls = 0
             lin_calls = 0
             
             dtol = max(param(21), param(22))
             if (nid == 0) write (6, '(A,1PE15.6)') 'dtol saved as:', dtol
-            tol = dtol ! Initialize time stepper tolerance
-      !     no need to call set_nek5000_tolerances as they are already set
+            tol = dtol ! Initialize time stepper tolerance: no need to call set_nek5000_tolerances as they are already set
          end if
       
-      !     ----- Set iteration limits
-         maxiter_newton = 20
-         maxiter_gmres = 20
+         maxiter_newton = 20; maxiter_gmres = 20
       
-      !     ----- Open output files
          if (istep == 0 .and. nid == 0) then
             write (6, *) 'Opening output files for residuals'
             open (unit=887, file='residu_newton.dat', status='replace'); close (887)
@@ -82,37 +81,32 @@
             open (unit=889, file='residu_arnoldi.dat', status='replace'); close (889)
          end if
       
-      !     ----- Initialize arrays
          if (nid == 0) write (6, *) 'Initializing Krylov vectors'
-         call k_zero(f)
-         call k_zero(dq)
+         call k_zero(f); call k_zero(dq)
       
-      !     ----- Copy initial condition
          if (nid == 0) write (6, *) 'Copying initial condition'
          call nopcopy(q%vx, q%vy, q%vz, q%pr, q%t, vx, vy, vz, pr, t)
       
-      !     ----- Newton iteration
          newton: do i = 1, maxiter_newton
             if (nid == 0) write (6, *) '------------------------------------------------'
             newton_start_time = dnekclock()
             total_gmres_calls = 0
       
             if (nid == 0) write (6, "('NEWTON   - Starting iteration ',I3,'/',I3,
-     $   ' residual:', 1PE15.6, ' solver:', 1PE15.6, ' (target:', 1PE15.6, ')') ")
-     $   i-1, maxiter_newton, prev_residual, max(param(21), param(22)), dtol
+     $   ' residual:', 1PE15.6, ' solver:', 1PE15.6, ' (target:', 1PE15.6,')')")
+     $   i, maxiter_newton, prev_residual, max(param(21), param(22)), dtol
             if (i == 1) then ! Set time
                q%time = param(10) ! First guess from endTime in .par
-               if (nid == 0) write (6, "('  Time    - Initial guess from param(10):', 1PE12.5) ") q%time
+               if (nid == 0) write (6, "('  Time    - Initial guess from param(10):', 1PE15.6) ") q%time
             else
                param(10) = q%time ! Other guesses included in nwt field
-               if (nid == 0) write (6, "('  Time    - Updated from previous iteration:', 1PE12.5) ") param(10)
+               if (nid == 0) write (6, "('  Time    - Updated from previous iteration:', 1PE15.6) ") param(10)
             end if
       
             call prepare_linearized_solver ! Compute nsteps and Nek parameters
       
-      !     Allocate nonlinear solution variable for natural or forced UPO
             if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
-               if (nid == 0) then
+               if (nid == 0) then ! Allocate nonlinear solution variable for natural or forced UPO
                   write (6, "('  Allocating orbit for GMRES')")
                   write (6, "('    Number of steps:',I6)") nsteps
                end if
@@ -130,8 +124,8 @@
             total_calls = total_calls + nonlin_calls
             tottime = tottime + time ! use time instead of nsteps*dt
       
-      !     Check residual || f(q) ||
-            call k_norm(residual, f) ! L2 norm: square root of dot product with weighted norms by bm1s
+      !     Check residual || f(q) ||! L2 norm: square root of dot product with weighted norms by bm1s
+            call k_norm(residual, f) ! Computes ||f||
             residual = residual**2 ! squared L2 norm for consistent convergence check with GMRES
             if (nid == 0) write (6, *) '  Computed residual:', residual
       
@@ -142,9 +136,10 @@
             call outpost2(f%vx, f%vy, f%vz, f%pr, f%t, nof, 'res')
             time = q%time ! restore
       
-      !     Output iteration information
-            if (nid == 0) then
+      
+            if (nid == 0) then ! Output iteration information
                newton_iter_time = dnekclock() - newton_start_time
+               k_sum = k_sum + k_out  ! Update k_sum with k from GMRES
                write (6, "('NEWTON   - Finished iteration ',I3,'/',I3,
      $   ' residual:', 1PE15.6, ' (target:', 1PE15.6, ')') ") i, maxiter_newton, residual, dtol
                if (i > 1) then ! Only show rate after first iteration
@@ -154,24 +149,22 @@
                end if
                write (6, "('          Time: ',1PE15.6,'s  GMRES calls: ', I4) ") newton_iter_time, total_gmres_calls
                open (887, file='residu_newton.dat', action='write', position='append')
-               write (887, "(4I9,4(1PE15.6))") i-1, total_calls, total_calls - prev_total_calls, k_sum, tottime, 
+               write (887, "(4I9,4(1PE15.6))") i, total_calls, total_calls - prev_total_calls, k_sum, tottime, 
      $          max(param(21), param(22)), residual, dtol
                close (887)
-               k_sum = k_sum + k_out  ! Update k_sum with k from GMRES (moved after writing)
                prev_total_calls = total_calls ! Save for next iteration
                prev_residual = residual ! Save for next iteration
                write (6, *) '------------------------------------------------'
             end if
       
-      !     Check for convergence
-            if (residual < dtol) then
+            if (residual < dtol) then ! If residual is below tolerance, exit Newton loop
                if (nid == 0) write (6, *) '  Converged. Exiting Newton loop...'
                exit newton
             end if
       
       !     If ifdyntol=true, two steps occur:
       !     1. Compute relaxed tolerance: tol = spec_tole(residual, dtol, 0.1d0)
-      !        - tol will be between dtol and min_tol
+      !        - tol will be between dtol (lower bound) and min_tol (upper bound) for stability
       !        - typically around 0.1*residual to avoid over-solving
       !     2. Update Nek5000 solver tolerances via set_nek5000_tolerances(tol)
             if (ifdyntol) then
@@ -179,19 +172,16 @@
                call set_nek5000_tolerances(tol) ! set the tolerance to the time-stepper
             end if
       
-      !     Solve the linear system
-            if (nid == 0) write (6, *) '  Solving linear system with GMRES'
+            if (nid == 0) write (6, *) '  Solving linear system with GMRES for rhs = f = F(q) - q'
             call ts_gmres(f, dq, maxiter_gmres, k_dim, tol, calls, k_out, i, dtol)
+            ! J(q)dq=rhs=F(q)−q, with dq being the solution (denoted sol in ts_gmres).
             lin_calls = lin_calls + calls + 1  ! Add GMRES calls + 1 for matvec in initialize_gmres_vector
             total_calls = total_calls + lin_calls
             tottime = tottime + calls*dt
             total_gmres_calls = total_gmres_calls + calls
       
-      !     Update Newton solution
-            if (nid == 0) write (6, *) '  Updating Newton solution'
-            call k_sub2(q, dq)
+            call k_sub2(q, dq) ! accepting the full step of the Newton update q = q - dq
       
-      !     Outpost current estimate of the solution ! NOT SURE ABOUT THIS POSITION
             if (nid == 0) write (6, *) '  Outposting current solution estimate'
             time = q%time
             if (uparam(1) == 2.0) time = real(i - 1) ! Ease visualization in paraview: file 1 is t = 0
@@ -199,7 +189,6 @@
             call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, 'nwt')
             time = q%time ! Restore
       
-      !     Deallocate nonlinear solution variable
             if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
                if (nid == 0) write (6, *) '  Deallocating orbit storage'
                deallocate (uor, vor, wor)
@@ -208,7 +197,6 @@
       
          end do newton
       
-      !     Output final results
          if (nid == 0) then
             if (i == maxiter_newton) then
                write (6, *) 'Reached maxiter_newto. STOPPING! (verify convergence)'
@@ -228,18 +216,15 @@
             end if
          end if
       
-      !     Output solution if converged
+      !     Output converged solution (time = orbit period)
          if (residual < dtol) then
             if (nid == 0) write (6, *) 'Outputting converged solution'
-            param(63) = 1.0d0 ! Enforce 64-bit output
-            call bcast(param(63), wdsize)
+            param(63) = 1.0d0; call bcast(param(63), wdsize)  ! Double precision
             call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, "BF_")
-            param(63) = 0.0d0 ! Enforce 32-bit output
-            call bcast(param(63), wdsize)
+            param(63) = 0.0d0; call bcast(param(63), wdsize)  ! Single precision
             call outpost_vort(vx, vy, vz, 'BFV')
          end if
       
-         if (nid == 0) write (6, *) 'newton_krylov subroutine completed'
          return
       end subroutine
       
@@ -294,10 +279,9 @@
          real :: gmres_start_time, gmres_iter_time
          real :: prev_beta2 = 0.0d0
          real :: arnoldi_start_time, arnoldi_iter_time
-         real :: ortho_metric ! Measure of orthogonalization quality
          real :: dot_val ! For weighted inner product calculation
          real, external :: dnekclock
-         integer, save :: k_sum = 0  ! Accumulator for total k values in GMRES
+         integer, save :: gmres_k_sum = 0  ! Accumulator for total k values in GMRES
       
          calls = 0
       
@@ -355,28 +339,34 @@
                beta2 = beta**2
       
       !     Compute orthogonalization quality metric using proper weighted inner products
-               ortho_metric = 0.0d0
-               if (k > 1) then
-                  do j = 1, k - 1
-                     call k_dot(dot_val, Q(k), Q(j))  ! Use weighted inner product
-                     ortho_metric = ortho_metric + abs(dot_val)
-                  end do
-                  ortho_metric = ortho_metric/(k - 1)  ! Average orthogonalization error
-               end if
-      
+      !     Note: This check is disabled by default as most problems maintain good orthogonality.
+      !     Enable if you suspect loss of orthogonality in your specific problem.
+      !     Warning signs: 
+      !     1. Slow GMRES convergence
+      !     2. Unexpected increase in residuals
+      !     3. Large number of GMRES restarts
+!              ortho_metric = 0.0d0
+!              if (k > 1) then
+!                 do j = 1, k - 1
+!                    call k_dot(dot_val, Q(k), Q(j))  ! Use weighted inner product
+!                    ortho_metric = ortho_metric + abs(dot_val)
+!                 end do
+!                 ortho_metric = ortho_metric/(k - 1)  ! Average orthogonalization error
+!              end if
+
                if (nid == 0) then
                   arnoldi_iter_time = dnekclock() - arnoldi_start_time
                   write (6, "('    ARNOLDI [GMRES ',I3,'/',I3,'] residual:',
      $   1PE15.6, ' (target:', 1PE15.6, ')') ") i, maxiter, beta2, tol
-                  if (k > 1) then ! Only show rate and ortho after first iteration
+                  if (k > 1) then ! Only show rate after first iteration
                      write (6, "('              Rate:',1PE15.6,' Time:',1PE15.6,
-     $   's  Ortho:', 1PE15.6) ") beta2/prev_beta2, arnoldi_iter_time, ortho_metric
+     $   's') ") beta2/prev_beta2, arnoldi_iter_time
                   else
                      write (6, "('              Time:',1PE15.6,'s') ") arnoldi_iter_time
                   end if
 
                   open (889, file='residu_arnoldi.dat', action='write', position='append')
-                  write (889, "(I9,5(1PE15.6))") k, arnoldi_iter_time, ortho_metric, tol, beta2, dtol
+                  write (889, "(I9,4(1PE15.6))") k, arnoldi_iter_time, tol, beta2, dtol
                   close (889)
                   write (6, *) '    ...........................'
                end if
@@ -413,9 +403,9 @@
                   write (6, "('           Time:',1PE15.6,'s  Arnoldi steps:', I4) ") 
      $   gmres_iter_time, k
                end if
-               k_sum = k_sum + k  ! Update accumulator after writing
+               gmres_k_sum = gmres_k_sum + k  ! Update accumulator after writing
                open (888, file='residu_gmres.dat', action='write', position='append')
-               write (888, "(4I9,3(1PE15.6))") newton_iter, i, k, k_sum, tol, beta2, dtol
+               write (888, "(4I9,3(1PE15.6))") newton_iter, i, k, gmres_k_sum, tol, beta2, dtol
                close (888)
                
                prev_beta2 = beta2
@@ -442,7 +432,7 @@
       ! initialize_gmres_vector: Prepares initial vector for GMRES iterations
       !
       ! This routine:
-      ! 1. Computes initial residual r = b - Ax
+      ! 1. Computes initial residual r = b - Ax for the system Ax = b
       ! 2. Normalizes the residual to create first Krylov vector
       ! 3. Returns the norm (beta) for use in GMRES
       !
@@ -464,15 +454,12 @@
          type(krylov_vector) :: f
          real, intent(out) :: beta
       
-      !     --> Compute initial residual: r = b - Ax
-         call matvec(f, q)
-         call k_sub2(f, rhs)
-         call k_cmult(f, -1.0d0)
-      
-      !     --> Normalize the starting vector.
-         call k_normalize(f, beta)
-         call k_copy(q, f)
-      
+         call matvec(f, q)         ! f = A·q
+         call k_sub2(f, rhs)       ! f = A·q - rhs (residual calculation)
+         call k_cmult(f, -1.0d0)   ! f = -(A·q - rhs) = rhs - A·q (standard residual form)
+         call k_normalize(f, beta) ! Normalizes f
+         call k_copy(q, f)         ! Sets q as normalized residual
+
          return
       end subroutine initialize_gmres_vector
       
@@ -481,12 +468,16 @@
       !-----------------------------------------------------------------------
       ! nonlinear_forward_map: Computes nonlinear residual f(q) = F(q) - q
       !
-      ! This routine:
-      ! 1. Sets initial condition from current solution estimate q
-      ! 2. Advances solution forward in time for nsteps
-      ! 3. Optionally stores trajectory for UPO computations
-      ! 4. Computes residual as difference between final and initial states
-      ! 5. Updates base flow for linearized calculations
+      ! Newton iteration requires the residual r = F(q) - q where:
+      ! - F(q) is computed by time-stepping from q
+      ! - The residual f = F(q) - q measures how far q is from a fixed point
+      ! - For convergence, we want ||f|| → 0
+      !
+      ! Steps:
+      ! 1. Set initial condition from q
+      ! 2. Time-step nsteps to get F(q)
+      ! 3. Compute residual f = F(q) - q
+      ! 4. Store base flow for linearized calculations
       !
       ! For periodic orbits (UPOs):
       ! - Stores full trajectory in uor, vor, wor arrays
@@ -535,9 +526,9 @@
          end do
       
       !     --> Compute the right hand side of the time-stepper Newton.
-         call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, vx, vy, vz, pr, t)
+         call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, vx, vy, vz, pr, t) ! F(q)
          call k_copy(fc_nwt, f) ! for Newton UPO newton_linearized_map
-         call k_sub2(f, q)
+         call k_sub2(f, q) ! f = F(q) - q
          f%time = 0.0d0
       
       !     --> Pass current guess as base flow for the linearized calculation.
@@ -548,55 +539,25 @@
       
       !-----------------------------------------------------------------------
       
-      !-----------------------------------------------------------------------
-      ! set_nek5000_tolerances: Updates all Nek5000 solver tolerances
-      !
-      ! This routine ensures consistency across all solvers by:
-      ! 1. Setting pressure and velocity solver tolerances (param 21,22)
-      !
-      ! All changes are broadcast to maintain consistency across MPI ranks
-      !-----------------------------------------------------------------------
       subroutine set_nek5000_tolerances(solver_tol) ! set solver tolerances
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
          real, intent(in) :: solver_tol ! New tolerance value to be set
          if (nid == 0) write (6, "('  TOLERANCE set from:',1PE15.6,' to:', 1PE15.6) ") param(21), abs(solver_tol)
-      
-      ! Set both param(21) and param(22) to the absolute value of the new tolerance.
-      ! Broadcast these changes to all nodes.
-         param(21) = abs(solver_tol)
-         call bcast(param(21), wdsize)
-         param(22) = abs(solver_tol)
-         call bcast(param(22), wdsize)
-      
-      ! Update TOLPDF and TOLHDF with the new tolerance and broadcast the changes.
-         TOLPDF = param(21)
-         call bcast(TOLPDF, wdsize)
-         TOLHDF = param(22)
-         call bcast(TOLHDF, wdsize)
-      
-      ! Update restol and atol with the new tolerance and broadcast the changes.
-         restol(:) = param(22)
-         call bcast(restol, (ldimt1 + 1)*wdsize)
-         atol(:) = param(22)
-         call bcast(atol, (ldimt1 + 1)*wdsize)
-      
+         param(21:22) = abs(solver_tol)  ! Set both tolerances at once
+         call bcast(param(21:22), 2*wdsize)  ! Broadcast both values in one call
       end subroutine set_nek5000_tolerances
       
       !-----------------------------------------------------------------------
       
       !-----------------------------------------------------------------------
       ! spec_tole: Computes relaxed tolerance for GMRES solver
-      !
       ! This implements an adaptive tolerance strategy:
       ! - Early iterations: Use relaxed tolerance ≈ relaxation_factor * residual
       !   to avoid over-solving when far from solution
       ! - Later iterations: Tolerance approaches dtol as residual decreases
-      ! - Bounded between dtol (min) and min_tol (max) for stability
-      !
-      ! Parameters:
+      ! - Bounded between dtol (lower bound) and min_tol (upper bound) for stability
       ! - residual: Current Newton residual norm
       ! - dtol: Target tolerance for Newton convergence
       ! - relaxation_factor: Controls how much to relax tolerance (typically 0.1)
@@ -610,16 +571,13 @@
          real, intent(in) :: dtol ! Target tolerance
          real, intent(in) :: relaxation_factor ! Relaxation factor for solver tolerances
          real :: nwtol ! Returned new tolerance
-         real, parameter :: min_tol = 1.0d-5 ! Minimum allowed tolerance
+         real, parameter :: min_tol = 1.0e-5 ! Minimum allowed tolerance
          
-         ! 1.51485E+02 e-5
-         ! 1.89187E+02 e-6
-      
       ! Compute new time stepper tolerances based on Newton residual
       ! Adjusts how accurately we solve the time stepping problem:
       ! - Early Newton iterations: Relaxed tolerances (≈ relaxation_factor * residual)
       ! - Later iterations: Stricter tolerances approaching dtol
-      ! - Bounded by dtol (min) and min_tol (max) for stability
+      ! - Bounded by dtol (lower bound) and min_tol (upper bound) for stability
          nwtol = max(min(residual*relaxation_factor, min_tol), dtol)
          if (nid == 0) then
             if (nwtol == min_tol) then
