@@ -1,27 +1,74 @@
-      module krylov_subspace
+      !-----------------------------------------------------------------------
+      ! krylov_subspace: High-performance Krylov operations for spectral elements
+      !
+      ! Purpose:
+      ! - Optimized vector operations for Krylov subspace methods
+      ! - MPI-compatible for parallel execution on supercomputers
+      ! - Minimizes memory usage and FLOPs in critical operations
+      !
+      ! Data Layout:
+      ! - Velocity/Temperature: lv = lx1*ly1*lz1*lelv (first-order elements)
+      ! - Pressure: lp = lx2*ly2*lz2*lelv (second-order elements)
+      ! - Temperature scalars: lt = lx1*ly1*lz1*lelt
+      !
+      ! Memory Management:
+      ! - Static allocation for vectors to avoid runtime overhead
+      ! - Minimal temporary storage in vector operations
+      ! - Optional orbit storage for UPO computations (deallocated when unused)
+      !-----------------------------------------------------------------------
+       module krylov_subspace
          implicit none
          include 'SIZE'
       
          private
       
-         integer, public, parameter :: lv = lx1*ly1*lz1*lelv
-         integer, public, parameter :: lt = lx1*ly1*lz1*lelt
-         integer, public, parameter :: lp = lx2*ly2*lz2*lelv ! lp is used for norm -> lp
-         integer, save, public :: nv, nt, n2 ! np conflits with mpi variable -> n2
-      ! we use lp and n2 -> for pressure fields
+         ! Spectral element dimensions (fixed at compile time)
+         integer, public, parameter :: lv = lx1*ly1*lz1*lelv  ! Velocity/temp points
+         integer, public, parameter :: lt = lx1*ly1*lz1*lelt  ! Temperature points
+         integer, public, parameter :: lp = lx2*ly2*lz2*lelv  ! Pressure points
+         
+         ! Runtime dimensions (may be smaller than max)
+         integer, save, public :: nv    ! Active velocity/temp points
+         integer, save, public :: nt    ! Active temperature points  
+         integer, save, public :: n2    ! Active pressure points (renamed from np for MPI)
+      
+         ! Core data structure for Krylov operations
          type, public :: krylov_vector
-            real, dimension(lv) :: vx, vy, vz
-            real, dimension(lp) :: pr
-            real, dimension(lv, ldimt) :: t
-            real :: time
+            real, dimension(lv) :: vx, vy, vz     ! Velocity components
+            real, dimension(lp) :: pr             ! Pressure field
+            real, dimension(lv, ldimt) :: t       ! Temperature/passive scalars
+            real :: time                          ! Time value
          end type krylov_vector
       
-         type(krylov_vector), save, public :: ic_nwt, fc_nwt
-         real, save, allocatable, dimension(:, :), public :: uor, vor, wor
-         real, save, allocatable, dimension(:, :, :), public :: tor
+         ! Global storage (minimized to essential data only)
+         type(krylov_vector), save, public :: ic_nwt, fc_nwt  ! Newton conditions
+         real, save, allocatable, dimension(:, :), public :: uor, vor, wor  ! Velocity orbits
+         real, save, allocatable, dimension(:, :, :), public :: tor        ! Temperature orbits
       
       contains
       end module krylov_subspace
+
+      !====================================================================
+      !     Module: krylov_subspace
+      !     
+      !     Purpose: Implements Krylov subspace operations for numerical computations
+      !              with support for velocity, pressure, and temperature fields.
+      !              Designed for both serial and MPI parallel processing.
+      !
+      !     Operations:
+      !     - k_dot(alpha,p,q):      alpha = <p,q>     ! Inner product
+      !     - k_norm(alpha,p):       alpha = ||p||      ! L2 norm
+      !     - k_normalize(p,alpha):  p = p/||p||        ! Returns norm in alpha
+      !     - k_cmult(p,c):         p = c*p            ! Scalar multiplication
+      !     - k_add2(p,q):          p = p + q          ! Vector addition
+      !     - k_sub2(p,q):          p = p - q          ! Vector subtraction
+      !     - k_sub3(p,q,r):        p = q - r          ! Three vector operation
+      !     - k_zero(p):            p = 0              ! Zero vector
+      !     - k_copy(p,q):          p = q              ! Copy vector
+      !     - k_matmul(dq,Q,y,k):   dq = Q*y          ! Matrix-vector product
+      !     
+      !     Note: All operations preserve MPI compatibility
+      !====================================================================
       
       subroutine k_dot(alpha, p, q)
          use krylov_subspace
