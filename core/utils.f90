@@ -430,7 +430,7 @@
             write (6, *) 'P41=', param(41), '1 for multiplicative SEMG'
             write (6, *) 'P42=', param(42), 'lin solv for the pres equation 0:GMRES,1:CG'
             write (6, *) 'P43=', param(43), '0:additive multilevel scheme 1:orig 2lvl sch'
-            write (6, *) 'P44=', param(44), '0=E-based addit Schwarz PnPn-2;1=A-based'
+            write (6, *) 'P44=', param(44), '0:E-based addit Schwarz PnPn-2;1:A-based'
             write (6, *) 'P93=', param(93), 'num vectors for projection'
             write (6, *) 'P94 =', param(94), 'num projection for helmholz solves'
             write (6, *) 'P95=', param(95), 'projection for pressure solver on/off'
@@ -463,7 +463,7 @@
          real, dimension(lv), intent(in) :: px, py, pz
          real, dimension(lv, ldimt), intent(in) :: pt
          integer, intent(in) :: skip
-         character(len=16), intent(in) :: fname
+         character(len=*), intent(in) :: fname
          real glsc3, uek, vek, wek, eek, pot
          save eek
          logical, save :: initialized
@@ -474,7 +474,7 @@
          uek = 0.0d0; vek = 0.0d0; wek = 0.0d0; pot = 0.0d0
       
          if (.not. initialized) then
-            if (nid == 0) open (730, file=fname, action='write', status='replace')
+            if (nid == 0) open (730, file=trim(fname), action='write', status='replace')
             initialized = .true.
          end if
       
@@ -498,7 +498,7 @@
          real, dimension(lv, ldimt), intent(in) :: pt
       !real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
          integer, intent(in) :: skip
-         character(len=19), intent(in) :: fname
+         character(len=*), intent(in) :: fname
          real vort(lv, 3), wo1(lv), wo2(lv)
          common/ugrad/vort, wo1, wo2
          real glsc3, uek, vek, wek, eek
@@ -510,7 +510,7 @@
          uek = 0.0d0; vek = 0.0d0; wek = 0.0d0
       
          if (.not. initialized) then
-            if (nid == 0) open (736, file=fname, action='write', status='replace')
+            if (nid == 0) open (736, file=trim(fname), action='write', status='replace')
             initialized = .true.
          end if
       
@@ -533,7 +533,7 @@
          include 'TOTAL'
       
          integer, intent(in) :: skip
-         character(len=20), intent(in) :: fname
+         character(len=*), intent(in) :: fname
       
          logical, save :: initialized
          data initialized/.false./
@@ -559,7 +559,7 @@
       
          if (.not. initialized) then
             if (nid == 0) write (6, *) 'Initializing torque routine...'
-            if (nid == 0) open (737, file=fname, action='write', status='replace')
+            if (nid == 0) open (737, file=trim(fname), action='write', status='replace')
             bIDs(1) = 1
             call create_obj(iobj_wall(1), bIDs, 1)
             scale = 2
