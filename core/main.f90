@@ -1,11 +1,11 @@
       !---------------------------------------------------------------------
       subroutine nekStab_setDefault
       !     specifying default values for nekStab
-      
+
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
+
          k_dim = 100 ! standard value, increas  in .usr
          schur_tgt = 2 ! schur target for schur step factorizaiton
          eigen_tol = 1.0e-6 ! tolerance for eigenmodes convergence
@@ -14,10 +14,10 @@
          glob_skip = 10 ! global energy computation skip frequency
          findiff_order = 1 ! finite difference order for the Frechet derivative
          epsilon_base = 1.0e-6 ! finite difference perturbation scale parameter
-      
+
          bst_skp = 10 ! boostconv skip iterations
          bst_snp = 10 ! bootsconv residual subspace matrix size
-      
+
          ifres = .false. ! outpost restart files (KRY*, HES*)
          ifvor = .false. ! outpost vorticity (vor* omega_x,omega_y,omega_z components)
          ifvox = .false. ! outpost vortex (vox*: q,lambda2,omega criterions)
@@ -25,17 +25,17 @@
          ifbf2D = .false. ! force 2D base flow solution
          ifstorebase = .true. ! store base flow for Floquet analysis (dynamic allocated)
          ifdyntol = .false. ! dynamical tolerances for SFD and Newton (potential speed-up)
-      
+
          ifseed_nois = .true. ! noise as initial seed
          ifseed_symm = .false. ! symmetry initial seed
          ifseed_load = .false. ! loading initial seed (e.g. Re_ )
       !  Note: if ifseed_* all are false, 'useric' subroutine prescribes the initial seed
-      
+
       !  Define here the probe position for zero-crossing vertical velocity analysis !
          xck = 2.0d0; call bcast(xck, wdsize)
          yck = 0.0d0; call bcast(yck, wdsize)
          zck = 0.0d0; call bcast(zck, wdsize)
-      
+
       ! Sponge zone parameters (modified from KTH Toolbox)
          xLspg = 0.0d0; call bcast(xLspg, wdsize) ! x left
          xRspg = 0.0d0; call bcast(xRspg, wdsize) ! x right
@@ -45,14 +45,14 @@
          zRspg = 0.0d0; call bcast(zRspg, wdsize)
          acc_spg = 0.333d0; call bcast(acc_spg, wdsize) !percentage for the acceleration phase in the sponge (e.g. 1/3)
          spng_st = 0.0d0; call bcast(spng_st, wdsize)
-      
+
          ifotd = .false.; call bcast(ifotd, lsize)
          otd_printStep = 100; call bcast(otd_printStep, isize)
          otd_gsStep = 10; call bcast(otd_gsStep, isize)
          otd_FTLEPeriod = 0.0; call bcast(otd_FTLEPeriod, wdsize)
-      
+
          evop = '_' ! initialize output prefix
-      
+
       !     !Broadcast all defaults !
          call bcast(eigen_tol, wdsize) ! wdsize for real
          call bcast(schur_del, wdsize)
@@ -68,7 +68,7 @@
          call bcast(zRspg, wdsize)
          call bcast(acc_spg, wdsize)
          call bcast(spng_st, wdsize)
-      
+
          call bcast(schur_tgt, isize) ! isize for integer
          call bcast(maxmodes, isize)
          call bcast(k_dim, isize)
@@ -76,7 +76,7 @@
          call bcast(bst_snp, isize)
          call bcast(glob_skip, isize)
          call bcast(findiff_order, isize)
-      
+
          call bcast(ifres, lsize) !lsize for boolean
          call bcast(ifvor, lsize)
          call bcast(ifvox, lsize)
@@ -87,7 +87,7 @@
          call bcast(ifbf2D, lsize)
          call bcast(ifstorebase, lsize)
          call bcast(ifdyntol, lsize)
-      
+
       end subroutine nekStab_setDefault
       !---------------------------------------------------------------------
       subroutine nekStab_init
@@ -99,16 +99,16 @@
          real glmin, glmax
          integer i
          nv = nx1*ny1*nz1*nelv
-      
+
          if (.not. isNekStabinit) then
             call nekStab_setDefault
             call nekStab_usrchk ! where user change defaults
             call nekStab_printNEKParams
-      
+
             xmn = glmin(xm1, nv); xmx = glmax(xm1, nv)
             ymn = glmin(ym1, nv); ymx = glmax(ym1, nv)
             zmn = glmin(zm1, nv); zmx = glmax(zm1, nv)
-      
+
             if (nid == 0) then
                print *, '                 __   _____  __          __  '
                print *, '   ____   ___   / /__/ ___/ / /_ ____ _ / /_ '
@@ -119,12 +119,12 @@
                print *, 'Nek5000 ', NVERSION
                print *, ''
             end if
-      
+
             call copy(bm1s, bm1, nv) ! never comment this !
             ifbfcv = .false.
-      
+
             if (spng_st > 0) call activate_sponge
-      
+
             nof = 0
             scal = .false.
             do i = 1, size(ifpsco)
@@ -141,28 +141,28 @@
                if (nid == 0) write (6, *) 'number of possible scalars (ldimt)=', ldimt
                if (nid == 0) write (6, *) 'number of scalars (nof)=', nof, npscal
             end if
-      
+
             call oprzero(fcx, fcy, fcz) ! never comment this!
             call rzero(fct, nx1*ny1*nz1*nelv)
-      
+
             isNekStabinit = .true.
          elseif (nid == 0) then
             print *, 'NekStab already initialized'
          end if
-      
+
       end subroutine nekStab_init
       !---------------------------------------------------------------------
       subroutine nekStab
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
+
          if (istep == 0) call nekStab_init
-      
+
          select case (floor(uparam(1)))
-      
+
          case (0) ! DNS
-      
+
             if (uparam(1) == 0.1) then ! Linearized DNS
                ifbase = .true.; call bcast(ifbase, lsize)
                ifpert = .true.; call bcast(ifpert, lsize)
@@ -170,19 +170,24 @@
                if (istep == 0) call op_add_noise(vxp, vyp, vzp)
                if (nid == 0) write (6, *) 'Linearized+DNS: ifbase=,', ifbase, ' ifpert=', ifpert
                if (ifoutfld) call outpost2(vxp, vyp, vzp, prp, tp, nof, 'pr_')
+               ! energy of the perturbation
+               call nekStab_energy(vxp(:, 1), vyp(:, 1), vzp(:, 1), tp(:, :, 1), 'total_ene_p1.dat', glob_skip)
+               call nekStab_enstrophy(vxp(:, 1), vyp(:, 1), vzp(:, 1), tp(:, :, 1), 'total_ens_p1.dat', glob_skip)
             end if
-      
+
             call nekStab_outpost ! outpost vorticity
             call nekStab_comment ! print comments
+            ! energy of the base flow
             call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
             call nekStab_enstrophy(vx, vy, vz, t, 'total_enstrophy.dat', glob_skip)
+
       !if (lastep == 1) call nek_end -> this is done by Nek5000
-      
+
          case (1) ! fixed points computation
-      
+
             call nekStab_outpost ! outpost vorticity
             call nekStab_comment ! print comments
-      
+
             if (uparam(1) == 1.1) then
                call SFD
                if (uparam(5) == 0) call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
@@ -197,16 +202,16 @@
                if (nid == 0) write (6, *) 'TDF'
                call TDF
             end if
-      
+
             if (ifbfcv) call nek_end
-      
+
          case (2) ! Newton-Krylov solver
-      
+
       ! Initialize flags based on the value of uparam(1)
             isNewtonFP = (uparam(1) == 2.0)
             isNewtonPO = (uparam(1) == 2.1)
             isNewtonPO_T = (uparam(1) == 2.2)
-      
+
       ! Conditional statements for each Newton-Krylov case
             if (nid == 0) then
                if (isNewtonFP) then
@@ -220,61 +225,61 @@
                   call nek_end
                end if
             end if
-      
+
       ! Proceed with Newton-Krylov computation
             call newton_krylov
             call nek_end
-      
+
          case (3) ! eigenvalue problem
-      
+
             isDirect = (uparam(1) == 3.1)
             isFloquetDirect = (uparam(1) == 3.11)
-      
+
             isAdjoint = (uparam(1) == 3.2)
             isFloquetAdjoint = (uparam(1) == 3.21)
-      
+
             isTransientGrowth = (uparam(1) == 3.3)
             isFloquetTransientGrowth = (uparam(1) == 3.31)
-      
+
             if (isDirect .or. isFloquetDirect .or. isAdjoint .or. isFloquetAdjoint) then
                call krylov_schur
             elseif (isTransientGrowth .or. isFloquetTransientGrowth) then
                call krylov_schur
             end if
             call nek_end
-      
+
          case (4) ! in postprocessing.f
-      
+
             if (uparam(01) == 4.0) then ! all
                call stability_energy_budget
                call wave_maker
                call bf_sensitivity
             end if
-      
+
       !     -----> Direct mode kinetic energy budget.
             if (uparam(01) == 4.1) call stability_energy_budget
-      
+
       !     -----> Wavemaker computation.
             if (uparam(01) == 4.2) call wave_maker
-      
+
       !     -----> Baseflow sensitivity.
             if (uparam(01) == 4.3) call bf_sensitivity
-      
+
       !     -----> Sensitivity to steady force.
             if (uparam(01) == 4.41 .or. uparam(01) == 4.42) call ts_steady_force_sensitivity
             if (uparam(01) == 4.43) call delta_forcing
-      
+
       !     -----> Animate mode # 4 steps in period; 'd' for direct, 'a' for adjoint.
             if (uparam(01) == 4.50) call animate_mode_only(int(uparam(7)), 'd')
             if (uparam(01) == 4.51) call animate_mode(int(uparam(7)), 'd') ! + base flow deformation
             if (uparam(01) == 4.52) call animate_mode_Floquet(int(uparam(7)), 'd')
-      
+
             call nek_end
-      
+
          case (5)
             call otd
-      
+
          end select
-      
+
       end subroutine nekStab
       !---------------------------------------------------------------------
