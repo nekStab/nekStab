@@ -6,7 +6,8 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         integer m, n, procmin, posiz
+         integer, intent(out) :: posiz, procmin
+         integer :: m, n
          real chk(lx1*ly1*lz1*lelt), chkmin, glmin
          n = nx1*ny1*nz1*nelt
          procmin = 0
@@ -20,7 +21,7 @@
             if (chkmin == chk(m)) then
                procmin = 1
                posiz = m
-               print *, 'Point found: ', m ! do not use nid = 0 as it could be any rank with this value !
+               write(6,*) 'Point found:', m ! do not use nid = 0 as it could be any rank with this value !
             end if
          end do
          return
@@ -73,12 +74,12 @@
          include 'INPUT' ! if3D
          include 'SOLN' ! VX, VY, VZ, VMULT
          include 'GEOM' ! XM1, YM1, ZM1
-      
+
          real, dimension(lx1, ly1, lz1, lelv) :: qx, qy, qz
          integer iel, ieg, il, jl, kl, nv
          real xl(LDIM), mth_rand, fc(3), nmin, nmax, glmax, glmin
          nv = nx1*ny1*nz1*nelv
-      
+
          do iel = 1, NELV
             do kl = 1, NZ1
                do jl = 1, NY1
@@ -87,40 +88,40 @@
                      xl(1) = XM1(il, jl, kl, iel)
                      xl(2) = YM1(il, jl, kl, iel)
                      if (if3D) xl(NDIM) = ZM1(il, jl, kl, iel)
-      
+
                      fc(1) = 3.0e4; fc(2) = -1.5e3; fc(3) = 0.5e5
                      qx(il, jl, kl, iel) = qx(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
-      
+
                      fc(1) = 2.3e4; fc(2) = 2.3e3; fc(3) = -2.0e5
                      qy(il, jl, kl, iel) = qy(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
-      
+
                      if (if3D) then
                         fc(1) = 2.e4; fc(2) = 1.e3; fc(3) = 1.e5
                         qz(il, jl, kl, iel) = qz(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
                      end if
-      
+
                   end do
                end do
             end do
          end do
-      
+
       !     face averaging
          call opdssum(qx(:, :, :, :), qy(:, :, :, :), qz(:, :, :, :))
          call opcolv(qx(:, :, :, :), qy(:, :, :, :), qz(:, :, :, :), VMULT)
-      
+
          call dsavg(qx(:, :, :, :))
          call dsavg(qy(:, :, :, :))
          if (if3D) call dsavg(qz(:, :, :, :))
-      
+
       !Note: v*mask removes points at wall/inflow
          call bcdirVC(qx(:, :, :, :), qy(:, :, :, :), qz(:, :, :, :), v1mask, v2mask, v3mask)
-      
+
          nmin = glmin(qx, nv); nmax = glmax(qx, nv)
          if (nid == 0) write (6, *) 'noise vx min,max', nmin, nmax
-      
+
          nmin = glmin(qy, nv); nmax = glmax(qy, nv)
          if (nid == 0) write (6, *) 'noise vy min,max', nmin, nmax
-      
+
          if (if3D) then
             nmin = glmin(qz, nv); nmax = glmax(qz, nv)
             if (nid == 0) write (6, *) 'noise vz min,max', nmin, nmax
@@ -136,42 +137,42 @@
          integer iel, ieg, il, jl, kl, nv
          real xlx, yly, zlz, alpha, x, y, z
          real glsc3, amp
-      
+
          nv = NX1*NY1*NZ1*NELV
          xlx = xmx - xmn
          yly = ymx - ymn
          zlz = zmx - zmn
-      
+
          alpha = 2*pi/zlz
-      
+
       !     --> Create the initial velocity perturbation.
-      
+
          do iel = 1, NELV
             do kl = 1, NZ1
                do jl = 1, NY1
                   do il = 1, NX1
-      
+
                      ieg = LGLEL(iel)
                      x = XM1(il, jl, kl, iel)
                      y = YM1(il, jl, kl, iel)
                      if (if3D) z = ZM1(il, jl, kl, iel)
-      
+
       !     -> Construct the perturbation. ! Note: Spanwise invariant.
                      qx(il, jl, kl, iel) = cos(alpha*z)*sin(2.*pi*y)
                      qz(il, jl, kl, iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
                      qp(il, jl, kl, iel) = cos(alpha*z)*cos(2.*pi*y)
-      
+
                   end do
                end do
             end do
          end do
-      
+
          amp = glsc3(qx, qx, bm1s, nv) + glsc3(qy, qy, bm1s, nv)
          if (if3D) amp = amp + glsc3(qz, qz, bm1s, nv)
          amp = 1e-6/(0.50d0*amp)
          call opcmult(qx, qy, qz, amp)
          call cmult(qp, amp, nv)
-      
+
          return
       end subroutine add_symmetric_seed
       !-----------------------------------------------------------------------
@@ -196,11 +197,11 @@
          character(len=3) :: name
          real wo1(lv), wo2(lv), vort(lv, 3)
          logical ifto_sav, ifpo_sav
-      
+
          if (ifvor) then
-      
+
             call comp_vort3(vort, wo1, wo2, ux, uy, uz)
-      
+
             ifto_sav = ifto
             ifpo_sav = ifpo
             ifto = .false.
@@ -209,43 +210,43 @@
             ifto = ifto_sav
             ifpo = ifpo_sav
          end if
-      
+
          return
       end subroutine outpost_vort
       !-----------------------------------------------------------------------
       subroutine norm_grad(vx_, vy_, vz_, pr_, t_, norma)
-      
+
          use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
+
          real, intent(in), dimension(lv) :: vx_, vy_, vz_
          real, intent(in), dimension(lp) :: pr_
          real, intent(in), dimension(lt, ldimt) :: t_
          real, intent(out) :: norma
-      
+
          real, dimension(lv) :: dudx, dudy, dudz
          real, dimension(lv) :: dvdx, dvdy, dvdz
          real, dimension(lv) :: dwdx, dwdy, dwdz
-      
+
          real :: glsc3
          nv = nx1*ny1*nz1*nelv
-      
+
       ! gradient computation
          call gradm1(dudx, dudy, dudz, vx_, nelv)
          call gradm1(dvdx, dvdy, dvdz, vy_, nelv)
          if (if3D) call gradm1(dwdx, dwdy, dwdz, vz_, nelv)
-      
+
       ! call dsavg(dudx); call dsavg(dudy); call dsavg(dudz)
       ! call dsavg(dvdx); call dsavg(dvdy); call dsavg(dvdz)
       ! call dsavg(dwdx); call dsavg(dwdy); call dsavg(dwdz)
-      
+
          norma = 0.0d0
-      
+
          norma = norma + glsc3(dudx, dudx, bm1s, nv) + glsc3(dudy, dudy, bm1s, nv)
          norma = norma + glsc3(dvdx, dvdx, bm1s, nv) + glsc3(dvdy, dvdy, bm1s, nv)
-      
+
          if (if3D) then
             norma = norma + glsc3(dudz, dudz, bm1s, nv)
             norma = norma + glsc3(dvdz, dvdz, bm1s, nv)
@@ -262,22 +263,22 @@
          real, intent(inout), dimension(lx1, ly1, lz1, lelt) :: u
          integer :: ifld, nv
          nv = lx1*ly1*lz1*nelv
-      
+
       ! avg boundary - used in comp_vort3
          call col2(u, bm1, nv)
          call dssum(u, lx1, ly1, lz1)
          call col2(u, binvm1, nv)
-      
+
       ! ensure continuous field that is in H1
          call dsavg(u) ! direct stiffness avg of u
-      
+
       ! filter field
          ifld = ifield
          ifield = 1
       !weight, ncut, name
          call filter_s0(u, 0.5, 1, 'field')
          ifield = ifld
-      
+
          return
       end subroutine smooth_field
       !-----------------------------------------------------------------------
@@ -287,62 +288,62 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
+
          real vort(lv, 3), wo1(lv), wo2(lv)
          common/ugrad/vort, wo1, wo2
-      
+
          logical ifto_sav, ifpo_sav, ifpsco_sav(ldimt1)
-      
+
       !if ((istep == 0) .or. ifoutfld .and. (ifvor .or. ifvox)) then
          if (ifoutfld .and. (ifvor .or. ifvox)) then
-      
+
             ifto_sav = ifto; ifpo_sav = ifpo; ifpsco_sav = ifpsco
             ifto = .false.; ifpo = .false.; ifpsco(:) = .false.
-      
+
       !---  > Compute and oupost vorticity.
             if (ifvor) then
                call oprzero(vort(1, 1), vort(1, 2), vort(1, 3))
                call comp_vort3(vort, wo1, wo2, vx, vy, vz)
-      
+
                call smooth_field(vort(:, 1))
                call smooth_field(vort(:, 2))
                call smooth_field(vort(:, 3))
-      
+
                call outpost(vort(1, 1), vort(1, 2), vort(1, 3), pr, t, 'vor')
             end if
-      
+
       !---  > Compute and outpost vortex fields.
             if (ifvox .and. (ifaxis .eqv. .false.)) then
-      
+
       !call vortex_core(vort(:, 1), 'lambda2')
       !call smooth_field(vort(:,1))
-      
+
       !call vortex_core(vort(:, 2), 'q')
       !call smooth_field(vort(:,2))
-      
+
                ifvo = .false.; ifto = .true.
                call vortex_core(vort(:, 3), 'omega')
                call smooth_field(vort(:, 3))
                call outpost(vort(:, 1), vort(:, 2), vort(:, 3), pr, vort(:, 3), 'omR')
                ifvo = .true.; ifto = .true.
-      
+
       !call outpost(vort(:, 1), vort(:, 2), vort(:, 3), pr, t, 'vox')
-      
-               if (.not. if3d) then ! 2D case -> no lambda2, no q
+
+               if (.not. if3D) then ! 2D case -> no lambda2, no q
                   ifvo = .false.; ifto = .true. ! just outposting omega field to temperature... v's and p ignored
                   call outpost(vx, vy, vz, pr, vort(:, 3), 'vox')
                   ifvo = .true.
                end if
-      
+
             end if
-      
+
             ifto = ifto_sav; ifpo = ifpo_sav; ifpsco(:) = ifpsco_sav(:)
-      
+
          end if
-      
+
       !!---  > Outpost initial condition.
       !if (istep == 0) call outpost2(vx, vy, vz, pr, t, nof, '   ')
-      
+
          return
       end subroutine nekStab_outpost
       !-----------------------------------------------------------------------
@@ -351,10 +352,9 @@
          include 'SIZE'
          include 'TOTAL'
          real, save :: eetime0, eetime1, eetime2, deltatime
-         data eetime0, eetime1, eetime2/0.0d0, 0.0d0, 0.0d0/
          real telapsed, tpernondt, tmiss, dnekclock, ttime
          integer ttime_stp
-      
+
       !     if extrapolation is not OIFS -> ifchar = false
       !     if OIFS -> ifchar = .true. and CFL 2-5
       !     cases can have CFL > 1 in initial time steps
@@ -367,7 +367,7 @@
             call nek_end
          end if
          if (nio /= 0) return
-      
+
          eetime2 = dnekclock()
          if (eetime0 == 0.0 .and. istep == 1) then
             eetime0 = eetime2
@@ -375,21 +375,21 @@
          else
             eetime1 = eetime2
          end if
-      
+
          if (istep > 0 .and. lastep == 0 .and. iftran) then
             ttime_stp = eetime2 - eetime1
             ttime = eetime2 - eetime0
-      
+
             if (istep == 1) then
                ttime_stp = 0.0d0
                ttime = 0.0d0
             end if
-      
+
             if (mod(istep, 10) == 0) then
                telapsed = ttime/3600.0d0
                tpernondt = ttime/(time - deltatime)
                tmiss = (param(10) - time)*tpernondt/3600.0d0
-      
+
                print *, ''
                write (6, "('      Mean time per timestep: ',F8.4,'  dev:',I8,'ms')")
      $   ttime/istep, nint(((ttime/istep) - ttime_stp)*1000)
@@ -405,7 +405,7 @@
                print *, ''
             end if
          end if
-      
+
       end subroutine nekStab_comment
       !-----------------------------------------------------------------------
       subroutine nekStab_printNEKParams ! print initialization for sanity check
@@ -465,27 +465,23 @@
          integer, intent(in) :: skip
          character(len=*), intent(in) :: fname
          real glsc3, uek, vek, wek, eek, pot
-         save eek
-         logical, save :: initialized
-         data initialized/.false./
          nv = nx1*ny1*nz1*nelv
          nt = nx1*ny1*nz1*nelt
          eek = 0.50d0/volvm1
          uek = 0.0d0; vek = 0.0d0; wek = 0.0d0; pot = 0.0d0
-      
-         if (.not. initialized) then
-            if (nid == 0) open (730, file=trim(fname), action='write', status='replace')
-            initialized = .true.
-         end if
-      
+
          if (mod(istep, skip) == 0) then
             uek = glsc3(px, px, bm1s, nv)
             vek = glsc3(py, py, bm1s, nv)
-            if (if3d) wek = glsc3(pz, pz, bm1s, nv)
+            if (if3D) wek = glsc3(pz, pz, bm1s, nv)
             if (ifheat) pot = glsc3(pt(:, 1), ym1, bm1s, nt)
-            if (nid == 0) write (730, "(6E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek, pot*eek
+            if (nid == 0) then
+               open(unit=730, file=trim(fname), action='write', status='unknown', position='append')
+               write (730, "(6E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek, pot*eek
+               close(730)
+            end if
          end if
-      
+
          return
       end subroutine nekStab_energy
       !-----------------------------------------------------------------------
@@ -502,27 +498,22 @@
          real vort(lv, 3), wo1(lv), wo2(lv)
          common/ugrad/vort, wo1, wo2
          real glsc3, uek, vek, wek, eek
-         save eek
-         logical, save :: initialized
-         data initialized/.false./
          nv = nx1*ny1*nz1*nelv
          eek = 0.50d0/volvm1
          uek = 0.0d0; vek = 0.0d0; wek = 0.0d0
-      
-         if (.not. initialized) then
-            if (nid == 0) open (736, file=trim(fname), action='write', status='replace')
-            initialized = .true.
-         end if
-      
+
          if (mod(istep, skip) == 0) then
             call comp_vort3(vort, wo1, wo2, px, py, pz)
             uek = glsc3(vort(1, 1), vort(1, 1), bm1s, nv)
             vek = glsc3(vort(1, 2), vort(1, 2), bm1s, nv)
-            if (if3d) wek = glsc3(vort(1, 3), vort(1, 3), bm1s, nv)
-            if (nid == 0) write (736, "(5E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek
-      
+            if (if3D) wek = glsc3(vort(1, 3), vort(1, 3), bm1s, nv)
+            if (nid == 0) then
+               open(unit=736, file=trim(fname), action='write', status='unknown', position='append')
+               write (736, "(5E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek
+               close(736)
+            end if
          end if
-      
+
          return
       end subroutine nekStab_enstrophy
       !-----------------------------------------------------------------------
@@ -531,24 +522,24 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
+
          integer, intent(in) :: skip
          character(len=*), intent(in) :: fname
-      
+
          logical, save :: initialized
          data initialized/.false./
-      
+
          integer, save :: bIDs(1), iobj_wall(1)
-      
+
          real, save :: x0(3), scale
          data x0/3*0/
-      
+
          integer :: nij, i, iobj, memtot, mem, ieg, ifc, ie
          integer, parameter :: lr = lx1*ly1*lz1
-      
+
          real glmin, glmax, x1min, x2min, x3min, x1max, x2max, x3max, w1(0:maxobj)
          real flow_rate, base_flow, domain_length, xsec, scale_vf(3), sij, pm1, xm0, ym0, zm0
-      
+
          real ur, us, ut, vr, vs, vt, wr, ws, wt
          common/scruz/ur(lr), us(lr), ut(lr), vr(lr), vs(lr), vt(lr), wr(lr), ws(lr), wt(lr)
          common/cvflow_r/flow_rate, base_flow, domain_length, xsec, scale_vf
@@ -556,7 +547,7 @@
          common/scrcg/pm1(lx1, ly1, lz1, lelv)
          common/scrsf/xm0(lx1, ly1, lz1, lelt), ym0(lx1, ly1, lz1, lelt), zm0(lx1, ly1, lz1, lelt)
          nv = lx1*ly1*lz1*nelv
-      
+
          if (.not. initialized) then
             if (nid == 0) write (6, *) 'Initializing torque routine...'
             if (nid == 0) open (737, file=trim(fname), action='write', status='replace')
@@ -565,9 +556,9 @@
             scale = 2
             initialized = .true.
          end if
-      
+
          if (mod(istep, skip) == 0) then
-      
+
             call mappr(pm1, pr, xm0, ym0) ! map pressure onto Mesh 1
             if (param(55) /= 0) then
                dpdx_mean = -scale_vf(1)
@@ -578,7 +569,7 @@
             call add2s2(pm1, ym1, dpdy_mean, nv) ! periodicboundary.  In this case,
             call add2s2(pm1, zm1, dpdz_mean, nv) ! set ._mean=0 and compensate in
             nij = 3
-            if (if3d .or. ifaxis) nij = 6
+            if (if3D .or. ifaxis) nij = 6
             call comp_sij(sij, nij, vx, vy, vz, ur, us, ut, vr, vs, vt, wr, ws, wt)
             if (istep < 1) call cfill(vdiff, param(2), nv)
             call cadd2(xm0, xm1, -x0(1), nv)
@@ -675,7 +666,7 @@
             end do
             do i = 1, nobj
                if (nio == 0) then
-                  if (if3d .or. ifaxis) then
+                  if (if3D .or. ifaxis) then
                      write (737, "(i8,19E15.7)") istep, time,
      $   dragx(i), dragpx(i), dragvx(i), dragy(i), dragpy(i), dragvy(i), dragz(i), dragpz(i), dragvz(i),
      $   torqx(i), torqpx(i), torqvx(i), torqy(i), torqpy(i), torqvy(i), torqz(i), torqpz(i), torqvz(i)
@@ -695,13 +686,13 @@
          include 'SIZE'
          include 'TOTAL'
          integer iel, ifc
-      
+
          do iel = 1, nelt
             do ifc = 1, 2*ndim
                if (cbc(ifc, iel, 1) == 'W  ') boundaryID(ifc, iel) = 1
             end do
          end do
-      
+
          return
       end subroutine nekStab_define_obj
       !-----------------------------------------------------------------------
@@ -722,7 +713,7 @@
          real, save :: p_now, p_sum, p_mean, p_old
          integer, save :: probe_nel, probe_nid, t_cross_count
          integer :: i
-      
+
          if (istep == 0) then
             if (nid == 0) write (6, *) 'Initializing zero-crossing routine...'
             probe_nel = 0; probe_nid = 0; vdot = 0.0d0; vddot = 0.0d0
@@ -735,12 +726,12 @@
             if (nid == 0) open (unit=19, file='zc_poincare.dat')
             call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
          end if
-      
+
          velp(plor) = 0.0d0
          if (probe_nid == 1) velp(plor) = vy(probe_nel, 1, 1, 1)
          velp(plor) = glsum(velp(plor), 1) !broadcast
          dtime = time - time0
-      
+
          if (istep > 1) then
             v_sum = v_sum + velp(plor)*dt !(v_mean*(dtime-dt)+v_now*dt)/dtime
             v_mean = v_mean_init + v_sum/dtime
@@ -748,19 +739,19 @@
       !     if(nid.eq.0)write(6,*)'         v_sum, dtime= ',v_sum,dtime
          end if
          if (velp(plor - 1) <= v_mean .and. velp(plor) >= v_mean) then !period found
-      
+
             p_old = p_now !save old value
             t_cross_old = t_cross !save old value
             t_cross = dtime !update new value
             p_now = t_cross - t_cross_old !compute period
-      
+
             call opsub3(do1, do2, do3, vx, vy, vz, T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3)) !ub=v-vold
             call normvc(h1, semi, l2, linf, do1, do2, do3)
             call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
             if (nid == 0) write (6, *) ' Zero-crossing T=', p_now, abs(p_now - p_old), l2
             v_cross_old = v_cross; v_cross = velp(plor)
             if (nid == 0) write (17, "(5E15.7)") time, p_now, abs(p_now - p_old), v_mean, l2
-      
+
          end if
       !     https://en.wikipedia.org/wiki/Finite_difference_coefficient
          if (istep > 3) then
@@ -770,11 +761,11 @@
             vdot = 0.0d0; vddot = 0.0d0
          end if
          if (nid == 0) write (19, "(4E15.7)") time, velp(plor), vdot, vddot
-      
+
          do i = 1, plor - 1
             velp(i) = velp(i + 1)
          end do
-      
+
          return
       end subroutine zero_crossing
       !-----------------------------------------------------------------------
