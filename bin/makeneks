@@ -135,7 +135,7 @@ if command -v mpiifort >/dev/null 2>&1; then
         if [ "$MPIIFORT_VERSION" = "ifort (IFORT) 2021.9.0 20230302" ]; then
             echo "Detected mpiifort version 2021.9.0 20230302. Applying specific settings."
             CFLAGS+=" -diag-disable=10441 -diag-disable=42"
-            FFLAGS+=" -warn noalign"
+            FFLAGS+=" -diag-disable=10441 -warn noalign"
         else
             FFLAGS+=" -xHost" # comment if already included
         fi
