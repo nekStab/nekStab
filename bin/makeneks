@@ -186,7 +186,7 @@ else # GCC
     # USR_LFLAGS+=" -I/usr/local/opt/openblas/include -L/usr/local/opt/openblas/lib -lopenblas"
 
 fi
-CFLAGS=" -w" # supress C warnings 
+CFLAGS+=" -w" # supress C warnings 
 
 LD="$FC" # Linker (default to Fortran compiler)
 #-------------------------------------------------------------------------------
