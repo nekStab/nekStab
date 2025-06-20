@@ -129,8 +129,6 @@ if command -v mpiifort >/dev/null 2>&1; then
     # else # mpiifort
 
         echo "Using Intel Compiler Classic..."
-               
-        # Specific check for mpiifort version 2021.9.0 20230302 in JeanZay
         MPIIFORT_VERSION=$(mpiifort --version | head -n 1)
         if [ "$MPIIFORT_VERSION" = "ifort (IFORT) 2021.9.0 20230302" ]; then
             echo "Detected mpiifort version 2021.9.0 20230302. Applying specific settings."
@@ -139,11 +137,6 @@ if command -v mpiifort >/dev/null 2>&1; then
         else
             FFLAGS+=" -xHost" # comment if already included
         fi
-
-        # for other older Intel compilers
-        # FFLAGS+=" -diag-disable=6375"  
-        # FFLAGS+=" -diag-disable=10441" #ifort version 2021.10.0
-        # CFLAGS+=" -diag-disable=10441" #icc version 2021.10.0 
 
         export PPLIST="VENDOR_BLAS" # we are using LP64 and NOT 64bit integer in ILP64
         FFLAGS+=" -qmkl=sequential -I${MKLROOT}/include" # using LP64 and NOT 64bit integer in ILP64
@@ -249,12 +242,16 @@ fi
 export USR
 
 # Output summary of settings
-echo "Nek5000 version: $N_VERSION"
-echo "nekStab version: $NS_VERSION"
-echo "preparing compilation with: $(
-    which $FC
-    echo "FFLAGS="$FFLAGS
-    echo "USR_LFLAGS="$USR_LFLAGS)"
+echo "---------------- Compilation Summary ----------------"
+echo "Nek5000 version : $N_VERSION"
+echo "nekStab version : $NS_VERSION"
+echo "Compiler (FC)   : $FC ($(which $FC))"
+echo "CC              : $CC ($(which $CC))"
+echo "CFLAGS          : $CFLAGS"
+echo "LD              : $LD"
+echo "FFLAGS          : $FFLAGS"
+echo "USR_LFLAGS      : $USR_LFLAGS"
+echo "-----------------------------------------------------"
 
 # Update makefile and static variables
 cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
