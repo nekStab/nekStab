@@ -549,12 +549,18 @@
          nv = lx1*ly1*lz1*nelv
 
          if (.not. initialized) then
-            if (nid == 0) write (6, *) 'Initializing torque routine...'
+            if (nid == 0) write (6, *) 'Initializing torque routine... (nid =', nid, ')'
+            if (nid == 0) write (6, *) 'About to open file ', trim(fname)
             if (nid == 0) open (737, file=trim(fname), action='write', status='replace')
+            if (nid == 0) write (6, *) 'File opened. Setting bIDs(1) = 1'
             bIDs(1) = 1
+            if (nid == 0) write (6, *) 'Calling create_obj: iobj_wall(1) [before] =', iobj_wall(1), ', bIDs(1) =', bIDs(1)
             call create_obj(iobj_wall(1), bIDs, 1)
+            if (nid == 0) write (6, *) 'Returned from create_obj: iobj_wall(1) [after] =', iobj_wall(1)
             scale = 2
+            if (nid == 0) write (6, *) 'Set scale =', scale
             initialized = .true.
+            if (nid == 0) write (6, *) 'Initialization block completed.'
          end if
 
          if (mod(istep, skip) == 0) then
@@ -681,20 +687,28 @@
       end subroutine nekStab_torque
       !-----------------------------------------------------------------------
       subroutine nekStab_define_obj
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-         integer iel, ifc
-
-         do iel = 1, nelt
-            do ifc = 1, 2*ndim
-               if (cbc(ifc, iel, 1) == 'W  ') boundaryID(ifc, iel) = 1
-            end do
-         end do
-
-         return
-      end subroutine nekStab_define_obj
+   use krylov_subspace
+   implicit none
+   include 'SIZE'
+   include 'TOTAL'
+   integer iel, ifc
+   integer n_set
+   n_set = 0
+   write(6,*) 'Entering nekStab_define_obj'
+   do iel = 1, nelt
+      do ifc = 1, 2*ndim
+         if (cbc(ifc, iel, 1) == 'W  ') then
+            boundaryID(ifc, iel) = 1
+            n_set = n_set + 1
+            if (n_set <= 10) then
+               write(6,*) 'Set boundaryID(',ifc,',',iel,') = 1'
+            end if
+         end if
+      end do
+   end do
+   write(6,*) 'nekStab_define_obj: Total boundaries set =', n_set
+   return
+end subroutine nekStab_define_obj
       !-----------------------------------------------------------------------
       subroutine zero_crossing(v_mean_init)
          use krylov_subspace
