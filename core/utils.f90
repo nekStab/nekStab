@@ -687,28 +687,28 @@
       end subroutine nekStab_torque
       !-----------------------------------------------------------------------
       subroutine nekStab_define_obj
-   use krylov_subspace
-   implicit none
-   include 'SIZE'
-   include 'TOTAL'
-   integer iel, ifc
-   integer n_set
-   n_set = 0
-   write(6,*) 'Entering nekStab_define_obj'
-   do iel = 1, nelt
-      do ifc = 1, 2*ndim
-         if (cbc(ifc, iel, 1) == 'W  ') then
-            boundaryID(ifc, iel) = 1
-            n_set = n_set + 1
-            if (n_set <= 10) then
-               write(6,*) 'Set boundaryID(',ifc,',',iel,') = 1'
-            end if
-         end if
-      end do
-   end do
-   write(6,*) 'nekStab_define_obj: Total boundaries set =', n_set
-   return
-end subroutine nekStab_define_obj
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         integer iel, ifc
+         integer n_set
+         n_set = 0
+         write(6,*) 'Entering nekStab_define_obj'
+         do iel = 1, nelt
+            do ifc = 1, 2*ndim
+               if (cbc(ifc, iel, 1) == 'W  ') then
+                  boundaryID(ifc, iel) = 1
+                  n_set = n_set + 1
+                  if (n_set <= 10) then
+                     write(6,*) 'Set boundaryID(',ifc,',',iel,') = 1'
+                  end if
+               end if
+            end do
+         end do
+         write(6,*) 'nekStab_define_obj: Total boundaries set =', n_set
+         return
+      end subroutine nekStab_define_obj
       !-----------------------------------------------------------------------
       subroutine zero_crossing(v_mean_init)
          use krylov_subspace
