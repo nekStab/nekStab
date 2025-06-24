@@ -518,35 +518,33 @@
       end subroutine nekStab_enstrophy
       !-----------------------------------------------------------------------
       subroutine nekStab_torque(fname, skip)
-         use krylov_subspace
-         implicit none
+         !use krylov_subspace
+         !implicit none
          include 'SIZE'
          include 'TOTAL'
-
          integer, intent(in) :: skip
          character(len=*), intent(in) :: fname
 
-         logical, save :: initialized
-         data initialized/.false./
-
-         integer, save :: bIDs(1), iobj_wall(1)
+         common /scrns/ sij (lx1*ly1*lz1*6*lelv)
+         common /scrcg/ pm1 (lx1,ly1,lz1,lelv)
+         common /scrsf/ xm0(lx1,ly1,lz1,lelt), ym0(lx1,ly1,lz1,lelt), zm0(lx1,ly1,lz1,lelt)
+         parameter (lr=lx1*ly1*lz1)
+         common /scruz/ ur(lr),us(lr),ut(lr),vr(lr),vs(lr),vt(lr),wr(lr),ws(lr),wt(lr)
+         common /cvflow_r/ scale_vf(3)
 
          real, save :: x0(3), scale
-         data x0/3*0/
+         data x0 /3*0.0d0/
+         data scale /2.0d0/
+         real :: w1(0:maxobj)
+         integer n, i, ie, iobj, memtot, mem, ieg, ifc, nij
+         real glmin, glmax, x1min, x2min, x3min, x1max, x2max, x3max
+        
+         logical, save :: initialized
+         data initialized/.false./
+        
+         integer, save :: bIDs(1), iobj_wall(1)
 
-         integer :: nij, i, iobj, memtot, mem, ieg, ifc, ie
-         integer, parameter :: lr = lx1*ly1*lz1
-
-         real glmin, glmax, x1min, x2min, x3min, x1max, x2max, x3max, w1(0:maxobj)
-         real flow_rate, base_flow, domain_length, xsec, scale_vf(3), sij, pm1, xm0, ym0, zm0
-
-         real ur, us, ut, vr, vs, vt, wr, ws, wt
-         common/scruz/ur(lr), us(lr), ut(lr), vr(lr), vs(lr), vt(lr), wr(lr), ws(lr), wt(lr)
-         common/cvflow_r/flow_rate, base_flow, domain_length, xsec, scale_vf
-      !common/scrns/sij(lx1*ly1*lz1*6*lelv)
-         common/scrcg/pm1(lx1, ly1, lz1, lelv)
-         common/scrsf/xm0(lx1, ly1, lz1, lelt), ym0(lx1, ly1, lz1, lelt), zm0(lx1, ly1, lz1, lelt)
-         nv = lx1*ly1*lz1*nelv
+         n = nx1*ny1*nz1*nelv
 
          if (.not. initialized) then
             if (nid == 0) write (6, *) 'Initializing torque routine... (nid =', nid, ')'
@@ -557,133 +555,155 @@
             if (nid == 0) write (6, *) 'Calling create_obj: iobj_wall(1) [before] =', iobj_wall(1), ', bIDs(1) =', bIDs(1)
             call create_obj(iobj_wall(1), bIDs, 1)
             if (nid == 0) write (6, *) 'Returned from create_obj: iobj_wall(1) [after] =', iobj_wall(1)
-            scale = 2
-            if (nid == 0) write (6, *) 'Set scale =', scale
             initialized = .true.
             if (nid == 0) write (6, *) 'Initialization block completed.'
          end if
 
-         if (mod(istep, skip) == 0) then
+         if (mod(istep, skip) /= 0) return
 
-            call mappr(pm1, pr, xm0, ym0) ! map pressure onto Mesh 1
-            if (param(55) /= 0) then
-               dpdx_mean = -scale_vf(1)
-               dpdy_mean = -scale_vf(2)
-               dpdz_mean = -scale_vf(3)
-            end if
-            call add2s2(pm1, xm1, dpdx_mean, nv) ! Doesn't work if object is cut by
-            call add2s2(pm1, ym1, dpdy_mean, nv) ! periodicboundary.  In this case,
-            call add2s2(pm1, zm1, dpdz_mean, nv) ! set ._mean=0 and compensate in
-            nij = 3
-            if (if3D .or. ifaxis) nij = 6
-            call comp_sij(sij, nij, vx, vy, vz, ur, us, ut, vr, vs, vt, wr, ws, wt)
-            if (istep < 1) call cfill(vdiff, param(2), nv)
-            call cadd2(xm0, xm1, -x0(1), nv)
-            call cadd2(ym0, ym1, -x0(2), nv)
-            call cadd2(zm0, zm1, -x0(3), nv)
-            x1min = glmin(xm0(1, 1, 1, 1), nv)
-            x2min = glmin(ym0(1, 1, 1, 1), nv)
-            x3min = glmin(zm0(1, 1, 1, 1), nv)
-            x1max = glmax(xm0(1, 1, 1, 1), nv)
-            x2max = glmax(ym0(1, 1, 1, 1), nv)
-            x3max = glmax(zm0(1, 1, 1, 1), nv)
-            do i = 0, maxobj
-               dragpx(i) = 0 ! BIG CODE  :}
-               dragvx(i) = 0
-               dragx(i) = 0
-               dragpy(i) = 0
-               dragvy(i) = 0
-               dragy(i) = 0
-               dragpz(i) = 0
-               dragvz(i) = 0
-               dragz(i) = 0
-               torqpx(i) = 0
-               torqvx(i) = 0
-               torqx(i) = 0
-               torqpy(i) = 0
-               torqvy(i) = 0
-               torqy(i) = 0
-               torqpz(i) = 0
-               torqvz(i) = 0
-               torqz(i) = 0
+         call mappr(pm1, pr, xm0, ym0) ! map pressure onto Mesh 1
+
+         if (param(55) /= 0) then ! Add mean_pressure_gradient.X to p:
+            dpdx_mean = -scale_vf(1)
+            dpdy_mean = -scale_vf(2)
+            dpdz_mean = -scale_vf(3)
+         end if
+
+         call add2s2(pm1, xm1, dpdx_mean, n)  ! Doesn't work if object is cut by periodic boundary.
+         call add2s2(pm1, ym1, dpdy_mean, n)  ! In this case, set ._mean=0 and compensate in post.
+         call add2s2(pm1, zm1, dpdz_mean, n)
+
+         nij = 3 ! Compute sij
+         if (if3d .or. ifaxis) nij = 6
+         call comp_sij(sij, nij, vx, vy, vz, ur, us, ut, vr, vs, vt, wr, ws, wt)
+
+         if (istep < 1) then ! Fill up viscous array with default
+            call cfill(vdiff, param(2), n)
+         end if
+
+         call cadd2(xm0, xm1, -x0(1), n)
+         call cadd2(ym0, ym1, -x0(2), n)
+         call cadd2(zm0, zm1, -x0(3), n)
+
+         x1min = glmin(xm0(1,1,1,1), n)
+         x2min = glmin(ym0(1,1,1,1), n)
+         x3min = glmin(zm0(1,1,1,1), n)
+         x1max = glmax(xm0(1,1,1,1), n)
+         x2max = glmax(ym0(1,1,1,1), n)
+         x3max = glmax(zm0(1,1,1,1), n)
+
+         do i = 0, maxobj
+            dragpx(i) = 0   ! Pressure drag x
+            dragvx(i) = 0   ! Viscous drag x
+            dragx(i)  = 0   ! Total drag x
+            dragpy(i) = 0
+            dragvy(i) = 0
+            dragy(i)  = 0
+            dragpz(i) = 0
+            dragvz(i) = 0
+            dragz(i)  = 0
+            torqpx(i) = 0
+            torqvx(i) = 0
+            torqx(i)  = 0
+            torqpy(i) = 0
+            torqvy(i) = 0
+            torqy(i)  = 0
+            torqpz(i) = 0
+            torqvz(i) = 0
+            torqz(i)  = 0
+         end do
+
+         ifield = 1
+         do iobj = 1, nobj
+            memtot = nmember(iobj)
+            do mem = 1, memtot
+                ieg = object(iobj, mem, 1)
+                ifc = object(iobj, mem, 2)
+                if (gllnid(ieg) == nid) then ! This processor has a contribution
+                    ie = gllel(ieg)
+                    call drgtrq(dgtq, xm0, ym0, zm0, sij, pm1, vdiff, ifc, ie)
+                    call cmult(dgtq, scale, 12)
+
+                    dragpx(iobj) = dragpx(iobj) + dgtq(1,1)  ! Pressure
+                    dragpy(iobj) = dragpy(iobj) + dgtq(2,1)
+                    dragpz(iobj) = dragpz(iobj) + dgtq(3,1)
+
+                    dragvx(iobj) = dragvx(iobj) + dgtq(1,2)  ! Viscous
+                    dragvy(iobj) = dragvy(iobj) + dgtq(2,2)
+                    dragvz(iobj) = dragvz(iobj) + dgtq(3,2)
+
+                    torqpx(iobj) = torqpx(iobj) + dgtq(1,3)  ! Pressure
+                    torqpy(iobj) = torqpy(iobj) + dgtq(2,3)
+                    torqpz(iobj) = torqpz(iobj) + dgtq(3,3)
+
+                    torqvx(iobj) = torqvx(iobj) + dgtq(1,4)  ! Viscous
+                    torqvy(iobj) = torqvy(iobj) + dgtq(2,4)
+                    torqvz(iobj) = torqvz(iobj) + dgtq(3,4)
+                end if
             end do
-            ifield = 1
-            do iobj = 1, nobj
-               memtot = nmember(iobj)
-               do mem = 1, memtot
-                  ieg = object(iobj, mem, 1)
-                  ifc = object(iobj, mem, 2)
-                  if (gllnid(ieg) == nid) then ! this processor has a contribution
-                     ie = gllel(ieg)
-                     call drgtrq(dgtq, xm0, ym0, zm0, sij, pm1, vdiff, ifc, ie)
-                     call cmult(dgtq, scale, 12)
-                     dragpx(iobj) = dragpx(iobj) + dgtq(1, 1) ! pressure
-                     dragpy(iobj) = dragpy(iobj) + dgtq(2, 1)
-                     dragpz(iobj) = dragpz(iobj) + dgtq(3, 1)
-                     dragvx(iobj) = dragvx(iobj) + dgtq(1, 2) ! viscous
-                     dragvy(iobj) = dragvy(iobj) + dgtq(2, 2)
-                     dragvz(iobj) = dragvz(iobj) + dgtq(3, 2)
-                     torqpx(iobj) = torqpx(iobj) + dgtq(1, 3) ! pressure
-                     torqpy(iobj) = torqpy(iobj) + dgtq(2, 3)
-                     torqpz(iobj) = torqpz(iobj) + dgtq(3, 3)
-                     torqvx(iobj) = torqvx(iobj) + dgtq(1, 4) ! viscous
-                     torqvy(iobj) = torqvy(iobj) + dgtq(2, 4)
-                     torqvz(iobj) = torqvz(iobj) + dgtq(3, 4)
-                  end if
-               end do
-            end do
-            call gop(dragpx, w1, '+  ', maxobj + 1)
-            call gop(dragpy, w1, '+  ', maxobj + 1)
-            call gop(dragpz, w1, '+  ', maxobj + 1)
-            call gop(dragvx, w1, '+  ', maxobj + 1)
-            call gop(dragvy, w1, '+  ', maxobj + 1)
-            call gop(dragvz, w1, '+  ', maxobj + 1)
-            call gop(torqpx, w1, '+  ', maxobj + 1)
-            call gop(torqpy, w1, '+  ', maxobj + 1)
-            call gop(torqpz, w1, '+  ', maxobj + 1)
-            call gop(torqvx, w1, '+  ', maxobj + 1)
-            call gop(torqvy, w1, '+  ', maxobj + 1)
-            call gop(torqvz, w1, '+  ', maxobj + 1)
-            do i = 1, nobj
-               dragx(i) = dragpx(i) + dragvx(i)
-               dragy(i) = dragpy(i) + dragvy(i)
-               dragz(i) = dragpz(i) + dragvz(i)
-               torqx(i) = torqpx(i) + torqvx(i)
-               torqy(i) = torqpy(i) + torqvy(i)
-               torqz(i) = torqpz(i) + torqvz(i)
-               dragpx(0) = dragpx(0) + dragpx(i)
-               dragvx(0) = dragvx(0) + dragvx(i)
-               dragx(0) = dragx(0) + dragx(i)
-               dragpy(0) = dragpy(0) + dragpy(i)
-               dragvy(0) = dragvy(0) + dragvy(i)
-               dragy(0) = dragy(0) + dragy(i)
-               dragpz(0) = dragpz(0) + dragpz(i)
-               dragvz(0) = dragvz(0) + dragvz(i)
-               dragz(0) = dragz(0) + dragz(i)
-               torqpx(0) = torqpx(0) + torqpx(i)
-               torqvx(0) = torqvx(0) + torqvx(i)
-               torqx(0) = torqx(0) + torqx(i)
-               torqpy(0) = torqpy(0) + torqpy(i)
-               torqvy(0) = torqvy(0) + torqvy(i)
-               torqy(0) = torqy(0) + torqy(i)
-               torqpz(0) = torqpz(0) + torqpz(i)
-               torqvz(0) = torqvz(0) + torqvz(i)
-               torqz(0) = torqz(0) + torqz(i)
-            end do
-            do i = 1, nobj
-               if (nio == 0) then
-                  if (if3D .or. ifaxis) then
-                     write (737, "(i8,19E15.7)") istep, time,
+         end do
+
+         ! Sum contributions from all processors
+         call gop(dragpx, w1, '+  ', maxobj+1)
+         call gop(dragpy, w1, '+  ', maxobj+1)
+         call gop(dragpz, w1, '+  ', maxobj+1)
+         call gop(dragvx, w1, '+  ', maxobj+1)
+         call gop(dragvy, w1, '+  ', maxobj+1)
+         call gop(dragvz, w1, '+  ', maxobj+1)
+         call gop(torqpx, w1, '+  ', maxobj+1)
+         call gop(torqpy, w1, '+  ', maxobj+1)
+         call gop(torqpz, w1, '+  ', maxobj+1)
+         call gop(torqvx, w1, '+  ', maxobj+1)
+         call gop(torqvy, w1, '+  ', maxobj+1)
+         call gop(torqvz, w1, '+  ', maxobj+1)
+
+         do i = 1, nobj ! Combine results
+            dragx(i) = dragpx(i) + dragvx(i)
+            dragy(i) = dragpy(i) + dragvy(i)
+            dragz(i) = dragpz(i) + dragvz(i)
+
+            torqx(i) = torqpx(i) + torqvx(i)
+            torqy(i) = torqpy(i) + torqvy(i)
+            torqz(i) = torqpz(i) + torqvz(i)
+
+            dragpx(0) = dragpx(0) + dragpx(i)
+            dragvx(0) = dragvx(0) + dragvx(i)
+            dragx(0)  = dragx(0)  + dragx(i)
+
+            dragpy(0) = dragpy(0) + dragpy(i)
+            dragvy(0) = dragvy(0) + dragvy(i)
+            dragy(0)  = dragy(0)  + dragy(i)
+
+            dragpz(0) = dragpz(0) + dragpz(i)
+            dragvz(0) = dragvz(0) + dragvz(i)
+            dragz(0)  = dragz(0)  + dragz(i)
+
+            torqpx(0) = torqpx(0) + torqpx(i)
+            torqvx(0) = torqvx(0) + torqvx(i)
+            torqx(0)  = torqx(0)  + torqx(i)
+
+            torqpy(0) = torqpy(0) + torqpy(i)
+            torqvy(0) = torqvy(0) + torqvy(i)
+            torqy(0)  = torqy(0)  + torqy(i)
+
+            torqpz(0) = torqpz(0) + torqpz(i)
+            torqvz(0) = torqvz(0) + torqvz(i)
+            torqz(0)  = torqz(0)  + torqz(i)
+         end do
+
+         do i = 1, nobj ! Write results
+            if (nio == 0) then
+               if (if3D .or. ifaxis) then ! 3D or axisymmetric
+                  write (737, "(i8,19E15.7)") istep, time,
      $   dragx(i), dragpx(i), dragvx(i), dragy(i), dragpy(i), dragvy(i), dragz(i), dragpz(i), dragvz(i),
      $   torqx(i), torqpx(i), torqvx(i), torqy(i), torqpy(i), torqvy(i), torqz(i), torqpz(i), torqvz(i)
-                  else
-                     write (737, "(i8,10E15.7)") istep, time,
+               else ! 2D or not axisymmetric
+               write (737, "(i8,10E15.7)") istep, time,
      $   dragx(i), dragpx(i), dragvx(i), dragy(i), dragpy(i), dragvy(i), torqz(i), torqpz(i), torqvz(i)
-                  end if
-               end if
-            end do
-         end if
-         return
+            end if ! if3D .or. ifaxis
+         end if ! nio == 0
+        end do ! i = 1, nobj
+
       end subroutine nekStab_torque
       !-----------------------------------------------------------------------
       subroutine nekStab_define_obj
@@ -691,23 +711,15 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         integer iel, ifc
-         integer n_set
-         n_set = 0
-         write(6,*) 'Entering nekStab_define_obj'
-         do iel = 1, nelt
-            do ifc = 1, 2*ndim
-               if (cbc(ifc, iel, 1) == 'W  ') then
-                  boundaryID(ifc, iel) = 1
-                  n_set = n_set + 1
-                  if (n_set <= 10) then
-                     write(6,*) 'Set boundaryID(',ifc,',',iel,') = 1'
-                  end if
-               end if
-            end do
-         end do
-         write(6,*) 'nekStab_define_obj: Total boundaries set =', n_set
-         return
+         integer nface, iel, iface
+         nface = 2*ndim
+         do iel=1,nelt
+            do iface = 1, nface
+               if (cbc(iface,iel,1) .eq. 'W  ') then
+                  boundaryID(iface,iel) = 1
+               endif
+            enddo 
+         enddo
       end subroutine nekStab_define_obj
       !-----------------------------------------------------------------------
       subroutine zero_crossing(v_mean_init)
