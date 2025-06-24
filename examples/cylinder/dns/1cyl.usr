@@ -5,13 +5,13 @@ c-----------------------------------------------------------------------
 
       call nekStab
       call hpts
+      call nekStab_torque('lift_drag.dat', 1)
 
       end
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
       include 'SIZE'
       include 'TOTAL'
-
       if(istep.eq.0)then !change defaults
 
         xLspg = uparam(8); call bcast(xLspg , wdsize)
@@ -90,30 +90,30 @@ c-----------------------------------------------------------------------
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
-      integer iel,ifc
-      
+
       !this mesh was generatd with genbox
       !with only BCs for velicity
       !here we chenge outflow to dirichlet if adjoint
       !and initilize BCs for scalar field
 
-      if(uparam(1)==3.2)then !if adjoint, change BCs
-      do iel=1,nelt
-      do ifc = 1, 2*ndim
-        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
-      enddo
-      enddo
-      endif
+      !if(uparam(1)==3.2)then !if adjoint, change BCs
+      !do iel=1,nelt
+      !do ifc = 1, 2*ndim
+      !  if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      !enddo
+      !enddo
+      !endif
 
-      if(ifheat)then
-      cbc(:,:,2)=cbc(:,:,1)
-      do iel=1,nelt
-       do ifc = 1, 2*ndim
-        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
-        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
-      enddo
-      enddo
-      endif
+      !if(ifheat)then
+      !cbc(:,:,2)=cbc(:,:,1)
+      !do iel=1,nelt
+      ! do ifc = 1, 2*ndim
+      !  if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+      !  if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      !enddo
+      !enddo
+      !endif
 
-      return
+      call nekStab_define_obj
+
       end
