@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# ============================================================================
+# To create a conda environment suitable for NekStab/Nek5000 on macOS ARM:
+#   conda create -n nek -c conda-forge gfortran openmpi cmake
+#   conda activate nek
+# ============================================================================
+
 set -a # export all variables and functions defined in the script
 
 # Initialize flags
@@ -99,8 +106,8 @@ fi
 # Compiler Detection
 #-------------------------------------------------------------------------------
 if command -v mpiifort >/dev/null 2>&1; then
-    echo "Compiler found: $(which mpiifort)"
-    echo "$(mpiifort --version | head -n1)"
+    # echo "Compiler found: $(which mpiifort)"
+    # echo "$(mpiifort --version | head -n1)"
 
     # set default compiler to Intel
     FC="mpiifort"
@@ -188,7 +195,22 @@ else # GCC
 fi
 CFLAGS+=" -w" # supress C warnings 
 
-LD="$FC" # Linker (default to Fortran compiler)
+#-------------------------------------------------------------------------------
+# Conda/Library Path Handling (macOS & Linux)
+#-------------------------------------------------------------------------------
+# Only add conda lib paths if in a conda env, and mpif90 is NOT the conda-forge wrapper
+# if [[ -n "$CONDA_PREFIX" ]]; then
+#     mpif90_path=$(command -v mpif90)
+#    # Always add conda lib paths if in a conda env
+#     if [[ "$USR_LFLAGS" != *"-L$CONDA_PREFIX/lib"* ]]; then
+#         USR_LFLAGS+=" -L$CONDA_PREFIX/lib"
+#     fi
+#     if [[ "$USR_LFLAGS" != *"-Wl,-rpath,$CONDA_PREFIX/lib"* ]]; then
+#         USR_LFLAGS+=" -Wl,-rpath,$CONDA_PREFIX/lib"
+#     fi
+# fi
+
+LD="$FC" # Linker (default to Fortran compiler as main program is in Fortran)
 #-------------------------------------------------------------------------------
 # Architecture Detection
 #-------------------------------------------------------------------------------
@@ -242,15 +264,20 @@ fi
 export USR
 
 # Output summary of settings
-echo "---------------- Compilation Summary ----------------"
-echo "Nek5000 version : $N_VERSION"
-echo "nekStab version : $NS_VERSION"
-echo "Compiler (FC)   : $FC ($(which $FC))"
-echo "CC              : $CC ($(which $CC))"
-echo "CFLAGS          : $CFLAGS"
-echo "LD              : $LD"
-echo "FFLAGS          : $FFLAGS"
-echo "USR_LFLAGS      : $USR_LFLAGS"
+echo "---------------- Compilation Details ----------------"
+echo "Nek5000 version: $N_VERSION"
+echo "nekStab version: $NS_VERSION"
+echo "mpiexec version: $(mpiexec --version | head -n1) [$(which mpiexec)]"
+echo "mpirun version: $(mpirun --version | head -n1) [$(which mpirun)]"
+echo "---------------- C Compiler Details ----------------"
+echo "CC compiler: $CC ($(which $CC 2>/dev/null || echo not found))"
+echo "CC version: $($CC --version | head -n1)"
+echo "CFLAGS: $CFLAGS"
+echo "---------------- Fortran Compiler Details ----------------"
+echo "FC compiler: $FC ($(which $FC 2>/dev/null || echo not found)) [LD : $LD]"
+echo "FC version: $($FC --version | head -n1)"
+echo "FFLAGS: $FFLAGS"
+echo "USR_LFLAGS: $USR_LFLAGS"
 echo "-----------------------------------------------------"
 
 # Update makefile and static variables
