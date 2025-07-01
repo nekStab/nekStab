@@ -707,14 +707,12 @@
       end subroutine nekStab_torque
       !-----------------------------------------------------------------------
       subroutine nekStab_define_obj
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         integer nface, iel, iface
-         nface = 2*ndim
+         integer iel, iface
          do iel=1,nelt
-            do iface = 1, nface
+            do iface = 1, 2*ndim
                if (cbc(iface,iel,1) .eq. 'W  ') then
                   boundaryID(iface,iel) = 1
                endif
