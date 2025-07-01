@@ -1,8 +1,8 @@
 [GENERAL]
-startFrom = rstcyl0.f00001
+startFrom = rst_1cyl0.f00001
 
 stopAt = endTime
-endTime = 1
+endTime = 10
 
 userParam01 = 0 # DNS mode
 
@@ -12,22 +12,22 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 100.
+writeInterval = 100
 writeDoublePrecision = no
 
 dealiasing = yes
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-05
+residualTol = 1.0E-06
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-07
+residualTol = 1.0E-08
 residualProj = no
 density = 1.0
 viscosity = -50.0
