@@ -5,7 +5,7 @@ c-----------------------------------------------------------------------
 
       call nekStab
       call hpts
-      call nekStab_torque('lift_drag.dat', 1)
+      call nekStab_torque('lift_drag.dat', 10)
 
       end
 c-----------------------------------------------------------------------
@@ -14,16 +14,16 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       if(istep.eq.0)then !change defaults
 
-        xLspg = uparam(8); call bcast(xLspg , wdsize)
-        xRspg = uparam(9); call bcast(xRspg , wdsize)
-        spng_st = uparam(10);  call bcast(spng_st, wdsize)
+        xLspg = 5; call bcast(xLspg , wdsize)
+        xRspg = 10; call bcast(xRspg , wdsize)
+        spng_st = 1.7;  call bcast(spng_st, wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
         schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = 10 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
-        ifvor = .true. ; call bcast(ifvor,lsize)
-        ifvox = .true. ; call bcast(ifvox,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
 
       endif
       end
@@ -114,6 +114,15 @@ c-----------------------------------------------------------------------
       !enddo
       !endif
 
-      call nekStab_define_obj
+         !!integer iel, iface
+         !do iel=1,nelt
+         !   do iface = 1, 2*ndim
+         !      if (cbc(iface,iel,1) .eq. 'W  ') then
+         !         boundaryID(iface,iel) = 1
+         !      endif
+         !   enddo
+         !enddo
+
+         call nekStab_define_obj
 
       end
