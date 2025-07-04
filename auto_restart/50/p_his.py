@@ -40,8 +40,12 @@ qual = 400
 fig_width = 4.3
 fig_height = 16 * fig_width / 9
 
+his_file = "1cyl.all"
+if not os.path.isfile(his_file):
+    his_file = "1cyl.his"
+
 files = [
-    "1cyl.his",
+    his_file,
 ]
 tskps = [0]  # set to 0 to plot all
 tmaxs = [0]

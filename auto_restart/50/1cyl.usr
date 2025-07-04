@@ -5,7 +5,7 @@ c-----------------------------------------------------------------------
 
       call nekStab
       call hpts
-      call nekStab_torque('lift_drag.dat', 10)
+      call nekStab_torque('lift_drag.dat', 2)
 
       end
 c-----------------------------------------------------------------------
@@ -13,10 +13,6 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       if(istep.eq.0)then !change defaults
-
-        xLspg = 5; call bcast(xLspg , wdsize)
-        xRspg = 10; call bcast(xRspg , wdsize)
-        spng_st = 1.7;  call bcast(spng_st, wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
         schur_tgt = 0 ; call bcast(schur_tgt,isize)
