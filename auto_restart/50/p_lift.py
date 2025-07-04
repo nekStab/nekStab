@@ -75,8 +75,11 @@ qual = 400
 fig_width = 4.3
 fig_height = 16 * fig_width / 9
 
-# Load and process lift_drag.dat using the loader class; remove all probe logic
 lift_drag_file = "lift_drag.dat"
+if not os.path.isfile(lift_drag_file):
+    lift_drag_file = "lift_drag.all"
+
+# Load and process lift_drag.dat using the loader class; remove all probe logic
 file_root = lift_drag_file.split(".")[0]
 loader = lif_drag3d_just_dgxyz(lift_drag_file)
 t = loader.t

@@ -178,8 +178,8 @@
             call nekStab_outpost ! outpost vorticity
             call nekStab_comment ! print comments
             ! energy of the base flow
-            call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
-            call nekStab_enstrophy(vx, vy, vz, t, 'total_enstrophy.dat', glob_skip)
+            !call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
+            !call nekStab_enstrophy(vx, vy, vz, t, 'total_enstrophy.dat', glob_skip)
 
       !if (lastep == 1) call nek_end -> this is done by Nek5000
 
