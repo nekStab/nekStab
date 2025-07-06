@@ -508,6 +508,7 @@ def adjust_par_file(pf, param_dict):
 
 def case_preserving_adjust_par_file(filename, param_dict):
     """Updates parameters in .par file, preserving case, spaces, and comments.
+    First tries exact case match, then falls back to case-insensitive matching.
     Args: filename (str), param_dict (dict of {(section, key): value})
     Returns: None
     """
@@ -534,9 +535,23 @@ def case_preserving_adjust_par_file(filename, param_dict):
 
         # For each key in this section, try to match and replace
         for (sect, key), value in param_lookup.items():
-            if sect == current_section:
+            # First try exact case match for section
+            section_matches = sect == current_section
+            
+            # If exact match fails, try case-insensitive fallback for section
+            if not section_matches:
+                section_matches = sect.lower() == current_section.lower()
+            
+            if section_matches:
+                # First try exact case match for key
                 key_re = re.compile(key_re_template.format(key=re.escape(key)))
                 m = key_re.match(line)
+                
+                # If exact match fails, try case-insensitive fallback for key
+                if not m:
+                    key_re_insensitive = re.compile(key_re_template.format(key=re.escape(key)), re.IGNORECASE)
+                    m = key_re_insensitive.match(line)
+                
                 if m:
                     # Reconstruct line: ensure exactly one space before comment if present
                     comment = m.group(3)
