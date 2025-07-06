@@ -33,6 +33,14 @@ plot_params = {
     "fig_height": 16 * 4.3 / 9,
 }
 
+# --- Reference Values Dictionary ---
+reference_values = {
+    "50": {"strouhal": 0.125, "description": "Re=50"},
+    # Add more Reynolds numbers here as needed:
+    # "100": {"strouhal": 0.164, "description": "Re=100"},
+    # "150": {"strouhal": 0.182, "description": "Re=150"},
+}
+
 # Update rcParams with only the valid keys to avoid errors
 valid_rc_keys = [
     "text.usetex",
@@ -46,14 +54,17 @@ plt.rcParams.update(rc_params_to_set)
 
 
 # --- Plotting Functions ---
-def plot_fft(ax, tn, vn, dt, label, color, scaling="spectrum", plot_reference=False):
+def plot_fft(ax, tn, vn, dt, label, color, scaling="spectrum", plot_reference=False, case_reynolds=""):
     """Computes and plots the FFT (periodogram) of a signal."""
     ufreq, psd = periodogram_rfft(vn, fs=1.0 / dt, scaling=scaling)
     peak_freqs, peak_vals = find_peaks(ufreq, psd, threshold=0.01)
 
-    # Plot reference line first so it appears first in legend
-    if plot_reference:
-        ax.axvline(x=0.125, c="k", lw=0.5, ls="--", label=f"Ref. $Re=50$ $St=0.125$")
+    # Plot reference line first so it appears first in legend (if available for this Re)
+    if plot_reference and case_reynolds in reference_values:
+        ref_data = reference_values[case_reynolds]
+        strouhal = ref_data["strouhal"]
+        description = ref_data["description"]
+        ax.axvline(x=strouhal, c="k", lw=0.5, ls="--", label=f"Ref. ${description}$ $St={strouhal}$")
 
     ax.loglog(ufreq, psd, c=color, lw=0.8, label=label)
     ax.scatter(peak_freqs, peak_vals, c="k", marker="x", s=40)
@@ -84,9 +95,13 @@ def plot_phase_portrait(ax, vn, dt, color, name="v", add_label=False):
     vdot_trim = vdot_interp[2:-2]
     v_trim = vn[2:-2]
 
+    # Add reference lines at origin
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=0.8)
+    ax.axvline(x=0, color='gray', linestyle='--', alpha=0.5, linewidth=0.8)
+
     ax.set_xlabel(f"${name}$")
     ax.set_ylabel(rf"$\dot{{{name}}}$")
-    ax.set_title("Phase Portrait (trimmed)")
+    ax.set_title("Phase Portrait")
     if add_label:
         ax.plot(v_trim, vdot_trim, c=color, lw=0.8, label=f"${name}$")
     else:
@@ -94,7 +109,7 @@ def plot_phase_portrait(ax, vn, dt, color, name="v", add_label=False):
 
 
 # --- Data Processors ---
-def process_his_file(his_file):
+def process_his_file(his_file, plot_all_probes=False, case_reynolds=""):
     """Load, process, and plot data from a .his file."""
     print(f"--- Processing History File: {his_file} ---")
     with open(his_file, "r") as file:
@@ -146,7 +161,15 @@ def process_his_file(his_file):
         print(f"Error reshaping data for {his_file}: {e}. Check if the file is complete. Skipping.")
         return
 
-    for prb in range(nps):
+    # Determine which probes to process
+    if plot_all_probes:
+        probes_to_process = range(nps)
+        print(f"Processing all {nps} probes")
+    else:
+        probes_to_process = [0]  # Only first probe
+        print(f"Processing only first probe (use --all to process all {nps} probes)")
+    
+    for prb in probes_to_process:
         print(f"Processing Probe {prb + 1}")
         t = data[:, prb, 0]  # Keep all data points
         # Extract both u and v components
@@ -182,15 +205,16 @@ def process_his_file(his_file):
         ax_signal.scatter(tn, vn, c="r", s=0.05, label=f"v (mean={v_mean:.5f})")
         ax_signal.set_xlabel(r"$t$")
         ax_signal.set_ylabel(r"$u' / v'$")
-        ax_signal.set_title(f"x,y,z={coords[prb][0]},{coords[prb][1]},{coords[prb][2]}")
+        ax_signal.set_title(f"Re={case_reynolds}, probe at x,y,z={coords[prb][0]},{coords[prb][1]},{coords[prb][2]}")
         ax_signal.legend()
 
-        plot_fft(ax_fft, tn, un, dt, label="u'", color="b", plot_reference=True)
-        plot_fft(ax_fft, tn, vn, dt, label="v'", color="r")
+        plot_fft(ax_fft, tn, un, dt, label="u'", color="b", plot_reference=True, case_reynolds=case_reynolds)
+        plot_fft(ax_fft, tn, vn, dt, label="v'", color="r", case_reynolds=case_reynolds)
         ax_fft.legend(loc="upper right")
         ax_fft.set_title("Spectrum")
         plot_phase_portrait(ax_phase, un, dt, color="b", name="u'", add_label=True)
         plot_phase_portrait(ax_phase, vn, dt, color="r", name="v'", add_label=True)
+        ax_phase.set_aspect('equal')  # Set equal aspect ratio after both plots
         ax_phase.legend()
 
         file_root = his_file.split(".")[0]
@@ -201,7 +225,7 @@ def process_his_file(his_file):
         plt.close(fig)
 
 
-def process_lift_file(lift_drag_file):
+def process_lift_file(lift_drag_file, case_reynolds=""):
     """Load, process, and plot data from a lift_drag file."""
     print(f"--- Processing Lift/Drag File: {lift_drag_file} ---")
     loader = LiftDragLoader(lift_drag_file)
@@ -236,16 +260,17 @@ def process_lift_file(lift_drag_file):
     ax_signal.scatter(tn, dgy_interp, c="g", s=0.05, label=f"Cy (mean={dgy_mean:.5f})")
     ax_signal.set_xlabel(r"$t$")
     ax_signal.set_ylabel(r"$C_x' / C_y'$")
-    ax_signal.set_title("Time vs Cx and Cy (zero-mean)")
+    ax_signal.set_title(f"Re={case_reynolds}, Time vs Cx and Cy (zero-mean)")
     ax_signal.legend()
 
-    plot_fft(ax_fft, tn, dgx_interp, dt, "Cx'", "b", scaling="spectrum", plot_reference=True)
-    plot_fft(ax_fft, tn, dgy_interp, dt, "Cy'", "g", scaling="spectrum")
+    plot_fft(ax_fft, tn, dgx_interp, dt, "Cx'", "b", scaling="spectrum", plot_reference=True, case_reynolds=case_reynolds)
+    plot_fft(ax_fft, tn, dgy_interp, dt, "Cy'", "g", scaling="spectrum", case_reynolds=case_reynolds)
     ax_fft.legend(loc="upper right")
     ax_fft.set_title("Spectrum")
 
     plot_phase_portrait(ax_phase, dgx_interp, dt, "b", name="C_x'", add_label=True)
     plot_phase_portrait(ax_phase, dgy_interp, dt, "g", name="C_y'", add_label=True)
+    ax_phase.set_aspect('equal')  # Set equal aspect ratio after both plots
     ax_phase.legend()
 
     file_root = lift_drag_file.split(".")[0]
@@ -263,10 +288,16 @@ def main():
     parser = argparse.ArgumentParser(description="Process and plot signals from Nek5000 simulations.")
     parser.add_argument("--his", action="store_true", help="Process history point file (e.g., 1cyl.his).")
     parser.add_argument("--lift", action="store_true", help="Process lift/drag file (e.g., lift_drag.dat).")
+    parser.add_argument("--all", action="store_true", help="Process all probes (default: only first probe).")
     args = parser.parse_args()
 
     run_his = args.his
     run_lift = args.lift
+    plot_all_probes = args.all
+    
+    # Get Reynolds number from directory name (same as check_restart.py)
+    working_directory = os.getcwd()
+    case_reynolds = os.path.basename(working_directory)
 
     # If no flags are specified, try to run both
     if not run_his and not run_lift:
@@ -280,7 +311,7 @@ def main():
         if not os.path.isfile(his_file):
             his_file = f"{case_name}.his"
         if os.path.isfile(his_file):
-            process_his_file(his_file)
+            process_his_file(his_file, plot_all_probes, case_reynolds)
         else:
             print("Info: No '.his' or '.all' file found, skipping history file processing.")
 
@@ -289,7 +320,7 @@ def main():
         if not os.path.isfile(lift_drag_file):
             lift_drag_file = "lift_drag.all"
         if os.path.isfile(lift_drag_file):
-            process_lift_file(lift_drag_file)
+            process_lift_file(lift_drag_file, case_reynolds)
         else:
             print("Info: No 'lift_drag.dat' or 'lift_drag.all' file found, skipping lift/drag processing.")
 
