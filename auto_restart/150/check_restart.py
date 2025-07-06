@@ -214,7 +214,7 @@ if __name__ == "__main__":
             next_time = min(single_job_time, target_end_time)
 
         if not job_running:
-            print("==== [PARAMETER UPDATE & JOB SUBMISSION] ====")
+            print("==== [PARAMETER UPDATE] ====")
             print(f"[INFO] Updating parameter file '{parameter_file}' for next run...")
             case_preserving_adjust_par_file(
                 parameter_file,
@@ -225,13 +225,8 @@ if __name__ == "__main__":
                 },
             )
             job_name = default_job_name(case_initial, case_reynolds, next_time)
-            # Determine the execution method
-            if shutil.which("squeue") is not None or shutil.which("qstat") is not None:
-                print(f"[INFO] Submitting PBS/SLURM job '{job_name}' using script '{pbs_script}'...")
-            else:
-                print(f"[INFO] Running locally with nohup using script '{local_sh_script}'...")
-            submit_job(job_name, local_sh_script, working_directory, pbs_script)
-            print("============================================\n")
+            print("==========================\n")
+            # Job submission will happen at the end of the script
         else:
             print("==== [JOB STATUS] ====")
             print("[INFO] Job is currently running. Skipping parameter update and job submission.")
@@ -284,6 +279,17 @@ if __name__ == "__main__":
     print("==== [CONSOLIDATION] ====")
     consolidate_files(consolidate_file_patterns)
     print("========================\n")
+
+    # Job submission at the very end (after all file operations are complete)
+    if velocity_file_time < target_end_time and not job_running:
+        print("==== [JOB SUBMISSION] ====")
+        # Determine the execution method
+        if shutil.which("squeue") is not None or shutil.which("qstat") is not None:
+            print(f"[INFO] Submitting PBS/SLURM job '{job_name}' using script '{pbs_script}'...")
+        else:
+            print(f"[INFO] Running locally with nohup using script '{local_sh_script}'...")
+        submit_job(job_name, local_sh_script, working_directory, pbs_script)
+        print("===========================\n")
 
 
 # NOTE: For test runs only. Not used for production cases.
