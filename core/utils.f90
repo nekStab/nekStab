@@ -517,34 +517,40 @@
          return
       end subroutine nekStab_enstrophy
       !-----------------------------------------------------------------------
-      subroutine nekStab_torque(fname, skip)
-         !use krylov_subspace
-         !implicit none
+      subroutine nekStab_torque(fname)
          include 'SIZE'
          include 'TOTAL'
-         integer, intent(in) :: skip
          character(len=*), intent(in) :: fname
 
-         common /scrns/ sij (lx1*ly1*lz1*6*lelv)
-         common /scrcg/ pm1 (lx1,ly1,lz1,lelv)
-         common /scrsf/ xm0(lx1,ly1,lz1,lelt), ym0(lx1,ly1,lz1,lelt), zm0(lx1,ly1,lz1,lelt)
-         parameter (lr=lx1*ly1*lz1)
-         common /scruz/ ur(lr),us(lr),ut(lr),vr(lr),vs(lr),vt(lr),wr(lr),ws(lr),wt(lr)
-         common /cvflow_r/ scale_vf(3)
 
+         ! becuase of this block we can not use implicit none in this routine ! 
+         real sij(lx1*ly1*lz1*6*lelv)
+         real pm1(lx1,ly1,lz1,lelv)
+         real xm0(lx1,ly1,lz1,lelt), ym0(lx1,ly1,lz1,lelt), zm0(lx1,ly1,lz1,lelt)
+         integer, parameter :: lr = lx1*ly1*lz1
+         real ur(lr), us(lr), ut(lr), vr(lr), vs(lr), vt(lr), wr(lr), ws(lr), wt(lr)
+         real scale_vf(3)
+         !!! 
+
+         common /scrns/ sij
+         common /scrcg/ pm1
+         common /scrsf/ xm0, ym0, zm0
+         common /scruz/ ur, us, ut, vr, vs, vt, wr, ws, wt
+         common /cvflow_r/ scale_vf
+
+         ! Local variables only
+         logical, save :: initialized
+         data initialized/.false./
+
+         integer, save :: bIDs(1), iobj_wall(1)
          real, save :: x0(3), scale
          data x0 /3*0.0d0/
          data scale /2.0d0/
-         real :: w1(0:maxobj)
-         integer n, i, ie, iobj, memtot, mem, ieg, ifc, nij
-         real glmin, glmax, x1min, x2min, x3min, x1max, x2max, x3max
-        
-         logical, save :: initialized
-         data initialized/.false./
-        
-         integer, save :: bIDs(1), iobj_wall(1)
 
-         n = nx1*ny1*nz1*nelv
+         integer :: nv, i, ie, iobj, memtot, mem, ieg, ifc, nij
+         real :: glmin, glmax, x1min, x2min, x3min, x1max, x2max, x3max, w1(0:maxobj)
+
+         nv = nx1*ny1*nz1*nelv
 
          if (.not. initialized) then
             if (nid == 0) write (6, *) 'Initializing torque routine... (nid =', nid, ')'
@@ -555,11 +561,10 @@
             if (nid == 0) write (6, *) 'Calling create_obj: iobj_wall(1) [before] =', iobj_wall(1), ', bIDs(1) =', bIDs(1)
             call create_obj(iobj_wall(1), bIDs, 1)
             if (nid == 0) write (6, *) 'Returned from create_obj: iobj_wall(1) [after] =', iobj_wall(1)
+            call cfill(vdiff, param(2), nv)  ! Fill up viscous array with default on initialization
             initialized = .true.
             if (nid == 0) write (6, *) 'Initialization block completed.'
          end if
-
-         if (mod(istep, skip) /= 0) return
 
          call mappr(pm1, pr, xm0, ym0) ! map pressure onto Mesh 1
 
@@ -569,28 +574,24 @@
             dpdz_mean = -scale_vf(3)
          end if
 
-         call add2s2(pm1, xm1, dpdx_mean, n)  ! Doesn't work if object is cut by periodic boundary.
-         call add2s2(pm1, ym1, dpdy_mean, n)  ! In this case, set ._mean=0 and compensate in post.
-         call add2s2(pm1, zm1, dpdz_mean, n)
+         call add2s2(pm1, xm1, dpdx_mean, nv)  ! Doesn't work if object is cut by periodic boundary.
+         call add2s2(pm1, ym1, dpdy_mean, nv)  ! In this case, set ._mean=0 and compensate in post.
+         call add2s2(pm1, zm1, dpdz_mean, nv)
 
          nij = 3 ! Compute sij
          if (if3d .or. ifaxis) nij = 6
          call comp_sij(sij, nij, vx, vy, vz, ur, us, ut, vr, vs, vt, wr, ws, wt)
 
-         if (istep < 1) then ! Fill up viscous array with default
-            call cfill(vdiff, param(2), n)
-         end if
+         call cadd2(xm0, xm1, -x0(1), nv)
+         call cadd2(ym0, ym1, -x0(2), nv)
+         call cadd2(zm0, zm1, -x0(3), nv)
 
-         call cadd2(xm0, xm1, -x0(1), n)
-         call cadd2(ym0, ym1, -x0(2), n)
-         call cadd2(zm0, zm1, -x0(3), n)
-
-         x1min = glmin(xm0(1,1,1,1), n)
-         x2min = glmin(ym0(1,1,1,1), n)
-         x3min = glmin(zm0(1,1,1,1), n)
-         x1max = glmax(xm0(1,1,1,1), n)
-         x2max = glmax(ym0(1,1,1,1), n)
-         x3max = glmax(zm0(1,1,1,1), n)
+         x1min = glmin(xm0(1,1,1,1), nv)
+         x2min = glmin(ym0(1,1,1,1), nv)
+         x3min = glmin(zm0(1,1,1,1), nv)
+         x1max = glmax(xm0(1,1,1,1), nv)
+         x2max = glmax(ym0(1,1,1,1), nv)
+         x3max = glmax(zm0(1,1,1,1), nv)
 
          do i = 0, maxobj
             dragpx(i) = 0   ! Pressure drag x
@@ -691,18 +692,21 @@
             torqz(0)  = torqz(0)  + torqz(i)
          end do
 
+         ! Match output format to htps routine: use 1p in format string for floats
+         ! '1p' in Fortran enforces scientific (exponential) notation for all subsequent real outputs
+         ! This ensures consistent precision and style with the htps output
          do i = 1, nobj ! Write results
             if (nio == 0) then
                if (if3D .or. ifaxis) then ! 3D or axisymmetric
-                  write (737, "(i8,19E15.7)") istep, time,
+                  write (737, "(i8,1p19E15.7)") istep, time,
      $   dragx(i), dragpx(i), dragvx(i), dragy(i), dragpy(i), dragvy(i), dragz(i), dragpz(i), dragvz(i),
      $   torqx(i), torqpx(i), torqvx(i), torqy(i), torqpy(i), torqvy(i), torqz(i), torqpz(i), torqvz(i)
                else ! 2D or not axisymmetric
-               write (737, "(i8,10E15.7)") istep, time,
+               write (737, "(i8,1p10E15.7)") istep, time,
      $   dragx(i), dragpx(i), dragvx(i), dragy(i), dragpy(i), dragvy(i), torqz(i), torqpz(i), torqvz(i)
-            end if ! if3D .or. ifaxis
-         end if ! nio == 0
-        end do ! i = 1, nobj
+              end if ! if3D .or. ifaxis
+            end if ! nio == 0
+         end do ! i = 1, nobj
 
       end subroutine nekStab_torque
       !-----------------------------------------------------------------------

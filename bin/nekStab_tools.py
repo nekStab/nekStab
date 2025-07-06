@@ -18,6 +18,10 @@ import numpy as np
 
 
 def dist(rec, N, s):
+    """Generates N integer values distributed around a reference point using cosine spacing.
+    Args: rec (float), N (int), s (float)
+    Returns: list of string integers
+    """
     y = np.cos(np.pi * np.arange(N) / (N - 1))
     x = rec - s * y / np.sqrt(1 + ((s / (N - 1)) ** 2) - y**2)
     x = np.round(x, 0)
@@ -27,6 +31,10 @@ def dist(rec, N, s):
 
 
 def build_nek(folder_path, usr_file, verbose=False):
+    """Cleans and compiles Nek5000 from .usr file, exits on failure.
+    Args: folder_path (str), usr_file (str), verbose (bool)
+    Returns: None
+    """
     from subprocess import Popen, PIPE, STDOUT
     from pathlib import Path
 
@@ -52,6 +60,10 @@ def build_nek(folder_path, usr_file, verbose=False):
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
+    """Copies directory tree from src to dst, overwriting existing files.
+    Args: src (str), dst (str), symlinks (bool), ignore (callable)
+    Returns: None
+    """
     for item in os.listdir(src):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
@@ -68,6 +80,10 @@ def copytree(src, dst, symlinks=False, ignore=None):
 
 
 def cSZ(infile, outfile, params):
+    """Modifies Fortran parameter statements using regex substitution.
+    Args: infile (str), outfile (str), params (dict)
+    Returns: None
+    """
     with open(infile, "r") as f:
         lines = f.readlines()
     # Substitute all the variables
@@ -88,6 +104,10 @@ def cSZ(infile, outfile, params):
 
 
 def check_keyword_in_file(folder_path, file_name, keyword):
+    """Checks if keyword exists in file, returns True if found.
+    Args: folder_path (str), file_name (str), keyword (str)
+    Returns: bool
+    """
     file_path = os.path.join(folder_path, file_name)
     if os.path.exists(file_path):
         with open(file_path, "r") as file:
@@ -104,6 +124,10 @@ def check_keyword_in_file(folder_path, file_name, keyword):
 
 
 def write_to_file(filename, content, target_line):
+    """Replaces specific line (1-indexed) in file with new content.
+    Args: filename (str), content (str), target_line (int)
+    Returns: None
+    """
     with open(filename, "r") as file:
         lines = file.readlines()
     # content_str = ' '.join(map(str, content))
@@ -113,6 +137,10 @@ def write_to_file(filename, content, target_line):
 
 
 def compile_neks(casename):
+    """Compiles Nek5000 case using makeneks script, automatically answers 'y' to prompts.
+    Args: casename (str)
+    Returns: None
+    """
     command = ["makeneks", casename]
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     output, error = process.communicate(input=b"y\n")  # Send 'y' and newline ('\n')
@@ -126,6 +154,10 @@ def compile_neks(casename):
 
 
 def c_pf(infile, outfile, opts):
+    """Modifies parameters in .par file using ConfigParser.
+    Args: infile (str), outfile (str), opts (dict of {section: {param: value}})
+    Returns: None
+    """
     import configparser
 
     parfile = configparser.ConfigParser()
@@ -139,6 +171,10 @@ def c_pf(infile, outfile, opts):
 
 
 def check_last_value(filename, tolerance):
+    """Checks if last numerical value in file is below tolerance.
+    Args: filename (str), tolerance (float)
+    Returns: bool (True if last value < tolerance)
+    """
     with open(filename, "r") as file:
         last_line = file.readlines()[-1]  # Read the last line of the file
     last_value = float(last_line.split()[-1])  # Split the line into parts and convert the last part to float
@@ -146,10 +182,18 @@ def check_last_value(filename, tolerance):
 
 
 def delete_files(pattern):
+    """Deletes all files matching glob pattern.
+    Args: pattern (str) - glob pattern like '*.log' or 'temp_*'
+    Returns: None
+    """
     [os.remove(file) for file in glob.glob(pattern)]
 
 
 def copy_bf(file, residu_file, oldbfs, tolerance):
+    """Copies baseflow file if residual converged below tolerance.
+    Args: file (str), residu_file (str), oldbfs (str), tolerance (float)
+    Returns: None
+    """
     if os.path.isfile(file) and os.path.isfile(residu_file):
         print(f"Found '{file}' and '{residu_file}'")
         with open(residu_file, "r") as f:
@@ -164,6 +208,10 @@ def copy_bf(file, residu_file, oldbfs, tolerance):
 
 
 def check_job_status(job_name):
+    """Checks if SLURM job is running and exits if found.
+    Args: job_name (str)
+    Returns: bool (True if running, exits program if found)
+    """
     result = subprocess.run(["squeue", "-u", "rvpo014"], capture_output=True, text=True)
     job_status = job_name in result.stdout
     if job_status:
@@ -177,6 +225,10 @@ def check_job_status(job_name):
 
 
 def check_job_exist(job_name):
+    """Checks if SLURM job exists in queue.
+    Args: job_name (str)
+    Returns: bool (True if job exists)
+    """
     result = subprocess.run(["squeue", "-u", "rvpo014"], capture_output=True, text=True)
     # print(result)
     job_status = job_name in result.stdout
@@ -188,7 +240,10 @@ def check_job_exist(job_name):
 
 
 def submit_job(job_name, job_script, working_directory, batch_file):
-    """Submit a job: use SLURM if available, otherwise run locally with a script."""
+    """Submits job using SLURM if available, otherwise runs locally with script.
+    Args: job_name (str), job_script (str), working_directory (str), batch_file (str)
+    Returns: None
+    """
     if shutil.which("squeue") is not None:
         if not check_job_exist(job_name):
             resubmit_job(batch_file, working_directory, job_name)
@@ -198,6 +253,10 @@ def submit_job(job_name, job_script, working_directory, batch_file):
 
 
 def resubmit_job(pbs_file, folder_path, job_name):
+    """Resubmits SLURM job by adjusting job name in PBS file.
+    Args: pbs_file (str), folder_path (str), job_name (str)
+    Returns: None
+    """
     print(f" Job name: {job_name}")
     pbs_file_path = os.path.join(folder_path, pbs_file)
     print(f" Adjusting file '{pbs_file_path}'")
@@ -223,6 +282,10 @@ def resubmit_job(pbs_file, folder_path, job_name):
 
 
 def get_closest_filename(target_dir, reference):
+    """Finds filename closest to reference number in target directory.
+    Args: target_dir (str), reference (str or int)
+    Returns: str (closest filename)
+    """
     file_names = os.listdir(target_dir)
     reference = int(reference)  # assuming reference is a numerical value
 
@@ -246,7 +309,10 @@ def get_closest_filename(target_dir, reference):
 
 
 def adjust_and_submit_job(folder_path, job_name):
-    """Adjust the PBS file and submit the job."""
+    """Adjusts PBS file and submits job with updated parameters.
+    Args: folder_path (str), job_name (str)
+    Returns: None
+    """
     pbs_file_path = os.path.join(folder_path, pbs_file)
     with open(pbs_file_path, "r") as file:
         filedata = file.read()
@@ -266,6 +332,10 @@ def adjust_and_submit_job(folder_path, job_name):
 
 
 def check_time(filename, which_time="final"):
+    """Checks time value from history file, either initial or final.
+    Args: filename (str), which_time (str) - 'final' or 'initial'
+    Returns: float (time value)
+    """
     print(f"Checking {which_time} time in {filename}")
     with open(filename, "r") as file:
         lines = file.readlines()
@@ -289,6 +359,10 @@ def check_time(filename, which_time="final"):
 
 
 def reset_his_file(filename):
+    """Resets history file by keeping only header and coordinate lines.
+    Args: filename (str)
+    Returns: None
+    """
     temp_filename = filename + ".tmp"
     with open(filename, "r") as file, open(temp_filename, "w") as temp_file:
         num = int(next(file).split()[0])  # read the first line
@@ -300,6 +374,10 @@ def reset_his_file(filename):
 
 
 def extract_time_from_binary(filename):
+    """Extracts time value from binary file header.
+    Args: filename (str)
+    Returns: float (time value or NaN if extraction fails)
+    """
     # Check if the file exists
     # if not os.path.isfile(filename):
     #   raise FileNotFoundError(f"The file {filename} does not exist.")
@@ -321,8 +399,15 @@ def extract_time_from_binary(filename):
 
 
 def append_files(pattern, output_file):
+    """Consolidates files matching pattern into single output file.
+    Args: pattern (str), output_file (str)
+    Returns: None
+    """
     print(f"[INFO] Consolidating files matching '{pattern}' into '{output_file}':")
-    files = sorted(glob.glob(pattern), key=lambda f: [float(num) for num in re.findall(r"\d+\.\d+", f)])
+    
+    # Sort files by time range suffix for chronological order
+    files = sorted(glob.glob(pattern), key=lambda f: float(f.split('_')[-1]))
+    
     if not files:
         print(f"  [WARN] No files matching pattern '{pattern}' found. Skipping consolidation for '{output_file}'.")
         return
@@ -336,13 +421,12 @@ def append_files(pattern, output_file):
                 with open(file, "r") as infile:
                     lines = infile.readlines()  # Read all lines into a list
                     if i == 0:
-                        num = int(lines[0].split()[0])
-                        outfile.writelines(lines[:-num])
-                        print(f"      [INFO] Found '.his_', skipping {num} lines from the end")
-                    elif i > 0 and i < len(files) - 1:
-                        outfile.writelines(lines[num + 1 : -num])
+                        # First file: include header (2 lines) + all data (no footer to skip)
+                        outfile.writelines(lines)
+                        print(f"      [INFO] Found '.his_', including all data from first file")
                     else:
-                        outfile.writelines(lines[num + 1 :])
+                        # Subsequent files: skip header (2 lines), include all data
+                        outfile.writelines(lines[2 :])
             else:
                 with open(file, "r") as infile:
                     shutil.copyfileobj(infile, outfile)
@@ -350,6 +434,10 @@ def append_files(pattern, output_file):
 
 
 def find_latest_final_dns_file(cn, verbose=False):
+    """Finds latest DNS final file by modification time.
+    Args: cn (str), verbose (bool)
+    Returns: str (latest filename or None if not found)
+    """
     pattern = f"{cn}0.f0*"
     files = glob.glob(pattern)
     if not files:
@@ -368,6 +456,10 @@ def find_latest_final_dns_file(cn, verbose=False):
 
 
 def get_case_name_from_usr():
+    """Gets case name from .usr file in current directory.
+    Args: None
+    Returns: str (case name without extension)
+    """
     usr_files = glob.glob("*.usr")
     if not usr_files:
         raise FileNotFoundError("No .usr file found in the current directory.")
@@ -376,15 +468,18 @@ def get_case_name_from_usr():
 
 
 def adjust_par_file(pf, param_dict):
-    """Adjust parameters in the .par file for the simulation using a dictionary of section/key: value."""
+    """Adjusts parameters in .par file using dictionary of section/key: value.
+    Args: pf (str), param_dict (dict)
+    Returns: None
+    """
     for (section, key), value in param_dict.items():
         c_pf(pf, pf, {section: {key: value}})
 
 
 def case_preserving_adjust_par_file(filename, param_dict):
-    """
-    Update parameters in a .par file, preserving case, spaces, and comments.
-    param_dict: { (section, key): value }
+    """Updates parameters in .par file, preserving case, spaces, and comments.
+    Args: filename (str), param_dict (dict of {(section, key): value})
+    Returns: None
     """
     import re
     with open(filename, "r") as f:
@@ -413,8 +508,16 @@ def case_preserving_adjust_par_file(filename, param_dict):
                 key_re = re.compile(key_re_template.format(key=re.escape(key)))
                 m = key_re.match(line)
                 if m:
-                    # Reconstruct line: keep original spaces and comments
-                    lines[i] = f"{m.group(1)}{value}{m.group(3)}\n"
+                    # Reconstruct line: ensure exactly one space before comment if present
+                    comment = m.group(3)
+                    if comment:
+                        comment_stripped = comment.lstrip()
+                        if comment_stripped.startswith('#'):
+                            lines[i] = f"{m.group(1)}{value} {comment_stripped}\n"
+                        else:
+                            lines[i] = f"{m.group(1)}{value}{comment}\n"
+                    else:
+                        lines[i] = f"{m.group(1)}{value}\n"
                     updated.add((sect, key))
                     break  # Only one key per line
 
@@ -431,7 +534,10 @@ def case_preserving_adjust_par_file(filename, param_dict):
 
 
 def check_required_files_exist(file_list):
-    """Check that all files in file_list exist. Exit if any are missing."""
+    """Checks that all files exist, exits if any are missing.
+    Args: file_list (list)
+    Returns: None
+    """
     missing = [f for f in file_list if not os.path.exists(f)]
     if missing:
         print(f"Missing required files: {', '.join(missing)}")
@@ -439,14 +545,9 @@ def check_required_files_exist(file_list):
 
 
 def backup_and_cleanup_files(files, backup_suffix, history_file, reset_his_file_func):
-    """
-    Binary file: copy for backup.
-    .his file: copy for backup, then reset using provided function.
-    All other files: MOVE (not copy) to backup name.
-    files: list of files to backup (binary, his, then rest)
-    backup_suffix: string to append to backup files
-    history_file: the main .his file to reset
-    reset_his_file_func: function to reset the history file
+    """Backs up and cleans files with different strategies per file type.
+    Args: files (list), backup_suffix (str), history_file (str), reset_his_file_func (callable)
+    Returns: None
     """
     import shutil, os
     if not files:
@@ -485,9 +586,178 @@ def backup_and_cleanup_files(files, backup_suffix, history_file, reset_his_file_
 
 
 def consolidate_files(pattern_output_list):
-    """
-    Consolidate files matching patterns into single output files.
-    pattern_output_list: list of (pattern, output_file) tuples
+    """Consolidates files matching patterns into single output files.
+    Args: pattern_output_list (list of tuples)
+    Returns: None
     """
     for pattern, output_file in pattern_output_list:
         append_files(pattern, output_file)
+
+# Read initial and final time as both float (for logic) and string (for suffix)
+from decimal import Decimal, localcontext
+
+def format_time_str(time_str):
+    """Formats time string for filenames.
+    - If integer, returns only the integer digits.
+    - If decimal and has only one nonzero digit after the decimal (e.g., 0.1, 0.2), use the shortest representation.
+    - Otherwise, use exactly 9 digits after the decimal (zero-padded).
+    Args: time_str (str)
+    Returns: str (formatted time)
+    """
+    try:
+        with localcontext() as ctx:
+            ctx.prec = 16
+            val = Decimal(time_str)
+            if val == val.to_integral():
+                return str(val.to_integral())
+            # Check if can be represented as a short decimal (e.g., 0.1, 0.2, 0.5)
+            s = format(val.normalize(), 'f')
+            if '.' in s and len(s.rstrip('0').split('.')[-1]) == 1:
+                # Only one nonzero digit after decimal
+                s = s.rstrip('0').rstrip('.')
+                return s
+            # Otherwise, use 9 digits after decimal, zero-padded
+            return f"{val:.9f}"
+    except Exception:
+        return time_str
+
+def get_time_str_and_float(filename, which_time):
+    """Gets time value from file as both formatted string and float.
+    Args: filename (str), which_time (str)
+    Returns: tuple (formatted time string, time float)
+    """
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+        if not lines:
+            raise ValueError(f"The file '{filename}' is empty.")
+        num = int(lines[0].split()[0]) + 1
+        if len(lines) > num:
+            if which_time == "final":
+                line = lines[-1]
+            elif which_time == "initial":
+                line = lines[num]
+            time_str = line.split()[0]
+            time_float = float(time_str)
+        else:
+            time_str = "0"
+            time_float = 0.0
+    return format_time_str(time_str), time_float
+
+def periodogram_rfft(x, fs, scaling="spectrum"):
+    """Computes power spectrum of real-valued signal using periodogram.
+    Args: x (array), fs (float), scaling (str)
+    Returns: tuple (frequencies, power spectrum)
+    """
+    from scipy import signal
+
+    # Efficient real FFT-based periodogram for real-valued signals
+    freqs, psd = signal.periodogram(x, fs, scaling=scaling)
+    return freqs, psd
+
+
+def find_peaks(st, psd, threshold=0.01):
+    """Finds peaks in power spectrum above threshold fraction of maximum.
+    Args: st (array), psd (array), threshold (float)
+    Returns: tuple (peak frequencies, peak values)
+    """
+    from scipy import signal
+    import numpy as np
+
+    # Handle empty or all-zero input
+    if len(psd) == 0 or not np.any(psd):
+        return np.array([]), np.array([])
+
+    # Detect peaks above threshold * max(psd)
+    peak_indices = signal.find_peaks(psd, height=max(psd) * threshold)[0]
+
+    return st[peak_indices], psd[peak_indices]
+
+def interpolate_signal(t, y, num_points=None, t_new=None, fft_safe=True):
+    """Interpolates signal to new time base with constant time step.
+    Args: 
+        t (array): Original time array
+        y (array): Original signal array  
+        num_points (int): Number of points for interpolation (if t_new not provided)
+        t_new (array): New time array (if provided, overrides num_points)
+        fft_safe (bool): If True, use max dt from original data for FFT-safe interpolation
+    Returns: tuple (new time array, interpolated signal)
+    """
+    from scipy.interpolate import interp1d
+    import numpy as np
+
+    if len(t) < 2:
+        # Cannot interpolate if there are not enough points
+        return t, y
+
+    if t_new is None:
+        if fft_safe and len(t) > 2:
+            # For FFT analysis with variable time steps: use max dt to avoid artificial high-freq content
+            dt_orig = np.diff(t)
+            max_dt = np.max(dt_orig)
+            min_dt = np.min(dt_orig)
+            mean_dt = np.mean(dt_orig)
+            
+            # Calculate number of points based on max_dt for conservative interpolation
+            total_time = t[-1] - t[0]
+            num_points_conservative = int(np.ceil(total_time / max_dt)) + 1
+            
+            print(f"Variable time step detected: min_dt={min_dt:.6f}, max_dt={max_dt:.6f}, mean_dt={mean_dt:.6f}")
+            print(f"Time range: {t[0]:.6f} to {t[-1]:.6f} (duration: {total_time:.6f})")
+            print(f"Using max_dt={max_dt:.6f} for FFT-safe interpolation ({num_points_conservative} points)")
+            
+            # Check if time array gets cropped due to max_dt constraint
+            t_new_end = t[0] + (num_points_conservative - 1) * max_dt
+            if t_new_end < t[-1] - max_dt/10:  # Allow small tolerance
+                print(f"WARNING: Time array cropped from {t[-1]:.6f} to {t_new_end:.6f} due to max_dt constraint")
+            
+            t_new = np.arange(t[0], t[-1] + max_dt/2, max_dt)
+        else:
+            # Original behavior: uniform spacing with specified number of points
+            if num_points is None:
+                num_points = len(t)
+            t_new = np.linspace(t.min(), t.max(), num_points)
+
+    # Use linear interpolation for robustness, cubic can be unstable with noisy data
+    f = interp1d(t, y, kind='linear', bounds_error=False, fill_value="extrapolate")
+    y_new = f(t_new)
+
+    return t_new, y_new
+
+
+class LiftDragLoader(object):
+    """Loads and processes lift/drag data from simulation files.
+    Args: filename (str), flip (bool)
+    Returns: LiftDragLoader object with t, dgx, dgy, dgz attributes
+    """
+    def __init__(self, filename, flip=False):
+        print("Reading " + filename)
+        data = []
+        with open(filename, "r") as f:
+            for line in f:
+                parts = line.strip().split()
+                # Skip lines that are too short or not data
+                if len(parts) < 3 or any(c in line for c in ['C', 's', 't']) or line.startswith('#'):
+                    continue
+                try:
+                    # Extract time from column 1 (index 1) if available, else column 0
+                    time = float(parts[1]) if len(parts) > 1 else float(parts[0])
+                    # Extract dragx and dragy from available columns
+                    dragx = float(parts[2]) if len(parts) > 2 else 0.0
+                    dragy = float(parts[5]) if len(parts) > 5 else (float(parts[3]) if len(parts) > 3 else 0.0)
+                    # Try to get dragz if present (3D), else None
+                    dragz = float(parts[8]) if len(parts) > 8 else None
+                    data.append([time, dragx, dragy, dragz])
+                except (ValueError, IndexError):
+                    continue
+        if not data:
+            print(f"Warning: No data read from {filename}")
+            self.t = self.dgx = self.dgy = self.dgz = np.array([])
+            return
+
+        d = np.transpose(data)
+        self.t = d[0]
+        self.dgx = d[1]
+        self.dgy = d[2]
+        self.dgz = d[3] if d.shape[0] > 3 and np.all([x is not None for x in d[3]]) else None
+        if flip and self.dgz is not None:
+            self.dgy, self.dgz = self.dgz, self.dgy
