@@ -86,6 +86,7 @@ if __name__ == "__main__":
         files_to_move.extend(glob.glob("*.dat*"))  # .dat and .dat_*
         files_to_move.extend(glob.glob("*.his_*"))  # .his_*
         files_to_move.extend(glob.glob("log*"))     # log* and logfile*
+        files_to_move.extend(glob.glob("*.all"))    # .all files (consolidated)
         
         # Special handling for current .his file - COPY it, don't move it
         his_file_to_copy = None
