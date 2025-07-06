@@ -72,6 +72,8 @@ if __name__ == "__main__":
     print(f"[INFO] Target final time: {target_end_time}")
     print(f"[INFO] Case name: {case_name}")
     print(f"[INFO] Parameter file: {parameter_file}")
+    print(f"[INFO] PBS/SLURM script: {pbs_script}")
+    print(f"[INFO] Local script: {local_sh_script}")
     print("==========================\n")
 
     final_time_in_his_str, final_time_in_his = get_time_str_and_float(history_file, which_time="final")
@@ -150,7 +152,11 @@ if __name__ == "__main__":
                 },
             )
             job_name = default_job_name(case_initial, case_reynolds, next_time)
-            print(f"[INFO] Submitting job '{job_name}' using script '{local_sh_script}'...")
+            # Determine the execution method
+            if shutil.which("squeue") is not None or shutil.which("qstat") is not None:
+                print(f"[INFO] Submitting PBS/SLURM job '{job_name}' using script '{pbs_script}'...")
+            else:
+                print(f"[INFO] Running locally with nohup using script '{local_sh_script}'...")
             submit_job(job_name, local_sh_script, working_directory, pbs_script)
             print("============================================\n")
         else:

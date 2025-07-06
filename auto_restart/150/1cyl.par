@@ -23,12 +23,12 @@ filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-07
+residualTol = 1.0E-06
 residualProj = yes
 writeToFieldFile = no
 
 [VELOCITY]
-residualTol = 1.0E-08
+residualTol = 1.0E-06
 residualProj = no
 density = 1.0
 viscosity = -150.0
