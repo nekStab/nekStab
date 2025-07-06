@@ -791,3 +791,76 @@ class LiftDragLoader(object):
         self.dgz = d[3] if d.shape[0] > 3 and np.all([x is not None for x in d[3]]) else None
         if flip and self.dgz is not None:
             self.dgy, self.dgz = self.dgz, self.dgy
+
+def zero_his(filename):
+    """Zeros out a .his file by truncating it after the header section.
+
+    This function reads the number of header lines from the first line of the file,
+    then truncates the file to keep only the header and one subsequent line,
+    effectively resetting the history data.
+
+    Args:
+        filename (str): The path to the .his file.
+    """
+    print(f"Zeroing history file: {filename}")
+    try:
+        with open(filename, 'r+') as f:
+            lines = f.readlines()
+            if not lines:
+                print(f"Warning: File is empty, cannot zero: {filename}")
+                return
+
+            try:
+                # First line should contain the number of header lines
+                n = int(lines[0].strip())
+            except (ValueError, IndexError):
+                print(f"Error: Could not parse header line count from {filename}")
+                return
+
+            # Keep header (n lines) + column names (1 line)
+            # The original bash script was sed 'n+2,$d', which keeps lines 1 to n+1
+            f.seek(0)
+            f.writelines(lines[:n + 1])
+            f.truncate()
+            f.write('\n')  # Add a blank line at the end
+
+        print(f"Time zeroed in file: {filename}")
+    except IOError as e:
+        print(f"Error processing file {filename}: {e}")
+
+def zero_binary(filename):
+    """Zeros out the time in a Nek5000 binary file header (e.g., .fld).
+
+    This function reads the first line of the specified file, finds a
+    floating-point time value in scientific notation, and replaces it with zero.
+
+    Args:
+        filename (str): The path to the binary-format file.
+    """
+    print(f"Zeroing binary file: {filename}")
+    try:
+        with open(filename, 'r+') as f:
+            lines = f.readlines()
+            if not lines:
+                print(f"Warning: File is empty, cannot zero: {filename}")
+                return
+
+            first_line = lines[0]
+            # Pattern for Nek5000 time format: 0.1234567890123E+00
+            pattern = r'0\.\d{13}E[+-]\d{2}'
+            replacement = '0.0000000000000E+00'
+
+            # Replace the pattern in the first line
+            new_first_line, num_replacements = re.subn(pattern, replacement, first_line, count=1)
+
+            if num_replacements > 0:
+                lines[0] = new_first_line
+                f.seek(0)
+                f.writelines(lines)
+                f.truncate()
+                print(f"Time zeroed in file: {filename}")
+            else:
+                print(f"Time pattern not found in {filename}. File not modified.")
+
+    except IOError as e:
+        print(f"Error processing file {filename}: {e}")

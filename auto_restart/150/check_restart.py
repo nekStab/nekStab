@@ -83,10 +83,80 @@ if __name__ == "__main__":
     if np.isnan(velocity_file_time):
         print(f"The file {latest_restart_file} does not exist.")
         sys.exit()
+    
     print("---- [TIME CHECK] ----")
     print(f"[INFO] Initial time in {history_file}: {initial_time_in_his}")
     print(f"[INFO] Final time in {history_file}: {final_time_in_his}")
     print(f"[INFO] Time in velocity file: {velocity_file_time}")
+    
+    # Check for first run scenario: binary file exists with time=0
+    is_first_run = (velocity_file_time == 0.0)
+    
+    if is_first_run:
+        print(f"[INFO] FIRST RUN detected: binary file time=0, history file empty/minimal")
+        print(f"[INFO] Will use binary file '{latest_restart_file}' as initial condition")
+        
+        # Find files to backup
+        import glob
+        files_to_move = []
+        files_to_move.extend(glob.glob("*.dat*"))  # .dat and .dat_*
+        files_to_move.extend(glob.glob("*.his_*"))  # .his_*
+        files_to_move.extend(glob.glob("log*"))     # log* and logfile*
+        
+        # Special handling for current .his file - COPY it, don't move it
+        his_file_to_copy = None
+        if os.path.exists(history_file):
+            his_file_to_copy = history_file
+        
+        total_files = len(files_to_move) + (1 if his_file_to_copy else 0)
+        
+        if total_files > 0:
+            print(f"[INFO] Found {total_files} existing files that need to be backed up for clean start")
+            
+            # Create old_dat directory for backup
+            old_dat_dir = "old_dat"
+            if not os.path.exists(old_dat_dir):
+                try:
+                    os.makedirs(old_dat_dir)
+                    print(f"[INFO] Created backup directory '{old_dat_dir}'")
+                except Exception as e:
+                    print(f"[WARNING] Could not create '{old_dat_dir}': {e}")
+                    old_dat_dir = None  # Skip backup operations if directory creation fails
+            
+            if old_dat_dir:
+                print(f"[INFO] Backing up files to '{old_dat_dir}'...")
+                
+                # Move files (keep original names)
+                for file in files_to_move:
+                    try:
+                        dest_path = os.path.join(old_dat_dir, file)
+                        shutil.move(file, dest_path)
+                        print(f"[INFO] Moved '{file}' to '{dest_path}'")
+                    except Exception as e:
+                        print(f"[WARNING] Could not move '{file}': {e}")
+                
+                # COPY (don't move) the current .his file (keep original name)
+                if his_file_to_copy:
+                    try:
+                        dest_path = os.path.join(old_dat_dir, his_file_to_copy)
+                        shutil.copy2(his_file_to_copy, dest_path)
+                        print(f"[INFO] Copied '{his_file_to_copy}' to '{dest_path}' (original preserved)")
+                    except Exception as e:
+                        print(f"[WARNING] Could not copy '{his_file_to_copy}': {e}")
+                
+                print(f"[INFO] File backup completed - {len(files_to_move)} moved, {1 if his_file_to_copy else 0} copied")
+        else:
+            print("[INFO] No existing data files found - workspace is already clean")
+        
+        # Reset current history file if it exists
+        if os.path.exists(history_file):
+            print(f"[INFO] Resetting current history file '{history_file}' for fresh start...")
+            try:
+                zero_his(history_file)
+                print(f"[INFO] History file '{history_file}' reset successfully")
+            except Exception as e:
+                print(f"[WARNING] Could not reset history file: {e}")
+    
     print("----------------------\n")
 
     # Generate the expected job name for this case
@@ -169,8 +239,8 @@ if __name__ == "__main__":
         print(f"[INFO] Simulation has reached target time. No further action needed.")
         print("======================\n")
 
-    # Only do backups when NO job is running
-    if not job_running and initial_time_in_his >= 0.0:
+    # Only do backups when NO job is running AND not a first run
+    if not job_running and initial_time_in_his >= 0.0 and not is_first_run:
         if initial_time_in_his == 0 and final_time_in_his == 0:
             backup_suffix = f"_{initial_time_in_his_str}"
         else:
@@ -202,6 +272,10 @@ if __name__ == "__main__":
             backup_and_cleanup_files(files_needing_backup, backup_suffix, None, lambda x: None)
         else:
             print("[INFO] All files already backed up. No backup needed.")
+        print("========================\n")
+    elif is_first_run and not job_running:
+        print("==== [BACKUP & CLEANUP] ====")
+        print("[INFO] First run detected - skipping backup operations.")
         print("========================\n")
 
     print("==== [CONSOLIDATION] ====")
