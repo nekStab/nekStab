@@ -8,7 +8,7 @@ from nekStab_tools import *
 
 # ---- SIMULATION TARGET SETTINGS ----
 target_end_time = 200.0  # Set your desired end time here
-single_job_time = 50.0  # Set your desired field write interval here
+single_job_time = 50.0  # Maximum job duration (will be adjusted near target end time)
 
 pbs_script = "jz.pbs"
 local_sh_script = "run_nohup.sh"
@@ -18,22 +18,6 @@ case_name = get_case_name_from_usr()
 case_initial = case_name[0]
 history_file = f"{case_name}.his"
 parameter_glob = "*.par"
-
-
-# NOTE: For test runs only. Not used for production cases.
-def prepare_par_for_restart(parameter_glob, single_job_time, case_preserving_adjust_par_file):
-    """
-    Update the .par file to set startFrom = rst_1cyl0.f00001 and endTime = single_job_time.
-    This is intended for starting from scratch in test runs only.
-    """
-    import glob
-
-    par_files = glob.glob(parameter_glob)
-    if not par_files:
-        raise FileNotFoundError(f"No .par file matching {parameter_glob} found.")
-    par_file = par_files[0]
-    case_preserving_adjust_par_file(par_file, {("GENERAL", "startFrom"): "rst_1cyl0.f00001", ("GENERAL", "endTime"): str(single_job_time)})
-
 
 log_file = "logfile"
 log_error_file = "logerror"
@@ -102,6 +86,7 @@ if __name__ == "__main__":
         files_to_move.extend(glob.glob("*.dat*"))  # .dat and .dat_*
         files_to_move.extend(glob.glob("*.his_*"))  # .his_*
         files_to_move.extend(glob.glob("log*"))     # log* and logfile*
+        files_to_move.extend(glob.glob("*.all"))    # .all files (consolidated)
         
         # Special handling for current .his file - COPY it, don't move it
         his_file_to_copy = None
@@ -161,9 +146,22 @@ if __name__ == "__main__":
 
     # Generate the expected job name for this case
     if velocity_file_time < target_end_time:
-        next_time = velocity_file_time + single_job_time
+        # Calculate remaining time to target
+        remaining_time = target_end_time - velocity_file_time
+        # Use minimum of max job time and remaining time to avoid overshooting
+        job_duration = min(single_job_time, remaining_time)
+        next_time = velocity_file_time + job_duration
+        
+        # Handle first run case
         if velocity_file_time < single_job_time:
-            next_time = single_job_time
+            next_time = min(single_job_time, target_end_time)
+        
+        # Log the job duration decision
+        if job_duration == single_job_time:
+            print(f"[INFO] Running for full job duration: {job_duration}")
+        else:
+            print(f"[INFO] Adjusting job duration to reach target: {job_duration} (remaining time)")
+        
         expected_job_name = default_job_name(case_initial, case_reynolds, next_time)
     else:
         expected_job_name = None
@@ -206,9 +204,14 @@ if __name__ == "__main__":
             pass
     
     if velocity_file_time < target_end_time:
-        next_time = velocity_file_time + single_job_time
+        # Calculate remaining time to target (same logic as above)
+        remaining_time = target_end_time - velocity_file_time
+        job_duration = min(single_job_time, remaining_time)
+        next_time = velocity_file_time + job_duration
+        
+        # Handle first run case
         if velocity_file_time < single_job_time:
-            next_time = single_job_time
+            next_time = min(single_job_time, target_end_time)
 
         if not job_running:
             print("==== [PARAMETER UPDATE & JOB SUBMISSION] ====")
