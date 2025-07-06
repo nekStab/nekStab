@@ -112,6 +112,15 @@ c-----------------------------------------------------------------------
       !enddo
       !endif
 
-      call nekStab_define_obj ! for torque / lift / drag / etc.
+         !!integer iel, iface
+         !do iel=1,nelt
+         !   do iface = 1, 2*ndim
+         !      if (cbc(iface,iel,1) .eq. 'W  ') then
+         !         boundaryID(iface,iel) = 1
+         !      endif
+         !   enddo
+         !enddo
+
+         call nekStab_define_obj
 
       end
