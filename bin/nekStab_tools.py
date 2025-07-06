@@ -434,7 +434,7 @@ def append_files(pattern, output_file):
 
 
 def find_latest_final_dns_file(cn, verbose=False):
-    """Finds latest DNS final file by modification time.
+    """Finds latest DNS final file, prioritizing original files over backup files.
     Args: cn (str), verbose (bool)
     Returns: str (latest filename or None if not found)
     """
@@ -444,15 +444,45 @@ def find_latest_final_dns_file(cn, verbose=False):
         if verbose:
             print(f"No files found matching pattern: {pattern}")
         return None
-    # Sort by modification time (most recent last)
-    files_sorted = sorted(files, key=os.path.getmtime)
+    
+    # Separate original files from backup files
+    original_files = []
+    backup_files = []
+    
+    for file in files:
+        # Original files have pattern: case0.f00001, case0.f00002, etc.
+        # Backup files have pattern: case0.f00001_time1_time2, etc.
+        if '_' in file:
+            backup_files.append(file)
+        else:
+            original_files.append(file)
+    
     if verbose:
-        print(f"Found {len(files_sorted)} files matching pattern '{pattern}':")
-        for f in files_sorted:
+        print(f"Found {len(files)} files matching pattern '{pattern}':")
+        for f in sorted(files, key=os.path.getmtime):
             mtime = os.path.getmtime(f)
-            print(f"  {f}  (modified: {datetime.datetime.fromtimestamp(mtime)})")
-        print(f"Selected latest file: {files_sorted[-1]}")
-    return files_sorted[-1]
+            file_type = "[ORIGINAL]" if '_' not in f else "[BACKUP]"
+            print(f"  {f}  (modified: {datetime.datetime.fromtimestamp(mtime)}) {file_type}")
+    
+    # Prioritize original files
+    if original_files:
+        # Sort original files by modification time and select the latest
+        original_files_sorted = sorted(original_files, key=os.path.getmtime)
+        selected_file = original_files_sorted[-1]
+        if verbose:
+            print(f"Selected latest original file: {selected_file}")
+        return selected_file
+    elif backup_files:
+        # If no original files, fall back to backup files
+        backup_files_sorted = sorted(backup_files, key=os.path.getmtime)
+        selected_file = backup_files_sorted[-1]
+        if verbose:
+            print(f"No original files found, selected latest backup file: {selected_file}")
+        return selected_file
+    else:
+        if verbose:
+            print("No files found")
+        return None
 
 
 def get_case_name_from_usr():

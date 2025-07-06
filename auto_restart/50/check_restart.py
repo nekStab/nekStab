@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, glob, subprocess, shutil
 
 try:
     sys.path.insert(0, os.path.join(os.environ["NEKSTAB_SOURCE_ROOT"], "bin"))
@@ -81,14 +81,90 @@ if __name__ == "__main__":
     if np.isnan(velocity_file_time):
         print(f"The file {latest_restart_file} does not exist.")
         sys.exit()
-
     print("---- [TIME CHECK] ----")
     print(f"[INFO] Initial time in {history_file}: {initial_time_in_his}")
     print(f"[INFO] Final time in {history_file}: {final_time_in_his}")
     print(f"[INFO] Time in velocity file: {velocity_file_time}")
     print("----------------------\n")
 
-    if initial_time_in_his >= 0.0:
+    # Generate the expected job name for this case
+    if velocity_file_time < target_end_time:
+        next_time = velocity_file_time + single_job_time
+        if velocity_file_time < single_job_time:
+            next_time = single_job_time
+        expected_job_name = default_job_name(case_initial, case_reynolds, next_time)
+    else:
+        expected_job_name = None
+
+    # Check if any job is running (PBS/SLURM or local)
+    job_running = False
+    
+    # Check for PBS/SLURM jobs first (check for exact job name)
+    if expected_job_name:
+        try:
+            if shutil.which("qstat") is not None:  # PBS
+                result = subprocess.run(['qstat', '-u', os.environ.get('USER', 'unknown')], capture_output=True, text=True)
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split('\n')[2:]:  # Skip header lines
+                        if line.strip() and expected_job_name in line:
+                            print(f"[INFO] Found specific PBS job '{expected_job_name}' running. Skipping all checks.. only consolidating.")
+                            job_running = True
+                            break
+            elif shutil.which("squeue") is not None:  # SLURM
+                result = subprocess.run(['squeue', '-u', os.environ.get('USER', 'unknown')], capture_output=True, text=True)
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split('\n')[1:]:  # Skip header line
+                        if line.strip() and expected_job_name in line:
+                            print(f"[INFO] Found specific SLURM job '{expected_job_name}' running. Skipping all checks.. only consolidating.")
+                            job_running = True
+                            break
+        except Exception:
+            pass
+    
+    # Check for local nek5000 processes (simpler check for local case)
+    if not job_running:
+        try:
+            result = subprocess.run(['pgrep', '-f', 'nek5000'], capture_output=True, text=True)
+            if result.returncode == 0:
+                pids = result.stdout.strip().split('\n')
+                pid_count = len(pids)
+                print(f"[INFO] Found {pid_count} local nek5000 job{'s' if pid_count > 1 else ''} running. Skipping all checks.. only consolidating.")
+                job_running = True
+        except Exception:
+            pass
+    
+    if velocity_file_time < target_end_time:
+        next_time = velocity_file_time + single_job_time
+        if velocity_file_time < single_job_time:
+            next_time = single_job_time
+
+        if not job_running:
+            print("==== [PARAMETER UPDATE & JOB SUBMISSION] ====")
+            print(f"[INFO] Updating parameter file '{parameter_file}' for next run...")
+            case_preserving_adjust_par_file(
+                parameter_file,
+                {
+                    ("GENERAL", "startFrom"): str(latest_restart_file),
+                    ("GENERAL", "endTime"): str(next_time),
+                    ("VELOCITY", "viscosity"): f"-{float(case_reynolds)}",
+                },
+            )
+            job_name = default_job_name(case_initial, case_reynolds, next_time)
+            print(f"[INFO] Submitting job '{job_name}' using script '{local_sh_script}'...")
+            submit_job(job_name, local_sh_script, working_directory, pbs_script)
+            print("============================================\n")
+        else:
+            print("==== [JOB STATUS] ====")
+            print("[INFO] Job is currently running. Skipping parameter update and job submission.")
+            print("======================\n")
+    else:
+        print("==== [JOB STATUS] ====")
+        print(f"[INFO] Current time: {final_time_in_his} >= Target time: {target_end_time}")
+        print(f"[INFO] Simulation has reached target time. No further action needed.")
+        print("======================\n")
+
+    # Only do backups when NO job is running
+    if not job_running and initial_time_in_his >= 0.0:
         if initial_time_in_his == 0 and final_time_in_his == 0:
             backup_suffix = f"_{initial_time_in_his_str}"
         else:
@@ -97,34 +173,30 @@ if __name__ == "__main__":
         print(f"==== [BACKUP & CLEANUP] ====")
         print(f"[INFO] Backup suffix: {backup_suffix}")
 
-        # Backup all files (restart, history, lift_drag, energy, enstrophy, logs) using the utility from nekStab_tools
+        # Check if backup files already exist and skip backing up if they do
         files_to_backup = [latest_restart_file, history_file, lift_drag_file, total_energy_file, total_enstrophy_file] + log_files
-        backup_and_cleanup_files(files_to_backup, backup_suffix, None, lambda x: None)
-
-    if velocity_file_time < target_end_time:
-        next_time = velocity_file_time + single_job_time
-        if velocity_file_time < single_job_time:
-            next_time = single_job_time
-
-        print("==== [PARAMETER UPDATE & JOB SUBMISSION] ====")
-        print(f"[INFO] Updating parameter file '{parameter_file}' for next run...")
-        case_preserving_adjust_par_file(
-            parameter_file,
-            {
-                ("GENERAL", "startFrom"): str(latest_restart_file),
-                ("GENERAL", "endTime"): str(next_time),
-                ("VELOCITY", "viscosity"): f"-{float(case_reynolds)}",
-            },
-        )
-        job_name = default_job_name(case_initial, case_reynolds, next_time)
-        print(f"[INFO] Submitting job '{job_name}' using script '{local_sh_script}'...")
-        submit_job(job_name, local_sh_script, working_directory, pbs_script)
-        print("============================================\n")
-    else:
-        print("==== [JOB STATUS] ====")
-        print(f"[INFO] Current time: {final_time_in_his} == Final time: {target_end_time}")
-        print(f"[INFO] Current time is less than final time. No action taken.")
-        print("======================\n")
+        files_needing_backup = []
+        for file in files_to_backup:
+            if os.path.exists(file):
+                # Skip binary files that already have backup suffixes (they are already backups)
+                if "_" in file and (file.endswith(".f00001") or ".f" in file):
+                    print(f"[INFO] File '{file}' is already a backup binary file. Skipping backup.")
+                    continue
+                    
+                backup_file = f"{file}{backup_suffix}"
+                if os.path.exists(backup_file):
+                    print(f"[INFO] Backup file '{backup_file}' already exists. Skipping backup of '{file}'.")
+                else:
+                    print(f"[INFO] Need to backup '{file}' to '{backup_file}'")
+                    files_needing_backup.append(file)
+            else:
+                print(f"[INFO] Original file '{file}' does not exist. Skipping backup.")
+        
+        if files_needing_backup:
+            backup_and_cleanup_files(files_needing_backup, backup_suffix, None, lambda x: None)
+        else:
+            print("[INFO] All files already backed up. No backup needed.")
+        print("========================\n")
 
     print("==== [CONSOLIDATION] ====")
     consolidate_files(consolidate_file_patterns)
