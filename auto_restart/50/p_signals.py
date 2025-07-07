@@ -109,7 +109,7 @@ def plot_phase_portrait(ax, vn, dt, color, name="v", add_label=False):
 
 
 # --- Data Processors ---
-def process_his_file(his_file, plot_all_probes=False, case_reynolds=""):
+def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=False):
     """Load, process, and plot data from a .his file."""
     print(f"--- Processing History File: {his_file} ---")
     with open(his_file, "r") as file:
@@ -152,8 +152,10 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds=""):
             data = raw_data.reshape(-1, nps, 3)
         elif raw_data.shape[1] == 4:
             data = raw_data.reshape(-1, nps, 4)
+            if3d = True
         elif raw_data.shape[1] == 5:
             data = raw_data.reshape(-1, nps, 5)
+            if3d = True
         else:
             print(f"Warning: Unexpected number of columns in {his_file}. Skipping.")
             return
@@ -175,6 +177,10 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds=""):
         # Extract both u and v components
         u = data[:, prb, 1] if data.shape[2] > 1 else data[:, prb, 0]
         v = data[:, prb, 2] if data.shape[2] > 2 else data[:, prb, 1]
+        if if3d:
+            w = data[:, prb, 3] if data.shape[2] > 3 else data[:, prb, 2]
+            if flip:
+                v, w = w, v 
 
         if len(t) < 2:
             print(f"Probe {prb + 1} has insufficient data. Skipping.")
@@ -225,10 +231,10 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds=""):
         plt.close(fig)
 
 
-def process_lift_file(lift_drag_file, case_reynolds=""):
+def process_lift_file(lift_drag_file, case_reynolds="", flip=False):
     """Load, process, and plot data from a lift_drag file."""
     print(f"--- Processing Lift/Drag File: {lift_drag_file} ---")
-    loader = LiftDragLoader(lift_drag_file)
+    loader = LiftDragLoader(lift_drag_file, flip=flip)
     t, dgx, dgy = loader.t, loader.dgx, loader.dgy
 
     if t.size < 2:
@@ -305,13 +311,15 @@ def main():
         run_his = True
         run_lift = True
 
+    case_name = get_case_name_from_usr()
+    flip = (case_name.lower() == "sphere")
+
     if run_his:
-        case_name = get_case_name_from_usr()
         his_file = f"{case_name}.all"
         if not os.path.isfile(his_file):
             his_file = f"{case_name}.his"
         if os.path.isfile(his_file):
-            process_his_file(his_file, plot_all_probes, case_reynolds)
+            process_his_file(his_file, plot_all_probes, case_reynolds, flip=flip)
         else:
             print("Info: No '.his' or '.all' file found, skipping history file processing.")
 
@@ -320,7 +328,7 @@ def main():
         if not os.path.isfile(lift_drag_file):
             lift_drag_file = "lift_drag.all"
         if os.path.isfile(lift_drag_file):
-            process_lift_file(lift_drag_file, case_reynolds)
+            process_lift_file(lift_drag_file, case_reynolds, flip=flip)
         else:
             print("Info: No 'lift_drag.dat' or 'lift_drag.all' file found, skipping lift/drag processing.")
 
