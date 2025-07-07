@@ -254,15 +254,9 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
         ax_signal.set_ylabel(r"$u' / v'$")
         ax_signal.set_title(f"Re={case_reynolds}, probe at x,y,z={coords[prb][0]},{coords[prb][1]},{coords[prb][2]}")
         ax_signal.legend()
-        # xlim/ylim for time series
-        xlim_min = signal_config.get("xlim_min", None)
-        xlim_max = signal_config.get("xlim_max", None)
-        ylim_min = signal_config.get("ylim_min", None)
-        ylim_max = signal_config.get("ylim_max", None)
-        if xlim_min is not None or xlim_max is not None:
-            ax_signal.set_xlim(left=xlim_min if xlim_min is not None else None, right=xlim_max if xlim_max is not None else None)
-        if ylim_min is not None or ylim_max is not None:
-            ax_signal.set_ylim(bottom=ylim_min if ylim_min is not None else None, top=ylim_max if ylim_max is not None else None)
+        # For the time series plot, set axis limits automatically based on the signal
+        ax_signal.set_xlim(tn[0], tn[-1])
+        # Let matplotlib autoscale y-axis for the signal plot
 
         plot_fft(ax_fft, tn, un, dt, label="u'", color=marker_color_u, plot_reference=True, case_reynolds=case_reynolds)
         plot_fft(ax_fft, tn, vn, dt, label="v'", color=marker_color_v, case_reynolds=case_reynolds)
