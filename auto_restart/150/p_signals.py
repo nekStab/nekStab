@@ -19,6 +19,24 @@ from nekStab_tools import (
     get_case_name_from_usr,
 )
 
+# --- Signal/Plot Configuration ---
+signal_config = {
+    "tmin": None,         # minimum time for cropping (None = auto)
+    "tmax": None,       # maximum time for cropping (None = auto)
+    "xlim_min": None,   # min x-axis limit for plots (None = auto)
+    "xlim_max": None,   # max x-axis limit for plots (None = auto)
+    "ylim_min": None,   # min y-axis limit for plots (None = auto)
+    "ylim_max": None,   # max y-axis limit for plots (None = auto)
+    "marker_size": 0.05, # marker size for scatter plots
+    "marker_color_u": "b", # color for u/Cx
+    "marker_color_v": "r", # color for v/Cy
+    "line_width": 0.8,  # line width for lines
+    "line_style": "-", # line style for lines
+    "fft_peak_marker_size": 40, # marker size for FFT peaks
+    'fft_peak_marker_color': 'red',
+    'peak_detector_threshold': 0.01,  # Default threshold for peak detection in FFT # color for FFT peaks
+}
+
 # --- Plotting Parameters ---
 plot_params = {
     "text.usetex": shutil.which("latex") is not None,
@@ -57,7 +75,7 @@ plt.rcParams.update(rc_params_to_set)
 def plot_fft(ax, tn, vn, dt, label, color, scaling="spectrum", plot_reference=False, case_reynolds=""):
     """Computes and plots the FFT (periodogram) of a signal."""
     ufreq, psd = periodogram_rfft(vn, fs=1.0 / dt, scaling=scaling)
-    peak_freqs, peak_vals = find_peaks(ufreq, psd, threshold=0.01)
+    peak_freqs, peak_vals = find_peaks(ufreq, psd, threshold=signal_config.get('peak_detector_threshold', 0.01))
 
     # Plot reference line first so it appears first in legend (if available for this Re)
     if plot_reference and case_reynolds in reference_values:
@@ -66,8 +84,12 @@ def plot_fft(ax, tn, vn, dt, label, color, scaling="spectrum", plot_reference=Fa
         description = ref_data["description"]
         ax.axvline(x=strouhal, c="k", lw=0.5, ls="--", label=f"Ref. ${description}$ $St={strouhal}$")
 
-    ax.loglog(ufreq, psd, c=color, lw=0.8, label=label)
-    ax.scatter(peak_freqs, peak_vals, c="k", marker="x", s=40)
+    lw = signal_config.get("line_width", 0.8)
+    ls = signal_config.get("line_style", "-")
+    ms = signal_config.get("fft_peak_marker_size", 40)
+    mc = signal_config.get("fft_peak_marker_color", "k")
+    ax.loglog(ufreq, psd, c=color, lw=lw, ls=ls, label=label)
+    ax.scatter(peak_freqs, peak_vals, c=mc, marker="x", s=ms)
     if len(peak_freqs) > 0:
         # Find the highest peak instead of the first peak
         highest_peak_idx = np.argmax(peak_vals)
@@ -75,10 +97,16 @@ def plot_fft(ax, tn, vn, dt, label, color, scaling="spectrum", plot_reference=Fa
         ax.axvline(x=highest_peak_freq, c=color, lw=0.5, ls="--", label=f"$St={highest_peak_freq:.4f}$")
 
     nyquist = 0.5 / dt
-    ax.set_xlim(1e-2, nyquist)
+    xlim_min = signal_config.get("xlim_min", 1e-2)
+    xlim_max = signal_config.get("xlim_max", nyquist)
+    ax.set_xlim(xlim_min if xlim_min is not None else 1e-2, xlim_max if xlim_max is not None else nyquist)
     psd_without_0 = psd[4:]
+    ylim_min = signal_config.get("ylim_min", None)
+    ylim_max = signal_config.get("ylim_max", None)
     if len(psd_without_0) > 0:
-        ax.set_ylim(psd_without_0.min(), psd_without_0.max() * 10)
+        auto_min = psd_without_0.min()
+        auto_max = psd_without_0.max() * 10
+        ax.set_ylim(ylim_min if ylim_min is not None else auto_min, ylim_max if ylim_max is not None else auto_max)
     ax.set_xlabel(r"$St$")
     if scaling == "spectrum":
         ax.set_ylabel("Power Spectrum")
@@ -99,13 +127,16 @@ def plot_phase_portrait(ax, vn, dt, color, name="v", add_label=False):
     ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=0.8)
     ax.axvline(x=0, color='gray', linestyle='--', alpha=0.5, linewidth=0.8)
 
+    lw = signal_config.get("line_width", 0.8)
+    ls = signal_config.get("line_style", "-")
+    ms = signal_config.get("marker_size", 0.05)
     ax.set_xlabel(f"${name}$")
     ax.set_ylabel(rf"$\dot{{{name}}}$")
     ax.set_title("Phase Portrait")
     if add_label:
-        ax.plot(v_trim, vdot_trim, c=color, lw=0.8, label=f"${name}$")
+        ax.plot(v_trim, vdot_trim, c=color, lw=lw, ls=ls, label=f"${name}$")
     else:
-        ax.plot(v_trim, vdot_trim, c=color, lw=0.8)
+        ax.plot(v_trim, vdot_trim, c=color, lw=lw, ls=ls)
 
 
 # --- Data Processors ---
@@ -150,6 +181,7 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
     try:
         if raw_data.shape[1] == 3:
             data = raw_data.reshape(-1, nps, 3)
+            if3d = False
         elif raw_data.shape[1] == 4:
             data = raw_data.reshape(-1, nps, 4)
             if3d = True
@@ -171,6 +203,14 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
         probes_to_process = [0]  # Only first probe
         print(f"Processing only first probe (use --all to process all {nps} probes)")
     
+    tmin = signal_config.get("tmin", None)
+    tmax = signal_config.get("tmax", None)
+    marker_size = signal_config.get("marker_size", 0.05)
+    marker_color_u = signal_config.get("marker_color_u", "b")
+    marker_color_v = signal_config.get("marker_color_v", "r")
+    line_width = signal_config.get("line_width", 0.8)
+    line_style = signal_config.get("line_style", "-")
+
     for prb in probes_to_process:
         print(f"Processing Probe {prb + 1}")
         t = data[:, prb, 0]  # Keep all data points
@@ -182,6 +222,7 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
             if flip:
                 v, w = w, v 
 
+        # Do NOT crop signals here! Cropping is handled in interpolate_signal.
         if len(t) < 2:
             print(f"Probe {prb + 1} has insufficient data. Skipping.")
             continue
@@ -190,7 +231,7 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
         u_mean, v_mean = np.mean(u), np.mean(v)
         u_zm, v_zm = u - u_mean, v - v_mean
 
-        tn, un = interpolate_signal(t, u_zm)
+        tn, un = interpolate_signal(t, u_zm, tmin=tmin, tmax=tmax)
         if len(tn) < 2:
             print(f"Probe {prb + 1} has insufficient data after interpolation. Skipping.")
             continue
@@ -207,21 +248,35 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
         ax_fft = fig.add_subplot(gs[1, 0])
         ax_phase = fig.add_subplot(gs[:, 1])
 
-        ax_signal.scatter(tn, un, c="b", s=0.05, label=f"u (mean={u_mean:.5f})")
-        ax_signal.scatter(tn, vn, c="r", s=0.05, label=f"v (mean={v_mean:.5f})")
+        ax_signal.scatter(tn, un, c=marker_color_u, s=marker_size, label=f"u (mean={u_mean:.5f})")
+        ax_signal.scatter(tn, vn, c=marker_color_v, s=marker_size, label=f"v (mean={v_mean:.5f})")
         ax_signal.set_xlabel(r"$t$")
         ax_signal.set_ylabel(r"$u' / v'$")
         ax_signal.set_title(f"Re={case_reynolds}, probe at x,y,z={coords[prb][0]},{coords[prb][1]},{coords[prb][2]}")
         ax_signal.legend()
+        # xlim/ylim for time series
+        xlim_min = signal_config.get("xlim_min", None)
+        xlim_max = signal_config.get("xlim_max", None)
+        ylim_min = signal_config.get("ylim_min", None)
+        ylim_max = signal_config.get("ylim_max", None)
+        if xlim_min is not None or xlim_max is not None:
+            ax_signal.set_xlim(left=xlim_min if xlim_min is not None else None, right=xlim_max if xlim_max is not None else None)
+        if ylim_min is not None or ylim_max is not None:
+            ax_signal.set_ylim(bottom=ylim_min if ylim_min is not None else None, top=ylim_max if ylim_max is not None else None)
 
-        plot_fft(ax_fft, tn, un, dt, label="u'", color="b", plot_reference=True, case_reynolds=case_reynolds)
-        plot_fft(ax_fft, tn, vn, dt, label="v'", color="r", case_reynolds=case_reynolds)
+        plot_fft(ax_fft, tn, un, dt, label="u'", color=marker_color_u, plot_reference=True, case_reynolds=case_reynolds)
+        plot_fft(ax_fft, tn, vn, dt, label="v'", color=marker_color_v, case_reynolds=case_reynolds)
         ax_fft.legend(loc="upper right")
         ax_fft.set_title("Spectrum")
-        plot_phase_portrait(ax_phase, un, dt, color="b", name="u'", add_label=True)
-        plot_phase_portrait(ax_phase, vn, dt, color="r", name="v'", add_label=True)
+        plot_phase_portrait(ax_phase, un, dt, color=marker_color_u, name="u'", add_label=True)
+        plot_phase_portrait(ax_phase, vn, dt, color=marker_color_v, name="v'", add_label=True)
         ax_phase.set_aspect('equal')  # Set equal aspect ratio after both plots
         ax_phase.legend()
+        # xlim/ylim for phase portrait
+        if xlim_min is not None or xlim_max is not None:
+            ax_phase.set_xlim(left=xlim_min if xlim_min is not None else None, right=xlim_max if xlim_max is not None else None)
+        if ylim_min is not None or ylim_max is not None:
+            ax_phase.set_ylim(bottom=ylim_min if ylim_min is not None else None, top=ylim_max if ylim_max is not None else None)
 
         file_root = his_file.split(".")[0]
         fname = f"{file_root}_probe{prb + 1}_signals.{plot_params['format']}"
@@ -244,7 +299,9 @@ def process_lift_file(lift_drag_file, case_reynolds="", flip=False):
     dgx_mean, dgy_mean = np.mean(dgx), np.mean(dgy)
     dgx_zm, dgy_zm = dgx - dgx_mean, dgy - dgy_mean
 
-    tn, dgx_interp = interpolate_signal(t, dgx_zm)
+    tmin = signal_config.get("tmin", None)
+    tmax = signal_config.get("tmax", None)
+    tn, dgx_interp = interpolate_signal(t, dgx_zm, tmin=tmin, tmax=tmax)
     if len(tn) < 2:
         print(f"Insufficient data in {lift_drag_file} after interpolation. Skipping.")
         return
@@ -254,7 +311,7 @@ def process_lift_file(lift_drag_file, case_reynolds="", flip=False):
         print(f"Could not determine time step for {lift_drag_file}. Skipping.")
         return
 
-    _, dgy_interp = interpolate_signal(t, dgy_zm, t_new=tn)
+    _, dgy_interp = interpolate_signal(t, dgy_zm, t_new=tn, tmin=tmin, tmax=tmax)
 
     fig = plt.figure(figsize=(3 * plot_params["fig_width"], plot_params["fig_height"]))
     gs = gridspec.GridSpec(2, 2, width_ratios=[2.2, 1])
