@@ -266,11 +266,7 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
         plot_phase_portrait(ax_phase, vn, dt, color=marker_color_v, name="v'", add_label=True)
         ax_phase.set_aspect('equal')  # Set equal aspect ratio after both plots
         ax_phase.legend()
-        # xlim/ylim for phase portrait
-        if xlim_min is not None or xlim_max is not None:
-            ax_phase.set_xlim(left=xlim_min if xlim_min is not None else None, right=xlim_max if xlim_max is not None else None)
-        if ylim_min is not None or ylim_max is not None:
-            ax_phase.set_ylim(bottom=ylim_min if ylim_min is not None else None, top=ylim_max if ylim_max is not None else None)
+        # Let matplotlib autoscale phase portrait axes
 
         file_root = his_file.split(".")[0]
         fname = f"{file_root}_probe{prb + 1}_signals.{plot_params['format']}"
