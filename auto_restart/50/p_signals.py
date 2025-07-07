@@ -263,19 +263,19 @@ def process_lift_file(lift_drag_file, case_reynolds="", flip=False):
     ax_phase = fig.add_subplot(gs[:, 1])
 
     ax_signal.scatter(tn, dgx_interp, c="b", s=0.05, label=f"Cx (mean={dgx_mean:.5f})")
-    ax_signal.scatter(tn, dgy_interp, c="g", s=0.05, label=f"Cy (mean={dgy_mean:.5f})")
+    ax_signal.scatter(tn, dgy_interp, c="r", s=0.05, label=f"Cy (mean={dgy_mean:.5f})")
     ax_signal.set_xlabel(r"$t$")
     ax_signal.set_ylabel(r"$C_x' / C_y'$")
     ax_signal.set_title(f"Re={case_reynolds}, Time vs Cx and Cy (zero-mean)")
     ax_signal.legend()
 
     plot_fft(ax_fft, tn, dgx_interp, dt, "Cx'", "b", scaling="spectrum", plot_reference=True, case_reynolds=case_reynolds)
-    plot_fft(ax_fft, tn, dgy_interp, dt, "Cy'", "g", scaling="spectrum", case_reynolds=case_reynolds)
+    plot_fft(ax_fft, tn, dgy_interp, dt, "Cy'", "r", scaling="spectrum", case_reynolds=case_reynolds)
     ax_fft.legend(loc="upper right")
     ax_fft.set_title("Spectrum")
 
     plot_phase_portrait(ax_phase, dgx_interp, dt, "b", name="C_x'", add_label=True)
-    plot_phase_portrait(ax_phase, dgy_interp, dt, "g", name="C_y'", add_label=True)
+    plot_phase_portrait(ax_phase, dgy_interp, dt, "r", name="C_y'", add_label=True)
     ax_phase.set_aspect('equal')  # Set equal aspect ratio after both plots
     ax_phase.legend()
 
