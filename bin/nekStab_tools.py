@@ -717,7 +717,7 @@ def find_peaks(st, psd, threshold=0.01):
 
     return st[peak_indices], psd[peak_indices]
 
-def interpolate_signal(t, y, num_points=None, t_new=None, fft_safe=True):
+def interpolate_signal(t, y, num_points=None, t_new=None, fft_safe=True, tmin=None, tmax=None):
     """Interpolates signal to new time base with constant time step.
     Args: 
         t (array): Original time array
@@ -729,6 +729,20 @@ def interpolate_signal(t, y, num_points=None, t_new=None, fft_safe=True):
     """
     from scipy.interpolate import interp1d
     import numpy as np
+
+    # Handle negative tmax: interpret as (max(t) - abs(tmax))
+    effective_tmax = tmax
+    if tmax is not None and tmax < 0:
+        effective_tmax = np.max(t) + tmax  # tmax is negative, so this subtracts abs(tmax)
+    # Optionally crop to tmin/effective_tmax if provided
+    if tmin is not None or effective_tmax is not None:
+        mask = np.ones_like(t, dtype=bool)
+        if tmin is not None:
+            mask &= (t >= tmin)
+        if effective_tmax is not None:
+            mask &= (t <= effective_tmax)
+        t = t[mask]
+        y = y[mask]
 
     if len(t) < 2:
         # Cannot interpolate if there are not enough points
