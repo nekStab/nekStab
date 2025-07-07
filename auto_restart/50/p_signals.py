@@ -324,9 +324,9 @@ def main():
             print("Info: No '.his' or '.all' file found, skipping history file processing.")
 
     if run_lift:
-        lift_drag_file = "lift_drag.dat"
+        lift_drag_file = "lift_drag.all"
         if not os.path.isfile(lift_drag_file):
-            lift_drag_file = "lift_drag.all"
+            lift_drag_file = "lift_drag.dat"
         if os.path.isfile(lift_drag_file):
             process_lift_file(lift_drag_file, case_reynolds, flip=flip)
         else:
