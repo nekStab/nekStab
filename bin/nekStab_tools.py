@@ -17,6 +17,109 @@ import os, re, shutil, subprocess, glob, sys, datetime
 import numpy as np
 
 
+def read_his_file(his_file):
+    """
+    Read .his file and return probe coordinates, time array, and velocity data.
+    
+    Returns:
+        coords (np.array): Probe coordinates, shape (n_probes, 3)
+        t (np.array): Time array, shape (n_timesteps,)
+        data (np.array): Velocity/field data, shape (n_timesteps, n_probes, n_fields)
+                        where n_fields = n_columns - 1 (excluding time column)
+    """
+    print(f"--- Reading History File: {his_file} ---")
+    
+    # Read number of probes and coordinates
+    with open(his_file, "r") as file:
+        try:
+            nps = int(file.readline().rstrip())
+        except (ValueError, IndexError):
+            print(f"Error: Could not read number of probes from {his_file}.")
+            return None, None, None
+            
+        print(f"Number of probes found: {nps}")
+        coords = np.zeros((nps, 3))
+        
+        for n, line in zip(range(nps), file):
+            try:
+                coord_parts = line.split()
+                coord_values = [0.0, 0.0, 0.0]  # Default values
+                
+                # Convert each coordinate part to float, handling both int and float formats
+                for i, part in enumerate(coord_parts[:3]):  # Take at most 3 coordinates
+                    try:
+                        coord_values[i] = float(part)  # Converts both "2" and "2.0" to 2.0
+                    except ValueError:
+                        coord_values[i] = 0.0  # Default to 0.0 if conversion fails
+                
+                coords[n] = coord_values
+            except (ValueError, IndexError):
+                coords[n] = [0.0, 0.0, 0.0]  # Default coordinates on error
+
+    # Read time series data
+    data_lines = []
+    with open(his_file, "r") as file:
+        lines = file.readlines()
+        
+        # Skip initial header (first line = number of probes, next nps lines = coordinates)
+        line_idx = nps + 1
+        
+        while line_idx < len(lines):
+            line = lines[line_idx].strip()
+            parts = line.split()
+            
+            # Check if this line looks like a number of probes (single integer)
+            if len(parts) == 1:
+                try:
+                    probe_count = int(parts[0])
+                    # Skip this header and the following coordinate lines
+                    line_idx += probe_count + 1
+                    continue
+                except ValueError:
+                    pass
+            
+            # Process data lines - ensure consistent column count
+            if len(parts) >= 3:
+                try:
+                    floats = [float(x) for x in parts]
+                    # Only accept lines with the expected number of columns
+                    # Determine expected columns from first valid data line
+                    if not data_lines:
+                        expected_cols = len(floats)
+                        data_lines.append(floats)
+                    elif len(floats) == expected_cols:
+                        data_lines.append(floats)
+                    # Skip lines with inconsistent column count
+                except ValueError:
+                    pass
+            
+            line_idx += 1
+    
+    if not data_lines:
+        print(f"Warning: No valid data found in {his_file}.")
+        return None, None, None
+    
+    raw_data = np.array(data_lines)
+    n_columns = raw_data.shape[1]
+    
+    try:
+        # Handle any number of columns (flexible approach)
+        if n_columns >= 3 and n_columns <= 6:
+            reshaped_data = raw_data.reshape(-1, nps, n_columns)
+            # Extract time from first probe (time should be same for all probes)
+            t = reshaped_data[:, 0, 0]
+            # Extract velocity/field data (excluding time column)
+            data = reshaped_data[:, :, 1:]  # All probes, all fields except time
+        else:
+            print(f"Warning: Unexpected number of columns ({n_columns}) in {his_file}. Expected 3-6 columns.")
+            return None, None, None
+    except ValueError as e:
+        print(f"Error reshaping data for {his_file}: {e}. Check if the file is complete.")
+        return None, None, None
+    
+    return coords, t, data
+
+
 def dist(rec, N, s):
     """Generates N integer values distributed around a reference point using cosine spacing.
     Args: rec (float), N (int), s (float)
