@@ -24,7 +24,7 @@ from nekStab_tools import (
 # --- Signal/Plot Configuration ---
 signal_config = {
     "tmin": None,         # minimum time for cropping (None = auto)
-    "tmax": None,       # maximum time for cropping (None = auto)
+    "tmax": None,       # maximum time for cropping (None = auto, negative = from end)
     "xlim_min": None,   # min x-axis limit for plots (None = auto)
     "xlim_max": None,   # max x-axis limit for plots (None = auto)
     "ylim_min": None,   # min y-axis limit for plots (None = auto)
