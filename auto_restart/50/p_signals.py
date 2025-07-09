@@ -76,6 +76,11 @@ reference_values = {
         "St_2": 0.2,   "description_2": "St_2 Re=50",
         "St_3": 0.3,   "description_3": "St_3 Re=50",
     },
+    "150": {
+        "St_1": 0.1316, "description_1": "St_1 Re=150",
+        "St_2": 0.0377,    "description_2": "St_2 Re=150",
+        "St_3": 0.0009,    "description_3": "St_3 Re=150",
+    },
     "340": {
         "St_1": 0.1316, "description_1": "St_1 Re=340",
         "St_2": 0.0377,    "description_2": "St_2 Re=340",
@@ -190,7 +195,7 @@ def plot_fft(ax, tn, vn, dt, label, color, plot_reference=False, case_reynolds="
                     for line in ax.get_lines():
                         if line.get_label().startswith(f"$St_{{{match['ref_label'].split('_')[1]}}}"):
                             error_pct = match['relative_error'] * 100
-                            new_label = f"$St_{{{match['ref_label'].split('_')[1]}}}={match['ref_freq']:.4f}$ ($\\Delta$={error_pct:.1f}%)"
+                            new_label = f"$St_{{{match['ref_label'].split('_')[1]}}}={match['ref_freq']:.4f}$ ($\\Delta$={error_pct:.1f}\\%)"
                             line.set_label(new_label)
                             break
 
@@ -369,7 +374,8 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
         ax_signal.set_ylabel(r"$u' / v'$")
         ax_signal.set_title(f"Re={case_reynolds}, probe at x,y,z={coords[prb][0]},{coords[prb][1]},{coords[prb][2]}")
         ax_signal.legend()
-        # For the time series plot, set axis limits automatically based on the signal
+        # For the time series plot, set axis limits to actual signal time range
+        # (tmin/tmax are used for data cropping, not display limits)
         ax_signal.set_xlim(tn[0], tn[-1])
         # Let matplotlib autoscale y-axis for the signal plot
 
@@ -440,6 +446,9 @@ def process_lift_file(lift_drag_file, case_reynolds="", flip=False):
     ax_signal.set_ylabel(r"$C_x' / C_y'$")
     ax_signal.set_title(f"Re={case_reynolds}, Time vs Cx and Cy (zero-mean)")
     ax_signal.legend()
+    # For the time series plot, set axis limits to actual signal time range
+    # (tmin/tmax are used for data cropping, not display limits)
+    ax_signal.set_xlim(tn[0], tn[-1])
 
     # Plot FFTs and collect PSDs and peak frequencies for proper limit setting
     psd_cx, peaks_cx = plot_fft(ax_fft, tn, dgx_interp, dt, "Cx'", "b", plot_reference=True, case_reynolds=case_reynolds, set_limits=False)
