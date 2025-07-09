@@ -76,7 +76,7 @@ reference_values = {
         "St_2": 0.2,   "description_2": "St_2 Re=50",
         "St_3": 0.3,   "description_3": "St_3 Re=50",
     },
-    "150": {#340
+    "340": {
         "St_1": 0.1316, "description_1": "St_1 Re=340",
         "St_2": 0.0377,    "description_2": "St_2 Re=340",
         "St_3": 0.0009,    "description_3": "St_3 Re=340",
