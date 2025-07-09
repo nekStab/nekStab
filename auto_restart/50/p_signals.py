@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from pickletools import string1
 import matplotlib
 
 matplotlib.use("Agg")
@@ -36,6 +37,7 @@ signal_config = {
     "fft_peak_marker_size": 40, # marker size for FFT peaks
     'fft_peak_marker_color': 'red',
     'peak_detector_threshold': 0.01,  # Default threshold for peak detection in FFT
+    'peak_matching_tolerance': 2.0,   # Tolerance for matching peaks to reference values (200%)
     # Spectrum plot configuration
     "xscale": "log",    # x-axis scale for spectrum plot ("log" or "linear")
     "yscale": "log",    # y-axis scale for spectrum plot ("log" or "linear")
@@ -59,12 +61,39 @@ plot_params = {
     "fig_height": 16 * 4.3 / 9,
 }
 
+# --- Reference Line Colors Configuration ---
+# Define consistent colors for reference St values (can be easily changed here)
+reference_colors = {
+    "St_1": "red",      # St_1 is always red
+    "St_2": "green",    # St_2 is always green  
+    "St_3": "blue",     # St_3 is always blue
+}
+
 # --- Reference Values Dictionary ---
 reference_values = {
-    "50": {"strouhal": 0.125, "description": "Re=50"},
+    "50": {
+        "St_1": 0.125, "description_1": "St_1 Re=50",
+        "St_2": 0.2,   "description_2": "St_2 Re=50",
+        "St_3": 0.3,   "description_3": "St_3 Re=50",
+    },
+    "150": {#340
+        "St_1": 0.1316, "description_1": "St_1 Re=340",
+        "St_2": 0.0377,    "description_2": "St_2 Re=340",
+        "St_3": 0.0009,    "description_3": "St_3 Re=340",
+    },
+    "355": {
+        "St_1": 0.1280, "description_1": "St_1 Re=355",
+        "St_2": 0.0350, "description_2": "St_2 Re=355",
+        "St_3": 0.0116, "description_3": "St_3 Re=355",
+    },
     # Add more Reynolds numbers here as needed:
-    # "100": {"strouhal": 0.164, "description": "Re=100"},
-    # "150": {"strouhal": 0.182, "description": "Re=150"},
+    # "100": {
+    #     "St_1": 0.164, "description_1": "St_1 Re=100",
+    #     "St_2": 0.21,  "description_2": "St_2 Re=100",
+    # },
+    # "150": {
+    #     "St_1": 0.182, "description_1": "St_1 Re=150",
+    # },
 }
 
 # Update rcParams with only the valid keys to avoid errors
@@ -79,6 +108,37 @@ rc_params_to_set = {key: plot_params[key] for key in valid_rc_keys}
 plt.rcParams.update(rc_params_to_set)
 
 
+# --- Helper Functions ---
+def find_closest_peaks_to_references(peak_freqs, peak_vals, ref_freqs, ref_labels, tolerance=0.1):
+    """Find the closest data peaks to reference frequencies and return matching pairs."""
+    matches = []
+    
+    for ref_freq, ref_label in zip(ref_freqs, ref_labels):
+        if len(peak_freqs) == 0:
+            continue
+            
+        # Find the closest peak to this reference frequency
+        distances = [abs(peak - ref_freq) for peak in peak_freqs]
+        min_distance_idx = np.argmin(distances)
+        closest_peak_freq = peak_freqs[min_distance_idx]
+        closest_peak_val = peak_vals[min_distance_idx]
+        min_distance = distances[min_distance_idx]
+        
+        # Check if the closest peak is within tolerance (relative to reference frequency)
+        relative_error = min_distance / ref_freq
+        if relative_error <= tolerance:
+            matches.append({
+                'ref_freq': ref_freq,
+                'ref_label': ref_label,
+                'peak_freq': closest_peak_freq,
+                'peak_val': closest_peak_val,
+                'distance': min_distance,
+                'relative_error': relative_error
+            })
+    
+    return matches
+
+
 # --- Plotting Functions ---
 def plot_fft(ax, tn, vn, dt, label, color, plot_reference=False, case_reynolds="", set_limits=True):
     """Computes and plots the FFT (periodogram) of a signal."""
@@ -89,10 +149,50 @@ def plot_fft(ax, tn, vn, dt, label, color, plot_reference=False, case_reynolds="
     # Plot reference line first so it appears first in legend (if available for this Re)
     show_reference = signal_config.get("show_reference", True)
     if plot_reference and show_reference and case_reynolds in reference_values:
-        ref_data = reference_values[case_reynolds]
-        strouhal = ref_data["strouhal"]
-        description = ref_data["description"]
-        ax.axvline(x=strouhal, c="k", lw=0.5, ls="--", label=f"Ref. ${description}$ $St={strouhal}$")
+        # Check if reference lines have already been plotted on this axis
+        existing_labels = [line.get_label() for line in ax.get_lines()]
+        ref_already_plotted = any(label.startswith("$St_") for label in existing_labels)
+        
+        if not ref_already_plotted:
+            ref_data = reference_values[case_reynolds]
+            # Only plot unique reference St values and avoid duplicate legend entries
+            plotted_st = set()
+            ref_freqs = []
+            ref_labels = []
+            
+            for key in ref_data:
+                if key.startswith("St_"):
+                    st_num = key.split('_')[1]
+                    st_value = ref_data[key]
+                    if st_value in plotted_st:
+                        continue
+                    plotted_st.add(st_value)
+                    st_key = f"St_{st_num}"
+                    ref_color = reference_colors.get(st_key, "gray")  # Default to gray if not found
+                    ref_label = f"$St_{{{st_num}}}={st_value}$"
+                    ax.axvline(x=st_value, c=ref_color, lw=0.8, ls="--", label=ref_label)
+                    ref_freqs.append(st_value)
+                    ref_labels.append(st_key)
+                    
+            
+            # Find closest peaks to reference values and mark them
+            if len(peak_freqs) > 0 and len(ref_freqs) > 0:
+                tolerance = signal_config.get('peak_matching_tolerance', 2.0)
+                matches = find_closest_peaks_to_references(peak_freqs, peak_vals, ref_freqs, ref_labels, tolerance=tolerance)
+                if matches:
+                    print(f"Peak matching results: {len(matches)} matches out of {len(ref_freqs)} references")
+                    for match in matches:
+                        print(f"✓ {match['ref_label']}: Ref={match['ref_freq']:.4f}, Data={match['peak_freq']:.4f}, Δ={match['relative_error']*100:.1f}%")
+                
+                # Update reference labels to show data peak values for matches
+                for match in matches:
+                    # Find and update the corresponding reference line label
+                    for line in ax.get_lines():
+                        if line.get_label().startswith(f"$St_{{{match['ref_label'].split('_')[1]}}}"):
+                            error_pct = match['relative_error'] * 100
+                            new_label = f"$St_{{{match['ref_label'].split('_')[1]}}}={match['ref_freq']:.4f}$ ($\\Delta$={error_pct:.1f}%)"
+                            line.set_label(new_label)
+                            break
 
     lw = signal_config.get("line_width", 0.8)
     ls = signal_config.get("line_style", "-")
@@ -138,25 +238,34 @@ def plot_fft(ax, tn, vn, dt, label, color, plot_reference=False, case_reynolds="
     return psd, peak_freqs  # Return PSD and peak frequencies for limit calculation
 
 
-def set_fft_limits(ax, all_psds, dt, all_peak_freqs=None):
-    """Set x and y-axis limits for FFT plot based on all PSDs and peak frequencies."""
-    # Set x-axis limits
+def set_fft_limits(ax, all_psds, dt, all_peak_freqs=None, case_reynolds=None):
+    """Set x and y-axis limits for FFT plot based on all PSDs, peak frequencies, and reference peaks."""
     nyquist = 0.5 / dt
     xlim_min = signal_config.get("xlim_min")
     xlim_max = signal_config.get("xlim_max") or nyquist
-    
-    # Auto-set xlim_min based on smallest peak frequency if not specified
     auto_xlim = signal_config.get("auto_xlim_from_peaks", True)
-    if xlim_min is None and auto_xlim and all_peak_freqs:
-        all_peaks = [freq for peaks in all_peak_freqs for freq in peaks if freq > 0]
-        if all_peaks:
-            min_peak_freq = min(all_peaks)
-            xlim_min = min_peak_freq / 10  # One decade to the left
+
+    if xlim_min is None and auto_xlim:
+        peak_freqs = [freq for peaks in all_peak_freqs for freq in peaks if freq > 0] if all_peak_freqs else []
+        ref_freqs = []
+        if case_reynolds is not None and case_reynolds in reference_values:
+            ref_data = reference_values[case_reynolds]
+            for key in ref_data:
+                if key.startswith("St_"):
+                    ref_freqs.append(ref_data[key])
+        
+        # Find the minimum between smallest peak and smallest reference marker
+        min_peak = min(peak_freqs) if peak_freqs else float('inf')
+        min_ref = min(ref_freqs) if ref_freqs else float('inf')
+        
+        if min_peak != float('inf') or min_ref != float('inf'):
+            min_freq = min(min_peak, min_ref)
+            xlim_min = min_freq / 10  # One decade to the left of the smallest frequency
         else:
-            xlim_min = 1e-2  # Default fallback
+            xlim_min = 1e-2
     else:
         xlim_min = xlim_min or 1e-2
-    
+
     ax.set_xlim(xlim_min, xlim_max)
     
     # Set y-axis limits
@@ -269,7 +378,7 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
         psd_v, peaks_v = plot_fft(ax_fft, tn, vn, dt, label="v'", color=marker_color_v, case_reynolds=case_reynolds, set_limits=False)
         
         # Set limits based on all PSDs and peak frequencies
-        set_fft_limits(ax_fft, [psd_u, psd_v], dt, [peaks_u, peaks_v])
+        set_fft_limits(ax_fft, [psd_u, psd_v], dt, [peaks_u, peaks_v], case_reynolds)
         ax_fft.set_xlabel(r"$St$")
         scaling = signal_config.get("fft_scaling", "spectrum")
         if scaling == "spectrum":
@@ -278,7 +387,7 @@ def process_his_file(his_file, plot_all_probes=False, case_reynolds="", flip=Fal
             ax_fft.set_ylabel("PSD")
         else:
             ax_fft.set_ylabel("Power")
-        ax_fft.legend(loc="upper right")
+        ax_fft.legend(loc="lower right")
         ax_fft.set_title("Spectrum")
         plot_phase_portrait(ax_phase, un, dt, color=marker_color_u, name="u'", add_label=True)
         plot_phase_portrait(ax_phase, vn, dt, color=marker_color_v, name="v'", add_label=True)
@@ -334,10 +443,10 @@ def process_lift_file(lift_drag_file, case_reynolds="", flip=False):
 
     # Plot FFTs and collect PSDs and peak frequencies for proper limit setting
     psd_cx, peaks_cx = plot_fft(ax_fft, tn, dgx_interp, dt, "Cx'", "b", plot_reference=True, case_reynolds=case_reynolds, set_limits=False)
-    psd_cy, peaks_cy = plot_fft(ax_fft, tn, dgy_interp, dt, "Cy'", "r", case_reynolds=case_reynolds, set_limits=False)
+    psd_cy, peaks_cy = plot_fft(ax_fft, tn, dgy_interp, dt, "Cy'", "r", plot_reference=False, case_reynolds=case_reynolds, set_limits=False)
     
     # Set limits based on all PSDs and peak frequencies
-    set_fft_limits(ax_fft, [psd_cx, psd_cy], dt, [peaks_cx, peaks_cy])
+    set_fft_limits(ax_fft, [psd_cx, psd_cy], dt, [peaks_cx, peaks_cy], case_reynolds)
     ax_fft.set_xlabel(r"$St$")
     scaling = signal_config.get("fft_scaling", "spectrum")
     if scaling == "spectrum":
@@ -346,7 +455,7 @@ def process_lift_file(lift_drag_file, case_reynolds="", flip=False):
         ax_fft.set_ylabel("PSD")
     else:
         ax_fft.set_ylabel("Power")
-    ax_fft.legend(loc="upper right")
+    ax_fft.legend(loc="lower right")
     ax_fft.set_title("Spectrum")
 
     plot_phase_portrait(ax_phase, dgx_interp, dt, "b", name="C_x'", add_label=True)
