@@ -64,12 +64,9 @@ jobs:
       - name: Build Nek5000 tools
         run: |
           cd Nek5000/tools
-          if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
-            # For Intel, explicitly set compilers for maketools
-            FC=ifx CC=icx ./maketools genmap genbox
-          else
-            ./maketools genmap genbox
-          fi
+          # Nek5000 tools (genmap, genbox) are serial - always build with GCC
+          # since maketools doesn't recognize ifx yet
+          FC=gfortran CC=gcc ./maketools genmap genbox
 
       - name: Build cylinder DNS example
         run: |
