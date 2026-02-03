@@ -38,7 +38,7 @@ jobs:
           compiler: ${{ matrix.toolchain.compiler }}
           version: ${{ matrix.toolchain.version }}
 
-      - name: Install MPI (Linux)
+      - name: Install MPI and BLAS (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -49,10 +49,27 @@ jobs:
         run: |
           brew install open-mpi
 
+      - name: Configure MPI for Intel compilers
+        if: matrix.toolchain.compiler == 'intel'
+        run: |
+          # Tell OpenMPI to use Intel compilers
+          echo "OMPI_FC=ifx" >> $GITHUB_ENV
+          echo "OMPI_CC=icx" >> $GITHUB_ENV
+          echo "OMPI_CXX=icpx" >> $GITHUB_ENV
+
       - name: Clone Nek5000
         run: |
           git clone --depth=1 https://github.com/Nek5000/Nek5000.git
-          cd Nek5000/tools && ./maketools genmap genbox
+
+      - name: Build Nek5000 tools
+        run: |
+          cd Nek5000/tools
+          if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
+            # For Intel, explicitly set compilers for maketools
+            FC=ifx CC=icx ./maketools genmap genbox
+          else
+            ./maketools genmap genbox
+          fi
 
       - name: Build cylinder DNS example
         run: |
