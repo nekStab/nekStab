@@ -4,7 +4,7 @@
   / __ \ / _ \ / //_/\__ \ / __// __ `// __ \
  / / / //  __// ,<  ___/ // /_ / /_/ // /_/ /
 /_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/
-COPYRIGHT (c) 2020-2025 DynFluid Laboratoire Paris
+(c) 2020-2025 DynFluid Laboratoire Paris
 ```
 
 [![CI Build](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg?branch=RANS_update)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml)

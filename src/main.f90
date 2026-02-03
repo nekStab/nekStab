@@ -115,7 +115,7 @@
                print *, '  / __ \ / _ \ / //_/\__ \ / __// __ `// __ \'
                print *, ' / / / //  __// ,<  ___/ // /_ / /_/ // /_/ /'
                print *, '/_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/ '
-               print *, 'COPYRIGHT (c) 2020-2025 DynFluid Laboratoire Paris ', NSVERSION
+               print *, '(c) 2020-2025 DynFluid Laboratoire Paris ', NSVERSION
                print *, 'Nek5000 ', NVERSION
                print *, ''
             end if
