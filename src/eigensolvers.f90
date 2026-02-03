@@ -732,7 +732,7 @@
          do i = 1, n
             idx(i) = i
          end do
-         call quicksort2(n, abs(vals), idx)
+         call argsort(n, abs(vals), idx)
 
       !     --> Select eigenvalues closer to the unit circle.
          selected = abs(vals) >= (1.0d0 - delta)

@@ -21,4 +21,4 @@ $(OBJDIR)/newton_krylov.o:        $(NEKSTAB_SOURCE_ROOT)/src/newton_krylov.f90  
 $(OBJDIR)/sensitivity.o:          $(NEKSTAB_SOURCE_ROOT)/src/sensitivity.f90          $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 
 # Files without module dependencies
-$(OBJDIR)/quicksort.o:            $(NEKSTAB_SOURCE_ROOT)/src/quicksort.f              ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/argsort.o:              $(NEKSTAB_SOURCE_ROOT)/src/argsort.f90              ;$(FC) -c $(FL2) $< -o $@
