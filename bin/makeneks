@@ -105,55 +105,124 @@ fi
 #-------------------------------------------------------------------------------
 # Compiler Detection
 #-------------------------------------------------------------------------------
-if command -v mpiifort >/dev/null 2>&1; then
-    # echo "Compiler found: $(which mpiifort)"
-    # echo "$(mpiifort --version | head -n1)"
+# NEKSTAB_FC environment variable can force: "ifort", "ifx", or "gcc"
+# Check for Intel compilers - prefer ifort (classic) if available, else ifx (LLVM)
+if [ "$NEKSTAB_FC" = "ifx" ] && command -v ifx >/dev/null 2>&1; then
+    # Forced ifx selection
+    echo "Using Intel Compiler LLVM (ifx) [forced via NEKSTAB_FC]..."
+    FC="mpiifx"
+    CC="mpiicx"
 
-    # set default compiler to Intel
+    FFLAGS+=" -fixed"
+    FFLAGS+=" -extend-source"
+    FFLAGS+=" -xHost"
+    FFLAGS+=" -fno-strict-overflow"
+    FFLAGS+=" -heap-arrays"
+    FFLAGS+=" -mprefer-vector-width=512"
+    FFLAGS+=" -align array64byte"
+
+    export PPLIST="VENDOR_BLAS"
+    # Dynamic MKL: best performance via runtime CPU dispatching
+    # Note: Requires Intel environment at runtime (module load intel)
+    if [ -z "$MKLROOT" ]; then
+        echo "Warning: MKLROOT not set, MKL linking may fail"
+    fi
+    FFLAGS+=" -qmkl=sequential"
+
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled"
+        FFLAGS+=" -g3 -traceback"
+    fi
+
+elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
+    # Forced GCC selection - jump directly to GCC configuration
+    FC="mpif90"
+    CC="mpicc"
+    echo "Using GCC (forced via NEKSTAB_FC)..."
+    echo "Compiler found: $(which $FC)"
+    echo "$($FC --version | head -n1)"
+
+    FFLAGS+=" -ffixed-form"
+    FFLAGS+=" -ffixed-line-length-none"
+    FFLAGS+=" -march=native"  # Native architecture optimization
+
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled"
+        FFLAGS+=" -g -fbacktrace"
+        FFLAGS+=" -Wall -Wno-analyzer-out-of-bounds -Wno-zerotrip -frecursive"
+    fi
+
+    export PPLIST="VENDOR_BLAS"
+    if [[ $(uname -s) == "Darwin" ]]; then
+        USR_LFLAGS+=" -framework Accelerate"
+    else
+        USR_LFLAGS+=" -llapack -lblas"
+    fi
+
+elif command -v ifort >/dev/null 2>&1; then
+    # Intel Classic (ifort) available
+    echo "Using Intel Compiler Classic (ifort)..."
     FC="mpiifort"
-    CC="mpiicc"
+    # Use mpiicx if icc is not available (Intel 2024+)
+    if command -v icc >/dev/null 2>&1; then
+        CC="mpiicc"
+    else
+        CC="mpiicx"
+    fi
 
     FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
     FFLAGS+=" -extend-source" # Accepts line with longer than 72 characters (132 characters)
 
-    # if command -v mpiifx >/dev/null 2>&1; then ### EXPERIMENTAL ! 
+    MPIIFORT_VERSION=$(mpiifort --version | head -n 1)
+    if [ "$MPIIFORT_VERSION" = "ifort (IFORT) 2021.9.0 20230302" ]; then
+        echo "Detected mpiifort version 2021.9.0 20230302. Applying specific settings."
+        CFLAGS+=" -diag-disable=10441 -diag-disable=42"
+        FFLAGS+=" -diag-disable=10441 -warn noalign"
+    else
+        FFLAGS+=" -xHost"
+    fi
 
-    # CRASHING  Error in generalev, info=           7           6          -1
+    export PPLIST="VENDOR_BLAS"
+    # Dynamic MKL: best performance via runtime CPU dispatching
+    # Note: Requires Intel environment at runtime (module load intel)
+    if [ -z "$MKLROOT" ]; then
+        echo "Warning: MKLROOT not set, MKL linking may fail"
+    fi
+    FFLAGS+=" -qmkl=sequential"
 
-    #     echo "Using Intel oneAPI Compiler ..." # LLVM compiler
+    # Handle debug mode for ifort
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled"
+        FFLAGS+=" -g3 -traceback"
+    fi
 
-    #     # Found LLVM compiler so we use it
-    #     FC="mpiifx"
-    #     CC="mpiicx"
+elif command -v ifx >/dev/null 2>&1; then
+    # Intel LLVM (ifx) available - Intel 2025+
+    echo "Using Intel Compiler LLVM (ifx)..."
+    FC="mpiifx"
+    CC="mpiicx"
 
-    #     # Check the link line advisor for the correct flags with MKL
-    #     # https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html
+    FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
+    FFLAGS+=" -extend-source" # Accepts line with longer than 72 characters (132 characters)
+    FFLAGS+=" -xHost"
+    # Compatibility flags for ifort behavior (prevent segfaults)
+    FFLAGS+=" -fno-strict-overflow" # Integer overflow behavior like ifort
+    FFLAGS+=" -heap-arrays" # Allocate arrays on heap instead of stack
+    # Performance optimization flags for ifx
+    FFLAGS+=" -mprefer-vector-width=512" # Encourage AVX-512 vectorization
+    FFLAGS+=" -align array64byte" # 64-byte alignment for AVX-512 (5% speedup)
 
-    #     export PPLIST="VENDOR_BLAS"
-    #     FFLAGS+=" -qmkl=sequential -I${MKLROOT}/include" # using LP64 and NOT double precision integer ILP64
-    #     USR_LFLAGS+=" -Wl,--start-group ${MKLROOT}/lib/libmkl_intel_lp64.a ${MKLROOT}/lib/libmkl_sequential.a ${MKLROOT}/lib/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
-
-    # else # mpiifort
-
-        echo "Using Intel Compiler Classic..."
-        MPIIFORT_VERSION=$(mpiifort --version | head -n 1)
-        if [ "$MPIIFORT_VERSION" = "ifort (IFORT) 2021.9.0 20230302" ]; then
-            echo "Detected mpiifort version 2021.9.0 20230302. Applying specific settings."
-            CFLAGS+=" -diag-disable=10441 -diag-disable=42"
-            FFLAGS+=" -diag-disable=10441 -warn noalign"
-        else
-            FFLAGS+=" -xHost" # comment if already included
-        fi
-
-        export PPLIST="VENDOR_BLAS" # we are using LP64 and NOT 64bit integer in ILP64
-        FFLAGS+=" -qmkl=sequential -I${MKLROOT}/include" # using LP64 and NOT 64bit integer in ILP64
-        USR_LFLAGS+=" -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" # using static link
-
-    # fi # LLVM compiler
+    export PPLIST="VENDOR_BLAS"
+    # Dynamic MKL: best performance via runtime CPU dispatching
+    # Note: Requires Intel environment at runtime (module load intel)
+    if [ -z "$MKLROOT" ]; then
+        echo "Warning: MKLROOT not set, MKL linking may fail"
+    fi
+    FFLAGS+=" -qmkl=sequential"
 
     # Handle debug mode
     if [ "$debug" = true ]; then
-        echo "Debug mode enabled " # Ricardo's debugging flags
+        echo "Debug mode enabled" # Ricardo's debugging flags
         FFLAGS+=" -g3 -traceback" # Enables stack tracing.
         # FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
         # FFLAGS+=" -debug extended" # Enables all runtime checks.
@@ -171,8 +240,9 @@ else # GCC
     echo "Compiler found: $(which $FC)"
     echo "$($FC --version | head -n1)"
 
-    FFLAGS+="-ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
+    FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
+    FFLAGS+=" -march=native" # Native architecture optimization (like Intel's -xHost)
 
     if [ "$debug" = true ]; then # Handle debug mode
         echo "Debug mode enabled"
@@ -237,6 +307,12 @@ esac
 #-------------------------------------------------------------------------------
 # Final Preparations
 #-------------------------------------------------------------------------------
+# Allow extra flags via environment variable (for testing/optimization)
+if [ -n "$NEKSTAB_EXTRA_FFLAGS" ]; then
+    echo "Adding extra FFLAGS: $NEKSTAB_EXTRA_FFLAGS"
+    FFLAGS+=" $NEKSTAB_EXTRA_FFLAGS"
+fi
+
 FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 
 # User-specified object files
@@ -337,7 +413,10 @@ set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig "$target"
 $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
 set -o pipefail
-touch $1.usr 
+touch ${target}.usr
+
+# Unset FFLAGS/CFLAGS to prevent make from reading them twice (makefile + environment)
+unset FFLAGS CFLAGS
 make -j4 2>&1 | tee -a build.log
 set +o pipefail
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
