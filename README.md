@@ -110,9 +110,9 @@ For more information, see the [Documentation](DOC.md).
 
 ## Development
 
-**nekStab** is mainly developed by Jean-Christophe Loiseau and Ricardo Frantz.
-However, we welcome contributors of all levels of experience.
-If you are planning a larger contribution, we encourage you to discuss the concept here on GitHub and to interact with us regularly to ensure your efforts are targeted.
+**nekStab** is maintained by [Ricardo Frantz](https://github.com/ricardofrantz). We welcome contributors of all levels of experience.
+
+> **Note:** The next-generation version is [LightKrylov](https://github.com/nekStab/LightKrylov), actively developed and maintained by Jean-Christophe Loiseau and Simon Kern.
 
 ## Help and support
 
