@@ -112,7 +112,7 @@ For more information, see the [Documentation](DOC.md).
 
 **nekStab** is maintained by [Ricardo Frantz](https://github.com/ricardofrantz). We welcome contributors of all levels of experience.
 
-> **Note:** The next-generation version is [LightKrylov](https://github.com/nekStab/LightKrylov), actively developed and maintained by Jean-Christophe Loiseau and Simon Kern.
+> **Note:** The next-generation versions are [LightKrylov](https://github.com/nekStab/LightKrylov) and [neklab](https://github.com/nekStab/neklab), actively developed and maintained by Jean-Christophe Loiseau and Simon Kern.
 
 ## Help and support
 
