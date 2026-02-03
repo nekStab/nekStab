@@ -1,4 +1,4 @@
-[![CI Build](https://github.com/nekStab/nekStab/actions/workflows/gcc.yml/badge.svg?branch=RANS_update)](https://github.com/nekStab/nekStab/actions/workflows/gcc.yml)
+[![CI Build](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg?branch=RANS_update)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml)
 
 **nekStab** is a toolbox for performing bifurcation analysis using the spectral element CFD solver [Nek5000](https://github.com/Nek5000/Nek5000).
 It is released under the BSD-3-Clause license.
