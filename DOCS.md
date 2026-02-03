@@ -1,6 +1,6 @@
 # nekStab Documentation
 
-A comprehensive toolbox for bifurcation analysis using the spectral element CFD solver Nek5000.
+A toolbox for global stability and bifurcation analysis using the spectral element solver Nek5000.
 
 ---
 
@@ -12,42 +12,35 @@ A comprehensive toolbox for bifurcation analysis using the spectral element CFD 
 4. [Quick Start](#quick-start)
 5. [Operating Modes](#operating-modes)
 6. [Parameter Reference](#parameter-reference)
-7. [Examples](#examples)
-8. [Theoretical Background](#theoretical-background)
-9. [Troubleshooting](#troubleshooting)
-10. [Citation](#citation)
+7. [Code Architecture](#code-architecture)
+8. [Vector Operations](#vector-operations)
+9. [Examples](#examples)
+10. [Theoretical Background](#theoretical-background)
+11. [Troubleshooting](#troubleshooting)
+12. [Citation](#citation)
 
 ---
 
 ## Overview
 
-**nekStab** provides tools for:
+**nekStab** extends Nek5000 with capabilities for:
 
-- **Direct Numerical Simulation (DNS)** - Time integration of Navier-Stokes equations
-- **Base Flow Computation** - Finding steady states via SFD, BoostConv, TDF, Newton-Krylov
-- **Linear Stability Analysis** - Eigenvalue problems using Krylov-Schur methods
-- **Sensitivity Analysis** - Wavemaker, structural sensitivity, optimal forcing
-- **Floquet Analysis** - Stability of time-periodic flows
-- **Transient Growth** - Non-modal stability analysis
+- **Direct Numerical Simulation (DNS)** - Standard and linearized time integration
+- **Base Flow Computation** - Steady/periodic states via SFD, BoostConv, TDF, Newton-Krylov
+- **Linear Stability Analysis** - Global eigenvalue problems using Krylov-Schur
+- **Sensitivity Analysis** - Structural sensitivity, wavemaker, optimal forcing
+- **Floquet Analysis** - Stability of time-periodic base flows
+- **Transient Growth** - Optimal perturbation and non-modal analysis
+- **OTD Modes** - Optimally Time-Dependent modes for chaotic flows
 
-### Architecture
+### Why nekStab?
 
-```
-nekStab/
-├── core/           # Main Fortran 90 modules
-│   ├── main.f90           # Entry point and mode dispatcher
-│   ├── eigensolvers.f90   # Krylov-Schur eigensolver
-│   ├── newton_krylov.f90  # Newton-GMRES for fixed points/UPOs
-│   ├── fixedp.f90         # SFD, BoostConv, TDF methods
-│   ├── sensitivity.f90    # Sensitivity and wavemaker analysis
-│   ├── postproc.f90       # Post-processing routines
-│   ├── matvec.f90         # Matrix-vector products (linearized NS)
-│   ├── krylov_subspace.f90    # Krylov vector type definitions
-│   └── krylov_decomposition.f90  # Arnoldi/Lanczos decompositions
-├── bin/            # Build scripts (mks, nekbmpi)
-├── examples/       # Test cases
-└── Nek5000/        # Nek5000 solver (submodule)
-```
+Traditional stability analysis requires forming and storing large Jacobian matrices. For 3D spectral element discretizations with millions of degrees of freedom, this is impractical. nekStab uses **matrix-free time-stepping** methods:
+
+1. The linearized Navier-Stokes operator **A** is never formed explicitly
+2. Matrix-vector products **Aq** are computed by time-stepping the linearized equations
+3. Krylov subspace methods extract eigenvalues from these products
+4. Memory scales with the number of Krylov vectors, not the matrix size
 
 ---
 
@@ -65,10 +58,9 @@ sudo apt-get install build-essential gfortran libopenmpi-dev liblapack-dev libbl
 brew install gcc open-mpi cmake
 ```
 
-**Optional: Intel oneAPI (recommended for performance)**
+**HPC Systems**
 ```bash
-# Download from: https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit.html
-source /opt/intel/oneapi/setvars.sh
+module load gcc openmpi  # or intel-oneapi
 ```
 
 ### Clone and Setup
@@ -79,6 +71,11 @@ cd nekStab
 ./Nek5000setup.sh
 ```
 
+The setup script will:
+1. Clone Nek5000 into the `Nek5000/` subdirectory
+2. Build the mesh tools (`genmap`, `genbox`)
+3. Optionally configure environment variables
+
 ### Environment Variables
 
 Add to `~/.bashrc` or `~/.zshrc`:
@@ -87,7 +84,8 @@ Add to `~/.bashrc` or `~/.zshrc`:
 export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
 export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
 export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
-ulimit -s unlimited
+ulimit -s unlimited   # Required for large stack allocations
+ulimit -c unlimited   # Enable core dumps for debugging
 ```
 
 ---
@@ -101,215 +99,393 @@ cd examples/cylinder/dns
 mks 1cyl
 ```
 
+The `mks` script:
+1. Detects available compilers
+2. Sets appropriate optimization flags
+3. Copies nekStab include files
+4. Invokes Nek5000's build system
+5. Compiles with parallel make (`-j4`)
+
 ### Compiler Selection
 
-The `mks` script auto-detects compilers: `ifort` → `ifx` → `gfortran`
+Auto-detection order: `ifort` → `ifx` → `gfortran`
 
 Force a specific compiler:
 ```bash
-NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM (fastest on x86)
-NEKSTAB_FC=ifort mks 1cyl  # Intel Classic
+NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM
+NEKSTAB_FC=ifort mks 1cyl  # Intel Classic (deprecated in oneAPI 2025)
 NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 ```
 
-### Performance Comparison
+### Compiler Comparison
 
-| Compiler | Performance | BLAS/LAPACK | Notes |
-|----------|-------------|-------------|-------|
-| **ifx** | Fastest | MKL | Intel oneAPI 2024+, AVX-512 optimized |
-| **ifort** | Fast | MKL | Legacy, being deprecated |
-| **gfortran** | Good | System BLAS | Universal compatibility |
+| Compiler | BLAS/LAPACK | Vectorization | Notes |
+|----------|-------------|---------------|-------|
+| **ifx** | MKL (dynamic) | AVX-512 | Requires `source /opt/intel/oneapi/setvars.sh` |
+| **ifort** | MKL (dynamic) | AVX2/AVX-512 | Being phased out by Intel |
+| **gfortran** | System libs | Native | Uses `-framework Accelerate` on macOS |
 
-### Debug Mode
+MKL provides runtime CPU dispatching - the same binary runs optimally on different Intel/AMD processors.
+
+### Build Options
 
 ```bash
-mks 1cyl --debug
+mks 1cyl --debug   # Enable: -g -fbacktrace -Wall (GCC) or -g3 -traceback (Intel)
+mks 1cyl --fresh   # Clean build: removes obj/, *.mod, makefile, logs
 ```
 
-Enables: stack traces, bounds checking, floating-point traps
-
-### Clean Build
+### Custom Flags
 
 ```bash
-mks 1cyl --fresh
+NEKSTAB_EXTRA_FFLAGS="-O3 -march=native" mks 1cyl
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Run DNS
+### 1. DNS Simulation
 
 ```bash
 cd examples/cylinder/dns
 mks 1cyl                    # Compile
-nekbmpi 1cyl 4              # Run on 4 processors
+nekbmpi 1cyl 4              # Run on 4 MPI ranks
 tail -f logfile             # Monitor output
+killall nek5000             # Stop if needed
 ```
 
-### 2. Compute Base Flow (Newton-Krylov)
+### 2. Base Flow (Newton-Krylov)
 
 ```bash
 cd examples/cylinder/baseflow/newton
-# Edit 1cyl.par: userParam01 = 2.0
-mks 1cyl
-nekbmpi 1cyl 4
+# Ensure userParam01 = 2.0 in 1cyl.par
+mks 1cyl && nekbmpi 1cyl 4
+# Output: BF_1cyl0.f00001 (converged base flow)
 ```
 
-### 3. Linear Stability Analysis
+### 3. Direct Stability Analysis
 
 ```bash
 cd examples/cylinder/stability/direct
-# Edit 1cyl.par: userParam01 = 3.1
-mks 1cyl
-nekbmpi 1cyl 4
+# Ensure userParam01 = 3.1 in 1cyl.par
+# Ensure base flow file exists: BF_1cyl0.f00001
+mks 1cyl && nekbmpi 1cyl 4
+# Output: dRe*, dIm* (eigenmodes), eigenvalues in logfile
+```
+
+### 4. Adjoint Analysis
+
+```bash
+cd examples/cylinder/stability/adjoint
+# Ensure userParam01 = 3.2 in 1cyl.par
+mks 1cyl && nekbmpi 1cyl 4
+# Output: aRe*, aIm* (adjoint eigenmodes)
+```
+
+### 5. Wavemaker Computation
+
+```bash
+cd examples/cylinder/postproc
+# Ensure userParam01 = 4.2 in 1cyl.par
+# Requires both direct and adjoint modes
+mks 1cyl && nekbmpi 1cyl 4
 ```
 
 ---
 
 ## Operating Modes
 
-Set the mode via `userParam01` in the `.par` file:
+Set via `userParam01` in the `.par` file:
 
 ### Mode 0: DNS
 
 | Value | Description |
 |-------|-------------|
-| `0` | Standard DNS |
-| `0.1` | Linearized DNS (perturbation evolution) |
+| `0` | Standard DNS (nonlinear Navier-Stokes) |
+| `0.1` | Linearized DNS (perturbation around base flow) |
 
 ### Mode 1: Fixed Point Methods
 
-| Value | Method | Description |
-|-------|--------|-------------|
-| `1.1` | SFD | Selective Frequency Damping |
-| `1.2` | BoostConv | Residual acceleration method |
-| `1.3` | DMT | Dynamic Mode Tracking |
-| `1.4` | TDF | Time-Delayed Feedback |
+| Value | Method | Use Case |
+|-------|--------|----------|
+| `1.1` | SFD (Selective Frequency Damping) | Unstable steady states with known frequency |
+| `1.2` | BoostConv | Accelerating slow convergence |
+| `1.3` | DMT (Dynamic Mode Tracking) | *Not fully ported* |
+| `1.4` | TDF (Time-Delayed Feedback) | Periodic orbits with known period |
+
+**SFD Parameters** (in `.par` file):
+- `userParam04`: Target frequency (Strouhal number, converted to ω internally)
+- `userParam05`: If > 0, enables forced frequency mode
 
 ### Mode 2: Newton-Krylov
 
 | Value | Description |
 |-------|-------------|
-| `2.0` | Newton-GMRES for fixed points |
-| `2.1` | Newton-GMRES for UPOs (Unstable Periodic Orbits) |
-| `2.2` | Newton-GMRES for forced UPOs |
+| `2.0` | Fixed points (steady states) |
+| `2.1` | UPOs (Unstable Periodic Orbits) |
+| `2.2` | Forced UPOs (with external forcing) |
+
+Uses GMRES to solve the Newton system. The Jacobian-vector product is computed via finite differences of the time-stepper.
 
 ### Mode 3: Eigenvalue Problems
 
-| Value | Description |
-|-------|-------------|
-| `3.1` | Direct LNSE (Linearized Navier-Stokes) |
-| `3.11` | Direct LNSE with Floquet |
-| `3.2` | Adjoint LNSE |
-| `3.21` | Adjoint LNSE with Floquet |
-| `3.3` | Transient growth |
-| `3.31` | Transient growth with Floquet |
+| Value | Description | Output Prefix |
+|-------|-------------|---------------|
+| `3.1` | Direct LNSE | `dRe*`, `dIm*` |
+| `3.11` | Direct Floquet | `dRe*`, `dIm*` |
+| `3.2` | Adjoint LNSE | `aRe*`, `aIm*` |
+| `3.21` | Adjoint Floquet | `aRe*`, `aIm*` |
+| `3.3` | Transient growth (optimal perturbation) | `oRe*`, `oIm*` |
+| `3.31` | Transient growth Floquet | `oRe*`, `oIm*` |
+
+**Key Parameter**: `userParam02`
+- `0`: Start from random noise
+- `> 0`: Restart from `userParam02` existing Krylov vectors
 
 ### Mode 4: Post-Processing
 
 | Value | Description |
 |-------|-------------|
-| `4.0` | All (budget + wavemaker + sensitivity) |
+| `4.0` | All: budget + wavemaker + BF sensitivity |
 | `4.1` | Kinetic energy budget |
-| `4.2` | Wavemaker |
+| `4.2` | Wavemaker (structural sensitivity) |
 | `4.3` | Base flow sensitivity |
-| `4.41` | Sensitivity to steady force (type 1) |
-| `4.42` | Sensitivity to steady force (type 2) |
-| `4.43` | Delta forcing |
-| `4.50` | Animate mode (direct) |
-| `4.51` | Animate mode + base flow deformation |
+| `4.41`, `4.42` | Sensitivity to steady forcing |
+| `4.43` | Delta forcing response |
+| `4.50` | Animate direct mode |
+| `4.51` | Animate mode with base flow deformation |
 | `4.52` | Animate Floquet mode |
 
 ### Mode 5: OTD
 
-Optimally Time-Dependent modes for chaotic flows.
+Optimally Time-Dependent modes for systems with chaotic base flows. Tracks the most unstable directions in real-time.
 
 ---
 
 ## Parameter Reference
 
-### .par File Parameters
+### .par File Structure
 
 ```ini
 [GENERAL]
-userParam01 = 3.1    # Operating mode (see above)
-userParam02 = ...    # Method-specific
+startFrom = BF_case0.f00001    # Initial condition file
+stopAt = endTime
+endTime = 100.0
+
+userParam01 = 3.1    # Operating mode
+userParam02 = 0      # Krylov restart (0 = fresh start)
 userParam03 = ...    # Method-specific
-...
+userParam04 = ...    # SFD/TDF frequency
+userParam05 = ...    # Forced frequency flag
+
+dt = 0               # 0 = variable dt
+variableDt = yes
+targetCFL = 0.5
+
+[VELOCITY]
+viscosity = -100.0   # Negative = Reynolds number
 ```
 
-### nekStab Parameters (set in .usr file)
+### nekStab Parameters
 
-Set these in `nekStab_usrchk` subroutine:
+Set in `nekStab_usrchk` subroutine in your `.usr` file:
 
 #### Krylov Solver
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `k_dim` | 100 | Krylov subspace dimension |
-| `eigen_tol` | 1e-6 | Eigenmode convergence tolerance |
-| `schur_tgt` | 2 | Schur target for factorization |
-| `schur_del` | 0.10 | Schur shift parameter |
-| `maxmodes` | 20 | Max converged modes to save |
+| `k_dim` | 100 | Krylov subspace dimension (larger = more eigenvalues but more memory) |
+| `eigen_tol` | 1e-6 | Convergence tolerance for eigenvalues |
+| `schur_tgt` | 2 | Number of eigenvalues to lock per restart |
+| `schur_del` | 0.10 | Deflation threshold |
+| `maxmodes` | 20 | Maximum eigenmodes to save to disk |
 
 #### Newton-Krylov
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `findiff_order` | 1 | Finite difference order for Jacobian |
-| `epsilon_base` | 1e-6 | Perturbation scale for finite differences |
+| `findiff_order` | 1 | Finite difference order (1 or 2) |
+| `epsilon_base` | 1e-6 | Perturbation scale ε for Jacobian approximation |
 
 #### BoostConv
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `bst_skp` | 10 | Skip iterations between updates |
-| `bst_snp` | 10 | Residual subspace matrix size |
+| `bst_skp` | 10 | Iterations between acceleration updates |
+| `bst_snp` | 10 | Size of residual subspace for extrapolation |
 
 #### Output Control
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `ifres` | .false. | Output restart files (KRY*, HES*) |
-| `ifvor` | .false. | Output vorticity fields |
-| `ifvox` | .false. | Output vortex criteria (Q, λ2, ω) |
-| `glob_skip` | 10 | Energy computation frequency |
+| `ifres` | .false. | Save Krylov restart files (KRY*, HES*) |
+| `ifvor` | .false. | Output vorticity components (vor*) |
+| `ifvox` | .false. | Output vortex criteria Q, λ₂, ω (vox*) |
+| `glob_skip` | 10 | Steps between energy/enstrophy output |
 
-#### Initial Conditions
+#### Initial Seed
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `ifseed_nois` | .true. | Use noise as initial seed |
-| `ifseed_symm` | .false. | Use symmetric initial seed |
-| `ifseed_load` | .false. | Load initial seed from file |
+| `ifseed_nois` | .true. | Initialize with random noise |
+| `ifseed_symm` | .false. | Use symmetric initial perturbation |
+| `ifseed_load` | .false. | Load seed from file |
+
+If all are `.false.`, the `useric` subroutine defines the initial condition.
 
 #### Base Flow
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `ifldbf` | .true. | Load base flow for stability |
-| `ifbf2D` | .false. | Force 2D base flow |
-| `ifstorebase` | .true. | Store base flow for Floquet |
+| `ifldbf` | .true. | Load base flow for linearized computations |
+| `ifbf2D` | .false. | Force 2D base flow (zero w-component) |
+| `ifstorebase` | .true. | Store base flow in memory for Floquet |
 
 #### Sponge Zone
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `xLspg, xRspg` | 0.0 | Sponge zone x boundaries |
-| `yLspg, yRspg` | 0.0 | Sponge zone y boundaries |
-| `zLspg, zRspg` | 0.0 | Sponge zone z boundaries |
+| `xLspg`, `xRspg` | 0.0 | Left/right sponge boundaries in x |
+| `yLspg`, `yRspg` | 0.0 | Bottom/top sponge boundaries in y |
+| `zLspg`, `zRspg` | 0.0 | Front/back sponge boundaries in z |
 | `spng_st` | 0.0 | Sponge strength (0 = disabled) |
-| `acc_spg` | 0.333 | Acceleration phase fraction |
+| `acc_spg` | 0.333 | Acceleration ramp fraction |
 
-#### OTD Parameters
+#### OTD
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `ifotd` | .false. | Enable OTD computation |
-| `otd_printStep` | 100 | OTD output frequency |
-| `otd_gsStep` | 10 | Gram-Schmidt frequency |
-| `otd_FTLEPeriod` | 0.0 | FTLE averaging period |
+| `otd_printStep` | 100 | Output interval for OTD modes |
+| `otd_gsStep` | 10 | Gram-Schmidt orthogonalization interval |
+| `otd_FTLEPeriod` | 0.0 | FTLE averaging window |
+
+---
+
+## Code Architecture
+
+### Directory Structure
+
+```
+nekStab/
+├── core/                    # Fortran 90 source files
+│   ├── main.f90            # Entry point, mode dispatcher
+│   ├── krylov_subspace.f90 # Data types, memory layout
+│   ├── krylov_decomposition.f90  # Arnoldi iteration
+│   ├── eigensolvers.f90    # Krylov-Schur algorithm
+│   ├── newton_krylov.f90   # Newton-GMRES solver
+│   ├── fixedp.f90          # SFD, BoostConv, TDF
+│   ├── matvec.f90          # Linearized NS operator
+│   ├── sensitivity.f90     # Wavemaker, forcing response
+│   ├── postproc.f90        # Energy budgets
+│   ├── nek_vectors.f90     # nop* vector operations
+│   ├── utils.f90           # Utilities, I/O helpers
+│   ├── otd.f90             # OTD modes
+│   └── IO.f90              # File I/O routines
+├── bin/
+│   └── mks                 # Build script
+├── examples/               # Test cases
+└── Nek5000/                # Nek5000 solver
+```
+
+### Data Layout
+
+nekStab uses Nek5000's spectral element data layout:
+
+```fortran
+! Velocity/temperature points per element
+lx1, ly1, lz1 = polynomial order + 1 (e.g., 8 for N=7)
+
+! Total points
+lv = lx1 * ly1 * lz1 * lelv   ! Velocity grid
+lt = lx1 * ly1 * lz1 * lelt   ! Temperature grid
+lp = lx2 * ly2 * lz2 * lelv   ! Pressure grid (lx2 = lx1 or lx1-2)
+```
+
+### The `krylov_vector` Type
+
+All stability computations use this derived type:
+
+```fortran
+type :: krylov_vector
+   real, dimension(lv) :: vx, vy, vz    ! Velocity components
+   real, dimension(lp) :: pr            ! Pressure
+   real, dimension(lv, ldimt) :: t      ! Temperature + passive scalars
+   real :: time                         ! For UPO period optimization
+end type
+```
+
+---
+
+## Vector Operations
+
+nekStab provides two levels of vector operations following BLAS conventions.
+
+### Level 1: Nek5000's `op*` Routines
+
+These operate on **velocity only** (vx, vy, vz):
+
+| Routine | Operation | Notes |
+|---------|-----------|-------|
+| `opcopy(a1,a2,a3, b1,b2,b3)` | a = b | Copy vectors |
+| `opadd2(a1,a2,a3, b1,b2,b3)` | a = a + b | In-place add |
+| `opsub2(a1,a2,a3, b1,b2,b3)` | a = a - b | In-place subtract |
+| `opsub3(a,b,c, d,e,f, g,h,i)` | a = d - g | Three-operand subtract |
+| `opcmult(a1,a2,a3, c)` | a = c*a | Scalar multiply |
+| `oprzero(a1,a2,a3)` | a = 0 | Zero vector |
+| `opcolv(a1,a2,a3, c)` | a = a.*c | Element-wise multiply |
+
+### Level 2: nekStab's `nop*` Routines
+
+These operate on **all fields** (velocity + pressure + scalars):
+
+```fortran
+! Signature: (vx, vy, vz, pr, t)
+call nopcopy(a1,a2,a3,a4,a5, b1,b2,b3,b4,b5)   ! a = b
+call nopadd2(a1,a2,a3,a4,a5, b1,b2,b3,b4,b5)   ! a = a + b
+call nopsub2(a1,a2,a3,a4,a5, b1,b2,b3,b4,b5)   ! a = a - b
+call nopcmult(a1,a2,a3,a4,a5, c)               ! a = c*a
+call noprzero(a1,a2,a3,a4,a5)                  ! a = 0
+call nopaxpby(a,alpha, b,beta)                 ! a = alpha*a + beta*b
+```
+
+**Scalar Loop Pattern**: All `nop*` routines handle multiple scalars:
+
+```fortran
+! Temperature (if ifto = .true.)
+if (ifto) call copy(a5(1,1), b5(1,1), n)
+
+! Passive scalars (if ifpsco(k) = .true.)
+if (ldimt > 1) then
+   do k = 1, npscal
+      if (ifpsco(k)) call copy(a5(1,k+1), b5(1,k+1), n)
+   end do
+end if
+```
+
+### Level 3: nekStab's `k_*` Routines
+
+High-level operations on `krylov_vector` type:
+
+| Routine | Operation | Description |
+|---------|-----------|-------------|
+| `k_dot(alpha, p, q)` | α = ⟨p,q⟩ | Mass-weighted inner product |
+| `k_norm(alpha, p)` | α = ‖p‖ | L2 norm |
+| `k_normalize(p, alpha)` | p = p/‖p‖ | Normalize, return norm |
+| `k_cmult(p, c)` | p = c*p | Scalar multiply |
+| `k_add2(p, q)` | p = p + q | Add vectors |
+| `k_sub2(p, q)` | p = p - q | Subtract vectors |
+| `k_copy(p, q)` | p = q | Copy vector |
+| `k_zero(p)` | p = 0 | Zero vector |
+
+**Inner Product**: Uses mass matrix weighting for spectral elements:
+
+```fortran
+alpha = glsc3(p%vx, q%vx, bm1s, nv) + glsc3(p%vy, q%vy, bm1s, nv)
+if (if3d) alpha = alpha + glsc3(p%vz, q%vz, bm1s, nv)
+if (ifto) alpha = alpha + glsc3(p%t(:,1), q%t(:,1), bm1s, nt)
+! ... loop over passive scalars
+```
 
 ---
 
@@ -317,182 +493,197 @@ Set these in `nekStab_usrchk` subroutine:
 
 ### Available Test Cases
 
-| Directory | Description |
-|-----------|-------------|
-| `cylinder/` | Flow around circular cylinder (Re=50-100) |
-| `back_fstep/` | Backward-facing step |
-| `lid_driven/` | Lid-driven cavity |
-| `blasius/` | Blasius boundary layer |
-| `cubic_cavity/` | 3D cubic cavity |
-| `naca0012/` | NACA 0012 airfoil |
-| `torus/` | Toroidal pipe flow |
-| `poiseuille/` | Plane Poiseuille flow |
+| Directory | Flow | Features Demonstrated |
+|-----------|------|----------------------|
+| `cylinder/` | Circular cylinder wake | DNS, Newton, stability, wavemaker |
+| `back_fstep/` | Backward-facing step | Convective instability |
+| `lid_driven/` | Lid-driven cavity | Confined flow bifurcations |
+| `blasius/` | Flat plate boundary layer | TS waves |
+| `cubic_cavity/` | 3D cubic cavity | 3D stability |
+| `naca0012/` | Airfoil at incidence | Bluff body stability |
+| `torus/` | Toroidal pipe | Dean instability |
+| `poiseuille/` | Channel flow | Canonical stability |
+| `tpjet/` | Turbulent jet | Complex geometry |
 
-### Cylinder Example Structure
+### Cylinder Workflow
 
 ```
-cylinder/
-├── dns/                  # Direct numerical simulation
+examples/cylinder/
+├── dns/           # 1. Verify mesh with DNS
 ├── baseflow/
-│   ├── sfd/             # SFD base flow
-│   ├── newton/          # Newton-Krylov base flow
-│   └── boostconv/       # BoostConv base flow
+│   ├── newton/    # 2. Compute steady base flow
+│   └── sfd/       # (alternative method)
 ├── stability/
-│   ├── direct/          # Direct stability
-│   └── adjoint/         # Adjoint stability
-└── postprocessing/
-    ├── wavemaker/       # Wavemaker analysis
-    └── sensitivity/     # Sensitivity analysis
+│   ├── direct/    # 3. Direct eigenmodes
+│   └── adjoint/   # 4. Adjoint eigenmodes
+└── postproc/      # 5. Wavemaker, sensitivity
 ```
 
-### Typical Workflow
+### Running a Complete Analysis
 
-1. **Generate mesh** (using Nek5000 tools)
-   ```bash
-   genbox < box.txt
-   genmap
-   ```
+```bash
+# 1. DNS verification
+cd examples/cylinder/dns
+mks 1cyl && nekbmpi 1cyl 4
+# Check: flow develops vortex shedding
 
-2. **Run DNS** to verify setup
-   ```bash
-   # userParam01 = 0
-   nekbmpi case 4
-   ```
+# 2. Base flow
+cd ../baseflow/newton
+cp ../dns/rst_1cyl0.f00001 .  # Use DNS snapshot as initial guess
+# Edit 1cyl.par: userParam01 = 2.0
+mks 1cyl && nekbmpi 1cyl 4
+# Check: residual → 0, output BF_1cyl0.f00001
 
-3. **Compute base flow**
-   ```bash
-   # userParam01 = 2.0 (Newton) or 1.1 (SFD)
-   nekbmpi case 4
-   ```
+# 3. Direct stability
+cd ../stability/direct
+ln -s ../../baseflow/newton/BF_1cyl0.f00001 .
+# Edit 1cyl.par: userParam01 = 3.1
+mks 1cyl && nekbmpi 1cyl 4
+# Check: eigenvalues in logfile, modes in dRe*, dIm*
 
-4. **Run stability analysis**
-   ```bash
-   # userParam01 = 3.1 (direct) or 3.2 (adjoint)
-   nekbmpi case 4
-   ```
+# 4. Adjoint stability
+cd ../adjoint
+ln -s ../../baseflow/newton/BF_1cyl0.f00001 .
+# Edit 1cyl.par: userParam01 = 3.2
+mks 1cyl && nekbmpi 1cyl 4
 
-5. **Post-process**
-   ```bash
-   # userParam01 = 4.2 (wavemaker)
-   nekbmpi case 4
-   ```
+# 5. Wavemaker
+cd ../postproc
+ln -s ../direct/dRe* ../direct/dIm* .
+ln -s ../adjoint/aRe* ../adjoint/aIm* .
+# Edit 1cyl.par: userParam01 = 4.2
+mks 1cyl && nekbmpi 1cyl 4
+```
 
 ---
 
 ## Theoretical Background
 
-### Linearized Navier-Stokes Equations (LNSE)
+### Linearized Navier-Stokes
 
-For a base flow **U**, the perturbation **u'** evolves according to:
+For base flow **U**(x), perturbation **u'**(x,t) satisfies:
 
 ```
-∂u'/∂t = -U·∇u' - u'·∇U - ∇p' + ν∇²u'
+∂u'/∂t + (U·∇)u' + (u'·∇)U = -∇p' + (1/Re)∇²u'
 ∇·u' = 0
 ```
 
-### Eigenvalue Problem
+### Matrix-Free Eigenvalue Problem
 
-Seeking solutions **u'** = **û** exp(λt), we solve:
-
-```
-λû = Aû
-```
-
-where **A** is the linearized Navier-Stokes operator.
-
-### Krylov-Schur Method
-
-nekStab uses time-stepping to build a Krylov subspace:
+Seeking **u'** = **q̂** exp(σt), the eigenvalue problem is:
 
 ```
-Km = span{q, Aq, A²q, ..., A^(m-1)q}
+σq̂ = Aq̂
 ```
 
-The Arnoldi decomposition `AV = VH + residual` gives Ritz values approximating eigenvalues of **A**.
+where **A** is the linearized operator. nekStab never forms **A** explicitly. Instead:
 
-### Adjoint Equations
+1. Time-step the linearized equations: q(T) = exp(AT)q(0)
+2. The propagator exp(AT) shares eigenvectors with **A**
+3. Eigenvalues: σ = log(μ)/T where μ is propagator eigenvalue
 
-The adjoint eigenproblem provides sensitivity information:
+### Krylov-Schur Algorithm
+
+1. **Arnoldi iteration**: Build orthonormal basis V and Hessenberg matrix H
+   ```
+   AV_m = V_m H_m + h_{m+1,m} v_{m+1} e_m^T
+   ```
+
+2. **Ritz extraction**: Eigenvalues of H_m approximate eigenvalues of A
+
+3. **Implicit restart**: Schur decomposition filters unwanted eigenvalues
+
+4. **Deflation**: Lock converged eigenvalues, continue with reduced subspace
+
+### Adjoint Operator
+
+The continuous adjoint satisfies:
 
 ```
-λ*û† = A†û†
+-∂u†/∂t - (U·∇)u† + (∇U)^T·u† = -∇p† + (1/Re)∇²u†
 ```
 
-### Wavemaker
+Discrete adjoint uses the **transpose** of the linearized time-stepper.
 
-The structural sensitivity (wavemaker) identifies regions where perturbations most affect eigenvalues:
+### Structural Sensitivity
+
+The wavemaker S(x) identifies where feedback most affects eigenvalues:
 
 ```
-S(x) = |û(x)| · |û†(x)|
+S(x) = |q̂(x)| · |q̂†(x)| / ∫ q̂† · q̂ dV
 ```
+
+High S(x) regions are sensitive to local modifications (e.g., control devices).
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### Compilation Issues
 
-**Compilation fails with module errors**
+**Module file not found**
 ```
 Cannot open module file 'krylov_subspace.mod'
 ```
-→ Clean and rebuild: `mks case --fresh`
+Solution: `mks case --fresh` (parallel make race condition)
 
-**MKL not found (Intel compiler)**
+**MKL libraries not found**
 ```
-cannot find -lmkl_intel_lp64
+ld: cannot find -lmkl_intel_lp64
 ```
-→ Source Intel environment: `source /opt/intel/oneapi/setvars.sh`
+Solution: `source /opt/intel/oneapi/setvars.sh` before compilation
 
-**Segmentation fault with ifx**
-→ Ensure you're using the latest nekStab with ifx compatibility fixes
+**ifx segmentation fault**
+Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assumed-length strings).
 
-**Eigenvalues don't converge**
-→ Increase `k_dim` or decrease `eigen_tol`
+### Runtime Issues
 
-**Base flow doesn't converge**
-→ Try different method (SFD for oscillating flows, Newton for steady)
-→ Check Reynolds number is in stable regime
-→ Adjust SFD parameters (χ, Δ)
+**Eigenvalues not converging**
+- Increase `k_dim` (more Krylov vectors)
+- Decrease `eigen_tol` (looser tolerance initially)
+- Check time step: too large can miss fast modes
 
-### Performance Tips
+**Newton not converging**
+- Verify initial guess is reasonable (close to solution)
+- Try SFD first to get closer to steady state
+- Reduce `epsilon_base` for better Jacobian approximation
 
-1. **Use Intel compilers** on x86 for 20-30% speedup
-2. **Increase polynomial order** (`lx1`) for accuracy, not elements
-3. **Use appropriate time step** - CFL ~0.5 for stability analysis
-4. **Parallelize wisely** - ~1000-5000 elements per MPI rank is optimal
+**Floquet modes incorrect**
+- Ensure `ifstorebase = .true.`
+- Verify base flow period matches actual period
+- Check sufficient time resolution over one period
+
+### Performance
+
+- **Optimal element count**: 1000-5000 elements per MPI rank
+- **Memory**: ~8 bytes × DOFs × k_dim × 2 (for V and H)
+- **Intel compilers**: 20-40% faster than GCC on x86
 
 ---
 
 ## Citation
 
-If you use nekStab, please cite:
-
 ```bibtex
 @article{frantz2023krylov,
     author = {Frantz, R. A. S. and Loiseau, J.-Ch. and Robinet, J.-Ch.},
-    title = "{Krylov Methods for Large-Scale Dynamical Systems: Application in Fluid Dynamics}",
+    title = "{Krylov Methods for Large-Scale Dynamical Systems:
+              Application in Fluid Dynamics}",
     journal = {Applied Mechanics Reviews},
     volume = {75},
     number = {3},
+    pages = {030802},
     year = {2023},
     doi = {10.1115/1.4056808},
 }
 ```
 
-Additional references:
-
-- Loiseau et al. (2019) - Time-stepping and Krylov methods, Springer
-- Loiseau et al. (2014) - First Arnoldi implementation in Nek5000, J. Fluid Mech.
-
 ---
 
 ## License
 
-BSD-3-Clause License. See [LICENSE](LICENSE) file.
+BSD-3-Clause. See [LICENSE](LICENSE).
 
 ## Contact
 
 - Ricardo Frantz: rasfrantz@gmail.com
-- Jean-Christophe Loiseau: loiseau.jc@gmail.com
-- Website: https://nekstab.github.io/
+- GitHub Issues: https://github.com/nekStab/nekStab/issues
