@@ -35,30 +35,6 @@ macOS
 brew install mpich gfortran wget git cmake htop
 ```
 
-**Intel oneAPI (Optional - Recommended for best performance)**
-
-For optimal performance on Intel/AMD x86 CPUs, install the Intel oneAPI compilers:
-
-```bash
-# Add Intel repository
-sudo apt install -y gpg-agent wget
-wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-  | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
-  | sudo tee /etc/apt/sources.list.d/oneAPI.list
-sudo apt update
-
-# Install (choose one)
-sudo apt install intel-oneapi-compiler-fortran intel-oneapi-mkl  # Fortran + MKL (~8 GB)
-# OR
-sudo apt install intel-oneapi-hpc-toolkit                        # Full HPC toolkit (~15 GB)
-```
-
-Add to `~/.bashrc`:
-```bash
-source /opt/intel/oneapi/setvars.sh
-```
-
 **Cloning the repository and Nek5000**
 
 ```bash
