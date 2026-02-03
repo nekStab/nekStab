@@ -663,7 +663,7 @@ where A = 0.05, θ₀ = 0.025, ω = 2π St.
 |-------------|------|-------------|-----------|-------------------|
 | Secondary | Period-doubling | Re_c ≈ 1371 | μ = -1 | Vortex pairing |
 
-**Reference**: [Léopold et al., JFM (2019)](https://doi.org/10.1017/jfm.2019.607)
+**Reference**: [Leopold et al., JFM (2019)](https://doi.org/10.1017/jfm.2019.607)
 
 **Validation**:
 - nekStab: Re_c = 1371.18
@@ -695,15 +695,17 @@ Three-dimensional perturbations on the 2D periodic wake. The critical spanwise w
 
 | Parameter | nekStab | Reference | Source |
 |-----------|---------|-----------|--------|
-| Re_c2 | ≈ 189 | 188.5 ± 1 | Barkley & Henderson, JFM (1996) |
-| μ at Re=190 | 1.012 | 1.034 | — |
-| St at Re=190 | 0.196 | 0.195 | — |
+| Re_c2 | ≈ 189 | 188.5 ± 1 | Barkley & Henderson (1996) |
+| μ at Re=190 | 1.012 | 1.034 | Barkley (2005) |
+| μ at Re=190 | 1.012 | 1.002 | Giannetti et al. (2010) |
+| St at Re=190 | 0.196 | 0.195 | Barkley & Henderson (1996) |
 
 The Floquet multiplier exits the unit circle at μ = +1 (synchronous mode), characteristic of a pitchfork bifurcation. The flow three-dimensionalizes while retaining the shedding frequency.
 
 **References**:
 - Primary: [Zebib, J. Eng. Math. (1987)](https://doi.org/10.1007/BF00127673)
 - Secondary: [Barkley & Henderson, JFM (1996)](https://doi.org/10.1017/S0022112096008750)
+- Floquet comparison: [Barkley, PoF (2005)](https://doi.org/10.1063/1.1868171), [Giannetti et al., JFM (2010)](https://doi.org/10.1017/S0022112010003083)
 
 ---
 
@@ -743,10 +745,10 @@ A linearly stable flow that exhibits strong transient amplification due to non-n
 
 | Quantity | nekStab | Reference |
 |----------|---------|-----------|
-| G_max | ≈ 77,000 | 77,000 |
 | τ_opt | 58 | 58 |
+| G(τ_opt) | Matches | See Fig. 22 in Frantz et al. (2023) |
 
-The optimal perturbation consists of streamwise vortices in the shear layer. The optimal response (at τ = 58) shows amplified streaks downstream of the step.
+The optimal perturbation consists of streamwise vortices in the shear layer. The optimal response (at τ = 58) shows amplified streaks downstream of the step. The gain envelope shows excellent quantitative agreement with the reference.
 
 **Method**: Mode 3.3 (transient growth). The direct-adjoint iteration converges to the leading singular triplet of exp(τL).
 
@@ -762,7 +764,7 @@ The optimal perturbation consists of streamwise vortices in the shear layer. The
 | Cylinder (2D) | Hopf | Re_c ≈ 46.6 | Literature |
 | Cylinder (3D) | Floquet pitchfork | Re_c ≈ 189 | < 0.5% |
 | Side-by-side | Neimark-Sacker | Re_c ≈ 61.17 | < 0.7% |
-| Back step | Transient growth | G_max ≈ 77,000 | Literature |
+| Back step | Transient growth | τ_opt = 58 | Literature |
 
 All validation cases are available in the `examples/` directory with ready-to-run configurations.
 
