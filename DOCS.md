@@ -15,9 +15,10 @@ A toolbox for global stability and bifurcation analysis using the spectral eleme
 7. [Code Architecture](#code-architecture)
 8. [Vector Operations](#vector-operations)
 9. [Examples](#examples)
-10. [Theoretical Background](#theoretical-background)
-11. [Troubleshooting](#troubleshooting)
-12. [Citation](#citation)
+10. [Validation](#validation)
+11. [Theoretical Background](#theoretical-background)
+12. [Troubleshooting](#troubleshooting)
+13. [Citation](#citation)
 
 ---
 
@@ -300,12 +301,65 @@ Set in `nekStab_usrchk` subroutine in your `.usr` file:
 | `schur_del` | 0.10 | Deflation threshold |
 | `maxmodes` | 20 | Maximum eigenmodes to save to disk |
 
+**Optimal Parameter Selection** (from parametric studies):
+
+The product of Krylov dimension `m` and sampling time `τ` should satisfy:
+
+```
+4 < m × τ / T < 20
+```
+
+where `T` is the characteristic timescale of the instability (period for oscillatory modes, doubling time for stationary modes).
+
+| Instability Type | Estimate T | Recommendation |
+|-----------------|------------|----------------|
+| Hopf (oscillatory) | T = 1/St | Use τ = T/8, m = 100-150 |
+| Pitchfork (steady) | T ≈ 1 (diffusive) | Use τ = 1, m = 100-150 |
+| Floquet | T = orbit period | Use τ = T, m = 64-128 |
+
+**Example**: For cylinder wake at Re = 50 with St = 0.125:
+- T = 1/0.125 = 8
+- Choose τ = 1 (= T/8) and m = 100
+- Product: m × τ / T = 100 × 1 / 8 = 12.5 ✓
+
+**Convergence rule of thumb**: For open shear flows, eigenvalues converge after total integration time exceeds one flow-through time:
+```
+m × τ > L_x / U_∞
+```
+where L_x is the streamwise domain extent.
+
 #### Newton-Krylov
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `findiff_order` | 1 | Finite difference order (1 or 2) |
 | `epsilon_base` | 1e-6 | Perturbation scale ε for Jacobian approximation |
+| `nwt_maxIt` | 50 | Maximum Newton iterations |
+| `nwt_tol` | 1e-10 | Newton residual tolerance |
+| `gmr_maxIt` | 100 | Maximum GMRES iterations per Newton step |
+
+**Dynamic Tolerances**: The inner GMRES solve does not need high precision early in Newton iteration. Using dynamic tolerances (starting loose, tightening as residual decreases) reduces total computation time by 5-10×.
+
+**Performance Guidelines** (from parametric studies):
+
+Similar to eigenvalue problems, optimal Newton-Krylov performance requires:
+```
+4 < m × τ / T < 20
+```
+
+| Case | Optimal m×τ | Time to Solution |
+|------|-------------|------------------|
+| Cylinder 2D (Re=80) | m×τ ≈ 67 | ~1 minute |
+| Open cavity 2D (Re=4700) | m×τ ≈ 10 | ~30 seconds |
+
+**Comparison with SFD**: For thermosyphon at Ra = 16,100:
+- Newton-Krylov: 147 seconds
+- SFD: 1071 seconds (7× slower)
+
+Newton-Krylov is particularly advantageous for:
+- Saddle-node fixed points (SFD cannot compute these)
+- Unstable periodic orbits
+- Cases far from bifurcation points
 
 #### BoostConv
 
@@ -554,6 +608,163 @@ ln -s ../adjoint/aRe* ../adjoint/aIm* .
 # Edit 1cyl.par: userParam01 = 4.2
 mks 1cyl && nekbmpi 1cyl 4
 ```
+
+---
+
+## Validation
+
+The following validation cases are documented in [Frantz et al. (2023)](https://doi.org/10.1115/1.4056808). Each demonstrates a specific bifurcation type and has been verified against published literature.
+
+### Annular Thermosyphon (Pitchfork + Hopf)
+
+A two-dimensional flow in a concentric annular enclosure heated from below. The inner-to-outer radius ratio is R₂/R₁ = 2. The lower wall is heated (θ = 1), upper wall cooled (θ = 0).
+
+**Governing equations**: Incompressible Navier-Stokes with Boussinesq approximation.
+
+**Control parameters**:
+- Rayleigh number: Ra = ρgβΔT(R₂-R₁)³/(μα)
+- Prandtl number: Pr = 5 (fixed)
+
+**Bifurcations**:
+
+| Bifurcation | Type | Critical Ra | Strouhal | Mode Character |
+|-------------|------|-------------|----------|----------------|
+| Primary | Pitchfork | Ra_c1 ≈ 494 | 0 (steady) | Symmetry-breaking convection cell |
+| Secondary | Hopf | Ra_c2 ≈ 16,081 | St ≈ 7 | Oscillating convection |
+
+**Reference**: [Loiseau et al., TCFD (2020)](https://doi.org/10.1007/s00162-019-00518-1)
+
+**Validation details**:
+- Mesh: 32×8 spectral elements (256 total), N=7 polynomial order
+- Pitchfork: Single real eigenvalue crosses into unstable half-plane at Ra ≈ 494
+- Hopf: Complex-conjugate pair crosses at Ra ≈ 16,081, frequency matches DNS
+
+**Computational performance** (Ra = 16,100 base flow):
+- Newton-Krylov: 147 seconds
+- SFD: 1071 seconds (7× slower)
+
+---
+
+### Harmonically Forced Jet (Period-Doubling)
+
+An axisymmetric jet forced at the inflow with 5% amplitude oscillation at Strouhal number St = 0.6. The configuration promotes vortex pairing via subharmonic instability.
+
+**Geometry**: Domain 40D × 5D (streamwise × radial), 160×30 spectral elements, N=5.
+
+**Inflow condition**:
+```
+u(r,t) = ½[1 - tanh(1/(4θ₀(r - 4r⁻¹)))] × (1 + A cos(ωt))
+```
+where A = 0.05, θ₀ = 0.025, ω = 2π St.
+
+**Bifurcation**:
+
+| Bifurcation | Type | Critical Re | Floquet μ | Physical Mechanism |
+|-------------|------|-------------|-----------|-------------------|
+| Secondary | Period-doubling | Re_c ≈ 1371 | μ = -1 | Vortex pairing |
+
+**Reference**: [Léopold et al., JFM (2019)](https://doi.org/10.1017/jfm.2019.607)
+
+**Validation**:
+- nekStab: Re_c = 1371.18
+- Reference: Re_c ≈ 1371
+- Agreement: < 0.02%
+
+The Floquet multiplier exits the unit circle at μ = -1 (characteristic of period-doubling). Above Re_c, vortices spontaneously pair, and the subharmonic St = 0.3 appears in spectra.
+
+---
+
+### Flow Past a Circular Cylinder (Hopf + Floquet Pitchfork)
+
+The canonical bluff body wake exhibiting both primary (2D) and secondary (3D) instabilities.
+
+**Mesh**: 1464 elements (2D), N=5. For 3D Floquet: extruded to 10 spanwise elements.
+
+#### Primary Instability (Hopf)
+
+| Parameter | nekStab | Reference | Source |
+|-----------|---------|-----------|--------|
+| Re_c1 | ≈ 46.6 | 46.6 | Jackson (1987), Kumar & Mittal (2006) |
+| St_c | 0.125 | 0.125 | — |
+
+The leading eigenvalue is a complex-conjugate pair crossing into the unstable half-plane. The corresponding eigenvector is the von Kármán mode.
+
+#### Secondary Instability (Floquet/Mode A)
+
+Three-dimensional perturbations on the 2D periodic wake. The critical spanwise wavelength is λ_z ≈ 4D (β_c = 1.585).
+
+| Parameter | nekStab | Reference | Source |
+|-----------|---------|-----------|--------|
+| Re_c2 | ≈ 189 | 188.5 ± 1 | Barkley & Henderson, JFM (1996) |
+| μ at Re=190 | 1.012 | 1.034 | — |
+| St at Re=190 | 0.196 | 0.195 | — |
+
+The Floquet multiplier exits the unit circle at μ = +1 (synchronous mode), characteristic of a pitchfork bifurcation. The flow three-dimensionalizes while retaining the shedding frequency.
+
+**References**:
+- Primary: [Zebib, J. Eng. Math. (1987)](https://doi.org/10.1007/BF00127673)
+- Secondary: [Barkley & Henderson, JFM (1996)](https://doi.org/10.1017/S0022112096008750)
+
+---
+
+### Side-by-Side Cylinders (Neimark-Sacker)
+
+Two circular cylinders placed side-by-side with gap g = 0.7D. This configuration exhibits the "flip-flop" instability—a quasi-periodic transition.
+
+**Mesh**: 5092 elements, N=7. Domain: -50D to 75D (streamwise), ±50D (cross-stream).
+
+**Bifurcations**:
+
+| Bifurcation | Type | Critical Re | Frequency | Mode |
+|-------------|------|-------------|-----------|------|
+| Primary | Hopf | Re_c1 ≈ 55 | St = 0.11 | Synchronized vortex shedding |
+| Secondary | Neimark-Sacker | Re_c2 ≈ 61.17 | St = 0.02 | Flip-flop |
+
+**Reference**: [Carini et al., JFM (2014)](https://doi.org/10.1017/jfm.2014.362)
+
+**Validation**:
+- nekStab: Re_c2 = 61.17
+- Reference: Re_c2 ≈ 61.6
+- Agreement: < 0.7%
+
+The Neimark-Sacker bifurcation is characterized by a complex-conjugate Floquet pair exiting the unit circle at angle φ ≈ 71°. Above Re_c2, the system exhibits quasi-periodic dynamics (torus in phase space) with two incommensurate frequencies.
+
+---
+
+### Backward-Facing Step (Transient Growth)
+
+A linearly stable flow that exhibits strong transient amplification due to non-normality of the linearized operator.
+
+**Geometry**: Step height h = 1, expansion ratio 1:2. Domain: -10h to 50h (streamwise), -1h to 1h (wall-normal). Mesh: 1670 elements, N=5.
+
+**Reference**: [Blackburn et al., JFM (2008)](https://doi.org/10.1017/S002211200800267X)
+
+**Results at Re = 500**:
+
+| Quantity | nekStab | Reference |
+|----------|---------|-----------|
+| G_max | ≈ 77,000 | 77,000 |
+| τ_opt | 58 | 58 |
+
+The optimal perturbation consists of streamwise vortices in the shear layer. The optimal response (at τ = 58) shows amplified streaks downstream of the step.
+
+**Method**: Mode 3.3 (transient growth). The direct-adjoint iteration converges to the leading singular triplet of exp(τL).
+
+---
+
+### Summary of Validation Cases
+
+| Case | Bifurcation | Critical Parameter | Agreement |
+|------|-------------|-------------------|-----------|
+| Thermosyphon | Pitchfork | Ra_c ≈ 494 | Literature |
+| Thermosyphon | Hopf | Ra_c ≈ 16,081 | Literature |
+| Forced jet | Period-doubling | Re_c ≈ 1371 | < 0.02% |
+| Cylinder (2D) | Hopf | Re_c ≈ 46.6 | Literature |
+| Cylinder (3D) | Floquet pitchfork | Re_c ≈ 189 | < 0.5% |
+| Side-by-side | Neimark-Sacker | Re_c ≈ 61.17 | < 0.7% |
+| Back step | Transient growth | G_max ≈ 77,000 | Literature |
+
+All validation cases are available in the `examples/` directory with ready-to-run configurations.
 
 ---
 
