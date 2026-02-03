@@ -1,31 +1,50 @@
-name: gfortran+openmpi
+name: GCC Build
+
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [RANS_update]
   pull_request:
+    branches: [RANS_update]
 
 env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  MPICH_FC: gfortran
-  MAKEFLAGS: "-j $(awk '/Thread/ {print $NF}' /proc/cpuinfo)"
+  NEKSTAB_SOURCE_ROOT: ${{ github.workspace }}
+  NEK_SOURCE_ROOT: ${{ github.workspace }}/Nek5000
 
 jobs:
-  main:
+  build:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout repository nekStab
+      - name: Checkout nekStab
         uses: actions/checkout@v4
 
-      - name: Execute Nek5000 Setup Script
-        run: yes | ./Nek5000setup.sh
-
-      - name: Compiling examples/cylinder/dns/
+      - name: Install dependencies
         run: |
-          source exports.sh
-          cd examples/cylinder/dns/
-          mks 1cyl
-          nekmpi 1cyl 2
+          sudo apt-get update
+          sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin liblapack-dev libblas-dev
+
+      - name: Clone Nek5000
+        run: |
+          git clone --depth=1 https://github.com/Nek5000/Nek5000.git
+          cd Nek5000/tools && ./maketools genmap genbox
+
+      - name: Build cylinder DNS example
+        run: |
+          export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
+          cd examples/cylinder/dns
+          NEKSTAB_FC=gcc mks 1cyl
+
+      - name: Run cylinder DNS (short test)
+        run: |
+          export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
+          cd examples/cylinder/dns
+          # Modify for short CI test run
+          sed -i 's/endTime = .*/endTime = 0.1/' 1cyl.par
+          mpirun -np 2 --oversubscribe ./nek5000 > ci.log 2>&1 &
+          PID=$!
+          sleep 60
+          kill $PID 2>/dev/null || true
+          # Check if simulation started successfully
+          grep -q "Step" ci.log && echo "Simulation started successfully"
