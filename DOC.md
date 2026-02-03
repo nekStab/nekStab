@@ -14,11 +14,14 @@ A toolbox for global stability and bifurcation analysis using the spectral eleme
 6. [Parameter Reference](#parameter-reference)
 7. [Code Architecture](#code-architecture)
 8. [Vector Operations](#vector-operations)
-9. [Examples](#examples)
-10. [Validation](#validation)
-11. [Theoretical Background](#theoretical-background)
-12. [Troubleshooting](#troubleshooting)
-13. [Citation](#citation)
+9. [Mesh Generation](#mesh-generation)
+10. [Examples](#examples)
+11. [Validation](#validation)
+12. [Theoretical Background](#theoretical-background)
+13. [Troubleshooting](#troubleshooting)
+14. [Citation](#citation)
+15. [License](#license)
+16. [Contact](#contact)
 
 ---
 
@@ -267,24 +270,24 @@ Set via `userParam01` in the `.par` file:
 
 ### Mode 1: Fixed Point Methods
 
-| Value | Method | Use Case |
-|-------|--------|----------|
-| `1.1` | SFD (Selective Frequency Damping) | Unstable steady states with known frequency |
+| Value | Method | Description |
+|-------|--------|-------------|
+| `1.1` | SFD | Selective Frequency Damping |
 | `1.2` | BoostConv | Accelerating slow convergence |
-| `1.3` | DMT (Dynamic Mode Tracking) | *Not fully ported* |
-| `1.4` | TDF (Time-Delayed Feedback) | Periodic orbits with known period |
+| `1.3` | DMT | Dynamic Mode Tracking (not yet ported) |
+| `1.4` | TDF | Time-Delayed Feedback |
 
-**SFD Parameters** (in `.par` file):
-- `userParam04`: Target frequency (Strouhal number, converted to ω internally)
-- `userParam05`: If > 0, enables forced frequency mode
+**SFD Parameters** (`userParam01 = 1.1`):
+- `userParam04`: Frequency `f` (positive: Åkervik formulation, negative: Casacuberta formulation)
+- `userParam05`: Filter width `σ` (use `0` for continuation from previous run)
 
 ### Mode 2: Newton-Krylov
 
 | Value | Description |
 |-------|-------------|
-| `2.0` | Fixed points (steady states) |
-| `2.1` | UPOs (Unstable Periodic Orbits) |
-| `2.2` | Forced UPOs (with external forcing) |
+| `2.0` | Newton for fixed points (steady states) |
+| `2.1` | Newton for periodic orbits (`endTime` = initial guess) |
+| `2.2` | Newton for forced periodic orbits (`endTime` = 1/f) |
 
 Uses GMRES to solve the Newton system. The Jacobian-vector product is computed via finite differences of the time-stepper.
 
@@ -311,7 +314,8 @@ Uses GMRES to solve the Newton system. The Jacobian-vector product is computed v
 | `4.1` | Kinetic energy budget |
 | `4.2` | Wavemaker (structural sensitivity) |
 | `4.3` | Base flow sensitivity |
-| `4.41`, `4.42` | Sensitivity to steady forcing |
+| `4.41` | Real part forcing sensitivity |
+| `4.42` | Imaginary part forcing sensitivity |
 | `4.43` | Delta forcing response |
 | `4.50` | Animate direct mode |
 | `4.51` | Animate mode with base flow deformation |
@@ -599,6 +603,135 @@ alpha = glsc3(p%vx, q%vx, bm1s, nv) + glsc3(p%vy, q%vy, bm1s, nv)
 if (if3d) alpha = alpha + glsc3(p%vz, q%vz, bm1s, nv)
 if (ifto) alpha = alpha + glsc3(p%t(:,1), q%t(:,1), bm1s, nt)
 ! ... loop over passive scalars
+```
+
+---
+
+## Mesh Generation
+
+### PointWise to Nek5000 Workflow
+
+This workflow converts a PointWise mesh to Nek5000 format via Gmsh.
+
+#### Step 1: Create Mesh in PointWise
+
+Create your mesh in PointWise (v18+) and save the project as `.pw` file.
+
+#### Step 2: Configure Solver Settings
+
+1. **CAE → Select Solver → Gmsh**
+2. **Set Dimension → 3D**
+3. **Set Boundary Conditions** - Create names with arbitrary boundary IDs:
+   ```
+   inf  1
+   out  2
+   top  3
+   bot  4
+   fsp  5
+   ```
+   > Note: These names don't need to follow Nek's 3-character style yet.
+
+   For **periodic** spanwise (instead of free-slip), tag each side separately:
+   ```
+   P1  5
+   P2  6
+   ```
+
+4. **Solver Attribute → Q1** (second-order elements will be set in Gmsh)
+
+#### Step 3: Export from PointWise
+
+1. **File → Export → CAE** → `mesh_file1.msh`
+2. **Data Precision → Double** → OK
+
+#### Step 4: Optimize in Gmsh
+
+Open Gmsh and load `mesh_file1.msh`:
+
+1. Expand the **Mesh** menu on the left panel
+2. Click **Optimize 3D**
+3. Click **Set order 2**
+4. **File → Export** → `mesh_file2.msh`
+5. **MSH Options → Version 2 ASCII** (ensure other options are not selected)
+
+#### Step 5: Convert with gmsh2nek
+
+Run `gmsh2nek` and follow the prompts:
+
+```
+$ gmsh2nek
+
+3                          # 3D mesh
+
+mesh_file2                 # mesh filename (without .msh)
+
+# Output shows BID mapping - SAVE THESE VALUES!
+
+1                          # 1 if periodic, 0 if SYM
+
+4 5                        # periodic pair IDs (P1, P2 - may have changed!)
+
+0 0 12                     # spanwise: x, y, z extent (e.g., -6 to 6 → 12)
+```
+
+#### Step 6: Generate Connectivity Map
+
+Run `genmap`:
+
+```
+$ genmap
+
+mesh_file2                 # mesh filename
+
+                           # press Enter for default tolerance, or specify custom
+```
+
+You should now have:
+- `mesh_file2.re2` - mesh file
+- `mesh_file2.ma2` - connectivity map
+
+#### Step 7: Configure Boundary Conditions in .usr
+
+In `usrdat2` in your `.usr` file, set boundary conditions.
+
+> **Important:** Use the boundary IDs from `gmsh2nek` output, NOT the original PointWise IDs!
+
+> **Important:** Nek5000 requires 3-character BC codes. See [Nek5000 documentation](https://nek5000.github.io/NekDoc/problem_setup/boundary_conditions.html) for options.
+
+```fortran
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer iel, ifc, id_face
+
+      do iel = 1, nelv
+         do ifc = 1, 2*ndim
+            id_face = bc(5, ifc, iel, 1)
+            if (id_face .eq. 2) then       ! outflow
+               cbc(ifc, iel, 1) = 'O  '
+            elseif (id_face .eq. 3) then   ! normal outflow
+               cbc(ifc, iel, 1) = 'ON '
+            elseif (id_face .eq. 6) then   ! wall
+               cbc(ifc, iel, 1) = 'W  '
+            elseif (id_face .eq. 7) then   ! prescribed inflow
+               cbc(ifc, iel, 1) = 'v  '
+            endif
+         enddo
+      enddo
+
+      return
+      end
+```
+
+### Alternative: Gmsh Native
+
+For simpler geometries, create meshes directly in Gmsh:
+
+```bash
+gmsh -3 geometry.geo -order 2 -o mesh.msh
+gmsh2nek
+genmap
 ```
 
 ---
