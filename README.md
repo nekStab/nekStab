@@ -50,15 +50,50 @@ ulimit -s unlimited
 ulimit -c unlimited
 ```
 
-Computing the fixed point for the cylinder flow example using the Newton-Krylov solver on 4 processors is as simple as
+## Compilation
 
 Go to a given example folder and compile the code:
 ```bash
-cd ~/nekStab/examples/cylinder/baseflow/newton  
-makeneks 1cyl
+cd ~/nekStab/examples/cylinder/baseflow/newton
+mks 1cyl
 ```
 
-If 'Compilation successful!' then you can run the code:
+### Compiler Selection
+
+nekStab supports multiple Fortran compilers. The build script auto-detects available compilers in this order: `ifort` → `ifx` → `gfortran`. To force a specific compiler:
+
+```bash
+NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM (recommended for Intel CPUs)
+NEKSTAB_FC=ifort mks 1cyl  # Intel Classic
+NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
+```
+
+### Performance Considerations
+
+| Compiler | Performance | Notes |
+|----------|-------------|-------|
+| **ifx** (Intel LLVM) | Fastest | Requires Intel oneAPI 2024+, uses MKL |
+| **ifort** (Intel Classic) | Fast | Legacy, being phased out by Intel |
+| **gfortran** (GCC) | Good | Universal, uses system BLAS/LAPACK |
+
+**For best performance on Intel/AMD x86 CPUs:**
+1. Install [Intel oneAPI HPC Toolkit](https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit.html) (free)
+2. Source the environment: `source /opt/intel/oneapi/setvars.sh`
+3. Build with ifx: `NEKSTAB_FC=ifx mks 1cyl`
+
+The Intel compilers use MKL (Math Kernel Library) which provides highly optimized BLAS/LAPACK routines with runtime CPU dispatching.
+
+### Debug Mode
+
+For debugging crashes or numerical issues:
+```bash
+mks 1cyl --debug
+```
+This enables stack traces, bounds checking, and additional warnings.
+
+## Running
+
+After successful compilation, run on 4 processors:
 ```bash
 nekbmpi 1cyl 4
 ```
