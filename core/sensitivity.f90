@@ -545,10 +545,13 @@
          type(krylov_vector) :: BF, Re, Im, Re_sin, Im_cos
          character(len=80) :: filename
          character(len=*), intent(in) :: mode ! 'd' or 'a'
+         character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
          real :: frequency, omega, sigma, u_max, A0
          integer, intent(in) :: num_steps
          integer :: i
-      
+
+         mode_local = mode ! copy to local before trim() for ifx compatibility
+
          if (nid == 0) then
             write (6, *) 'Animating mode function in mode:', mode
             write (6, *) 'Number of steps:', num_steps
@@ -604,7 +607,7 @@
             call k_copy(Re_sin, Re); call k_cmult(Re_sin, cos(omega*time))
             call k_copy(Im_cos, Im); call k_cmult(Im_cos, -sin(omega*time))
             call k_add2(Re_sin, Im_cos)
-            call outpost2(Re_sin%vx, Re_sin%vy, Re_sin%vz, Re_sin%pr, Re_sin%t, nof, trim(mode)//'Q_')
+            call outpost2(Re_sin%vx, Re_sin%vy, Re_sin%vz, Re_sin%pr, Re_sin%t, nof, trim(mode_local)//'Q_')
       
          end do
       
@@ -705,14 +708,17 @@
       
          integer, intent(in) :: num_of_files
          character(len=*), intent(in) :: mode ! 'd' or 'a'
-      
+
          type(krylov_vector), save :: BF, Re, Im
          type(krylov_vector) :: Re_cos, Im_sin
          real, save :: frequency, omega, sigma, u_max, A0
          character(len=80) :: filename
+         character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
          real :: amplitude
          integer :: i
-      
+
+         mode_local = mode ! copy to local before trim() for ifx compatibility
+
          if (nid == 0) then
             write (6, *) 'Animating mode function in mode:', mode
             write (6, *) 'Number of steps:', num_of_files
@@ -772,15 +778,15 @@
             call k_add2(Re_cos, Im_sin)
       
             call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
-            call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qm')
-      
+            call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qm')
+
             amplitude = A0*exp(sigma*time)
             if (nid == 0) write (6, *) 'Amplitude: ', A0, amplitude
-      
+
             call k_cmult(Re_cos, amplitude)
             call k_add2(Re_cos, BF)
             call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
-            call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qb')
+            call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qb')
       
          end do
       
@@ -794,15 +800,18 @@
       
          integer, intent(in) :: num_of_files
          character(len=*), intent(in) :: mode ! 'd' or 'a'
-      
+
          type(krylov_vector), save :: BF, Re, Im
          type(krylov_vector) :: Re_cos, Im_sin
          real, save :: frequency, omega, sigma, u_max, A0
          character(len=80) :: filename
+         character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
          real :: amplitude, period
          integer :: i, iosteps, nfiles
          integer, save :: counter = 1
-      
+
+         mode_local = mode ! copy to local before trim() for ifx compatibility
+
          if (nid == 0) then
             write (6, *) 'Animating mode function in mode:', mode
             write (6, *) 'Number of steps:', num_of_files
@@ -893,13 +902,13 @@
                call k_copy(Im_sin, Im); call k_cmult(Im_sin, -sin(omega*time))
                call k_add2(Re_cos, Im_sin)
                call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
-               call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qm')
+               call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qm')
                amplitude = A0*exp(sigma*time)
                if (nid == 0) write (6, *) 'Amplitude: ', A0, amplitude
                call k_cmult(Re_cos, amplitude)
                call k_add2(Re_cos, BF)
                call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
-               call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode)//'Qb')
+               call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qb')
             end if
       
             call prepost(ifoutfld, 'his')

@@ -2,9 +2,7 @@
       subroutine whereyouwant(resnam, posfil) !file numbering suffix counter
          character(len=3) resnam
          integer posfil, iprefix
-         common/RES_WANT/nopen(99, 2)
-      
-      !     change prepost.f line 1094 from "save nopen" to "common /RES_WANT/ nopen"
+         common/nopenf2/nopen(1000, 2)
       
          iprefix = i_find_prefix(resnam, 99)
          nopen(iprefix, 1) = posfil - 1
@@ -38,15 +36,18 @@
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
+
          type(krylov_vector), intent(out) :: Q
          character(len=*), intent(in) :: fname
+         character(len=256) :: fname_local ! ifx: trim() on assumed-length args can segfault
          character(len=60) :: filename
-      
-         if (index(fname, '.f') == 0) then
-            write (filename, '(2A)') trim(fname), trim(SESSION)//'0.f00001'
+
+         fname_local = fname ! copy to local before trim() for ifx compatibility
+
+         if (index(fname_local, '.f') == 0) then
+            write (filename, '(2A)') trim(fname_local), trim(SESSION)//'0.f00001'
          else
-            filename = fname
+            filename = fname_local
          end if
       
          call load_fld(filename)
