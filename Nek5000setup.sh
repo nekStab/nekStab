@@ -7,9 +7,8 @@ echo "This script will perform the following actions upon your confirmation:"
 echo "1. Remove existing Nek5000 directory (if found)."
 echo "2. Install necessary dependencies."
 echo "3. Clone the Nek5000 repository."
-echo "4. Modify a line in core/prepost.f."
-echo "5. Build genmap and genbox tools."
-echo "6. Add environment variables to your shell configuration."
+echo "4. Build genmap and genbox tools."
+echo "5. Add environment variables to your shell configuration."
 echo "--------------------"
 
 # Detect the operating system
@@ -66,75 +65,6 @@ else
     cd Nek5000
 fi
 
-# Modify core/prepost.f
-read -p "Do you want to modify a line in core/prepost.f? (y/n) [y]: " confirm
-confirm=${confirm:-y}
-if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
-    echo "Modifying core/prepost.f..."
-    FILE_PATH="core/prepost.f"
-    
-    # Show the current state
-    echo "=== Current state ==="
-    grep -n "save    nopen" "$FILE_PATH" || echo "Pattern not found!"
-    
-    # Make the replacement
-    if [ "$OS" == "Linux" ]; then
-        sed -i 's/save    nopen/common \/RES_WANT\/ nopen/g' "$FILE_PATH"
-    elif [ "$OS" == "Darwin" ]; then
-        sed -i '' 's/save    nopen/common \/RES_WANT\/ nopen/g' "$FILE_PATH"
-    fi
-    
-    # Show the result and verify
-    echo "=== Modified state ==="
-    if grep -n "common /RES_WANT/ nopen" "$FILE_PATH"; then
-        if grep -q "save    nopen" "$FILE_PATH"; then
-            echo "Warning: Original 'save' statement is still present!"
-            echo "Modification may have failed."
-        else
-            echo "Success: 'save' statement was replaced with 'common' block"
-        fi
-    else
-        echo "Error: Could not find the modified line!"
-    fi
-else
-    echo "Skipping modification."
-fi
-
-# Modify core/makenek.inc
-read -p "Do you want to patch FFLAGS+= in core/makenek.inc? (y/n) [y]: " confirm_makenek
-confirm_makenek=${confirm_makenek:-y}
-if [ "$confirm_makenek" == "y" ] || [ "$confirm_makenek" == "Y" ]; then
-    echo "Modifying core/makenek.inc..."
-    FILE_PATH="core/makenek.inc"
-    
-    # Show the current state
-    echo "=== Current state ==="
-    grep -n '\-e.*FFLAGS.*+=.*FCPP' "$FILE_PATH" || echo "Pattern not found!"
-    
-    # Make the replacement
-    if [ "$OS" == "Linux" ]; then
-        sed -i '/FFLAGS.*+=.*FCPP/ c\-e "s:^FFLAGS[ ]*+=.*:FFLAGS=$FCPP $FR8 $FF77 $FFLAGS:" \\' "$FILE_PATH"
-    elif [ "$OS" == "Darwin" ]; then
-        sed -i '' '/FFLAGS.*+=.*FCPP/ c\-e "s:^FFLAGS[ ]*+=.*:FFLAGS=$FCPP $FR8 $FF77 $FFLAGS:" \\' "$FILE_PATH"
-    fi
-    
-    # Show the result and verify
-    echo "=== Modified state ==="
-    if grep -n '\-e.*FFLAGS.*FCPP' "$FILE_PATH"; then
-        # Check if the + was actually removed from the replacement part
-        if grep -q '\-e.*FFLAGS+=' "$FILE_PATH"; then
-            echo "Warning: FFLAGS+= is still present in the file!"
-            echo "Modification may have failed."
-        else
-            echo "Success: FFLAGS+= was replaced with FFLAGS="
-        fi
-    else
-        echo "Error: Could not find the FFLAGS line after modification!"
-    fi
-else
-    echo "Skipping modification."
-fi
-
 # Build genmap and genbox tools
 read -p "Do you want to build genmap and genbox tools? (y/n) [y]: " confirm
 confirm=${confirm:-y}
@@ -167,10 +97,8 @@ if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
         config_file=~/.bashrc
     elif [ "$SHELL" = "/bin/zsh" ]; then
         config_file=~/.zshrc
-    elif [ "$SHELL" = "/bin/fish" ]; then
-        config_file=~/.config/fish/config.fish
     else
-        echo "Unsupported shell: $SHELL"
+        echo "Unsupported shell: $SHELL (only bash and zsh are supported)"
         exit 1
     fi
 
