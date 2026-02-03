@@ -9,14 +9,7 @@ COPYRIGHT (c) 2020-2025 DynFluid Laboratoire Paris
 
 [![CI Build](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg?branch=RANS_update)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml)
 
-**nekStab** is a toolbox for performing bifurcation analysis using the spectral element CFD solver [Nek5000](https://github.com/Nek5000/Nek5000).
-It is released under the BSD-3-Clause license.
-
-The project started in 2010 with the PhD thesis of [Jean-Christophe Loiseau](https://loiseaujc.github.io/) and builds on the work of former PhD students of our group such as Frédéric Alizard, Stefania Cherubini, Alessandro Bucci, Mirko Farano, Francesco Picella and [Ricardo Frantz](https://github.com/ricardofrantz).
-Ricardo is the one who brought all the previous contributions together in a single toolbox.
-
-It is actively maintained mainly by [Ricardo Frantz](https://github.com/ricardofrantz) and [Jean-Christophe Loiseau](https://loiseaujc.github.io/).
-Both of them work at [DynFluid](http://dynfluid.ensam.eu/), a fluid dynamics laboratory part of [Arts et Métiers Institute of Technology](https://artsetmetiers.fr/en).
+**nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
 ## First Steps
 
