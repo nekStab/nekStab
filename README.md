@@ -130,7 +130,7 @@ To stop the code just:
 killall nek5000
 ```
 
-For more information on compiling the code on Mac OS or optional packages, see the [**Documentation**](https://nekstab.github.io/nekStabDoc/en/master/).
+For more information, see the [Documentation](DOC.md).
 
 ## Development
 
