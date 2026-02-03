@@ -1,17 +1,40 @@
 cff-version: 1.2.0
-message: "If you use our package, please cite it as below."
+message: "If you use nekStab, please cite our paper below."
+title: "nekStab: Stability analysis toolbox for Nek5000"
+type: software
 authors:
-- family-names: "Frantz"
-  given-names: "R. A. S."
-  orcid: "https://orcid.org/0000-0001-8219-3368"
-- family-names: "Loiseau"
-  given-names: "J.-Ch."
-  orcid: "https://orcid.org/0000-0002-7244-8416"
-- family-names: "Robinet"
-  given-names: "J.-Ch."
-  orcid: "https://orcid.org/0000-0002-3529-6003"
-title: "nekStab : global stability analysis toolbox for nek5000"
-version: 1.1.0
-doi: 10.1115/1.4056808
-date-released: 2023-01-01
-url: "https://github.com/nekStab"
+  - family-names: Frantz
+    given-names: Ricardo A. S.
+    orcid: "https://orcid.org/0000-0001-8219-3368"
+  - family-names: Loiseau
+    given-names: Jean-Christophe
+    orcid: "https://orcid.org/0000-0002-7244-8416"
+  - family-names: Robinet
+    given-names: Jean-Christophe
+    orcid: "https://orcid.org/0000-0002-3529-6003"
+repository-code: "https://github.com/nekStab/nekStab"
+url: "https://nekstab.github.io/"
+license: BSD-3-Clause
+keywords:
+  - computational fluid dynamics
+  - stability analysis
+  - spectral element method
+  - Nek5000
+  - Krylov methods
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Frantz
+      given-names: R. A. S.
+    - family-names: Loiseau
+      given-names: J.-Ch.
+    - family-names: Robinet
+      given-names: J.-Ch.
+  title: "Krylov Methods for Large-Scale Dynamical Systems: Application in Fluid Dynamics"
+  journal: "Applied Mechanics Reviews"
+  volume: 75
+  issue: 3
+  year: 2023
+  month: 3
+  doi: "10.1115/1.4056808"
+  url: "https://doi.org/10.1115/1.4056808"
