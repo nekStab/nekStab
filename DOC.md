@@ -96,7 +96,7 @@ ulimit -c unlimited   # Enable core dumps for debugging
 ### Basic Usage
 
 ```bash
-cd examples/cylinder/dns
+cd example/cylinder/dns
 mks 1cyl
 ```
 
@@ -148,7 +148,7 @@ NEKSTAB_EXTRA_FFLAGS="-O3 -march=native" mks 1cyl
 ### 1. DNS Simulation
 
 ```bash
-cd examples/cylinder/dns
+cd example/cylinder/dns
 mks 1cyl                    # Compile
 nekbmpi 1cyl 4              # Run on 4 MPI ranks
 tail -f logfile             # Monitor output
@@ -158,7 +158,7 @@ killall nek5000             # Stop if needed
 ### 2. Base Flow (Newton-Krylov)
 
 ```bash
-cd examples/cylinder/baseflow/newton
+cd example/cylinder/baseflow/newton
 # Ensure userParam01 = 2.0 in 1cyl.par
 mks 1cyl && nekbmpi 1cyl 4
 # Output: BF_1cyl0.f00001 (converged base flow)
@@ -167,7 +167,7 @@ mks 1cyl && nekbmpi 1cyl 4
 ### 3. Direct Stability Analysis
 
 ```bash
-cd examples/cylinder/stability/direct
+cd example/cylinder/stability/direct
 # Ensure userParam01 = 3.1 in 1cyl.par
 # Ensure base flow file exists: BF_1cyl0.f00001
 mks 1cyl && nekbmpi 1cyl 4
@@ -177,7 +177,7 @@ mks 1cyl && nekbmpi 1cyl 4
 ### 4. Adjoint Analysis
 
 ```bash
-cd examples/cylinder/stability/adjoint
+cd example/cylinder/stability/adjoint
 # Ensure userParam01 = 3.2 in 1cyl.par
 mks 1cyl && nekbmpi 1cyl 4
 # Output: aRe*, aIm* (adjoint eigenmodes)
@@ -186,7 +186,7 @@ mks 1cyl && nekbmpi 1cyl 4
 ### 5. Wavemaker Computation
 
 ```bash
-cd examples/cylinder/postproc
+cd example/cylinder/postproc
 # Ensure userParam01 = 4.2 in 1cyl.par
 # Requires both direct and adjoint modes
 mks 1cyl && nekbmpi 1cyl 4
@@ -422,7 +422,7 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 
 ```
 nekStab/
-├── core/                    # Fortran 90 source files
+├── src/                     # Fortran 90 source files
 │   ├── main.f90            # Entry point, mode dispatcher
 │   ├── krylov_subspace.f90 # Data types, memory layout
 │   ├── krylov_decomposition.f90  # Arnoldi iteration
@@ -438,7 +438,7 @@ nekStab/
 │   └── IO.f90              # File I/O routines
 ├── bin/
 │   └── mks                 # Build script
-├── examples/               # Test cases
+├── example/                # Test cases
 └── Nek5000/                # Nek5000 solver
 ```
 
@@ -562,7 +562,7 @@ if (ifto) alpha = alpha + glsc3(p%t(:,1), q%t(:,1), bm1s, nt)
 ### Cylinder Workflow
 
 ```
-examples/cylinder/
+example/cylinder/
 ├── dns/           # 1. Verify mesh with DNS
 ├── baseflow/
 │   ├── newton/    # 2. Compute steady base flow
@@ -577,7 +577,7 @@ examples/cylinder/
 
 ```bash
 # 1. DNS verification
-cd examples/cylinder/dns
+cd example/cylinder/dns
 mks 1cyl && nekbmpi 1cyl 4
 # Check: flow develops vortex shedding
 
@@ -766,7 +766,7 @@ The optimal perturbation consists of streamwise vortices in the shear layer. The
 | Side-by-side | Neimark-Sacker | Re_c ≈ 61.17 | < 0.7% |
 | Back step | Transient growth | τ_opt = 58 | Literature |
 
-All validation cases are available in the `examples/` directory with ready-to-run configurations.
+All validation cases are available in the `example/` directory with ready-to-run configurations.
 
 ---
 

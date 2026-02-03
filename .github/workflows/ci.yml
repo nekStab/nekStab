@@ -81,7 +81,7 @@ jobs:
       - name: Build cylinder DNS example
         run: |
           export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
-          cd examples/cylinder/dns
+          cd example/cylinder/dns
           if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
             # Source MKL environment for Intel build
             source /opt/intel/oneapi/mkl/latest/env/vars.sh
@@ -92,6 +92,6 @@ jobs:
 
       - name: Verify executable
         run: |
-          cd examples/cylinder/dns
+          cd example/cylinder/dns
           ls -la nek5000
           file nek5000
