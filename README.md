@@ -11,10 +11,15 @@ COPYRIGHT (c) 2020-2025 DynFluid Laboratoire Paris
 
 **nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
-## First Steps
+**Features:**
+- Base flow computation (SFD, BoostConv, Newton-Krylov)
+- Linear stability analysis (direct and adjoint eigenmodes)
+- Floquet analysis for time-periodic flows
+- Transient growth and optimal perturbations
+- Sensitivity analysis (wavemaker, forcing response)
+- Matrix-free Krylov methods, scales to millions of DoFs
 
-**nekStab** is a toolbox written in 'Fortran 90' for the spectral element solver Nek500.
-If you already have C and Fortran compilers, you can install both on Ubuntu/Debian distributions with the following commands.
+## First Steps
 
 **Prerequisites**
 
