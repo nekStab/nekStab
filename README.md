@@ -114,16 +114,10 @@ For more information, see the [Documentation](DOC.md).
 
 > **See also:** [LightKrylov](https://github.com/nekStab/LightKrylov) is a modern Fortran library providing abstract Krylov methods. [neklab](https://github.com/nekStab/neklab) is the next-generation bifurcation and stability analysis toolbox for Nek5000, built on LightKrylov. Both are actively developed by Jean-Christophe Loiseau and Simon Kern.
 
-## Help and support
+## Communication
 
-Although **nekStab** relies on Nek5000, none of us are active developers of Nek5000.
-If you have questions about Nek5000, please contact the dedicated [GitHub repo](https://github.com/Nek5000/Nek5000)
- and [documentation](https://nek5000.github.io/NekDoc/)
-
-### Communication
-
-- Mail : [Jean-Christophe Loiseau](mailto:loiseau.jc@gmail.com?subject=[GitHub]%20Information%20about%20nekStab) or [Ricardo Frantz](mailto:rasfrantz@gmail.com?subject=[GitHub]%20Information%20about%20nekStab)
-- Website : [https://nekstab.github.io/](https://nekstab.github.io/)
+- Mail: [Jean-Christophe Loiseau](mailto:loiseau.jc@gmail.com?subject=[GitHub]%20Information%20about%20nekStab) or [Ricardo Frantz](mailto:rasfrantz@gmail.com?subject=[GitHub]%20Information%20about%20nekStab)
+- Website: [https://nekstab.github.io/](https://nekstab.github.io/)
 
 ### Citation
 
