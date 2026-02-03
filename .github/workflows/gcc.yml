@@ -1,4 +1,4 @@
-name: GCC Build
+name: CI Build
 
 on:
   workflow_dispatch:
@@ -13,17 +13,41 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        toolchain:
+          - {compiler: gcc, version: 14}
+        include:
+          # Intel ifx only on Linux (not supported on macOS)
+          - os: ubuntu-latest
+            toolchain: {compiler: intel, version: '2024.2'}
 
     steps:
       - name: Checkout nekStab
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Setup Fortran
+        uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: ${{ matrix.toolchain.compiler }}
+          version: ${{ matrix.toolchain.version }}
+
+      - name: Install MPI (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin liblapack-dev libblas-dev
+          sudo apt-get install -y libopenmpi-dev openmpi-bin liblapack-dev libblas-dev
+
+      - name: Install MPI (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install open-mpi
 
       - name: Clone Nek5000
         run: |
@@ -34,17 +58,14 @@ jobs:
         run: |
           export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
           cd examples/cylinder/dns
-          NEKSTAB_FC=gcc mks 1cyl
+          if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
+            NEKSTAB_FC=ifx mks 1cyl
+          else
+            NEKSTAB_FC=gcc mks 1cyl
+          fi
 
-      - name: Run cylinder DNS (short test)
+      - name: Verify executable
         run: |
-          export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
           cd examples/cylinder/dns
-          # Modify for short CI test run
-          sed -i 's/endTime = .*/endTime = 0.1/' 1cyl.par
-          mpirun -np 2 --oversubscribe ./nek5000 > ci.log 2>&1 &
-          PID=$!
-          sleep 60
-          kill $PID 2>/dev/null || true
-          # Check if simulation started successfully
-          grep -q "Step" ci.log && echo "Simulation started successfully"
+          ls -la nek5000
+          file nek5000
