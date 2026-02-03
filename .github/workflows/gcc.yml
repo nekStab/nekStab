@@ -44,6 +44,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libopenmpi-dev openmpi-bin liblapack-dev libblas-dev
 
+      - name: Install Intel MKL (for Intel compiler)
+        if: matrix.toolchain.compiler == 'intel'
+        run: |
+          # Add Intel APT repository
+          wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add -
+          sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
+          sudo apt-get update
+          # Install MKL (needed for -qmkl flag)
+          sudo apt-get install -y intel-oneapi-mkl-devel
+
       - name: Install MPI (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -73,6 +83,8 @@ jobs:
           export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
           cd examples/cylinder/dns
           if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
+            # Source MKL environment for Intel build
+            source /opt/intel/oneapi/mkl/latest/env/vars.sh
             NEKSTAB_FC=ifx mks 1cyl
           else
             NEKSTAB_FC=gcc mks 1cyl
