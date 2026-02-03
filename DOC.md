@@ -49,7 +49,7 @@ Traditional stability analysis requires forming and storing large Jacobian matri
 
 ### Prerequisites
 
-**Linux (Ubuntu/Debian)**
+**Linux (Ubuntu/Debian) - GCC**
 ```bash
 sudo apt-get install build-essential gfortran libopenmpi-dev liblapack-dev libblas-dev cmake
 ```
@@ -63,6 +63,64 @@ brew install gcc open-mpi cmake
 ```bash
 module load gcc openmpi  # or intel-oneapi
 ```
+
+### Intel oneAPI Installation (Recommended)
+
+For optimal performance on Intel/AMD x86 CPUs, install Intel oneAPI. The `ifx` compiler with MKL typically provides 20-40% faster execution than GCC.
+
+#### Repository Setup
+
+```bash
+# Install prerequisites
+sudo apt update
+sudo apt install -y gpg-agent wget
+
+# Add Intel GPG key
+wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+  | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+
+# Add Intel repository
+echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+  | sudo tee /etc/apt/sources.list.d/oneAPI.list
+
+sudo apt update
+```
+
+#### Installation Options
+
+| Package | Command | Disk Space |
+|---------|---------|------------|
+| Fortran compiler only | `sudo apt install intel-oneapi-compiler-fortran` | ~3 GB |
+| Fortran + MKL | `sudo apt install intel-oneapi-compiler-fortran intel-oneapi-mkl` | ~8 GB |
+| Full HPC Toolkit | `sudo apt install intel-oneapi-hpc-toolkit` | ~15 GB |
+
+The **Fortran + MKL** option is recommended for nekStab - it provides the compiler and optimized math libraries without unnecessary components.
+
+#### Environment Setup
+
+Add to `~/.bashrc` or `~/.zshrc`:
+```bash
+# Intel oneAPI environment
+if [ -f /opt/intel/oneapi/setvars.sh ]; then
+    source /opt/intel/oneapi/setvars.sh > /dev/null
+fi
+```
+
+Verify installation:
+```bash
+source ~/.bashrc
+ifx --version
+# Intel(R) Fortran Compiler for oneAPI 2025.x.x
+```
+
+#### What's Included in oneAPI 2025
+
+- **ifx** - Intel Fortran Compiler (LLVM-based, Fortran 2023 features)
+- **MKL** - Math Kernel Library (optimized BLAS, LAPACK, FFT)
+- **MPI** - Intel MPI Library (in HPC toolkit)
+- **OpenMP 6.0** - Parallel programming support
+
+> **Note:** Intel discontinued `ifort` in oneAPI 2025, but it remains available on many HPC systems with older installations. nekStab supports both `ifx` and `ifort`.
 
 ### Clone and Setup
 
@@ -109,12 +167,12 @@ The `mks` script:
 
 ### Compiler Selection
 
-Auto-detection order: `ifort` → `ifx` → `gfortran`
+Auto-detection order: `ifx` → `ifort` → `gfortran`
 
 Force a specific compiler:
 ```bash
-NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM
-NEKSTAB_FC=ifort mks 1cyl  # Intel Classic (deprecated in oneAPI 2025)
+NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM (recommended)
+NEKSTAB_FC=ifort mks 1cyl  # Intel Classic (HPC systems)
 NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 ```
 
@@ -122,9 +180,11 @@ NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 
 | Compiler | BLAS/LAPACK | Vectorization | Notes |
 |----------|-------------|---------------|-------|
-| **ifx** | MKL (dynamic) | AVX-512 | Requires `source /opt/intel/oneapi/setvars.sh` |
-| **ifort** | MKL (dynamic) | AVX2/AVX-512 | Being phased out by Intel |
+| **ifx** | MKL (dynamic) | AVX2/AVX-512 | Requires `source /opt/intel/oneapi/setvars.sh` |
+| **ifort** | MKL (dynamic) | AVX2/AVX-512 | Discontinued in oneAPI 2025, but available on many HPC systems |
 | **gfortran** | System libs | Native | Uses `-framework Accelerate` on macOS |
+
+> **Note:** Intel discontinued `ifort` in oneAPI 2025, but it remains available on many HPC systems with older oneAPI or Intel Parallel Studio installations.
 
 MKL provides runtime CPU dispatching - the same binary runs optimally on different Intel/AMD processors.
 

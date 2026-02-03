@@ -31,13 +31,38 @@ If you already have C and Fortran compilers, you can install both on Ubuntu/Debi
 
 **Prerequisites**
 
-Linux
+Linux (GCC)
 ```bash
-sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4 htop
+sudo apt-get -y install build-essential gfortran libmpich-dev libopenblas-dev cmake m4 htop
 ```
-MacOS
+
+macOS
 ```bash
 brew install mpich gfortran wget git cmake htop
+```
+
+**Intel oneAPI (Optional - Recommended for best performance)**
+
+For optimal performance on Intel/AMD x86 CPUs, install the Intel oneAPI compilers:
+
+```bash
+# Add Intel repository
+sudo apt install -y gpg-agent wget
+wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+  | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+  | sudo tee /etc/apt/sources.list.d/oneAPI.list
+sudo apt update
+
+# Install (choose one)
+sudo apt install intel-oneapi-compiler-fortran intel-oneapi-mkl  # Fortran + MKL (~8 GB)
+# OR
+sudo apt install intel-oneapi-hpc-toolkit                        # Full HPC toolkit (~15 GB)
+```
+
+Add to `~/.bashrc`:
+```bash
+source /opt/intel/oneapi/setvars.sh
 ```
 
 **Cloning the repository and Nek5000**
@@ -68,11 +93,11 @@ mks 1cyl
 
 ### Compiler Selection
 
-nekStab supports multiple Fortran compilers. The build script auto-detects available compilers in this order: `ifort` → `ifx` → `gfortran`. To force a specific compiler:
+nekStab supports multiple Fortran compilers. The build script auto-detects available compilers in this order: `ifx` → `ifort` → `gfortran`. To force a specific compiler:
 
 ```bash
-NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM (recommended for Intel CPUs)
-NEKSTAB_FC=ifort mks 1cyl  # Intel Classic
+NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM (recommended for Intel/AMD CPUs)
+NEKSTAB_FC=ifort mks 1cyl  # Intel Classic (available on many HPC systems)
 NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 ```
 
@@ -81,13 +106,10 @@ NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 | Compiler | Performance | Notes |
 |----------|-------------|-------|
 | **ifx** (Intel LLVM) | Fastest | Requires Intel oneAPI 2024+, uses MKL |
-| **ifort** (Intel Classic) | Fast | Legacy, being phased out by Intel |
+| **ifort** (Intel Classic) | Fast | Available on HPC systems, discontinued in oneAPI 2025 |
 | **gfortran** (GCC) | Good | Universal, uses system BLAS/LAPACK |
 
-**For best performance on Intel/AMD x86 CPUs:**
-1. Install [Intel oneAPI HPC Toolkit](https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit.html) (free)
-2. Source the environment: `source /opt/intel/oneapi/setvars.sh`
-3. Build with ifx: `NEKSTAB_FC=ifx mks 1cyl`
+> **Note:** Intel discontinued `ifort` in oneAPI 2025, but it remains available on many HPC systems. New installations should use `ifx`.
 
 The Intel compilers use MKL (Math Kernel Library) which provides highly optimized BLAS/LAPACK routines with runtime CPU dispatching.
 
