@@ -464,6 +464,7 @@
          real, dimension(lv, ldimt), intent(in) :: pt
          integer, intent(in) :: skip
          character(len=*), intent(in) :: fname
+         character(len=256) :: fname_local  ! Local copy for ifx compatibility
          real glsc3, uek, vek, wek, eek, pot
          nv = nx1*ny1*nz1*nelv
          nt = nx1*ny1*nz1*nelt
@@ -471,12 +472,13 @@
          uek = 0.0d0; vek = 0.0d0; wek = 0.0d0; pot = 0.0d0
 
          if (mod(istep, skip) == 0) then
+            fname_local = fname
             uek = glsc3(px, px, bm1s, nv)
             vek = glsc3(py, py, bm1s, nv)
             if (if3D) wek = glsc3(pz, pz, bm1s, nv)
             if (ifheat) pot = glsc3(pt(:, 1), ym1, bm1s, nt)
             if (nid == 0) then
-               open(unit=730, file=trim(fname), action='write', status='unknown', position='append')
+               open(unit=730, file=trim(fname_local), action='write', status='unknown', position='append')
                write (730, "(6E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek, pot*eek
                close(730)
             end if
@@ -495,6 +497,7 @@
       !real, dimension(lx1,ly1,lz1,lelt,ldimt), intent(in) :: pt
          integer, intent(in) :: skip
          character(len=*), intent(in) :: fname
+         character(len=256) :: fname_local  ! Local copy for ifx compatibility
          real vort(lv, 3), wo1(lv), wo2(lv)
          common/ugrad/vort, wo1, wo2
          real glsc3, uek, vek, wek, eek
@@ -503,12 +506,13 @@
          uek = 0.0d0; vek = 0.0d0; wek = 0.0d0
 
          if (mod(istep, skip) == 0) then
+            fname_local = fname
             call comp_vort3(vort, wo1, wo2, px, py, pz)
             uek = glsc3(vort(1, 1), vort(1, 1), bm1s, nv)
             vek = glsc3(vort(1, 2), vort(1, 2), bm1s, nv)
             if (if3D) wek = glsc3(vort(1, 3), vort(1, 3), bm1s, nv)
             if (nid == 0) then
-               open(unit=736, file=trim(fname), action='write', status='unknown', position='append')
+               open(unit=736, file=trim(fname_local), action='write', status='unknown', position='append')
                write (736, "(5E15.7)") time, uek*eek, vek*eek, wek*eek, (uek + vek + wek)*eek
                close(736)
             end if
@@ -521,9 +525,9 @@
          include 'SIZE'
          include 'TOTAL'
          character(len=*), intent(in) :: fname
+         character(len=256) :: fname_local  ! Local copy for ifx compatibility
 
-
-         ! becuase of this block we can not use implicit none in this routine ! 
+         ! becuase of this block we can not use implicit none in this routine !
          real sij(lx1*ly1*lz1*6*lelv)
          real pm1(lx1,ly1,lz1,lelv)
          real xm0(lx1,ly1,lz1,lelt), ym0(lx1,ly1,lz1,lelt), zm0(lx1,ly1,lz1,lelt)
@@ -553,9 +557,10 @@
          nv = nx1*ny1*nz1*nelv
 
          if (.not. initialized) then
+            fname_local = fname  ! Copy to local variable for ifx compatibility
             if (nid == 0) write (6, *) 'Initializing torque routine... (nid =', nid, ')'
-            if (nid == 0) write (6, *) 'About to open file ', trim(fname)
-            if (nid == 0) open (737, file=trim(fname), action='write', status='replace')
+            if (nid == 0) write (6, *) 'About to open file ', trim(fname_local)
+            if (nid == 0) open (737, file=trim(fname_local), action='write', status='replace')
             if (nid == 0) write (6, *) 'File opened. Setting bIDs(1) = 1'
             bIDs(1) = 1
             if (nid == 0) write (6, *) 'Calling create_obj: iobj_wall(1) [before] =', iobj_wall(1), ', bIDs(1) =', bIDs(1)
@@ -707,6 +712,8 @@
               end if ! if3D .or. ifaxis
             end if ! nio == 0
          end do ! i = 1, nobj
+
+         if (nio == 0) flush(737) ! Ensure data is written to disk
 
       end subroutine nekStab_torque
       !-----------------------------------------------------------------------
