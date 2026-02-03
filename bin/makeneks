@@ -357,7 +357,7 @@ echo "USR_LFLAGS: $USR_LFLAGS"
 echo "-----------------------------------------------------"
 
 # Update makefile and static variables
-cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
+cp -v $NEKSTAB_SOURCE_ROOT/src/NEKSTAB NEKSTAB.inc
 
 # appends `include 'NEKSTAB.inc'` to `SIZE` if not present.
 FILE="SIZE"
@@ -382,7 +382,7 @@ fi
 
 # Define the file and the include line
 FILE="makefile_usr.inc"
-INCLUDE_LINE="include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab"
+INCLUDE_LINE="include $NEKSTAB_SOURCE_ROOT/src/makefile_nekStab"
 
 # Check if the file exists
 if [ -f "$FILE" ]; then

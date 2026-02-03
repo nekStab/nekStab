@@ -1,0 +1,24 @@
+
+# all nekStab files are in .f90 (format for )free format source code
+
+# Module dependencies - krylov_subspace must be built first
+$(OBJDIR)/nek_vectors.o:          $(NEKSTAB_SOURCE_ROOT)/src/nek_vectors.f90          ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/krylov_subspace.o:      $(NEKSTAB_SOURCE_ROOT)/src/krylov_subspace.f90      ;$(FC) -c $(FL2) $< -o $@
+
+# Files that depend on krylov_subspace module
+$(OBJDIR)/krylov_decomposition.o: $(NEKSTAB_SOURCE_ROOT)/src/krylov_decomposition.f90 $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/matvec.o:               $(NEKSTAB_SOURCE_ROOT)/src/matvec.f90               $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/eigensolvers.o:         $(NEKSTAB_SOURCE_ROOT)/src/eigensolvers.f90         $(OBJDIR)/krylov_subspace.o $(OBJDIR)/krylov_decomposition.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/lapack_wrapper.o:       $(NEKSTAB_SOURCE_ROOT)/src/lapack_wrapper.f90       $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/fixedp.o:               $(NEKSTAB_SOURCE_ROOT)/src/fixedp.f90               $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/otd.o:                  $(NEKSTAB_SOURCE_ROOT)/src/otd.f90                  $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/forcing.o:              $(NEKSTAB_SOURCE_ROOT)/src/forcing.f90              $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/main.o:                 $(NEKSTAB_SOURCE_ROOT)/src/main.f90                 $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/utils.o:                $(NEKSTAB_SOURCE_ROOT)/src/utils.f90                $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/IO.o:                   $(NEKSTAB_SOURCE_ROOT)/src/IO.f90                   $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/postproc.o:             $(NEKSTAB_SOURCE_ROOT)/src/postproc.f90             $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/newton_krylov.o:        $(NEKSTAB_SOURCE_ROOT)/src/newton_krylov.f90        $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/sensitivity.o:          $(NEKSTAB_SOURCE_ROOT)/src/sensitivity.f90          $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+
+# Files without module dependencies
+$(OBJDIR)/quicksort.o:            $(NEKSTAB_SOURCE_ROOT)/src/quicksort.f              ;$(FC) -c $(FL2) $< -o $@
