@@ -231,10 +231,11 @@
       !     ----- Miscellaneous declarations     -----
          logical :: select_eigvals
          real :: wr, wi
+         real, parameter :: EIGVAL_MAG_THRESHOLD = 0.9d0  ! Select eigenvalues near unit circle
       
       !     --> Select eigenvalues based on its magnitude.
-         select_eigvals = .false.
-         if (sqrt(wr**2 + wi**2) > 0.9) select_eigvals = .true.
+         
+         select_eigvals = (sqrt(wr**2 + wi**2) > EIGVAL_MAG_THRESHOLD)
       
          return
       end function select_eigvals
