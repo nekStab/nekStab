@@ -142,11 +142,11 @@ def plot_pod(pod, max_modes=20):
     ax2.tick_params(axis='y', labelcolor='firebrick')
     ax2.set_ylim(0, 100)
 
-    # Reference lines at 90% and 99%
-    if cumulative[-1] >= 90:
-        ax2.axhline(90, color='orange', linestyle='--', linewidth=1.0, label='90%')
+    # Reference lines at 99% and 90% (order matters for legend)
     if cumulative[-1] >= 99:
         ax2.axhline(99, color='green', linestyle='--', linewidth=1.0, label='99%')
+    if cumulative[-1] >= 90:
+        ax2.axhline(90, color='orange', linestyle='--', linewidth=1.0, label='90%')
 
     ax2.legend(loc='lower right', fontsize=7)
     ax1.set_title('POD Energy Spectrum')
