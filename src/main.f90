@@ -57,9 +57,7 @@
          call bcast(eigen_tol, wdsize) ! wdsize for real
          call bcast(schur_del, wdsize)
          call bcast(epsilon_base, wdsize)
-         call bcast(xck, wdsize)
-         call bcast(yck, wdsize)
-         call bcast(zck, wdsize)
+         ! Note: xck, yck, zck already broadcast above
          call bcast(xLspg, wdsize)
          call bcast(xRspg, wdsize)
          call bcast(yLspg, wdsize)
@@ -128,12 +126,12 @@
             nof = 0
             scal = .false.
             do i = 1, size(ifpsco)
-               if (ifpsco(i) .eqv. .true.) then
+               if (ifpsco(i)) then
                   scal = .true.
                   nof = nof + 1
                end if
             end do
-            if (ifto .eqv. .true. .or. scal .eqv. .true.) then
+            if (ifto .or. scal) then
                if (nid == 0) write (6, *) 'Scalars found:'
                if (nid == 0) write (6, *) ' ifto=', ifto
                if (nid == 0) write (6, *) ' ifpsco=', ifpsco
@@ -241,9 +239,9 @@
             isTransientGrowth = (uparam(1) == 3.3)
             isFloquetTransientGrowth = (uparam(1) == 3.31)
 
-            if (isDirect .or. isFloquetDirect .or. isAdjoint .or. isFloquetAdjoint) then
-               call krylov_schur
-            elseif (isTransientGrowth .or. isFloquetTransientGrowth) then
+            if (isDirect .or. isFloquetDirect .or. isAdjoint .or.
+     &    isFloquetAdjoint .or. isTransientGrowth .or.
+     &    isFloquetTransientGrowth) then
                call krylov_schur
             end if
             call nek_end
