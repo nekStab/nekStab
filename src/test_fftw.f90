@@ -338,7 +338,7 @@ contains
 
     ! Reconstruct at a sample point in time array (exact match)
     t_test = time(17)  ! Use exact sample point
-    call fourier_reconstruction(npts, nfreq, freq, vx_hat, vy_hat, vz_hat, &
+    call fourier_reconstruction(npts, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
                                  t_test, vx_rec, vy_rec, vz_rec)
 
     ! Compare with expected values

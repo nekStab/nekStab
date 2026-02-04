@@ -221,7 +221,7 @@ contains
     call cpu_time(t_start)
     do k = 1, 100
       t_test = time_arr(1) + (k-1) * dt * 0.5d0
-      call fourier_reconstruction(npts, nfreq, freq, vx_hat, vy_hat, vz_hat, &
+      call fourier_reconstruction(npts, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
                                    t_test, vx_rec, vy_rec, vz_rec)
     end do
     call cpu_time(t_end)

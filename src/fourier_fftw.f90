@@ -294,10 +294,13 @@ contains
   !
   ! Formula: v(t) = sum_k [ real(v_hat(k)) * cos(2*pi*f*t)
   !                       - imag(v_hat(k)) * sin(2*pi*f*t) ]
+  !
+  ! nsnap: original number of time snapshots (needed to determine if
+  !        Nyquist frequency exists - only for even nsnap)
   !---------------------------------------------------------------------
-  subroutine fourier_reconstruction(npts, nfreq, freq, vx_hat, vy_hat, vz_hat, &
+  subroutine fourier_reconstruction(npts, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
                                      t, vx, vy, vz)
-    integer, intent(in) :: npts, nfreq
+    integer, intent(in) :: npts, nfreq, nsnap
     real(C_DOUBLE), intent(in) :: freq(nfreq)
     complex(C_DOUBLE_COMPLEX), intent(in) :: vx_hat(npts, nfreq)
     complex(C_DOUBLE_COMPLEX), intent(in) :: vy_hat(npts, nfreq)
@@ -307,6 +310,10 @@ contains
 
     integer :: i, k
     real(C_DOUBLE) :: omega, cos_wt, sin_wt, factor
+    logical :: has_nyquist
+
+    ! Nyquist frequency only exists for even-length FFT
+    has_nyquist = (mod(nsnap, 2) == 0)
 
     vx = 0.0d0
     vy = 0.0d0
@@ -324,8 +331,8 @@ contains
       cos_wt = cos(omega * t)
       sin_wt = sin(omega * t)
 
-      ! Account for Nyquist frequency (no factor of 2 for even-length FFT)
-      if (k == nfreq) then
+      ! Nyquist frequency (last bin for even nsnap) has no conjugate pair
+      if (k == nfreq .and. has_nyquist) then
         factor = 1.0d0
       else
         factor = 2.0d0
