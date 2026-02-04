@@ -143,8 +143,6 @@
          yly = ymx - ymn
          zlz = zmx - zmn
 
-         alpha = 2*pi/zlz
-
       !     --> Create the initial velocity perturbation.
 
          do iel = 1, NELV
@@ -154,12 +152,20 @@
 
                      x = XM1(il, jl, kl, iel)
                      y = YM1(il, jl, kl, iel)
-                     if (if3D) z = ZM1(il, jl, kl, iel)
 
-      !     -> Construct the perturbation. ! Note: Spanwise invariant.
-                     qx(il, jl, kl, iel) = cos(alpha*z)*sin(2.*pi*y)
-                     qz(il, jl, kl, iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
-                     qp(il, jl, kl, iel) = cos(alpha*z)*cos(2.*pi*y)
+                     if (if3D) then
+      !     -> 3D: spanwise-modulated perturbation
+                        z = ZM1(il, jl, kl, iel)
+                        alpha = 2*pi/zlz
+                        qx(il, jl, kl, iel) = cos(alpha*z)*sin(2.*pi*y)
+                        qz(il, jl, kl, iel) = -(2.*pi)/(alpha)*cos(alpha*z)*cos(2.*pi*y)
+                        qp(il, jl, kl, iel) = cos(alpha*z)*cos(2.*pi*y)
+                     else
+      !     -> 2D: y-dependent perturbation only
+                        qx(il, jl, kl, iel) = sin(2.*pi*y/yly)
+                        qy(il, jl, kl, iel) = -cos(2.*pi*y/yly)
+                        qp(il, jl, kl, iel) = cos(2.*pi*y/yly)
+                     end if
 
                   end do
                end do
