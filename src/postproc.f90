@@ -496,28 +496,6 @@
       
       end subroutine quadLambdaCi
       !-------------------------------------------------------------------
-      subroutine LambdaCi2D(lci)
-         include 'SIZE'
-         include 'TOTAL'
-         parameter(lxyz=lx1*ly1*lz1)
-         real mygi(lxyz, ldim, ldim)
-         real d
-         real lci
-         complex ci
-         complex x1
-         common/mygrad/mygi
-         ci = sqrt(cmplx(-1.))
-      
-         d = (mygi(l, 1, 2) - mygi(l, 2, 1))**2 - 4*mygi(l, 1, 2)*mygi(l, 2, 1)
-      
-         if (d >= 0.) then
-            lci = 0.
-         else
-            lci = sqrt(abs(d))/2.
-         end if
-      
-      end subroutine LambdaCi2D
-      !-------------------------------------------------------------------
       subroutine nekStab_avg(ifstatis)
          use krylov_subspace
          include 'SIZE'
@@ -591,19 +569,9 @@
                call avg2(trms, t(1, 1, 1, 1, 1), alpha, beta, ntot, 'trms', ifverbose)
       
       !     compute averages E(X*Y)
-      !     call avg3    (uvms,vx,vy,alpha,beta,ntot,'uvm ',ifverbose)
-      !     call avg3    (vwms,vy,vz,alpha,beta,ntot,'vwm ',ifverbose)
-      !     call avg3    (wums,vz,vx,alpha,beta,ntot,'wum ',ifverbose)
-      !     if(ifheat)then
-      !     call avg3  (uvms,vx,t(1,1,1,1,1),alpha,beta,ntot,'utm ',ifverbose)
-      !     call avg3  (vwms,vy,t(1,1,1,1,1),alpha,beta,ntot,'vtm ',ifverbose)
-      !     call avg3  (wums,vz,t(1,1,1,1,1),alpha,beta,ntot,'wtm ',ifverbose)
-      !     endif
       
             end if
       
-      !     call torque_calc(1.0,x0,.false.,.false.) ! compute wall shear
-      !     dragx_avg = alpha*dragx_avg + beta*dragx(iobj_wall)
       
          end if
       
@@ -623,14 +591,6 @@
             call outpost2(urms, vrms, wrms, prms, trms, ldimt, 'rms')
             call outpost(uvms, vwms, wums, prms, trms, 'rm2')
       
-      !     urms2 = urms-uavg*uavg
-      !     vrms2 = vrms-vavg*vavg
-      !     wrms2 = wrms-wavg*wavg
-      !     uvms2 = uvms-uavg*vavg
-      !     vwms2 = vwms-vavg*wavg
-      !     wums2 = wums-uavg*wavg
-      !     call outpost(urms2,vrms2,wrms2,pr,t,'rm1')
-      !     call outpost(uvms2,vwms2,wums2,pr,t,'rm2')
       
             param(63) = dtmp
             atime = 0.
