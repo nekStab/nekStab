@@ -155,8 +155,18 @@ elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
     export PPLIST="VENDOR_BLAS"
     if [[ $(uname -s) == "Darwin" ]]; then
         USR_LFLAGS+=" -framework Accelerate"
+        # FFTW3 from Homebrew (brew install fftw)
+        if [ -d "/opt/homebrew/opt/fftw" ]; then
+            USR_LFLAGS+=" -L/opt/homebrew/opt/fftw/lib -lfftw3"
+            FFLAGS+=" -I/opt/homebrew/opt/fftw/include"
+        elif [ -d "/usr/local/opt/fftw" ]; then
+            USR_LFLAGS+=" -L/usr/local/opt/fftw/lib -lfftw3"
+            FFLAGS+=" -I/usr/local/opt/fftw/include"
+        fi
     else
         USR_LFLAGS+=" -llapack -lblas"
+        # FFTW3 from system packages (apt install libfftw3-dev)
+        USR_LFLAGS+=" -lfftw3"
     fi
 
 elif command -v ifort >/dev/null 2>&1; then
@@ -255,8 +265,18 @@ else # GCC
     export PPLIST="VENDOR_BLAS"
     if [[ $(uname -s) == "Darwin" ]]; then
         USR_LFLAGS+=" -framework Accelerate"
+        # FFTW3 from Homebrew (brew install fftw)
+        if [ -d "/opt/homebrew/opt/fftw" ]; then
+            USR_LFLAGS+=" -L/opt/homebrew/opt/fftw/lib -lfftw3"
+            FFLAGS+=" -I/opt/homebrew/opt/fftw/include"
+        elif [ -d "/usr/local/opt/fftw" ]; then
+            USR_LFLAGS+=" -L/usr/local/opt/fftw/lib -lfftw3"
+            FFLAGS+=" -I/usr/local/opt/fftw/include"
+        fi
     else
         USR_LFLAGS+=" -llapack -lblas"
+        # FFTW3 from system packages (apt install libfftw3-dev)
+        USR_LFLAGS+=" -lfftw3"
     fi
 
     # Linking with OPENBLAS instead of LAPACK/BLAS (optional)
@@ -318,6 +338,8 @@ FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 # User-specified object files
 USR="nek_vectors.o"
 USR+=" krylov_subspace.o"
+USR+=" fourier_fftw.o"
+USR+=" fourier.o"
 USR+=" krylov_decomposition.o"
 USR+=" argsort.o"
 USR+=" matvec.o"

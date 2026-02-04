@@ -24,12 +24,12 @@
 
 Linux (GCC)
 ```bash
-sudo apt-get -y install build-essential gfortran libmpich-dev libopenblas-dev cmake m4 htop
+sudo apt -y install build-essential gfortran libmpich-dev libopenblas-dev libfftw3-dev cmake m4 htop
 ```
 
 macOS
 ```bash
-brew install mpich gfortran wget git cmake htop
+brew install mpich gfortran fftw wget git cmake htop
 ```
 
 **Cloning the repository and Nek5000**
