@@ -127,15 +127,17 @@ cd nekStab
 | `cd nekStab` | Enter the nekStab directory |
 | `./Nek5000setup.sh` | Downloads and configures Nek5000 inside `nekStab/Nek5000/` |
 
-> **Note:** The setup script clones Nek5000 as a subdirectory, keeping both codes together for easier version management.
+> **Already have Nek5000?** Skip `./Nek5000setup.sh` and point `NEK_SOURCE_ROOT` to your existing installation (see below).
 
 Add to your shell config (`~/.bashrc` or `~/.zshrc`):
 ```bash
-# nekStab and Nek5000 paths
+# nekStab path
 export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
-export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
-export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
+
+# Nek5000 path (adjust if using existing installation)
+export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000  # ← or your existing path
+export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 
 # Stack/core limits for large simulations
 ulimit -s unlimited
