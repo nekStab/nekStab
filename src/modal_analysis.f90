@@ -36,14 +36,14 @@
          type(krylov_vector) :: mean_snap
          integer :: i
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Print header
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) then
             write(6,*) ''
-            write(6,*) '═══════════════════════════════════════════════'
+            write(6,*) '==============================================='
             write(6,*) '        MODAL ANALYSIS (Mode 6)'
-            write(6,*) '═══════════════════════════════════════════════'
+            write(6,*) '==============================================='
             write(6,*) ''
             write(6,'(A,A)')    '  Prefix:     ', trim(modal_prefix)
             write(6,'(A,I6)')   '  Snapshots:  ', modal_nsnap
@@ -55,9 +55,9 @@
             write(6,*) ''
          end if
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Validate parameters
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (modal_nsnap < 2) then
             if (nid == 0) write(6,*) 'ERROR: modal_nsnap must be >= 2'
             call nek_end
@@ -70,19 +70,22 @@
             return
          end if
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  PHASE 1: Load snapshots
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) 'Loading snapshots...'
          allocate(snaps(modal_nsnap))
 
          call load_files(snaps, modal_nsnap, modal_nsnap, modal_prefix)
 
-         if (nid == 0) write(6,*) '  Loaded', modal_nsnap, 'snapshots'
+         if (nid == 0) then
+            write(6,*) '  Loaded', modal_nsnap, 'snapshots'
+            call flush(6)
+         end if
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  PHASE 2: Compute and subtract mean
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) 'Computing temporal mean...'
          call modal_compute_mean(snaps, modal_nsnap, mean_snap)
          call modal_subtract_mean(snaps, modal_nsnap, mean_snap)
@@ -94,57 +97,57 @@
          call outpost2(vx, vy, vz, pr, t, 0, 'mea')
          if (nid == 0) write(6,*) '  Saved mean field as mea*'
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  PHASE 3: POD
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (ifpod) then
             if (nid == 0) then
                write(6,*) ''
-               write(6,*) '───────────────────────────────────────────'
+               write(6,*) '-------------------------------------------'
                write(6,*) '  POD (Proper Orthogonal Decomposition)'
-               write(6,*) '───────────────────────────────────────────'
+               write(6,*) '-------------------------------------------'
             end if
             call pod_compute(snaps, modal_nsnap, modal_nsave)
          end if
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  PHASE 4: DMD
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (ifdmd) then
             if (nid == 0) then
                write(6,*) ''
-               write(6,*) '───────────────────────────────────────────'
+               write(6,*) '-------------------------------------------'
                write(6,*) '  DMD (Dynamic Mode Decomposition)'
-               write(6,*) '───────────────────────────────────────────'
+               write(6,*) '-------------------------------------------'
             end if
             call dmd_compute(snaps, modal_nsnap, modal_dt,
      $                       dmd_rank, modal_nsave)
          end if
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  PHASE 5: SPOD
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (ifspod) then
             if (nid == 0) then
                write(6,*) ''
-               write(6,*) '───────────────────────────────────────────'
+               write(6,*) '-------------------------------------------'
                write(6,*) '  SPOD (Spectral POD)'
-               write(6,*) '───────────────────────────────────────────'
+               write(6,*) '-------------------------------------------'
             end if
             call spod_compute(snaps, modal_nsnap, modal_dt,
      $                        spod_nfft, spod_noverlap, modal_nsave)
          end if
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Cleanup
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          deallocate(snaps)
 
          if (nid == 0) then
             write(6,*) ''
-            write(6,*) '═══════════════════════════════════════════════'
+            write(6,*) '==============================================='
             write(6,*) '  Modal analysis complete'
-            write(6,*) '═══════════════════════════════════════════════'
+            write(6,*) '==============================================='
          end if
 
       end subroutine modal_analysis
@@ -201,8 +204,8 @@
 !     POD via method of snapshots (Sirovich, 1987)
 !
 !     Forms correlation matrix C(i,j) = <snaps(i), snaps(j)>_E
-!     Solves eigenvalue problem C v = λ v
-!     Reconstructs spatial modes Φ_k = Σ_i v_k(i) snaps(i) / √(λ_k n)
+!     Solves eigenvalue problem C v = lambda v
+!     Reconstructs spatial modes Phi_k = Sum_i v_k(i) snaps(i) / sqrt(lambda_k n)
 
          use krylov_subspace
          implicit none
@@ -215,9 +218,9 @@
          real, allocatable :: C(:,:), eigvals(:), eigvecs(:,:)
          integer :: i, j
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Step 1: Form correlation matrix using k_dot
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Forming correlation matrix...'
 
          allocate(C(nsnap, nsnap))
@@ -235,24 +238,24 @@
 !        Normalize by number of snapshots
          C = C / dble(nsnap)
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Step 2: Solve eigenvalue problem
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Solving eigenvalue problem...'
 
          call eig_symmetric(C, eigvals, eigvecs, nsnap)
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Step 3: Reconstruct and save modes
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Reconstructing POD modes...'
 
          call pod_reconstruct_modes(snaps, eigvecs, eigvals,
      $                              nsnap, nsave)
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Step 4: Write eigenvalue spectrum
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          call pod_write_spectrum(eigvals, nsnap)
 
          deallocate(C, eigvals, eigvecs)
@@ -318,7 +321,7 @@
       subroutine pod_reconstruct_modes(snaps, eigvecs, eigvals,
      $                                  nsnap, nsave)
 !     Reconstruct POD spatial modes from temporal coefficients
-!     Φ_m = Σ_i v_m(i) * snaps(i) / sqrt(λ_m * nsnap)
+!     Phi_m = Sum_i v_m(i) * snaps(i) / sqrt(lambda_m * nsnap)
 
          use krylov_subspace
          implicit none
@@ -341,12 +344,12 @@
          do m = 1, nmodes
             call k_zero(mode)
 
-!           Φ_m = Σ_i v_m(i) * snaps(i)
+!           Phi_m = Sum_i v_m(i) * snaps(i)
             do i = 1, nsnap
                call k_add2s2(mode, snaps(i), eigvecs(i, m))
             end do
 
-!           Normalize: divide by sqrt(λ_m * nsnap)
+!           Normalize: divide by sqrt(lambda_m * nsnap)
             if (eigvals(m) > 0.0d0) then
                scale = 1.0d0 / sqrt(eigvals(m) * dble(nsnap))
                call k_cmult(mode, scale)
@@ -360,8 +363,9 @@
             if (nid == 0) then
                call k_norm(mode_norm, mode)
                write(6,'(A,I4,A,E12.4,A,F8.4)')
-     $              '    Mode', m, ': λ =', eigvals(m),
-     $              ', ||Φ|| =', mode_norm
+     $              '    Mode', m, ': lambda =', eigvals(m),
+     $              ', ||Phi|| =', mode_norm
+               call flush(6)
             end if
          end do
 
@@ -410,9 +414,9 @@
 !
 !     1. Form data matrices: X = [x1,...,x_{n-1}], Y = [x2,...,x_n]
 !     2. SVD of X via eigendecomposition of X^T X
-!     3. Project dynamics: Ã = U^H Y V Σ^{-1}
-!     4. Eigendecomposition of Ã gives DMD eigenvalues
-!     5. DMD modes: Φ = U W (or Y V Σ^{-1} W for exact DMD)
+!     3. Project dynamics: Atilde = U^H Y V Sum^{-1}
+!     4. Eigendecomposition of Atilde gives DMD eigenvalues
+!     5. DMD modes: Phi = U W (or Y V Sum^{-1} W for exact DMD)
 
          use krylov_subspace
          implicit none
@@ -437,9 +441,9 @@
 
          if (nid == 0) write(6,*) '  Using', n, 'snapshot pairs'
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Step 1: Form Gram matrix G = X^T X
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Computing Gram matrix...'
 
          allocate(G(n, n))
@@ -451,15 +455,15 @@
             end do
          end do
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Step 2: SVD via eigendecomposition of G
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Computing SVD via eigendecomp...'
 
          allocate(S(n), Vt(n, n))
          call eig_symmetric(G, S, Vt, n)
 
-!        S now contains σ², need sqrt for singular values
+!        S now contains sigma^2, need sqrt for singular values
 !        Also determine rank (truncation)
          total_energy = sum(S)
          if (rank > 0) then
@@ -494,21 +498,21 @@
             end if
          end do
 
-!  ─────────────────────────────────────────────────────────────────
-!  Step 3: Project Y onto POD basis and form Ã
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
+!  Step 3: Project Y onto POD basis and form Atilde
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Forming projected operator...'
 
-!        Ã(i,j) = Σ_k Σ_l <U_i, Y_k> V(k,j) Σ^{-1}_j
-!        where U_i = Σ_m V(m,i) X_m / σ_i
-!        So Ã(i,j) = Σ_k <snaps(k+1), snaps(m)> V(m,i) V(k,j) Σ^{-1}_i Σ^{-1}_j
+!        Atilde(i,j) = Sum_k Sum_l <U_i, Y_k> V(k,j) Sum^{-1}_j
+!        where U_i = Sum_m V(m,i) X_m / sigma_i
+!        So Atilde(i,j) = Sum_k <snaps(k+1), snaps(m)> V(m,i) V(k,j) Sum^{-1}_i Sum^{-1}_j
 
          allocate(Y_proj(r, r))
          allocate(Atilde(r, r))
 
-!        Y_proj(i,j) = <U_i, Y V Σ^{-1} e_j> = Σ_k <U_i, snaps(k+1)> V(k,j) Σ^{-1}_j
-!        But U_i = Σ_m snaps(m) V(m,i) Σ^{-1}_i
-!        So Y_proj(i,j) = Σ_k Σ_m <snaps(m), snaps(k+1)> V(m,i) V(k,j) Σ^{-1}_i Σ^{-1}_j
+!        Y_proj(i,j) = <U_i, Y V Sum^{-1} e_j> = Sum_k <U_i, snaps(k+1)> V(k,j) Sum^{-1}_j
+!        But U_i = Sum_m snaps(m) V(m,i) Sum^{-1}_i
+!        So Y_proj(i,j) = Sum_k Sum_m <snaps(m), snaps(k+1)> V(m,i) V(k,j) Sum^{-1}_i Sum^{-1}_j
 
          Y_proj = 0.0d0
          do i = 1, r
@@ -522,17 +526,17 @@
             end do
          end do
 
-!        Ã = Σ^{-1} U^H Y V Σ^{-1} = Y_proj (already scaled)
-!        Actually need to rescale: Atilde(i,j) = σ_i * Y_proj(i,j)
+!        Atilde = Sum^{-1} U^H Y V Sum^{-1} = Y_proj (already scaled)
+!        Actually need to rescale: Atilde(i,j) = sigma_i * Y_proj(i,j)
          do i = 1, r
             do j = 1, r
                Atilde(i,j) = S(i) * Y_proj(i,j)
             end do
          end do
 
-!  ─────────────────────────────────────────────────────────────────
-!  Step 4: Eigendecomposition of Ã
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
+!  Step 4: Eigendecomposition of Atilde
+!  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Computing DMD eigenvalues...'
 
          allocate(dmd_evals(r), dmd_evecs(r, r))
@@ -541,9 +545,9 @@
 
          call eig(Atilde_work, dmd_evecs, dmd_evals, r)
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Step 5: Write spectrum and reconstruct modes
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          call dmd_write_spectrum(dmd_evals, r, delta_t)
          call dmd_reconstruct_modes(snaps, Vt, S, Sinv,
      $        dmd_evecs, dmd_evals, n, r, nsave)
@@ -596,7 +600,7 @@
 !-----------------------------------------------------------------------
       subroutine dmd_reconstruct_modes(snaps, V, S, Sinv,
      $     evecs, evals, n, r, nsave)
-!     Reconstruct DMD modes: Φ = X V Σ^{-1} W (projected DMD modes)
+!     Reconstruct DMD modes: Phi = X V Sum^{-1} W (projected DMD modes)
 !     Output real and imaginary parts separately
 
          use krylov_subspace
@@ -619,13 +623,13 @@
          prefix_im = 'dIm'
          nmodes = min(nsave, r)
 
-!        DMD mode m: Φ_m = X V Σ^{-1} w_m
-!        where w_m is eigenvector of Ã
+!        DMD mode m: Phi_m = X V Sum^{-1} w_m
+!        where w_m is eigenvector of Atilde
          do m = 1, nmodes
             call k_zero(mode_re)
             call k_zero(mode_im)
 
-!           Φ_m = Σ_i snaps(i) * (Σ_j V(i,j) Σ^{-1}_j w_m(j))
+!           Phi_m = Sum_i snaps(i) * (Sum_j V(i,j) Sum^{-1}_j w_m(j))
             do i = 1, n
                coef_re = 0.0d0
                coef_im = 0.0d0
@@ -657,8 +661,8 @@
      $              (2.0d0 * PI_VAL * modal_dt)
                call k_norm(mode_norm, mode_re)
                write(6,'(A,I4,A,F8.4,A,F10.4,A,E12.4)')
-     $              '    Mode', m, ': |μ| =', mu_mag,
-     $              ', St =', freq, ', ||Φ_re|| =', mode_norm
+     $              '    Mode', m, ': |mu| =', mu_mag,
+     $              ', St =', freq, ', ||Phi_re|| =', mode_norm
             end if
          end do
 
@@ -741,9 +745,9 @@
      $         '# SPOD Spectrum: St, eigenvalues (nblk columns)'
          end if
 
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
 !  Loop over frequencies
-!  ─────────────────────────────────────────────────────────────────
+!  -----------------------------------------------------------------
          do ifreq = 1, nfreq
 
 !           FFT each block at this frequency
@@ -1013,7 +1017,7 @@
             call k_zero(mode_re)
             call k_zero(mode_im)
 
-!           Φ_m = Σ_i w_m(i) * Q̂_k(i) / sqrt(λ_m * nblk)
+!           Phi_m = Sum_i w_m(i) * Qhat_k(i) / sqrt(lambda_m * nblk)
             do i = 1, nblk
                coef_re = real(evecs(i, m))
                coef_im = aimag(evecs(i, m))
@@ -1048,8 +1052,8 @@
             if (nid == 0 .and. m == 1) then
                call k_norm(mode_norm, mode_re)
                write(6,'(A,F10.4,A,E12.4,A,E12.4)')
-     $              '    St =', freq(ifreq), ': λ₁ =', evals(1),
-     $              ', ||Φ|| =', mode_norm
+     $              '    St =', freq(ifreq), ': lambda_1 =', evals(1),
+     $              ', ||Phi|| =', mode_norm
             end if
          end do
 
