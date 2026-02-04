@@ -49,12 +49,14 @@
 - **Scalar transport** — temperature and passive scalar stability
 - **Sponge zones** — non-reflecting boundaries for open flows
 - **Vortex identification** — λ₂, Q-criterion, Ω-criterion output
+- **FFT module** — FFTW3/MKL integration for spectral analysis with Nek5000
 
 ### Why nekStab?
 - **Matrix-free**: No Jacobian storage — scales to millions of DoFs
 - **Spectral accuracy**: Leverages Nek5000's high-order elements
 - **MPI parallel**: Efficient on laptops to supercomputers
 - **Validated**: Benchmarked against canonical flows (cylinder, cavity, jets)
+- **FFT included**: Smart linking to FFTW3 (GCC) or MKL (Intel) — no manual setup
 
 ## Quick Reference
 
