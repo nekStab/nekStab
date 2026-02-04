@@ -6,7 +6,18 @@
 /_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/
 ```
 
-[![CI Build](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg?branch=RANS_update)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml)
+[![CI Build](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml)
+
+### Build Matrix
+
+| OS | Arch | Compiler | MPI | Status |
+|:---|:----:|:---------|:----|:------:|
+| Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI 4.x | [![Ubuntu GCC OpenMPI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu 24.04 | x86_64 | gfortran 14 | MPICH 4.x | [![Ubuntu GCC MPICH](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 15 | ARM64 | gfortran 14 | OpenMPI 5.x | [![macOS GCC OpenMPI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 15 | ARM64 | gfortran 14 | MPICH 4.x | [![macOS GCC MPICH](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu 24.04 | x86_64 | ifort 2024.2 | Intel MPI 2021 | [![Ubuntu ifort](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu 24.04 | x86_64 | ifx 2025.2 | Intel MPI 2021 | [![Ubuntu ifx](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 
 **nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
@@ -119,4 +130,3 @@ For more information, see the [Documentation](DOC.md).
 ### Citation
 
 When using **nekStab**, please cite [Frantz et al. (2023)](https://doi.org/10.1115/1.4056808). See [CITATIONS.md](CITATIONS.md) for BibTeX entries and additional references.
-# test

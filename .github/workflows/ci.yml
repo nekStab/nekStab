@@ -13,6 +13,7 @@ env:
 
 jobs:
   build:
+    name: ${{ matrix.os }} / ${{ matrix.toolchain.compiler }}-${{ matrix.toolchain.version }} / ${{ matrix.mpi }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 
@@ -22,10 +23,16 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         toolchain:
           - {compiler: gcc, version: 14}
+        mpi: [openmpi, mpich]
         include:
-          # Intel ifx only on Linux (not supported on macOS)
+          # Intel ifort (classic) - final version before discontinuation
           - os: ubuntu-latest
-            toolchain: {compiler: intel, version: '2024.2'}
+            toolchain: {compiler: intel-classic, version: '2024.2'}
+            mpi: intelmpi
+          # Intel ifx (LLVM-based) - current/modern compiler
+          - os: ubuntu-latest
+            toolchain: {compiler: intel, version: '2025.2'}
+            mpi: intelmpi
 
     steps:
       - name: Checkout nekStab
@@ -38,34 +45,55 @@ jobs:
           compiler: ${{ matrix.toolchain.compiler }}
           version: ${{ matrix.toolchain.version }}
 
-      - name: Install MPI and BLAS (Linux)
+      - name: Install MPI, BLAS, and FFTW3 (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libopenmpi-dev openmpi-bin liblapack-dev libblas-dev
+          # Install MPI (skip for intelmpi - installed separately with Intel oneAPI)
+          if [ "${{ matrix.mpi }}" = "openmpi" ]; then
+            sudo apt-get install -y libopenmpi-dev openmpi-bin
+          elif [ "${{ matrix.mpi }}" = "mpich" ]; then
+            sudo apt-get install -y libmpich-dev mpich
+          fi
+          sudo apt-get install -y liblapack-dev libblas-dev libfftw3-dev
 
-      - name: Install Intel MKL (for Intel compiler)
-        if: matrix.toolchain.compiler == 'intel'
+      - name: Install Intel MKL and MPI (for Intel compilers)
+        if: matrix.toolchain.compiler == 'intel' || matrix.toolchain.compiler == 'intel-classic'
         run: |
           # Add Intel APT repository
           wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add -
           sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
           sudo apt-get update
-          # Install MKL (needed for -qmkl flag)
-          sudo apt-get install -y intel-oneapi-mkl-devel
+          # Install MKL and Intel MPI
+          sudo apt-get install -y intel-oneapi-mkl-devel intel-oneapi-mpi-devel
 
-      - name: Install MPI (macOS)
+      - name: Install MPI and FFTW3 (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install open-mpi
+          if [ "${{ matrix.mpi }}" = "openmpi" ]; then
+            brew install open-mpi
+          else
+            brew install mpich
+          fi
+          brew install fftw
 
-      - name: Configure MPI for Intel compilers
-        if: matrix.toolchain.compiler == 'intel'
+      - name: Configure Intel MPI environment
+        if: matrix.mpi == 'intelmpi'
         run: |
-          # Tell OpenMPI to use Intel compilers
-          echo "OMPI_FC=ifx" >> $GITHUB_ENV
-          echo "OMPI_CC=icx" >> $GITHUB_ENV
-          echo "OMPI_CXX=icpx" >> $GITHUB_ENV
+          # Source Intel MPI environment and export to GITHUB_ENV
+          source /opt/intel/oneapi/mpi/latest/env/vars.sh
+          # Set compilers based on toolchain (ifx/icx for modern, ifort/icc for classic)
+          if [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
+            echo "I_MPI_FC=ifort" >> $GITHUB_ENV
+            echo "I_MPI_CC=icc" >> $GITHUB_ENV
+            echo "I_MPI_CXX=icpc" >> $GITHUB_ENV
+          else
+            echo "I_MPI_FC=ifx" >> $GITHUB_ENV
+            echo "I_MPI_CC=icx" >> $GITHUB_ENV
+            echo "I_MPI_CXX=icpx" >> $GITHUB_ENV
+          fi
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
       - name: Clone Nek5000
         run: |
@@ -83,9 +111,13 @@ jobs:
           export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
           cd example/cylinder/dns
           if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
-            # Source MKL environment for Intel build
-            source /opt/intel/oneapi/mkl/latest/env/vars.sh
+            # Source Intel oneAPI environment (MKL + MPI)
+            source /opt/intel/oneapi/setvars.sh
             NEKSTAB_FC=ifx mks 1cyl
+          elif [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
+            # Source Intel oneAPI environment (MKL + MPI)
+            source /opt/intel/oneapi/setvars.sh
+            NEKSTAB_FC=ifort mks 1cyl
           else
             NEKSTAB_FC=gcc mks 1cyl
           fi
