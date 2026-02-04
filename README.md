@@ -201,18 +201,21 @@ mks 1cyl --debug
 
 ## Running
 
-After successful compilation, run on 4 processors:
+After successful compilation:
+
 ```bash
-nekbmpi 1cyl 4
+nekbmpi 1cyl 4       # Run case "1cyl" on 4 MPI processes
+tail -f logfile      # Monitor output in real-time
+killall nek5000      # Stop the simulation
 ```
-to follow the code output in the _logfile_ try:
-```bash
-tail -f logfile
-```
-To stop the code just:
-```bash
-killall nek5000
-```
+
+| Command | What it does |
+|---------|--------------|
+| `nekbmpi 1cyl 4` | Launches `nek5000` via `mpirun` with 4 processes (adjust to your CPU cores) |
+| `tail -f logfile` | Streams solver output — watch convergence, time steps, diagnostics |
+| `killall nek5000` | Gracefully stops all running Nek5000 processes |
+
+> **Tip:** Use `nekbmpi 1cyl 4 &` to run in background, then `tail -f logfile` in the same terminal.
 
 For more information, see the [Documentation](DOC.md).
 
