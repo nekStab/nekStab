@@ -205,6 +205,38 @@
          end if
          return
       end subroutine nopadd2
+!-----------------------------------------------------------------------
+      subroutine nopadd2s2(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5, c)
+!        a = a + c*b  (BLAS-style AXPY for all fields)
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         integer n, k
+         real, intent(inout) :: a1(lx1*ly1*lz1*nelv)
+         real, intent(inout) :: a2(lx1*ly1*lz1*nelv)
+         real, intent(inout) :: a3(lx1*ly1*lz1*nelv)
+         real, intent(inout) :: a4(lx2*ly2*lz2*nelv)
+         real, intent(inout) :: a5(lx1*ly1*lz1*lelt, ldimt)
+         real, intent(in) :: b1(lx1*ly1*lz1*nelv)
+         real, intent(in) :: b2(lx1*ly1*lz1*nelv)
+         real, intent(in) :: b3(lx1*ly1*lz1*nelv)
+         real, intent(in) :: b4(lx2*ly2*lz2*nelv)
+         real, intent(in) :: b5(lx1*ly1*lz1*lelt, ldimt)
+         real, intent(in) :: c
+         n = lx1*ly1*lz1*nelv
+         call add2s2(a1, b1, c, n)
+         call add2s2(a2, b2, c, n)
+         if (if3D) call add2s2(a3, b3, c, n)
+         if (ifpo) call add2s2(a4, b4, c, lx2*ly2*lz2*nelv)
+         if (ifto) call add2s2(a5(1, 1), b5(1, 1), c, lx1*ly1*lz1*nelfld(2))
+         if (ldimt > 1) then
+            do k = 1, npscal
+               if (ifpsco(k)) call add2s2(a5(1, k + 1), b5(1, k + 1), c, lx1*ly1*lz1*nelfld(k + 2))
+            end do
+         end if
+         return
+      end subroutine nopadd2s2
+!-----------------------------------------------------------------------
       subroutine opadd3(a1, a2, a3, b1, b2, b3, c1, c2, c3)
          implicit none
          include 'SIZE'
