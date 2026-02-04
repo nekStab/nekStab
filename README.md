@@ -116,14 +116,14 @@ brew install mpich gfortran fftw wget git cmake htop
 **Installation**
 
 ```bash
-git clone --depth=50 https://github.com/nekStab/nekStab.git
+git clone --depth=1 https://github.com/nekStab/nekStab.git
 cd nekStab
 ./Nek5000setup.sh
 ```
 
 | Command | What it does |
 |---------|--------------|
-| `git clone --depth=50 ...` | Downloads nekStab with recent history only (faster than full clone) |
+| `git clone --depth=1 ...` | Downloads only the latest version (fastest, minimal download) |
 | `cd nekStab` | Enter the nekStab directory |
 | `./Nek5000setup.sh` | Downloads and configures Nek5000 inside `nekStab/Nek5000/` |
 
