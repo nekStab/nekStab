@@ -142,16 +142,13 @@ def plot_pod(pod, max_modes=20):
     ax2.tick_params(axis='y', labelcolor='firebrick')
     ax2.set_ylim(0, 100)
 
-    # Reference lines at 90% and 99% with red markers on right axis
-    for pct in [90, 99]:
-        if cumulative[-1] >= pct:
-            ax2.axhline(pct, color='gray', linestyle='--', linewidth=0.5, alpha=0.5)
-            # Red marker on right edge (inside plot area)
-            ax2.plot(n, pct, 's', color='firebrick', markersize=5, zorder=5)
-            # Position label below the line to avoid overlap with curve
-            ax2.annotate(f'{pct}%', xy=(1.5, pct - 3), fontsize=7,
-                         color='gray', va='top', ha='left')
+    # Reference lines at 90% and 99%
+    if cumulative[-1] >= 90:
+        ax2.axhline(90, color='orange', linestyle='--', linewidth=1.0, label='90%')
+    if cumulative[-1] >= 99:
+        ax2.axhline(99, color='green', linestyle='--', linewidth=1.0, label='99%')
 
+    ax2.legend(loc='lower right', fontsize=7)
     ax1.set_title('POD Energy Spectrum')
     fig.tight_layout()
 
