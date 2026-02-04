@@ -24,6 +24,10 @@ jobs:
         toolchain:
           - {compiler: gcc, version: 14}
         mpi: [openmpi, mpich]
+        exclude:
+          # FFTW Homebrew formula depends on open-mpi, conflicts with mpich
+          - os: macos-26
+            mpi: mpich
         include:
           # Intel ifort (classic) - final version before discontinuation
           - os: ubuntu-latest
@@ -70,16 +74,8 @@ jobs:
       - name: Install MPI and FFTW3 (macOS)
         if: runner.os == 'macOS'
         run: |
-          # Install fftw first (its bottle depends on open-mpi)
-          brew install fftw
-          if [ "${{ matrix.mpi }}" = "openmpi" ]; then
-            # fftw already installed open-mpi as dependency
-            :
-          else
-            # For MPICH: unlink open-mpi (installed as fftw dependency), install mpich
-            brew unlink open-mpi
-            brew install mpich
-          fi
+          # FFTW bottle depends on open-mpi, so we only support OpenMPI on macOS
+          brew install open-mpi fftw
 
       - name: Configure Intel MPI environment
         if: matrix.mpi == 'intelmpi'
