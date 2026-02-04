@@ -126,6 +126,8 @@ jobs:
           cd example/cylinder/ci_test
           if [ "${{ matrix.toolchain.compiler }}" = "intel" ] || [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
             source /opt/intel/oneapi/setvars.sh --force || true
+            # Enable MKL support for AMD CPUs (GitHub runners may be AMD)
+            export MKL_DEBUG_CPU_TYPE=5
           fi
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
