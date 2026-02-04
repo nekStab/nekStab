@@ -32,17 +32,15 @@
       
             call otd_white_noise ! Initialise all IC fields to white noise
       
-            if (i == 1) then
-               maxnum = 0
-               do j = 1, 99
-                  write (filename, '(A,A,A,I5.5)') 'r01', trim(SESSION), '0.f', j
-      ! if(nid.eq.0) write(6,*) 'Looking for file ', trim(filename)
-                  inquire (file=filename, exist=exist_IC)
-                  if (exist_IC) then
-                     maxnum = j
-                  end if
-               end do
-            end if
+            ! Search for existing IC files
+            maxnum = 0
+            do j = 1, 99
+               write (filename, '(A,A,A,I5.5)') 'r01', trim(SESSION), '0.f', j
+               inquire (file=filename, exist=exist_IC)
+               if (exist_IC) then
+                  maxnum = j
+               end if
+            end do
             if (maxnum > 0) then
                if (nid == 0) write (6, *) 'Found ', maxnum, ' IC files'
                do i = 1, npert
