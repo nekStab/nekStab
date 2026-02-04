@@ -130,6 +130,10 @@ def plot_pod(pod, max_modes=20):
     ax1.set_xlim(0.5, n + 0.5)
     ax1.set_ylim(0, max(energy) * 1.15)
 
+    # X-axis: integer ticks only
+    ax1.set_xticks(modes[::2])  # every other mode to avoid crowding
+    ax1.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x)}'))
+
     # Cumulative energy on secondary axis
     ax2 = ax1.twinx()
     ax2.plot(modes, cumulative, 'o-', color='firebrick', markersize=4,
@@ -138,12 +142,14 @@ def plot_pod(pod, max_modes=20):
     ax2.tick_params(axis='y', labelcolor='firebrick')
     ax2.set_ylim(0, 105)
 
-    # Reference lines at 90% and 99%
+    # Reference lines at 90% and 99% with red markers on right axis
     for pct in [90, 99]:
         if cumulative[-1] >= pct:
-            ax2.axhline(pct, color='gray', linestyle='--', linewidth=0.5, alpha=0.7)
-            ax2.annotate(f'{pct}%', xy=(n + 0.3, pct), fontsize=7,
-                         color='gray', va='center')
+            ax2.axhline(pct, color='gray', linestyle='--', linewidth=0.5, alpha=0.5)
+            # Red marker on right edge (inside plot area)
+            ax2.plot(n, pct, 's', color='firebrick', markersize=5, zorder=5)
+            ax2.annotate(f'{pct}%', xy=(n - 0.5, pct), fontsize=7,
+                         color='gray', va='center', ha='right')
 
     ax1.set_title('POD Energy Spectrum')
     fig.tight_layout()
