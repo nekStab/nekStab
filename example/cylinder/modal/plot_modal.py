@@ -1,157 +1,300 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
-Plot modal analysis results for cylinder Re=100.
+plot_modal.py: Unified plotting for modal analysis results (POD, DMD, SPOD)
 
-Expected: Vortex shedding at St ≈ 0.164-0.167
+Reads output files from nekStab modal_analysis.f90:
+  - pod_energy.dat   : POD eigenvalue spectrum
+  - dmd_spectrum.dat : DMD eigenvalues and frequencies
+  - spod_spectrum.dat: SPOD energy vs frequency
+
+Usage:
+  python plot_modal.py              # auto-detect and plot all available
+  python plot_modal.py --pod        # plot POD only
+  python plot_modal.py --dmd        # plot DMD only
+  python plot_modal.py --spod       # plot SPOD only
+
+Output:
+  pod_spectrum.png, dmd_spectrum.png, spod_spectrum.png
 """
-
-import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
+import numpy as np
+import os
+import sys
 
-# Expected Strouhal number range for Re=100
-ST_MIN, ST_MAX = 0.160, 0.170
+# -----------------------------------------------------------------------------
+# Matplotlib configuration (consistent with nekStab style)
+# -----------------------------------------------------------------------------
+params = {
+    'text.usetex': False,
+    'font.size': 9,
+    'legend.fontsize': 8,
+    'legend.handlelength': 1.5,
+    'axes.labelsize': 10,
+    'xtick.labelsize': 8,
+    'ytick.labelsize': 8,
+}
+plt.rcParams.update(params)
+
+FORMAT = 'png'
+DPI = 600
+BBOX = 'tight'
+
+# -----------------------------------------------------------------------------
+# Data classes
+# -----------------------------------------------------------------------------
+
+class PODSpectrum:
+    """Read POD eigenvalue spectrum from pod_energy.dat"""
+
+    def __init__(self, filename='pod_energy.dat'):
+        if not os.path.exists(filename):
+            raise FileNotFoundError(f'{filename} not found')
+
+        print(f'Reading {filename}')
+        data = np.genfromtxt(filename, comments='#')
+
+        self.mode = data[:, 0].astype(int)
+        self.eigenvalue = data[:, 1]
+        self.energy_pct = data[:, 2]
+        self.cumulative_pct = data[:, 3]
+        self.nmodes = len(self.mode)
+
+        print(f'  {self.nmodes} modes, total energy captured: {self.cumulative_pct[-1]:.2f}%')
 
 
-def plot_pod_spectrum():
-    """Plot POD eigenvalue spectrum."""
-    try:
-        data = np.loadtxt('pod_energy.dat', comments='#')
-    except FileNotFoundError:
-        print("pod_energy.dat not found")
-        return
+class DMDSpectrum:
+    """Read DMD eigenvalue spectrum from dmd_spectrum.dat"""
 
-    mode = data[:, 0]
-    eigval = data[:, 1]
-    cumsum = data[:, 3]
+    def __init__(self, filename='dmd_spectrum.dat'):
+        if not os.path.exists(filename):
+            raise FileNotFoundError(f'{filename} not found')
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        print(f'Reading {filename}')
+        data = np.genfromtxt(filename, comments='#')
 
-    # Eigenvalue spectrum
-    ax1.semilogy(mode, eigval, 'bo-', markersize=4)
-    ax1.set_xlabel('Mode')
-    ax1.set_ylabel('Eigenvalue')
-    ax1.set_title('POD Eigenvalue Spectrum')
-    ax1.grid(True, alpha=0.3)
-    ax1.set_xlim(0, min(50, len(mode)))
+        self.mode = data[:, 0].astype(int)
+        self.mu_abs = data[:, 1]      # |mu|
+        self.sigma = data[:, 2]       # growth rate
+        self.omega = data[:, 3]       # angular frequency
+        self.St = data[:, 4]          # Strouhal number
+        self.mu_real = data[:, 5]     # Re(mu)
+        self.mu_imag = data[:, 6]     # Im(mu)
+        self.nmodes = len(self.mode)
 
-    # Cumulative energy
-    ax2.plot(mode, cumsum, 'r-', linewidth=2)
-    ax2.axhline(90, color='k', linestyle='--', alpha=0.5, label='90%')
-    ax2.axhline(99, color='k', linestyle=':', alpha=0.5, label='99%')
-    ax2.set_xlabel('Mode')
-    ax2.set_ylabel('Cumulative Energy (%)')
-    ax2.set_title('POD Cumulative Energy')
-    ax2.grid(True, alpha=0.3)
-    ax2.legend()
-    ax2.set_xlim(0, min(50, len(mode)))
-    ax2.set_ylim(0, 100)
+        # Find unstable modes
+        n_unstable = np.sum(self.sigma > 0)
+        print(f'  {self.nmodes} modes, {n_unstable} unstable (sigma > 0)')
 
-    plt.tight_layout()
-    plt.savefig('pod_spectrum.png', dpi=150)
-    print("Saved pod_spectrum.png")
+
+class SPODSpectrum:
+    """Read SPOD spectrum from spod_spectrum.dat"""
+
+    def __init__(self, filename='spod_spectrum.dat'):
+        if not os.path.exists(filename):
+            raise FileNotFoundError(f'{filename} not found')
+
+        print(f'Reading {filename}')
+        data = np.genfromtxt(filename, comments='#')
+
+        if data.size == 0:
+            raise ValueError(f'{filename} is empty')
+
+        self.St = data[:, 0]                    # Strouhal numbers
+        self.eigenvalues = data[:, 1:]          # eigenvalues (nfreq x nblk)
+        self.nfreq = len(self.St)
+        self.nblk = self.eigenvalues.shape[1]
+
+        print(f'  {self.nfreq} frequencies, {self.nblk} SPOD modes per frequency')
+
+
+# -----------------------------------------------------------------------------
+# Plotting functions
+# -----------------------------------------------------------------------------
+
+def plot_pod(pod, max_modes=20):
+    """Plot POD energy spectrum: bar chart + cumulative line"""
+
+    n = min(max_modes, pod.nmodes)
+    modes = pod.mode[:n]
+    energy = pod.energy_pct[:n]
+    cumulative = pod.cumulative_pct[:n]
+
+    fig, ax1 = plt.subplots(figsize=(5, 3.5))
+
+    # Bar chart for individual mode energy
+    ax1.bar(modes, energy, color='steelblue', edgecolor='k',
+            linewidth=0.5, alpha=0.8, label='Mode energy')
+    ax1.set_xlabel('POD mode')
+    ax1.set_ylabel('Energy (%)', color='steelblue')
+    ax1.tick_params(axis='y', labelcolor='steelblue')
+    ax1.set_xlim(0.5, n + 0.5)
+    ax1.set_ylim(0, max(energy) * 1.15)
+
+    # Cumulative energy on secondary axis
+    ax2 = ax1.twinx()
+    ax2.plot(modes, cumulative, 'o-', color='firebrick', markersize=4,
+             linewidth=1.2, label='Cumulative')
+    ax2.set_ylabel('Cumulative energy (%)', color='firebrick')
+    ax2.tick_params(axis='y', labelcolor='firebrick')
+    ax2.set_ylim(0, 105)
+
+    # Reference lines at 90% and 99%
+    for pct in [90, 99]:
+        if cumulative[-1] >= pct:
+            ax2.axhline(pct, color='gray', linestyle='--', linewidth=0.5, alpha=0.7)
+            ax2.annotate(f'{pct}%', xy=(n + 0.3, pct), fontsize=7,
+                         color='gray', va='center')
+
+    ax1.set_title('POD Energy Spectrum')
+    fig.tight_layout()
+
+    fname = f'pod_spectrum.{FORMAT}'
+    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
+    print(f'Saved {fname}')
     plt.close()
 
 
-def plot_dmd_spectrum():
-    """Plot DMD eigenvalue spectrum."""
-    try:
-        data = np.loadtxt('dmd_spectrum.dat', comments='#')
-    except FileNotFoundError:
-        print("dmd_spectrum.dat not found")
-        return
+def plot_dmd(dmd):
+    """Plot DMD spectrum: complex plane + growth rate vs frequency"""
 
-    mu_mag = data[:, 1]
-    sigma = data[:, 2]  # Growth rate
-    St = data[:, 4]     # Strouhal number (column header is St)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3.5))
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    # --- Left panel: Complex plane (mu) ---
+    theta = np.linspace(0, 2*np.pi, 200)
+    ax1.plot(np.cos(theta), np.sin(theta), 'r-', linewidth=0.8,
+             label='Unit circle')
 
-    # Eigenvalue magnitude vs Strouhal number
-    ax1.scatter(St, mu_mag, c='b', s=30, alpha=0.7)
-    ax1.axvline(ST_MIN, color='r', linestyle='--', alpha=0.5)
-    ax1.axvline(ST_MAX, color='r', linestyle='--', alpha=0.5,
-                label=f'Expected St={ST_MIN:.3f}-{ST_MAX:.3f}')
-    ax1.axhline(1.0, color='k', linestyle='-', alpha=0.3)
-    ax1.set_xlabel('St')
-    ax1.set_ylabel('|μ|')
-    ax1.set_title('DMD Eigenvalue Magnitude')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
+    # Color by stability: blue=stable, red=unstable
+    stable = dmd.mu_abs <= 1.0
+    unstable = dmd.mu_abs > 1.0
 
-    # Growth rate vs Strouhal number
-    ax2.scatter(St, sigma, c='b', s=30, alpha=0.7)
-    ax2.axvline(ST_MIN, color='r', linestyle='--', alpha=0.5)
-    ax2.axvline(ST_MAX, color='r', linestyle='--', alpha=0.5)
-    ax2.axhline(0.0, color='k', linestyle='-', alpha=0.3)
-    ax2.set_xlabel('St')
-    ax2.set_ylabel('Growth rate σ')
-    ax2.set_title('DMD Growth Rate')
-    ax2.grid(True, alpha=0.3)
+    ax1.scatter(dmd.mu_real[stable], dmd.mu_imag[stable],
+                s=25, c='steelblue', edgecolors='k', linewidth=0.3,
+                alpha=0.8, label=f'Stable ({np.sum(stable)})', zorder=3)
 
-    plt.tight_layout()
-    plt.savefig('dmd_spectrum.png', dpi=150)
-    print("Saved dmd_spectrum.png")
+    if np.any(unstable):
+        ax1.scatter(dmd.mu_real[unstable], dmd.mu_imag[unstable],
+                    s=40, c='firebrick', edgecolors='k', linewidth=0.3,
+                    marker='D', alpha=0.9, label=f'Unstable ({np.sum(unstable)})',
+                    zorder=4)
+
+    ax1.axhline(0, color='k', linewidth=0.3, linestyle=':')
+    ax1.axvline(0, color='k', linewidth=0.3, linestyle=':')
+    ax1.set_xlabel(r'Re$(\mu)$')
+    ax1.set_ylabel(r'Im$(\mu)$')
+    ax1.set_aspect('equal')
+    ax1.set_xlim(-1.3, 1.3)
+    ax1.set_ylim(-1.3, 1.3)
+    ax1.legend(loc='upper left', fontsize=7)
+    ax1.set_title('DMD Eigenvalues')
+
+    # --- Right panel: Growth rate vs Strouhal ---
+    ax2.scatter(np.abs(dmd.St), dmd.sigma, s=25, c='steelblue',
+                edgecolors='k', linewidth=0.3, alpha=0.8)
+
+    # Highlight unstable modes
+    if np.any(dmd.sigma > 0):
+        ax2.scatter(np.abs(dmd.St[dmd.sigma > 0]), dmd.sigma[dmd.sigma > 0],
+                    s=40, c='firebrick', edgecolors='k', linewidth=0.3,
+                    marker='D', alpha=0.9, zorder=4)
+
+    ax2.axhline(0, color='r', linewidth=0.8, linestyle='-', label=r'$\sigma=0$')
+    ax2.set_xlabel(r'Strouhal number $St$')
+    ax2.set_ylabel(r'Growth rate $\sigma$')
+    ax2.set_xlim(left=0)
+    ax2.legend(loc='best', fontsize=7)
+    ax2.set_title('DMD Growth Rates')
+
+    fig.tight_layout()
+
+    fname = f'dmd_spectrum.{FORMAT}'
+    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
+    print(f'Saved {fname}')
     plt.close()
 
-    # Find dominant mode
-    idx = np.argmax(mu_mag)
-    print(f"DMD: Dominant mode at St = {St[idx]:.4f}, |μ| = {mu_mag[idx]:.4f}")
 
+def plot_spod(spod, max_modes=5):
+    """Plot SPOD spectrum: energy vs Strouhal for each mode rank"""
 
-def plot_spod_spectrum():
-    """Plot SPOD spectrum."""
-    try:
-        data = np.loadtxt('spod_spectrum.dat', comments='#')
-    except FileNotFoundError:
-        print("spod_spectrum.dat not found")
-        return
+    fig, ax = plt.subplots(figsize=(5.5, 3.5))
 
-    St = data[:, 0]  # Strouhal number (column header is St)
-    # Eigenvalues are in columns 1, 2, 3, ...
-    evals = data[:, 1:]
+    # Color palette for different mode ranks
+    colors = plt.cm.viridis(np.linspace(0, 0.85, min(max_modes, spod.nblk)))
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    n_to_plot = min(max_modes, spod.nblk)
+    for i in range(n_to_plot):
+        eig = spod.eigenvalues[:, i]
+        # Avoid log(0) issues
+        eig = np.maximum(eig, 1e-20)
 
-    # Plot first few eigenvalues
-    nplot = min(5, evals.shape[1])
-    for i in range(nplot):
-        ax.semilogy(St, evals[:, i], label=f'Mode {i+1}', alpha=0.8)
+        lw = 1.5 if i == 0 else 0.8
+        alpha = 1.0 if i == 0 else 0.7
+        ax.semilogy(spod.St, eig, '-', color=colors[i], linewidth=lw,
+                    alpha=alpha, label=f'Mode {i+1}')
 
-    # Mark expected shedding frequency
-    ax.axvline(ST_MIN, color='r', linestyle='--', alpha=0.5)
-    ax.axvline(ST_MAX, color='r', linestyle='--', alpha=0.5,
-               label=f'Expected St={ST_MIN:.3f}-{ST_MAX:.3f}')
-
-    ax.set_xlabel('St')
-    ax.set_ylabel('SPOD Eigenvalue')
+    ax.set_xlabel(r'Strouhal number $St$')
+    ax.set_ylabel('SPOD eigenvalue')
+    ax.set_xlim(0, max(spod.St))
+    ax.legend(loc='best', fontsize=7, ncol=2)
     ax.set_title('SPOD Spectrum')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
+    ax.grid(True, which='minor', linestyle=':', linewidth=0.2, alpha=0.3)
 
-    plt.tight_layout()
-    plt.savefig('spod_spectrum.png', dpi=150)
-    print("Saved spod_spectrum.png")
+    fig.tight_layout()
+
+    fname = f'spod_spectrum.{FORMAT}'
+    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
+    print(f'Saved {fname}')
     plt.close()
 
-    # Find peak frequency
-    idx = np.argmax(evals[:, 0])
-    print(f"SPOD: Peak at St = {St[idx]:.4f}")
 
-
-def main():
-    print("Cylinder Re=100 Modal Analysis Results")
-    print("=" * 50)
-    print(f"Expected: Vortex shedding at St ≈ {ST_MIN}-{ST_MAX}")
-    print("")
-
-    plot_pod_spectrum()
-    plot_dmd_spectrum()
-    plot_spod_spectrum()
-
-    print("")
-    print("Done! Check generated PNG files.")
-
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    main()
+    print('=' * 50)
+    print('  Modal Analysis Spectrum Plotter')
+    print('=' * 50)
+
+    # Parse arguments
+    plot_all = len(sys.argv) == 1
+    plot_pod_flag = plot_all or '--pod' in sys.argv
+    plot_dmd_flag = plot_all or '--dmd' in sys.argv
+    plot_spod_flag = plot_all or '--spod' in sys.argv
+
+    plots_made = 0
+
+    # POD
+    if plot_pod_flag:
+        try:
+            pod = PODSpectrum()
+            plot_pod(pod)
+            plots_made += 1
+        except FileNotFoundError as e:
+            print(f'  Skipping POD: {e}')
+
+    # DMD
+    if plot_dmd_flag:
+        try:
+            dmd = DMDSpectrum()
+            plot_dmd(dmd)
+            plots_made += 1
+        except FileNotFoundError as e:
+            print(f'  Skipping DMD: {e}')
+
+    # SPOD
+    if plot_spod_flag:
+        try:
+            spod = SPODSpectrum()
+            plot_spod(spod)
+            plots_made += 1
+        except (FileNotFoundError, ValueError) as e:
+            print(f'  Skipping SPOD: {e}')
+
+    print('-' * 50)
+    if plots_made == 0:
+        print('No data files found. Run modal analysis first.')
+        print('Expected files: pod_energy.dat, dmd_spectrum.dat, spod_spectrum.dat')
+    else:
+        print(f'Done. Generated {plots_made} plot(s).')
