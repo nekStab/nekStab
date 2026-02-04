@@ -471,6 +471,143 @@ Uses GMRES to solve the Newton system. The Jacobian-vector product is computed v
 
 Optimally Time-Dependent modes for systems with chaotic base flows. Tracks the most unstable directions in real-time.
 
+### Mode 6: Modal Analysis (POD, DMD, SPOD)
+
+Data-driven modal decomposition methods for extracting coherent structures from time-resolved snapshot data.
+
+| Value | Method | Description |
+|-------|--------|-------------|
+| `6.0` | All enabled | Run all methods where `ifpod`/`ifdmd`/`ifspod = .true.` |
+| `6.1` | POD | Proper Orthogonal Decomposition only |
+| `6.2` | DMD | Dynamic Mode Decomposition only |
+| `6.3` | SPOD | Spectral POD only |
+
+#### Overview
+
+| Method | Basis | Output | Best For |
+|--------|-------|--------|----------|
+| **POD** | Energy-optimal spatial modes | Ranked by turbulent kinetic energy | Low-dimensional models, energy analysis |
+| **DMD** | Temporal growth rate + frequency | Complex eigenvalues λ = σ + iω | Identifying oscillatory structures, linear dynamics |
+| **SPOD** | Frequency-resolved energy-optimal modes | Eigenvalues per Strouhal number | Turbulent flows, broadband spectra |
+
+#### Configuration
+
+Set these parameters in `nekStab_usrchk`:
+
+```fortran
+subroutine nekStab_usrchk
+   ! Required parameters
+   modal_prefix = '1cyl'      ! Snapshot file prefix (e.g., 1cyl0.f00001)
+   modal_nsnap  = 100         ! Number of snapshots to load
+   modal_dt     = 0.5         ! Time step between snapshots
+   modal_nsave  = 10          ! Number of modes to save to disk
+
+   ! Method selection
+   ifpod  = .true.            ! Enable POD
+   ifdmd  = .true.            ! Enable DMD
+   ifspod = .false.           ! Enable SPOD
+
+   ! Optional: DMD rank truncation (0 = auto)
+   dmd_rank = 0
+
+   ! Optional: SPOD windowing
+   spod_nfft = 64             ! FFT block size
+   spod_noverlap = 32         ! Block overlap
+end subroutine
+```
+
+#### Input Files
+
+Snapshots must be Nek5000 field files with sequential numbering:
+```
+<prefix>0.f00001, <prefix>0.f00002, ..., <prefix>0.f<nsnap>
+```
+
+Example: `1cyl0.f00001` through `1cyl0.f00100` for 100 snapshots.
+
+#### Output Files
+
+| File | Contents | Format |
+|------|----------|--------|
+| `pod_energy.dat` | POD eigenvalue spectrum | `mode, eigenvalue, energy_%, cumulative_%` |
+| `dmd_spectrum.dat` | DMD eigenvalues | `mode, |μ|, σ, ω, St, Re(μ), Im(μ)` |
+| `spod_spectrum.dat` | SPOD spectrum | `St, λ₁, λ₂, ..., λ_nblk` |
+| `mea*.f00001` | Temporal mean field | Nek5000 field file |
+| `pod*.f00001` | POD modes | Nek5000 field files |
+| `dm1*.f00001` | DMD modes (real part) | Nek5000 field files |
+| `dm2*.f00001` | DMD modes (imag part) | Nek5000 field files |
+| `SPG*.f00001` | SPOD modes | Nek5000 field files |
+
+#### Plotting Results
+
+Use the provided Python script:
+
+```bash
+cd example/cylinder/modal
+python plot_modal.py           # Auto-detect and plot all
+python plot_modal.py --pod     # POD only
+python plot_modal.py --dmd     # DMD only
+python plot_modal.py --spod    # SPOD only
+```
+
+Generates: `pod_spectrum.png`, `dmd_spectrum.png`, `spod_spectrum.png`
+
+#### Method Details
+
+**POD (Proper Orthogonal Decomposition)**
+
+Computes energy-optimal modes via the method of snapshots:
+1. Subtract temporal mean from snapshots
+2. Form correlation matrix C_ij = ⟨q_i, q_j⟩
+3. Solve eigenvalue problem: C v = λ v
+4. Reconstruct spatial modes: φ_k = Σ_i v_ik q_i
+
+Eigenvalues represent the kinetic energy captured by each mode. The first few modes typically capture >90% of fluctuation energy for periodic flows.
+
+**DMD (Dynamic Mode Decomposition)**
+
+Extracts modes with exponential temporal behavior using projected DMD:
+1. Form data matrices: X = [q₁,...,q_{n-1}], Y = [q₂,...,q_n]
+2. SVD of X: X = U Σ V*
+3. Project dynamics: Ã = U* Y V Σ⁻¹
+4. Eigendecomposition of Ã gives DMD eigenvalues μ
+
+Eigenvalues relate to continuous-time growth rate σ and frequency ω:
+- σ = log|μ| / Δt (growth rate)
+- ω = arg(μ) / Δt (angular frequency)
+- St = ω / (2π) (Strouhal number)
+
+**SPOD (Spectral POD)**
+
+Frequency-resolved POD using Welch's method:
+1. Divide snapshots into overlapping blocks
+2. Apply windowing (Hamming) and FFT each block
+3. At each frequency, form cross-spectral density matrix
+4. Eigendecomposition gives SPOD modes ranked by energy at that frequency
+
+SPOD reduces to POD for a single block and to DMD for broadband-limited signals.
+
+#### Example Workflow
+
+```bash
+# 1. Generate DNS snapshots (run DNS, save every 0.5 time units)
+cd example/cylinder/dns
+# Edit 1cyl.par: writeInterval = 0.5, endTime = 50
+mks 1cyl && nekbmpi 1cyl 4
+
+# 2. Run modal analysis
+cd ../modal
+ln -s ../dns/1cyl0.f* .     # Link snapshots
+# Edit 1cyl.usr nekStab_usrchk:
+#   modal_prefix = '1cyl'
+#   modal_nsnap = 100
+#   modal_dt = 0.5
+mks 1cyl && nekbmpi 1cyl 4
+
+# 3. Plot spectra
+python plot_modal.py
+```
+
 ---
 
 ## Parameter Reference
@@ -624,6 +761,21 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 | `otd_gsStep` | 10 | Gram-Schmidt orthogonalization interval |
 | `otd_FTLEPeriod` | 0.0 | FTLE averaging window |
 
+#### Modal Analysis (POD/DMD/SPOD)
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `modal_prefix` | `'DNS'` | Snapshot file prefix (e.g., `'1cyl'` for `1cyl0.f00001`) |
+| `modal_nsnap` | 100 | Number of snapshots to load |
+| `modal_dt` | 1.0 | Time step between snapshots |
+| `modal_nsave` | 10 | Number of modes to save to disk |
+| `ifpod` | .false. | Enable POD computation |
+| `ifdmd` | .false. | Enable DMD computation |
+| `ifspod` | .false. | Enable SPOD computation |
+| `dmd_rank` | 0 | DMD truncation rank (0 = auto, use all) |
+| `spod_nfft` | 64 | SPOD FFT block size |
+| `spod_noverlap` | 32 | SPOD block overlap (typically nfft/2) |
+
 ---
 
 ## Code Architecture
@@ -645,6 +797,9 @@ nekStab/
 │   ├── nek_vectors.f90     # nop* vector operations
 │   ├── utils.f90           # Utilities, I/O helpers
 │   ├── otd.f90             # OTD modes
+│   ├── modal_analysis.f90  # POD, DMD, SPOD
+│   ├── fourier_fftw.f90    # FFT interface (FFTW3/MKL)
+│   ├── fourier.f90         # Fourier decomposition wrappers
 │   └── IO.f90              # File I/O routines
 ├── bin/
 │   └── mks                 # Build script
