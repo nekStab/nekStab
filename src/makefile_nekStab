@@ -1,9 +1,15 @@
 
 # all nekStab files are in .f90 (format for )free format source code
 
+# Free-form flags: replace -fixed/-ffixed-form with -free/-ffree-form
+# Intel: -fixed -> -free; GCC: -ffixed-form -> -ffree-form
+FL2_FREE = $(subst -fixed,-free,$(subst -ffixed-form,-ffree-form,$(FL2)))
+
 # Module dependencies - krylov_subspace must be built first
 $(OBJDIR)/nek_vectors.o:          $(NEKSTAB_SOURCE_ROOT)/src/nek_vectors.f90          ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/krylov_subspace.o:      $(NEKSTAB_SOURCE_ROOT)/src/krylov_subspace.f90      ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/fourier_fftw.o:         $(NEKSTAB_SOURCE_ROOT)/src/fourier_fftw.f90         ;$(FC) -c $(FL2_FREE) $< -o $@
+$(OBJDIR)/fourier.o:              $(NEKSTAB_SOURCE_ROOT)/src/fourier.f90              $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # Files that depend on krylov_subspace module
 $(OBJDIR)/krylov_decomposition.o: $(NEKSTAB_SOURCE_ROOT)/src/krylov_decomposition.f90 $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@

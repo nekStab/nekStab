@@ -54,12 +54,12 @@ Traditional stability analysis requires forming and storing large Jacobian matri
 
 **Linux (Ubuntu/Debian) - GCC**
 ```bash
-sudo apt-get install build-essential gfortran libopenmpi-dev liblapack-dev libblas-dev cmake
+sudo apt install build-essential gfortran libopenmpi-dev liblapack-dev libblas-dev libfftw3-dev cmake
 ```
 
 **macOS**
 ```bash
-brew install gcc open-mpi cmake
+brew install gcc open-mpi fftw cmake
 ```
 
 **HPC Systems**
@@ -125,6 +125,17 @@ ifx --version
 
 > **Note:** Intel discontinued `ifort` in oneAPI 2025, but it remains available on many HPC systems with older installations. nekStab supports both `ifx` and `ifort`.
 
+#### FFT Library Linking
+
+nekStab uses FFTW3 for spectral analysis (temporal FFT, future SPOD support):
+
+| Compiler | FFT Backend | Linking |
+|----------|-------------|---------|
+| **Intel (ifx/ifort)** | MKL FFTW wrappers | Automatic via `-qmkl` |
+| **GCC (gfortran)** | FFTW3 | Requires `libfftw3-dev` |
+
+Intel's MKL includes FFTW3-compatible wrappers, so no additional installation is needed. The `-qmkl` flag (already used for BLAS/LAPACK) provides optimized FFT routines. GCC builds link against the system FFTW3 library.
+
 ### Clone and Setup
 
 ```bash
@@ -181,11 +192,11 @@ NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 
 ### Compiler Comparison
 
-| Compiler | BLAS/LAPACK | Vectorization | Notes |
-|----------|-------------|---------------|-------|
-| **ifx** | MKL (dynamic) | AVX2/AVX-512 | Requires `source /opt/intel/oneapi/setvars.sh` |
-| **ifort** | MKL (dynamic) | AVX2/AVX-512 | Discontinued in oneAPI 2025, but available on many HPC systems |
-| **gfortran** | System libs | Native | Uses `-framework Accelerate` on macOS |
+| Compiler | BLAS/LAPACK | FFT | Vectorization | Notes |
+|----------|-------------|-----|---------------|-------|
+| **ifx** | MKL | MKL FFTW | AVX2/AVX-512 | Requires `source /opt/intel/oneapi/setvars.sh` |
+| **ifort** | MKL | MKL FFTW | AVX2/AVX-512 | Discontinued in oneAPI 2025, but available on many HPC systems |
+| **gfortran** | System libs | FFTW3 | Native | Uses `-framework Accelerate` on macOS, requires `libfftw3-dev` on Linux |
 
 > **Note:** Intel discontinued `ifort` in oneAPI 2025, but it remains available on many HPC systems with older oneAPI or Intel Parallel Studio installations.
 
