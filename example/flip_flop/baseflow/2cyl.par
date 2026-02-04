@@ -29,4 +29,4 @@ writeToFieldFile = yes
 residualTol = 1.0E-8
 residualProj = yes
 density = 1.0
-viscosity = -63.0
+viscosity = -62.0  # Re=62, slightly above critical Re_c≈61.17
