@@ -1,7 +1,6 @@
 # Minimal CI test configuration - runs ~10 timesteps
+# Cold start (no restart file needed)
 [GENERAL]
-startFrom = rst_1cyl0.f00001
-
 stopAt = numSteps
 numSteps = 10
 
