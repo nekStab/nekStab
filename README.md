@@ -201,7 +201,7 @@ Three equivalent ways to select operating mode:
 
 ## Communication
 
-- Mail: [Jean-Christophe Loiseau](mailto:loiseau.jc@gmail.com?subject=[GitHub]%20Information%20about%20nekStab) or [Ricardo Frantz](mailto:rasfrantz@gmail.com?subject=[GitHub]%20Information%20about%20nekStab)
+- Mail: [Ricardo Frantz](mailto:rasfrantz@gmail.com?subject=[GitHub]%20Information%20about%20nekStab)
 - Website: [https://nekstab.github.io/](https://nekstab.github.io/)
 
 ### Citation
