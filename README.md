@@ -53,6 +53,7 @@
 
 ### Why nekStab?
 - **Matrix-free**: No Jacobian storage — scales to millions of DoFs
+- **Krylov-based**: Time-stepper as linear operator — eigenvalues from snapshots, no math required
 - **Spectral accuracy**: Leverages Nek5000's high-order elements
 - **MPI parallel**: Efficient on laptops to supercomputers
 - **Validated**: Benchmarked against canonical flows (cylinder, cavity, jets)
