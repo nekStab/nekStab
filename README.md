@@ -111,6 +111,31 @@ killall nek5000
 
 For more information, see the [Documentation](DOC.md).
 
+## Mode Configuration
+
+nekStab supports three equivalent ways to select the operating mode:
+
+**Method 1: String mode** (human-readable, recommended)
+```fortran
+! In nekStab_usrchk subroutine in your .usr file:
+nekstab_mode = 'floquet_adjoint'
+```
+
+**Method 2: Flag mode** (flexible)
+```fortran
+! In nekStab_usrchk subroutine:
+isAdjoint = .true.
+ifFloquet = .true.   ! modifier flag
+```
+
+**Method 3: uparam** (automation-friendly, backward compatible)
+```
+# In .par file [PROBLEMTYPE] section:
+userParam01 = 3.21
+```
+
+All three methods produce identical behavior. See [DOC.md](DOC.md) for the complete mode reference table.
+
 ## Development
 
 **nekStab** is maintained by [Ricardo Frantz](https://github.com/ricardofrantz).
