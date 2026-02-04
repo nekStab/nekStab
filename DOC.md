@@ -17,11 +17,12 @@ A toolbox for global stability and bifurcation analysis using the spectral eleme
 9. [Mesh Generation](#mesh-generation)
 10. [Examples](#examples)
 11. [Validation](#validation)
-12. [Theoretical Background](#theoretical-background)
-13. [Troubleshooting](#troubleshooting)
-14. [Citation](#citation)
-15. [License](#license)
-16. [Contact](#contact)
+12. [Continuous Integration](#continuous-integration)
+13. [Theoretical Background](#theoretical-background)
+14. [Troubleshooting](#troubleshooting)
+15. [Citation](#citation)
+16. [License](#license)
+17. [Contact](#contact)
 
 ---
 
@@ -1165,6 +1166,59 @@ S(x) = |q̂(x)| · |q̂†(x)| / ∫ q̂† · q̂ dV
 ```
 
 High S(x) regions are sensitive to local modifications (e.g., control devices).
+
+---
+
+## Continuous Integration
+
+nekStab uses GitHub Actions to automatically test compilation and execution across multiple platforms, compilers, and MPI implementations.
+
+### Build Matrix
+
+| OS | Arch | Compiler | MPI | Status |
+|:---|:----:|:---------|:----|:------:|
+| Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI 4.1 | [![CI](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu 24.04 | x86_64 | gfortran 14 | MPICH 4.2 | — |
+| macOS 26 | ARM64 | gfortran 14 | OpenMPI 5.0 | — |
+| Ubuntu 24.04 | x86_64 | ifort 2024.2 | Intel MPI | — |
+| Ubuntu 24.04 | x86_64 | ifx 2025.2 | Intel MPI | — |
+
+> **Note:** All configurations share the same CI badge. Individual job status can be viewed on the [Actions page](https://github.com/nekStab/nekStab/actions/workflows/ci.yml).
+
+### What the CI Tests
+
+1. **Compilation** — Builds the `example/cylinder/ci_test` case with each compiler/MPI combination
+2. **Smoke Test** — Runs 10 DNS timesteps with 2 MPI ranks to verify basic functionality
+3. **Output Verification** — Confirms the logfile contains successful completion markers
+
+### Running Tests Locally
+
+To replicate CI tests locally:
+
+```bash
+cd example/cylinder/ci_test
+mks 1cyl                           # Compile
+echo "1cyl" > SESSION.NAME
+pwd >> SESSION.NAME                # Create session file
+mpirun -np 2 ./nek5000             # Run smoke test
+grep "FINISHED RUN\|End of time-step loop" logfile  # Verify completion
+```
+
+### Triggering CI
+
+CI runs automatically on:
+- Push to `dev` branch
+- Pull requests to `dev` branch
+- Manual dispatch via Actions page
+
+### Adding New Test Cases
+
+To add a new CI test case:
+
+1. Create a minimal configuration in `example/<case>/ci_test/`
+2. Use `stopAt = numSteps` with `numSteps = 10` for fast execution
+3. Use cold start (no restart file) for simplicity
+4. Add the build/run steps to `.github/workflows/ci.yml`
 
 ---
 
