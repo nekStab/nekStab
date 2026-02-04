@@ -82,11 +82,12 @@ jobs:
         run: |
           # Source Intel MPI environment and export to GITHUB_ENV
           source /opt/intel/oneapi/mpi/latest/env/vars.sh
-          # Set compilers based on toolchain (ifx/icx for modern, ifort/icc for classic)
+          # Set compilers based on toolchain
+          # Note: ifort uses icx/icpx for C/C++ (icc/icpc deprecated in oneAPI 2024+)
           if [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
             echo "I_MPI_FC=ifort" >> $GITHUB_ENV
-            echo "I_MPI_CC=icc" >> $GITHUB_ENV
-            echo "I_MPI_CXX=icpc" >> $GITHUB_ENV
+            echo "I_MPI_CC=icx" >> $GITHUB_ENV
+            echo "I_MPI_CXX=icpx" >> $GITHUB_ENV
           else
             echo "I_MPI_FC=ifx" >> $GITHUB_ENV
             echo "I_MPI_CC=icx" >> $GITHUB_ENV
