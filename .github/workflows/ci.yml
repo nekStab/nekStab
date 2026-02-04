@@ -129,7 +129,15 @@ jobs:
           fi
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
-          mpirun -np 2 ./nek5000
+          # Use mpiexec for better cross-MPI compatibility
+          # MPICH needs explicit host specification on some systems
+          if [ "${{ matrix.mpi }}" = "mpich" ]; then
+            mpiexec -n 2 -host localhost:2 ./nek5000
+          elif [ "${{ matrix.mpi }}" = "intelmpi" ]; then
+            mpiexec -n 2 ./nek5000
+          else
+            mpirun --oversubscribe -np 2 ./nek5000
+          fi
           echo "Test completed successfully"
 
       - name: Verify output
