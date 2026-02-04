@@ -1,0 +1,1 @@
+FFLAGS:  -fixed -extend-source -xHost -fno-strict-overflow -heap-arrays -mprefer-vector-width=512 -qmkl=sequential -I/opt/intel/oneapi/mkl/2025.2/include -mcmodel=large -DNVERSION="'v19.0-212-g66b24be'" -DNSVERSION="'70fe640'"
