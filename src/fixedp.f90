@@ -13,7 +13,7 @@
          logical, save :: init
          data init/.false./
       
-         nt = nx1*ny1*nz1*nt
+         nt = nx1*ny1*nz1*nelt
          if (.not. init) then
       
             if (nid == 0) write (6, *) '   Target frequency specified in uparam(5)=', uparam(5)
