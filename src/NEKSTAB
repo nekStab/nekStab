@@ -2,13 +2,39 @@
       ! Shared memory bounded arrays and parameters
       !
       ! RESPECT 72 CHAR LIMIT PER LINE
-      
+      !
+      ! ═══════════════════════════════════════════════════════════════════
+      ! MODE CONFIGURATION INTERFACE
+      ! ═══════════════════════════════════════════════════════════════════
+      !
+      ! Three equivalent methods to select nekStab operating mode:
+      !
+      ! METHOD 1: String mode in .usr (human-readable, recommended)
+      !   subroutine nekStab_usrchk
+      !     nekstab_mode = 'floquet_adjoint'
+      !   end subroutine
+      !
+      ! METHOD 2: Flag mode in .usr (flexible)
+      !   subroutine nekStab_usrchk
+      !     isAdjoint = .true.
+      !     ifFloquet = .true.   ! modifier flag
+      !   end subroutine
+      !
+      ! METHOD 3: uparam in .par file (automation-friendly)
+      !   [PROBLEMTYPE]
+      !   userParam01 = 3.21
+      !
+      ! Priority order: String mode > Flag mode > uparam(1)
+      ! See DOC.md for complete mode string table and examples.
+      ! ═══════════════════════════════════════════════════════════════════
+
       ! Parameters
       integer, parameter :: ncoef = 4 ! Number of coefficients for finite difference
-      
+
       ! Character variables
       character(len=1) :: evop
-      common/nStab_char/evop
+      character(len=32) :: nekstab_mode  ! String mode selector (see table above)
+      common/nStab_char/evop, nekstab_mode
       
       ! Logical variables for various stability flags
       logical :: ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm
@@ -17,12 +43,50 @@
       logical :: isDirect, isAdjoint, isTransientGrowth
       logical :: isFloquetDirect, isFloquetAdjoint
       logical :: isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
-      
+
+      ! ─────────────────────────────────────────────────────────────────
+      ! USER-SETTABLE MODE FLAGS (alternative to uparam encoding)
+      ! Set these in nekStab_usrchk to override uparam(1) decoding
+      ! ─────────────────────────────────────────────────────────────────
+
+      ! Mode 0: DNS flags
+      logical :: ifDNS       ! Direct Numerical Simulation (uparam=0)
+      logical :: ifLinDNS    ! Linearized DNS (uparam=0.1)
+
+      ! Mode 1: Fixed point method flags
+      logical :: ifSFD       ! Selective Frequency Damping (uparam=1.1)
+      logical :: ifBoostConv ! BoostConv acceleration (uparam=1.2)
+      logical :: ifTDF       ! Time-Delayed Feedback (uparam=1.4)
+
+      ! Mode 3: Stability analysis modifier
+      logical :: ifFloquet   ! Floquet modifier (combines with isDirect/etc)
+
+      ! Mode 4: Postprocessing flags
+      logical :: ifEnergyBudget    ! Stability energy budget (uparam=4.1)
+      logical :: ifWavemaker       ! Wavemaker computation (uparam=4.2)
+      logical :: ifBFSensitivity   ! Base flow sensitivity (uparam=4.3)
+      logical :: ifForceSensReal   ! Steady force sensitivity real (uparam=4.41)
+      logical :: ifForceSensImag   ! Steady force sensitivity imag (uparam=4.42)
+      logical :: ifDeltaForcing    ! Delta forcing (uparam=4.43)
+      logical :: ifAnimateMode     ! Animate mode only (uparam=4.50)
+      logical :: ifAnimateBFDeform ! Animate + base flow deform (uparam=4.51)
+      logical :: ifAnimateFloquet  ! Animate Floquet mode (uparam=4.52)
+
+      ! Mode 6: Modal analysis flags
+      logical :: ifpod       ! POD analysis (uparam=6.1)
+      logical :: ifdmd       ! DMD analysis (uparam=6.2)
+      logical :: ifspod      ! SPOD analysis (uparam=6.3)
+
       common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois,
      $   ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol,
-     $   iffindiff, ifotd, isNekStabinit, isDirect, isAdjoint, isTransientGrowth,
-     $   isFloquetDirect, isFloquetAdjoint, isFloquetTransientGrowth,
-     $   isNewtonFP, isNewtonPO, isNewtonPO_T
+     $   iffindiff, ifotd, isNekStabinit, isDirect, isAdjoint,
+     $   isTransientGrowth, isFloquetDirect, isFloquetAdjoint,
+     $   isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
+
+      common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv,
+     $   ifTDF, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity,
+     $   ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode,
+     $   ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod
       
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
@@ -37,6 +101,13 @@
       integer :: mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof
       common/nStab_int/mstep, schur_tgt, maxmodes, schur_cnt,
      $   glob_skip, nof
+
+      ! Mode configuration integers
+      integer :: animate_mode_num   ! Mode number for animation (default=1)
+      integer :: modal_nsnap        ! Number of snapshots for modal analysis
+      character(len=3) :: modal_prefix  ! File prefix for modal analysis
+      common/nStab_mode_int/animate_mode_num, modal_nsnap
+      common/nStab_mode_char/modal_prefix
       
       ! Real variables for finite difference method
       real :: xck, yck, zck

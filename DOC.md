@@ -270,7 +270,141 @@ mks 1cyl && nekbmpi 1cyl 4
 
 ## Operating Modes
 
-Set via `userParam01` in the `.par` file:
+nekStab supports **three equivalent methods** to select the operating mode, providing flexibility for different use cases.
+
+### Mode Configuration Interface
+
+#### Method 1: String Mode (Recommended)
+
+The most readable approach. Set `nekstab_mode` in your `.usr` file's `nekStab_usrchk` subroutine:
+
+```fortran
+subroutine nekStab_usrchk
+   nekstab_mode = 'floquet_adjoint'  ! Clear, self-documenting
+   k_dim = 92                        ! Krylov dimension
+end subroutine
+```
+
+**Available mode strings:**
+
+| String | Description | Equivalent uparam |
+|--------|-------------|-------------------|
+| `'dns'` | Direct Numerical Simulation | 0 |
+| `'linear_dns'` | Linearized DNS | 0.1 |
+| `'sfd'` | Selective Frequency Damping | 1.1 |
+| `'boostconv'` | BoostConv acceleration | 1.2 |
+| `'tdf'` | Time-Delayed Feedback | 1.4 |
+| `'newton_fp'` | Newton for fixed points | 2.0 |
+| `'newton_po'` | Newton for periodic orbits | 2.1 |
+| `'newton_po_t'` | Newton for forced periodic orbits | 2.2 |
+| `'direct'` | Direct eigenmode analysis | 3.1 |
+| `'floquet_direct'` | Direct Floquet analysis | 3.11 |
+| `'adjoint'` | Adjoint eigenmode analysis | 3.2 |
+| `'floquet_adjoint'` | Adjoint Floquet analysis | 3.21 |
+| `'transient_growth'` | Transient growth analysis | 3.3 |
+| `'floquet_tg'` | Floquet transient growth | 3.31 |
+| `'energy_budget'` | Kinetic energy budget | 4.1 |
+| `'wavemaker'` | Wavemaker/structural sensitivity | 4.2 |
+| `'bf_sensitivity'` | Base flow sensitivity | 4.3 |
+| `'force_sensitivity_real'` | Real part forcing sensitivity | 4.41 |
+| `'force_sensitivity_imag'` | Imaginary part forcing sensitivity | 4.42 |
+| `'delta_forcing'` | Delta forcing response | 4.43 |
+| `'animate_mode'` | Animate eigenmode | 4.50 |
+| `'animate_bf_deform'` | Animate with base flow deformation | 4.51 |
+| `'animate_floquet'` | Animate Floquet mode | 4.52 |
+| `'otd'` | Optimally Time-Dependent modes | 5 |
+| `'pod'` | Proper Orthogonal Decomposition | 6.1 |
+| `'dmd'` | Dynamic Mode Decomposition | 6.2 |
+| `'spod'` | Spectral POD | 6.3 |
+
+Mode strings are **case-insensitive** and support aliases (e.g., `'tg'` for transient growth).
+
+#### Method 2: Flag Mode (Flexible)
+
+Set individual boolean flags for fine-grained control:
+
+```fortran
+subroutine nekStab_usrchk
+   isAdjoint = .true.    ! Base mode
+   ifFloquet = .true.    ! Modifier flag
+   k_dim = 92
+end subroutine
+```
+
+**Mode flags by category:**
+
+| Category | Flags |
+|----------|-------|
+| DNS | `ifDNS`, `ifLinDNS` |
+| Fixed Point | `ifSFD`, `ifBoostConv`, `ifTDF` |
+| Newton-Krylov | `isNewtonFP`, `isNewtonPO`, `isNewtonPO_T` |
+| Stability | `isDirect`, `isAdjoint`, `isTransientGrowth` |
+| Floquet modifier | `ifFloquet` (transforms base stability modes) |
+| Postprocessing | `ifEnergyBudget`, `ifWavemaker`, `ifBFSensitivity`, `ifForceSensReal`, `ifForceSensImag`, `ifDeltaForcing`, `ifAnimateMode`, `ifAnimateBFDeform`, `ifAnimateFloquet` |
+| OTD | `ifotd` |
+| Modal Analysis | `ifpod`, `ifdmd`, `ifspod` |
+
+**The `ifFloquet` modifier** combines with base stability modes:
+- `isDirect = .true.` + `ifFloquet = .true.` → Floquet direct analysis
+- `isAdjoint = .true.` + `ifFloquet = .true.` → Floquet adjoint analysis
+- `isTransientGrowth = .true.` + `ifFloquet = .true.` → Floquet transient growth
+
+**Animation parameters:**
+- `animate_mode_num = 3` — specifies which mode number to animate (default: 1)
+
+#### Method 3: uparam (Automation-Friendly)
+
+The original method, still fully supported. Set in your `.par` file:
+
+```ini
+[PROBLEMTYPE]
+userParam01 = 3.21    # Floquet adjoint
+userParam07 = 3       # Mode number for animation
+```
+
+This method is ideal for **parametric studies** and **automation scripts** where you need to change modes without recompiling.
+
+#### Priority Order
+
+When multiple methods are used, the priority is:
+
+1. **String mode** (`nekstab_mode`) — highest priority
+2. **Flag mode** (any `if*` flag set) — middle priority
+3. **uparam(1)** — lowest priority (fallback)
+
+This means user-set flags in `.usr` always override `.par` file settings, giving explicit user intent precedence.
+
+#### Example: Three Ways to Run Floquet Adjoint
+
+**Method 1: String (clearest)**
+```fortran
+! In .usr nekStab_usrchk
+nekstab_mode = 'floquet_adjoint'
+k_dim = 92
+```
+
+**Method 2: Flags (flexible)**
+```fortran
+! In .usr nekStab_usrchk
+isAdjoint = .true.
+ifFloquet = .true.
+k_dim = 92
+```
+
+**Method 3: uparam (automation)**
+```ini
+# In .par file
+userParam01 = 3.21
+userParam07 = 92
+```
+
+All three produce **identical behavior**.
+
+---
+
+### Mode Reference
+
+The following sections describe each mode in detail. The `userParam01` values are shown for reference but can be replaced with string or flag methods above.
 
 ### Mode 0: DNS
 

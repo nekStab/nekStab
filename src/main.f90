@@ -53,6 +53,54 @@
 
          evop = '_' ! initialize output prefix
 
+      !  ───────────────────────────────────────────────────────────────
+      !  User-settable mode flags (alternative to uparam encoding)
+      !  These can be set in nekStab_usrchk to override uparam(1)
+      !  ───────────────────────────────────────────────────────────────
+         nekstab_mode = ''  ! Empty = use uparam(1) or flag detection
+
+      !  Mode 0: DNS
+         ifDNS = .false.     ! Direct Numerical Simulation
+         ifLinDNS = .false.  ! Linearized DNS
+
+      !  Mode 1: Fixed point methods
+         ifSFD = .false.       ! Selective Frequency Damping
+         ifBoostConv = .false. ! BoostConv acceleration
+         ifTDF = .false.       ! Time-Delayed Feedback
+
+      !  Mode 2: Newton-Krylov (use existing isNewtonFP, isNewtonPO, isNewtonPO_T)
+         isNewtonFP = .false.   ! Newton for fixed points
+         isNewtonPO = .false.   ! Newton for periodic orbits
+         isNewtonPO_T = .false. ! Newton for forced periodic orbits
+
+      !  Mode 3: Stability analysis
+         isDirect = .false.           ! Direct eigenmodes
+         isAdjoint = .false.          ! Adjoint eigenmodes
+         isTransientGrowth = .false.  ! Transient growth
+         ifFloquet = .false.          ! Floquet modifier flag
+         isFloquetDirect = .false.    ! Floquet direct
+         isFloquetAdjoint = .false.   ! Floquet adjoint
+         isFloquetTransientGrowth = .false.  ! Floquet transient growth
+
+      !  Mode 4: Postprocessing
+         ifEnergyBudget = .false.    ! Stability energy budget
+         ifWavemaker = .false.       ! Wavemaker computation
+         ifBFSensitivity = .false.   ! Base flow sensitivity
+         ifForceSensReal = .false.   ! Steady force sensitivity (real)
+         ifForceSensImag = .false.   ! Steady force sensitivity (imag)
+         ifDeltaForcing = .false.    ! Delta forcing
+         ifAnimateMode = .false.     ! Animate mode only
+         ifAnimateBFDeform = .false. ! Animate + base flow deformation
+         ifAnimateFloquet = .false.  ! Animate Floquet mode
+         animate_mode_num = 1        ! Default mode number for animation
+
+      !  Mode 6: Modal analysis
+         ifpod = .false.      ! POD analysis
+         ifdmd = .false.      ! DMD analysis
+         ifspod = .false.     ! SPOD analysis
+         modal_nsnap = 100    ! Default snapshot count
+         modal_prefix = 'dns' ! Default file prefix
+
       !     !Broadcast all defaults !
          call bcast(eigen_tol, wdsize) ! wdsize for real
          call bcast(schur_del, wdsize)
@@ -86,6 +134,37 @@
          call bcast(ifstorebase, lsize)
          call bcast(ifdyntol, lsize)
 
+      !  Broadcast new mode flags
+         call bcast(ifDNS, lsize)
+         call bcast(ifLinDNS, lsize)
+         call bcast(ifSFD, lsize)
+         call bcast(ifBoostConv, lsize)
+         call bcast(ifTDF, lsize)
+         call bcast(ifFloquet, lsize)
+         call bcast(isNewtonFP, lsize)
+         call bcast(isNewtonPO, lsize)
+         call bcast(isNewtonPO_T, lsize)
+         call bcast(isDirect, lsize)
+         call bcast(isAdjoint, lsize)
+         call bcast(isTransientGrowth, lsize)
+         call bcast(isFloquetDirect, lsize)
+         call bcast(isFloquetAdjoint, lsize)
+         call bcast(isFloquetTransientGrowth, lsize)
+         call bcast(ifEnergyBudget, lsize)
+         call bcast(ifWavemaker, lsize)
+         call bcast(ifBFSensitivity, lsize)
+         call bcast(ifForceSensReal, lsize)
+         call bcast(ifForceSensImag, lsize)
+         call bcast(ifDeltaForcing, lsize)
+         call bcast(ifAnimateMode, lsize)
+         call bcast(ifAnimateBFDeform, lsize)
+         call bcast(ifAnimateFloquet, lsize)
+         call bcast(ifpod, lsize)
+         call bcast(ifdmd, lsize)
+         call bcast(ifspod, lsize)
+         call bcast(animate_mode_num, isize)
+         call bcast(modal_nsnap, isize)
+
       end subroutine nekStab_setDefault
       !---------------------------------------------------------------------
       subroutine nekStab_init
@@ -100,7 +179,8 @@
 
          if (.not. isNekStabinit) then
             call nekStab_setDefault
-            call nekStab_usrchk ! where user change defaults
+            call nekStab_usrchk ! where user can change defaults or set mode flags
+            call nekStab_resolve_mode ! resolve mode from string/flags/uparam
             call nekStab_printNEKParams
 
             xmn = glmin(xm1, nv); xmx = glmax(xm1, nv)
@@ -151,66 +231,68 @@
       end subroutine nekStab_init
       !---------------------------------------------------------------------
       subroutine nekStab
+      !  Main dispatcher - routes to appropriate solver based on resolved mode flags
+      !  Flags are set by nekStab_resolve_mode (string > flags > uparam priority)
          implicit none
          include 'SIZE'
          include 'TOTAL'
 
          if (istep == 0) call nekStab_init
 
-         select case (floor(uparam(1)))
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 0: DNS (Direct Numerical Simulation)
+      !  ═══════════════════════════════════════════════════════════════════
+         if (ifDNS .or. ifLinDNS) then
 
-         case (0) ! DNS
-
-            if (uparam(1) == 0.1) then ! Linearized DNS
+            if (ifLinDNS) then
                ifbase = .true.; call bcast(ifbase, lsize)
                ifpert = .true.; call bcast(ifpert, lsize)
                param(31) = lpert; npert = int(param(31))
                if (istep == 0) call op_add_noise(vxp, vyp, vzp)
-               if (nid == 0) write (6, *) 'Linearized+DNS: ifbase=,', ifbase, ' ifpert=', ifpert
-               if (ifoutfld) call outpost2(vxp, vyp, vzp, prp, tp, nof, 'pr_')
-               ! energy of the perturbation
-               call nekStab_energy(vxp(:, 1), vyp(:, 1), vzp(:, 1), tp(:, :, 1), 'total_ene_p1.dat', glob_skip)
-               call nekStab_enstrophy(vxp(:, 1), vyp(:, 1), vzp(:, 1), tp(:, :, 1), 'total_ens_p1.dat', glob_skip)
+               if (nid == 0) write (6, *) 'Linearized+DNS: ifbase=,',
+     &              ifbase, ' ifpert=', ifpert
+               if (ifoutfld) call outpost2(vxp, vyp, vzp, prp, tp, nof,
+     &              'pr_')
+               call nekStab_energy(vxp(:, 1), vyp(:, 1), vzp(:, 1),
+     &              tp(:, :, 1), 'total_ene_p1.dat', glob_skip)
+               call nekStab_enstrophy(vxp(:, 1), vyp(:, 1), vzp(:, 1),
+     &              tp(:, :, 1), 'total_ens_p1.dat', glob_skip)
             end if
 
-            call nekStab_outpost ! outpost vorticity
-            call nekStab_comment ! print comments
-            ! energy of the base flow
-            !call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
-            !call nekStab_enstrophy(vx, vy, vz, t, 'total_enstrophy.dat', glob_skip)
+            call nekStab_outpost
+            call nekStab_comment
+            return
+         end if
 
-      !if (lastep == 1) call nek_end -> this is done by Nek5000
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 1: Fixed Point Methods (SFD, BoostConv, TDF)
+      !  ═══════════════════════════════════════════════════════════════════
+         if (ifSFD .or. ifBoostConv .or. ifTDF) then
 
-         case (1) ! fixed points computation
+            call nekStab_outpost
+            call nekStab_comment
 
-            call nekStab_outpost ! outpost vorticity
-            call nekStab_comment ! print comments
-
-            if (uparam(1) == 1.1) then
+            if (ifSFD) then
                call SFD
-               if (uparam(5) == 0) call nekStab_energy(vx, vy, vz, t, 'total_energy.dat', glob_skip)
-            elseif (uparam(1) == 1.2) then
+               if (uparam(5) == 0) call nekStab_energy(vx, vy, vz, t,
+     &              'total_energy.dat', glob_skip)
+            elseif (ifBoostConv) then
                if (nid == 0) write (6, *) 'BOOSTCONV'
                call BoostConv
-            elseif (uparam(1) == 1.3) then
-               if (nid == 0) write (6, *) 'DMT'
-               if (nid == 0) write (6, *) 'stopping ! not yet ported to this version'; call nek_end
-      ! call DMT
-            elseif (uparam(1) == 1.4) then
+            elseif (ifTDF) then
                if (nid == 0) write (6, *) 'TDF'
                call TDF
             end if
 
             if (ifbfcv) call nek_end
+            return
+         end if
 
-         case (2) ! Newton-Krylov solver
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 2: Newton-Krylov Solver
+      !  ═══════════════════════════════════════════════════════════════════
+         if (isNewtonFP .or. isNewtonPO .or. isNewtonPO_T) then
 
-      ! Initialize flags based on the value of uparam(1)
-            isNewtonFP = (uparam(1) == 2.0)
-            isNewtonPO = (uparam(1) == 2.1)
-            isNewtonPO_T = (uparam(1) == 2.2)
-
-      ! Conditional statements for each Newton-Krylov case
             if (nid == 0) then
                if (isNewtonFP) then
                   write (6, *) 'Newton-Krylov for fixed points...'
@@ -218,66 +300,413 @@
                   write (6, *) 'Newton-Krylov for UPOs...'
                elseif (isNewtonPO_T) then
                   write (6, *) 'Newton-Krylov for forced UPOs...'
-               else
-                  write (6, *) 'Unrecognized option...'
-                  call nek_end
                end if
             end if
 
-      ! Proceed with Newton-Krylov computation
             call newton_krylov
             call nek_end
+         end if
 
-         case (3) ! eigenvalue problem
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 3: Eigenvalue Problem (Direct/Adjoint/TransientGrowth)
+      !  ═══════════════════════════════════════════════════════════════════
+         if (isDirect .or. isFloquetDirect .or.
+     &       isAdjoint .or. isFloquetAdjoint .or.
+     &       isTransientGrowth .or. isFloquetTransientGrowth) then
 
-            isDirect = (uparam(1) == 3.1)
-            isFloquetDirect = (uparam(1) == 3.11)
-
-            isAdjoint = (uparam(1) == 3.2)
-            isFloquetAdjoint = (uparam(1) == 3.21)
-
-            isTransientGrowth = (uparam(1) == 3.3)
-            isFloquetTransientGrowth = (uparam(1) == 3.31)
-
-            if (isDirect .or. isFloquetDirect .or. isAdjoint .or.
-     &    isFloquetAdjoint .or. isTransientGrowth .or.
-     &    isFloquetTransientGrowth) then
-               call krylov_schur
-            end if
+            call krylov_schur
             call nek_end
+         end if
 
-         case (4) ! in postprocessing.f
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 4: Postprocessing
+      !  ═══════════════════════════════════════════════════════════════════
+         if (ifEnergyBudget) call stability_energy_budget
+         if (ifWavemaker) call wave_maker
+         if (ifBFSensitivity) call bf_sensitivity
+         if (ifForceSensReal .or. ifForceSensImag)
+     &        call ts_steady_force_sensitivity
+         if (ifDeltaForcing) call delta_forcing
+         if (ifAnimateMode)
+     &        call animate_mode_only(animate_mode_num, 'd')
+         if (ifAnimateBFDeform)
+     &        call animate_mode(animate_mode_num, 'd')
+         if (ifAnimateFloquet)
+     &        call animate_mode_Floquet(animate_mode_num, 'd')
 
-            if (uparam(01) == 4.0) then ! all
-               call stability_energy_budget
-               call wave_maker
-               call bf_sensitivity
-            end if
-
-      !     -----> Direct mode kinetic energy budget.
-            if (uparam(01) == 4.1) call stability_energy_budget
-
-      !     -----> Wavemaker computation.
-            if (uparam(01) == 4.2) call wave_maker
-
-      !     -----> Baseflow sensitivity.
-            if (uparam(01) == 4.3) call bf_sensitivity
-
-      !     -----> Sensitivity to steady force.
-            if (uparam(01) == 4.41 .or. uparam(01) == 4.42) call ts_steady_force_sensitivity
-            if (uparam(01) == 4.43) call delta_forcing
-
-      !     -----> Animate mode # 4 steps in period; 'd' for direct, 'a' for adjoint.
-            if (uparam(01) == 4.50) call animate_mode_only(int(uparam(7)), 'd')
-            if (uparam(01) == 4.51) call animate_mode(int(uparam(7)), 'd') ! + base flow deformation
-            if (uparam(01) == 4.52) call animate_mode_Floquet(int(uparam(7)), 'd')
-
+         if (ifEnergyBudget .or. ifWavemaker .or. ifBFSensitivity .or.
+     &       ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing
+     &       .or. ifAnimateMode .or. ifAnimateBFDeform
+     &       .or. ifAnimateFloquet) then
             call nek_end
+         end if
 
-         case (5)
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 5: OTD (Optimally Time-Dependent)
+      !  ═══════════════════════════════════════════════════════════════════
+         if (ifotd) then
             call otd
+         end if
 
-         end select
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 6: Modal Analysis (POD/DMD/SPOD)
+      !  ═══════════════════════════════════════════════════════════════════
+         if (ifpod .or. ifdmd .or. ifspod) then
+            call modal_analysis
+            call nek_end
+         end if
 
       end subroutine nekStab
+      !---------------------------------------------------------------------
+      subroutine nekStab_resolve_mode
+      !  Determines operating mode from three possible sources:
+      !    1. nekstab_mode string (highest priority) - human readable
+      !    2. Individual if* flags set by user - flexible
+      !    3. uparam(1) decoding (lowest priority) - backward compatible
+      !
+      !  Called in nekStab_init AFTER nekStab_usrchk (where user sets preferences)
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         logical :: any_mode_flag_set
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Check if user explicitly set any mode flag in nekStab_usrchk
+      !  NOTE: Modal flags (ifpod, ifdmd, ifspod) excluded because they
+      !  may be used alongside other modes for snapshot collection
+      !  ─────────────────────────────────────────────────────────────────
+         any_mode_flag_set = ifDNS .or. ifLinDNS .or.
+     &        ifSFD .or. ifBoostConv .or. ifTDF .or.
+     &        isNewtonFP .or. isNewtonPO .or. isNewtonPO_T .or.
+     &        isDirect .or. isAdjoint .or. isTransientGrowth .or.
+     &        isFloquetDirect .or. isFloquetAdjoint .or.
+     &        isFloquetTransientGrowth .or.
+     &        ifEnergyBudget .or. ifWavemaker .or. ifBFSensitivity .or.
+     &        ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing
+     &        .or. ifAnimateMode .or. ifAnimateBFDeform
+     &        .or. ifAnimateFloquet .or. ifotd
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Priority 1: String mode (nekstab_mode) - highest priority
+      !  ─────────────────────────────────────────────────────────────────
+         if (len_trim(nekstab_mode) > 0) then
+            call nekStab_mode_from_string(nekstab_mode)
+            if (nid == 0) write (6, *) 'Mode set via nekstab_mode = ',
+     &           trim(nekstab_mode)
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Priority 2: Flag mode - user set explicit flags
+      !  ─────────────────────────────────────────────────────────────────
+         elseif (any_mode_flag_set) then
+            call nekStab_mode_from_flags
+            if (nid == 0) write (6, *) 'Mode set via if-flags'
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Priority 3: uparam(1) decoding - backward compatible default
+      !  ─────────────────────────────────────────────────────────────────
+         else
+            call nekStab_mode_from_uparam
+            if (nid == 0) write (6, *) 'Mode set via uparam(1) =',
+     &           uparam(1)
+         end if
+
+      !  Validate: check for conflicting modes
+         call nekStab_validate_mode
+
+      end subroutine nekStab_resolve_mode
+      !---------------------------------------------------------------------
+      subroutine nekStab_mode_from_string(mode_str)
+      !  Parses nekstab_mode string and sets appropriate flags
+      !  Case-insensitive comparison for user convenience
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         character(len=*), intent(in) :: mode_str
+         character(len=32) :: mode_lower
+         integer :: i
+
+      !  Convert to lowercase for case-insensitive comparison
+         mode_lower = adjustl(mode_str)
+         do i = 1, len_trim(mode_lower)
+            if (mode_lower(i:i) >= 'A' .and. mode_lower(i:i) <= 'Z')
+     &           then
+               mode_lower(i:i) = char(ichar(mode_lower(i:i)) + 32)
+            end if
+         end do
+
+      !  Match mode string and set corresponding flag
+         select case (trim(mode_lower))
+
+      !  Mode 0: DNS
+         case ('dns')
+            ifDNS = .true.
+         case ('linear_dns', 'lindns', 'linearized_dns')
+            ifLinDNS = .true.
+
+      !  Mode 1: Fixed point methods
+         case ('sfd')
+            ifSFD = .true.
+         case ('boostconv', 'boost')
+            ifBoostConv = .true.
+         case ('tdf')
+            ifTDF = .true.
+
+      !  Mode 2: Newton-Krylov
+         case ('newton_fp', 'newton')
+            isNewtonFP = .true.
+         case ('newton_po', 'upo')
+            isNewtonPO = .true.
+         case ('newton_po_t', 'forced_upo')
+            isNewtonPO_T = .true.
+
+      !  Mode 3: Stability analysis
+         case ('direct')
+            isDirect = .true.
+         case ('floquet_direct', 'floquetdirect')
+            isFloquetDirect = .true.
+         case ('adjoint')
+            isAdjoint = .true.
+         case ('floquet_adjoint', 'floquetadjoint')
+            isFloquetAdjoint = .true.
+         case ('transient_growth', 'tg')
+            isTransientGrowth = .true.
+         case ('floquet_tg', 'floquet_transient_growth')
+            isFloquetTransientGrowth = .true.
+
+      !  Mode 4: Postprocessing
+         case ('energy_budget')
+            ifEnergyBudget = .true.
+         case ('wavemaker')
+            ifWavemaker = .true.
+         case ('bf_sensitivity', 'baseflow_sensitivity')
+            ifBFSensitivity = .true.
+         case ('force_sensitivity_real', 'force_sens_real')
+            ifForceSensReal = .true.
+         case ('force_sensitivity_imag', 'force_sens_imag')
+            ifForceSensImag = .true.
+         case ('delta_forcing')
+            ifDeltaForcing = .true.
+         case ('animate_mode', 'animate')
+            ifAnimateMode = .true.
+         case ('animate_bf_deform', 'animate_deform')
+            ifAnimateBFDeform = .true.
+         case ('animate_floquet')
+            ifAnimateFloquet = .true.
+
+      !  Mode 5: OTD
+         case ('otd')
+            ifotd = .true.
+
+      !  Mode 6: Modal analysis
+         case ('pod')
+            ifpod = .true.
+         case ('dmd')
+            ifdmd = .true.
+         case ('spod')
+            ifspod = .true.
+
+         case default
+            if (nid == 0) then
+               write (6, *) 'ERROR: Unknown nekstab_mode: ',
+     &              trim(mode_str)
+               write (6, *) 'Valid modes: dns, linear_dns, sfd, ',
+     &              'boostconv, tdf,'
+               write (6, *) '  newton_fp, newton_po, newton_po_t,'
+               write (6, *) '  direct, adjoint, transient_growth,'
+               write (6, *) '  floquet_direct, floquet_adjoint, ',
+     &              'floquet_tg,'
+               write (6, *) '  energy_budget, wavemaker, ',
+     &              'bf_sensitivity,'
+               write (6, *) '  animate_mode, otd, pod, dmd, spod'
+            end if
+            call nek_end
+         end select
+
+      end subroutine nekStab_mode_from_string
+      !---------------------------------------------------------------------
+      subroutine nekStab_mode_from_flags
+      !  Handles ifFloquet modifier flag transformation
+      !  ifFloquet=.true. + isDirect=.true. → isFloquetDirect=.true.
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+      !  Apply ifFloquet modifier to base stability modes
+         if (ifFloquet) then
+            if (isDirect) then
+               isFloquetDirect = .true.
+               isDirect = .false.
+            end if
+            if (isAdjoint) then
+               isFloquetAdjoint = .true.
+               isAdjoint = .false.
+            end if
+            if (isTransientGrowth) then
+               isFloquetTransientGrowth = .true.
+               isTransientGrowth = .false.
+            end if
+         end if
+
+      end subroutine nekStab_mode_from_flags
+      !---------------------------------------------------------------------
+      subroutine nekStab_mode_from_uparam
+      !  Decodes uparam(1) into mode flags (backward compatible)
+      !  Uses tolerance-based comparison to avoid floating-point issues
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         real :: up1
+         real, parameter :: tol = 1.0e-4
+
+         up1 = uparam(1)
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Mode 0: DNS
+      !  ─────────────────────────────────────────────────────────────────
+         if (abs(up1 - 0.0) < tol) then
+            ifDNS = .true.
+         elseif (abs(up1 - 0.1) < tol) then
+            ifLinDNS = .true.
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Mode 1: Fixed point methods
+      !  ─────────────────────────────────────────────────────────────────
+         elseif (abs(up1 - 1.1) < tol) then
+            ifSFD = .true.
+         elseif (abs(up1 - 1.2) < tol) then
+            ifBoostConv = .true.
+         elseif (abs(up1 - 1.4) < tol) then
+            ifTDF = .true.
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Mode 2: Newton-Krylov
+      !  ─────────────────────────────────────────────────────────────────
+         elseif (abs(up1 - 2.0) < tol) then
+            isNewtonFP = .true.
+         elseif (abs(up1 - 2.1) < tol) then
+            isNewtonPO = .true.
+         elseif (abs(up1 - 2.2) < tol) then
+            isNewtonPO_T = .true.
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Mode 3: Eigenvalue problem (stability analysis)
+      !  ─────────────────────────────────────────────────────────────────
+         elseif (abs(up1 - 3.1) < tol) then
+            isDirect = .true.
+         elseif (abs(up1 - 3.11) < tol) then
+            isFloquetDirect = .true.
+         elseif (abs(up1 - 3.2) < tol) then
+            isAdjoint = .true.
+         elseif (abs(up1 - 3.21) < tol) then
+            isFloquetAdjoint = .true.
+         elseif (abs(up1 - 3.3) < tol) then
+            isTransientGrowth = .true.
+         elseif (abs(up1 - 3.31) < tol) then
+            isFloquetTransientGrowth = .true.
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Mode 4: Postprocessing
+      !  ─────────────────────────────────────────────────────────────────
+         elseif (abs(up1 - 4.0) < tol) then
+            ifEnergyBudget = .true.
+            ifWavemaker = .true.
+            ifBFSensitivity = .true.
+         elseif (abs(up1 - 4.1) < tol) then
+            ifEnergyBudget = .true.
+         elseif (abs(up1 - 4.2) < tol) then
+            ifWavemaker = .true.
+         elseif (abs(up1 - 4.3) < tol) then
+            ifBFSensitivity = .true.
+         elseif (abs(up1 - 4.41) < tol) then
+            ifForceSensReal = .true.
+         elseif (abs(up1 - 4.42) < tol) then
+            ifForceSensImag = .true.
+         elseif (abs(up1 - 4.43) < tol) then
+            ifDeltaForcing = .true.
+         elseif (abs(up1 - 4.50) < tol) then
+            ifAnimateMode = .true.
+            animate_mode_num = int(uparam(7))
+         elseif (abs(up1 - 4.51) < tol) then
+            ifAnimateBFDeform = .true.
+            animate_mode_num = int(uparam(7))
+         elseif (abs(up1 - 4.52) < tol) then
+            ifAnimateFloquet = .true.
+            animate_mode_num = int(uparam(7))
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Mode 5: OTD
+      !  ─────────────────────────────────────────────────────────────────
+         elseif (floor(up1) == 5) then
+            ifotd = .true.
+
+      !  ─────────────────────────────────────────────────────────────────
+      !  Mode 6: Modal analysis
+      !  ─────────────────────────────────────────────────────────────────
+         elseif (abs(up1 - 6.1) < tol) then
+            ifpod = .true.
+         elseif (abs(up1 - 6.2) < tol) then
+            ifdmd = .true.
+         elseif (abs(up1 - 6.3) < tol) then
+            ifspod = .true.
+
+         end if
+
+      end subroutine nekStab_mode_from_uparam
+      !---------------------------------------------------------------------
+      subroutine nekStab_validate_mode
+      !  Validates that only one main mode category is active
+      !  Prevents conflicting modes (e.g., direct + adjoint)
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         integer :: nmodes
+
+         nmodes = 0
+
+      !  Count active mode categories
+         if (ifDNS .or. ifLinDNS) nmodes = nmodes + 1
+         if (ifSFD .or. ifBoostConv .or. ifTDF) nmodes = nmodes + 1
+         if (isNewtonFP .or. isNewtonPO .or. isNewtonPO_T)
+     &        nmodes = nmodes + 1
+         if (isDirect .or. isFloquetDirect .or.
+     &       isAdjoint .or. isFloquetAdjoint .or.
+     &       isTransientGrowth .or. isFloquetTransientGrowth)
+     &        nmodes = nmodes + 1
+         if (ifEnergyBudget .or. ifWavemaker .or. ifBFSensitivity .or.
+     &       ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing
+     &       .or. ifAnimateMode .or. ifAnimateBFDeform
+     &       .or. ifAnimateFloquet) nmodes = nmodes + 1
+         if (ifotd) nmodes = nmodes + 1
+      !  Note: Modal analysis (POD/DMD/SPOD) not counted - can run standalone
+
+         if (nmodes > 1) then
+            if (nid == 0) then
+               write (6, *) 'ERROR: Multiple conflicting modes active'
+               write (6, *) 'Set only ONE mode category at a time'
+            end if
+            call nek_end
+         end if
+
+      !  Check for conflicting stability sub-modes
+         if ((isDirect .or. isFloquetDirect) .and.
+     &       (isAdjoint .or. isFloquetAdjoint)) then
+            if (nid == 0) then
+               write (6, *) 'ERROR: Both direct and adjoint modes set'
+               write (6, *) 'Choose one: direct OR adjoint'
+            end if
+            call nek_end
+         end if
+
+         if ((isDirect .or. isFloquetDirect .or.
+     &        isAdjoint .or. isFloquetAdjoint) .and.
+     &       (isTransientGrowth .or. isFloquetTransientGrowth)) then
+            if (nid == 0) then
+               write (6, *) 'ERROR: Eigenmode and transient growth ',
+     &              'both set'
+               write (6, *) 'Choose one: eigenmode OR transient growth'
+            end if
+            call nek_end
+         end if
+
+      end subroutine nekStab_validate_mode
       !---------------------------------------------------------------------
