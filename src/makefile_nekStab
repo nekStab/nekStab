@@ -25,6 +25,7 @@ $(OBJDIR)/IO.o:                   $(NEKSTAB_SOURCE_ROOT)/src/IO.f90             
 $(OBJDIR)/postproc.o:             $(NEKSTAB_SOURCE_ROOT)/src/postproc.f90             $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/newton_krylov.o:        $(NEKSTAB_SOURCE_ROOT)/src/newton_krylov.f90        $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/sensitivity.o:          $(NEKSTAB_SOURCE_ROOT)/src/sensitivity.f90          $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/modal_analysis.o:       $(NEKSTAB_SOURCE_ROOT)/src/modal_analysis.f90       $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier_fftw.o ;$(FC) -c $(FL2) $< -o $@
 
 # Files without module dependencies
 $(OBJDIR)/argsort.o:              $(NEKSTAB_SOURCE_ROOT)/src/argsort.f90              ;$(FC) -c $(FL2) $< -o $@
