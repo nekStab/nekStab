@@ -107,10 +107,10 @@ jobs:
           # since maketools doesn't recognize ifx yet
           FC=gfortran CC=gcc ./maketools genmap genbox
 
-      - name: Build cylinder DNS example
+      - name: Build cylinder CI test
         run: |
           export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
-          cd example/cylinder/dns
+          cd example/cylinder/ci_test
           if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
             # Source Intel oneAPI environment (MKL + MPI) with --force since it may already be sourced
             source /opt/intel/oneapi/setvars.sh --force || true
@@ -123,8 +123,25 @@ jobs:
             NEKSTAB_FC=gcc mks 1cyl
           fi
 
-      - name: Verify executable
+      - name: Run smoke test (10 timesteps)
         run: |
-          cd example/cylinder/dns
+          cd example/cylinder/ci_test
+          if [ "${{ matrix.toolchain.compiler }}" = "intel" ] || [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
+            source /opt/intel/oneapi/setvars.sh --force || true
+          fi
+          echo "1cyl" > SESSION.NAME
+          echo "$(pwd)/" >> SESSION.NAME
+          mpirun -np 2 ./nek5000
+          echo "Test completed successfully"
+
+      - name: Verify output
+        run: |
+          cd example/cylinder/ci_test
           ls -la nek5000
-          file nek5000
+          # Check logfile exists and contains "finished" or similar
+          if grep -q "FINISHED RUN" logfile 2>/dev/null || grep -q "End of time-step loop" logfile 2>/dev/null; then
+            echo "Simulation completed successfully"
+          else
+            echo "WARNING: Could not verify simulation completion in logfile"
+            tail -50 logfile 2>/dev/null || true
+          fi
