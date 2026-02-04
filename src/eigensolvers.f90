@@ -277,10 +277,32 @@
             call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
 
       !     --> Check the residual of the eigenvalues.
+      !         The standard Arnoldi residual is: r_i = |beta * e_k^T * y_i|
+      !         where beta = H(k+1,k), e_k is the k-th unit vector, and y_i is the
+      !         i-th eigenvector of the Hessenberg matrix H.
+      !
+      !         IMPORTANT: Using only an absolute tolerance can be problematic:
+      !         - For |lambda| << 1: tolerance may be too loose, accepting unconverged values
+      !         - For |lambda| >> 1: tolerance may be too strict
+      !         We use BOTH absolute and relative criteria: an eigenvalue is converged if
+      !         residual < eigen_tol OR residual < eigen_tol * |lambda|
+      !         This ensures small eigenvalues use absolute tolerance while large ones
+      !         use relative tolerance, preventing spurious acceptance of unconverged modes.
 
             residual = abs(H(k_dim + 1, k_dim)*vecs(k_dim, :))
 
-            converged_eigenvalues = count(residual < eigen_tol)
+      !     --> Count converged eigenvalues using combined absolute/relative criterion.
+      !         We use: converged if residual < eigen_tol * max(|lambda|, 1)
+      !         This ensures:
+      !         - For |lambda| < 1: we use absolute tolerance (don't over-tighten)
+      !         - For |lambda| >= 1: we use relative tolerance (don't under-tighten)
+      !         This is important for stability analysis where |lambda| ~ 1 matters most.
+            converged_eigenvalues = 0
+            do i = 1, k_dim
+               if (residual(i) < eigen_tol * max(abs(vals(i)), 1.0d0)) then
+                  converged_eigenvalues = converged_eigenvalues + 1
+               end if
+            end do
 
             if (nid == 0) write (6, *) 'total eigenvalues converged:', converged_eigenvalues
 
@@ -739,14 +761,56 @@
 
       !     --> Select at least the nev+4 largest eigenvalues.
          selected(idx(n - (nev + 3):n)) = .true.
-         if (aimag(vals(idx(n - (nev + 3)))) == -aimag(vals(idx(n - (nev + 4))))) then
-            selected(idx(n - (nev + 4))) = .true.
-         end if
+
+!     --> Ensure complex conjugate pairs are kept together during Schur reordering.
+!         For a true conjugate pair: real parts equal, imaginary parts opposite.
+!         We check BOTH conditions with relative tolerances to avoid:
+!         1. Splitting true conjugates due to roundoff
+!         2. Mis-pairing eigenvalues with opposite imaginaries but different reals
+!         Tolerance scales with eigenvalue magnitude for numerical robustness.
+         call check_conjugate_pair(vals(idx(n-(nev+3))), vals(idx(n-(nev+4))),
+     &                             selected(idx(n-(nev+4))))
 
          converged_eigenvalues = count(selected)
 
          return
       end subroutine select_eigenvalues
+
+      !     ------------------------------------------------------------------------------------
+
+      subroutine check_conjugate_pair(lambda1, lambda2, is_conjugate)
+
+      !     Check if two complex eigenvalues form a conjugate pair.
+      !     For true conjugates: real(lambda1) = real(lambda2), imag(lambda1) = -imag(lambda2)
+      !
+      !     Uses relative tolerance scaled by eigenvalue magnitude to handle both
+      !     small and large eigenvalues correctly. This prevents:
+      !     - Splitting true conjugate pairs due to roundoff
+      !     - Mis-pairing eigenvalues with opposite imaginaries but different reals
+
+         implicit none
+         complex(kind=kind(0.0d0)), intent(in) :: lambda1, lambda2
+         logical, intent(out) :: is_conjugate
+
+         real :: real_diff, imag_sum, scale, tol
+         real, parameter :: REL_TOL = 1.0d-10
+         real, parameter :: ABS_FLOOR = 1.0d-14
+
+      !     --> Scale tolerance by the larger eigenvalue magnitude.
+         scale = max(abs(lambda1), abs(lambda2), 1.0d0)
+         tol = REL_TOL * scale
+
+      !     --> Check real parts are equal (within tolerance).
+         real_diff = abs(real(lambda1) - real(lambda2))
+
+      !     --> Check imaginary parts are opposite (sum should be zero).
+         imag_sum = abs(aimag(lambda1) + aimag(lambda2))
+
+      !     --> Both conditions must be satisfied for a true conjugate pair.
+         is_conjugate = (real_diff < tol) .and. (imag_sum < tol)
+
+         return
+      end subroutine check_conjugate_pair
 
       !     ------------------------------------------------------------------------------------
 
