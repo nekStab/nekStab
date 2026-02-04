@@ -1,0 +1,29 @@
+[GENERAL]
+startFrom = BF_Re60_2cyl0.f00001
+stopAt = endTime
+endTime = 8.73356  # Orbit period from UPO computation
+
+userParam01 = 3.11  # Direct Floquet analysis
+userParam07 = 128   # k_dim (Krylov subspace dimension)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -60.0  # Re=60 (matches base flow BF_Re60)
