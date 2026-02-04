@@ -234,7 +234,7 @@
             end if
 
             call oprzero(fcx, fcy, fcz) ! never comment this!
-            call rzero(fct, nx1*ny1*nz1*nelv)
+            call rzero(fct, nx1*ny1*nz1*nelt*ldimt) ! zero all scalar forcing
 
             isNekStabinit = .true.
          elseif (nid == 0) then
