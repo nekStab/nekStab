@@ -3,9 +3,9 @@ name: CI Build
 on:
   workflow_dispatch:
   push:
-    branches: [RANS_update]
+    branches: [dev]
   pull_request:
-    branches: [RANS_update]
+    branches: [dev]
 
 env:
   NEKSTAB_SOURCE_ROOT: ${{ github.workspace }}
