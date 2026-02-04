@@ -106,6 +106,11 @@ fi
 # Compiler Detection
 #-------------------------------------------------------------------------------
 # NEKSTAB_FC environment variable can force: "ifort", "ifx", or "gcc"
+# CI environment uses portable flags (no CPU-specific optimizations)
+if [ -n "$CI" ]; then
+    echo "CI environment detected - using portable compiler flags"
+fi
+
 # Check for Intel compilers - prefer ifort (classic) if available, else ifx (LLVM)
 if [ "$NEKSTAB_FC" = "ifx" ] && command -v ifx >/dev/null 2>&1; then
     # Forced ifx selection
@@ -115,7 +120,12 @@ if [ "$NEKSTAB_FC" = "ifx" ] && command -v ifx >/dev/null 2>&1; then
 
     FFLAGS+=" -fixed"
     FFLAGS+=" -extend-source"
-    FFLAGS+=" -xHost"
+    # Use portable x86-64-v3 in CI, native optimization otherwise
+    if [ -n "$CI" ]; then
+        FFLAGS+=" -march=x86-64-v3"  # AVX2 - portable across Intel/AMD
+    else
+        FFLAGS+=" -xHost"
+    fi
     FFLAGS+=" -fno-strict-overflow"
     FFLAGS+=" -heap-arrays"
     FFLAGS+=" -mprefer-vector-width=512"
@@ -144,7 +154,12 @@ elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
 
     FFLAGS+=" -ffixed-form"
     FFLAGS+=" -ffixed-line-length-none"
-    FFLAGS+=" -march=native"  # Native architecture optimization
+    # Use portable flags in CI, native optimization otherwise
+    if [ -n "$CI" ]; then
+        FFLAGS+=" -mtune=generic"  # Portable across x86-64 CPUs
+    else
+        FFLAGS+=" -march=native"   # Native architecture optimization
+    fi
     FFLAGS+=" -fno-lto" # Disable LTO to avoid linker issues with static archives (MPICH)
 
     if [ "$debug" = true ]; then
@@ -189,6 +204,8 @@ elif command -v ifort >/dev/null 2>&1; then
         echo "Detected mpiifort version 2021.9.0 20230302. Applying specific settings."
         CFLAGS+=" -diag-disable=10441 -diag-disable=42"
         FFLAGS+=" -diag-disable=10441 -warn noalign"
+    elif [ -n "$CI" ]; then
+        FFLAGS+=" -xCORE-AVX2"  # Portable AVX2 for CI
     else
         FFLAGS+=" -xHost"
     fi
@@ -215,7 +232,12 @@ elif command -v ifx >/dev/null 2>&1; then
 
     FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
     FFLAGS+=" -extend-source" # Accepts line with longer than 72 characters (132 characters)
-    FFLAGS+=" -xHost"
+    # Use portable flags in CI, native optimization otherwise
+    if [ -n "$CI" ]; then
+        FFLAGS+=" -march=x86-64-v3"  # AVX2 - portable across Intel/AMD
+    else
+        FFLAGS+=" -xHost"
+    fi
     # Compatibility flags for ifort behavior (prevent segfaults)
     FFLAGS+=" -fno-strict-overflow" # Integer overflow behavior like ifort
     FFLAGS+=" -heap-arrays" # Allocate arrays on heap instead of stack
@@ -253,7 +275,12 @@ else # GCC
 
     FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
-    FFLAGS+=" -march=native" # Native architecture optimization (like Intel's -xHost)
+    # Use portable flags in CI, native optimization otherwise
+    if [ -n "$CI" ]; then
+        FFLAGS+=" -mtune=generic"  # Portable across x86-64 CPUs
+    else
+        FFLAGS+=" -march=native"   # Native architecture optimization
+    fi
     FFLAGS+=" -fno-lto" # Disable LTO to avoid linker issues with static archives (MPICH)
 
     if [ "$debug" = true ]; then # Handle debug mode
