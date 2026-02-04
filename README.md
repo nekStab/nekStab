@@ -121,15 +121,28 @@ cd nekStab
 ./Nek5000setup.sh
 ```
 
-Run **vim $HOME/.bashrc** and add the following :
+Add to your shell config (`~/.bashrc` or `~/.zshrc`):
 ```bash
+# nekStab and Nek5000 paths
 export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
 export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
 export PATH=$NEK_SOURCE_ROOT/bin:$PATH
 export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
+
+# Stack/core limits for large simulations
 ulimit -s unlimited
 ulimit -c unlimited
 ```
+
+| Variable / Setting | Purpose |
+|--------------------|---------|
+| `NEKSTAB_SOURCE_ROOT` | Location of nekStab source (build scripts reference this) |
+| `NEK_SOURCE_ROOT` | Location of Nek5000 (required by Nek5000 build system) |
+| `PATH` additions | Makes `mks`, `nekbmpi`, `genmap`, etc. available anywhere |
+| `ulimit -s unlimited` | Removes stack size limit — prevents crashes in large runs |
+| `ulimit -c unlimited` | Enables core dumps for debugging crashes |
+
+Then reload: `source ~/.bashrc` (or restart terminal).
 
 ## Compilation
 
