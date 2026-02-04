@@ -84,11 +84,11 @@
             do kl = 1, NZ1
                do jl = 1, NY1
                   do il = 1, NX1
-                     ieg = LGLEL(iel)
                      xl(1) = XM1(il, jl, kl, iel)
                      xl(2) = YM1(il, jl, kl, iel)
                      if (if3D) xl(NDIM) = ZM1(il, jl, kl, iel)
 
+                     ieg = LGLEL(iel)
                      fc(1) = 3.0e4; fc(2) = -1.5e3; fc(3) = 0.5e5
                      qx(il, jl, kl, iel) = qx(il, jl, kl, iel) + mth_rand(il, jl, kl, ieg, xl, fc)
 
@@ -134,7 +134,7 @@
          include "SIZE"
          include "TOTAL"
          real, dimension(lx1, ly1, lz1, lelv) :: qx, qy, qz, qp
-         integer iel, ieg, il, jl, kl, nv
+         integer iel, il, jl, kl, nv
          real xlx, yly, zlz, alpha, x, y, z
          real glsc3, amp
 
@@ -152,7 +152,6 @@
                do jl = 1, NY1
                   do il = 1, NX1
 
-                     ieg = LGLEL(iel)
                      x = XM1(il, jl, kl, iel)
                      y = YM1(il, jl, kl, iel)
                      if (if3D) z = ZM1(il, jl, kl, iel)
