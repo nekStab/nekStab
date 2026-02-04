@@ -99,7 +99,12 @@
          ifdmd = .false.      ! DMD analysis
          ifspod = .false.     ! SPOD analysis
          modal_nsnap = 100    ! Default snapshot count
+         modal_nsave = 10     ! Default number of modes to save
+         modal_dt = 0.1d0     ! Default time between snapshots
          modal_prefix = 'dns' ! Default file prefix
+         dmd_rank = 0         ! DMD rank (0=auto based on energy)
+         spod_nfft = 64       ! SPOD FFT block size
+         spod_noverlap = 32   ! SPOD block overlap (50%)
 
       !     !Broadcast all defaults !
          call bcast(eigen_tol, wdsize) ! wdsize for real
@@ -164,6 +169,11 @@
          call bcast(ifspod, lsize)
          call bcast(animate_mode_num, isize)
          call bcast(modal_nsnap, isize)
+         call bcast(modal_nsave, isize)
+         call bcast(modal_dt, wdsize)
+         call bcast(dmd_rank, isize)
+         call bcast(spod_nfft, isize)
+         call bcast(spod_noverlap, isize)
 
       end subroutine nekStab_setDefault
       !---------------------------------------------------------------------

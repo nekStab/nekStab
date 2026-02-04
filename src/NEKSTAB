@@ -105,8 +105,15 @@
       ! Mode configuration integers
       integer :: animate_mode_num   ! Mode number for animation (default=1)
       integer :: modal_nsnap        ! Number of snapshots for modal analysis
+      integer :: modal_nsave        ! Number of modes to save
+      integer :: dmd_rank           ! DMD truncation rank (0=auto)
+      integer :: spod_nfft          ! SPOD FFT block size
+      integer :: spod_noverlap      ! SPOD block overlap
+      real :: modal_dt              ! Time between snapshots
       character(len=3) :: modal_prefix  ! File prefix for modal analysis
-      common/nStab_mode_int/animate_mode_num, modal_nsnap
+      common/nStab_mode_int/animate_mode_num, modal_nsnap, modal_nsave,
+     $   dmd_rank, spod_nfft, spod_noverlap
+      common/nStab_mode_real/modal_dt
       common/nStab_mode_char/modal_prefix
       
       ! Real variables for finite difference method
