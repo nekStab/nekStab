@@ -190,7 +190,14 @@ For debugging crashes or numerical issues:
 ```bash
 mks 1cyl --debug
 ```
-This enables stack traces, bounds checking, and additional warnings.
+
+| What it enables | Why it helps |
+|-----------------|--------------|
+| Debug symbols (`-g`) | Use `gdb` to inspect variables and step through code |
+| Stack traces (`-fbacktrace`) | See exact file:line when a crash occurs |
+| Compiler warnings (`-Wall`) | Catch uninitialized variables, type mismatches |
+
+> **Tip:** When a crash happens in debug mode, the output shows which subroutine and line number failed — much easier than hunting through a release build.
 
 ## Running
 
