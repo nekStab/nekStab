@@ -70,12 +70,16 @@ jobs:
       - name: Install MPI and FFTW3 (macOS)
         if: runner.os == 'macOS'
         run: |
+          # Install fftw first (its bottle depends on open-mpi)
+          brew install fftw
           if [ "${{ matrix.mpi }}" = "openmpi" ]; then
-            brew install open-mpi
+            # fftw already installed open-mpi as dependency
+            :
           else
+            # For MPICH: unlink open-mpi (installed as fftw dependency), install mpich
+            brew unlink open-mpi
             brew install mpich
           fi
-          brew install fftw
 
       - name: Configure Intel MPI environment
         if: matrix.mpi == 'intelmpi'
@@ -111,12 +115,12 @@ jobs:
           export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
           cd example/cylinder/dns
           if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
-            # Source Intel oneAPI environment (MKL + MPI)
-            source /opt/intel/oneapi/setvars.sh
+            # Source Intel oneAPI environment (MKL + MPI) with --force since it may already be sourced
+            source /opt/intel/oneapi/setvars.sh --force || true
             NEKSTAB_FC=ifx mks 1cyl
           elif [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
-            # Source Intel oneAPI environment (MKL + MPI)
-            source /opt/intel/oneapi/setvars.sh
+            # Source Intel oneAPI environment (MKL + MPI) with --force since it may already be sourced
+            source /opt/intel/oneapi/setvars.sh --force || true
             NEKSTAB_FC=ifort mks 1cyl
           else
             NEKSTAB_FC=gcc mks 1cyl
