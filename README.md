@@ -11,7 +11,6 @@
 | Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI 4.1 | [![Ubuntu GCC OpenMPI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | Ubuntu 24.04 | x86_64 | gfortran 14 | MPICH 4.2 | [![Ubuntu GCC MPICH](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | macOS 26 | ARM64 | gfortran 14 | OpenMPI 5.0 | [![macOS GCC OpenMPI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| macOS 26 | ARM64 | gfortran 14 | MPICH 4.3 | [![macOS GCC MPICH](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | Ubuntu 24.04 | x86_64 | ifort 2024.2 | Intel MPI 2021.17 | [![Ubuntu ifort](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | Ubuntu 24.04 | x86_64 | ifx 2025.2 | Intel MPI 2021.17 | [![Ubuntu ifx](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 
