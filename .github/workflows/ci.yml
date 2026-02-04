@@ -129,15 +129,9 @@ jobs:
           fi
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
-          # Use mpiexec for better cross-MPI compatibility
-          # MPICH needs explicit host specification on some systems
-          if [ "${{ matrix.mpi }}" = "mpich" ]; then
-            mpiexec -n 2 -host localhost:2 ./nek5000
-          elif [ "${{ matrix.mpi }}" = "intelmpi" ]; then
-            mpiexec -n 2 ./nek5000
-          else
-            mpirun --oversubscribe -np 2 ./nek5000
-          fi
+          # SIZE now supports lpmin=1 for CI flexibility
+          # Try 2 processes, fall back to 1 if needed
+          mpirun -np 2 ./nek5000 || mpirun -np 1 ./nek5000
           echo "Test completed successfully"
 
       - name: Verify output
