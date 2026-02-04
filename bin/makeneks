@@ -145,6 +145,7 @@ elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
     FFLAGS+=" -ffixed-form"
     FFLAGS+=" -ffixed-line-length-none"
     FFLAGS+=" -march=native"  # Native architecture optimization
+    FFLAGS+=" -fno-lto" # Disable LTO to avoid linker issues with static archives (MPICH)
 
     if [ "$debug" = true ]; then
         echo "Debug mode enabled"
@@ -253,6 +254,7 @@ else # GCC
     FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native" # Native architecture optimization (like Intel's -xHost)
+    FFLAGS+=" -fno-lto" # Disable LTO to avoid linker issues with static archives (MPICH)
 
     if [ "$debug" = true ]; then # Handle debug mode
         echo "Debug mode enabled"
