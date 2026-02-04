@@ -29,11 +29,8 @@ jobs:
           - os: macos-26
             mpi: mpich
         include:
-          # Intel ifort (classic) - final version before discontinuation
-          - os: ubuntu-latest
-            toolchain: {compiler: intel-classic, version: '2024.2'}
-            mpi: intelmpi
           # Intel ifx (LLVM-based) - current/modern compiler
+          # Note: ifort (classic) removed - deprecated in oneAPI 2025, runtime requires Intel CPUs
           - os: ubuntu-latest
             toolchain: {compiler: intel, version: '2025.2'}
             mpi: intelmpi
