@@ -61,6 +61,7 @@
       !     - k_normalize(p,alpha):  p = p/||p||        ! Returns norm in alpha
       !     - k_cmult(p,c):         p = c*p            ! Scalar multiplication
       !     - k_add2(p,q):          p = p + q          ! Vector addition
+      !     - k_add2s2(p,q,c):      p = p + c*q        ! Scaled addition (AXPY)
       !     - k_sub2(p,q):          p = p - q          ! Vector subtraction
       !     - k_sub3(p,q,r):        p = q - r          ! Three vector operation
       !     - k_zero(p):            p = 0              ! Zero vector
@@ -124,14 +125,44 @@
          type(krylov_vector), intent(inout) :: p
          real, intent(out) :: alpha
          real :: inv_alpha
-      
+
+      !     --> Minimum norm threshold for warning about potential breakdown.
+      !         A very small norm indicates the Arnoldi process may have found an
+      !         invariant subspace (lucky breakdown), or severe loss of orthogonality.
+      !         NOTE: We do NOT clamp alpha because:
+      !         1. The caller uses alpha for H(k+1,k) in the Hessenberg matrix
+      !         2. Modifying alpha would corrupt the Arnoldi factorization
+      !         3. The lucky breakdown detection in update_hessenberg_matrix handles this
+         real, parameter :: NORM_WARN_TOL = 1.0d-14
+
       !     --> Compute the user-defined norm.
          call k_norm(alpha, p)
-         inv_alpha = 1.0d0/alpha
-      
-      !     --> Normalize the vector.
-         call k_cmult(p, inv_alpha)
-      
+
+      !     --> Warn if norm is dangerously small (but don't modify alpha).
+         if (alpha < NORM_WARN_TOL) then
+            if (nid == 0) then
+               write(6,*) 'WARNING [k_normalize]: Near-zero norm =', alpha
+               write(6,*) '         Possible invariant subspace or loss of orthogonality.'
+            end if
+         end if
+
+      !     --> Guard against division by exactly zero (should be extremely rare).
+      !         IMPORTANT: Do NOT modify alpha - the caller needs the true value for H(k+1,k).
+      !         If alpha is zero, this indicates exact breakdown (invariant subspace).
+      !         We zero the vector to avoid NaN but preserve alpha=0 for proper detection.
+         if (alpha > 0.0d0) then
+            inv_alpha = 1.0d0/alpha
+            call k_cmult(p, inv_alpha)
+         else
+            if (nid == 0) then
+               write(6,*) 'INFO [k_normalize]: Exact zero norm detected.'
+               write(6,*) '     This indicates an invariant subspace (exact breakdown).'
+               write(6,*) '     Vector zeroed, alpha preserved as 0 for H(k+1,k).'
+            end if
+            call k_zero(p)  ! Zero the vector to avoid undefined state
+            ! alpha remains 0 - DO NOT modify it
+         end if
+
          return
       end subroutine k_normalize
       
@@ -158,7 +189,22 @@
          p%time = p%time + q%time
          return
       end subroutine k_add2
-      
+
+      subroutine k_add2s2(p, q, c)
+!        p = p + c*q  (BLAS-style AXPY operation)
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         type(krylov_vector), intent(inout) :: p
+         type(krylov_vector), intent(in) :: q
+         real, intent(in) :: c
+         call nopadd2s2(p%vx, p%vy, p%vz, p%pr, p%t,
+     $                  q%vx, q%vy, q%vz, q%pr, q%t, c)
+         p%time = p%time + c*q%time
+         return
+      end subroutine k_add2s2
+
       subroutine k_sub2(p, q)
          use krylov_subspace
          implicit none
