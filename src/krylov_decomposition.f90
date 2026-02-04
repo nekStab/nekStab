@@ -76,7 +76,19 @@
       
       !     --> Update Hessenberg matrix and compute the orthogonal residual f.
             call update_hessenberg_matrix(H(1:mstep + 1, 1:mstep), f, Q(1:mstep), mstep)
-      
+
+      !     --> Check for lucky breakdown: if H(k+1,k) is near-zero, we've found an
+      !         invariant subspace. The eigenvalues of H(1:k,1:k) are exact.
+      !         Continuing would amplify round-off noise into spurious Krylov vectors.
+            if (H(mstep + 1, mstep) < 1.0d-12) then
+               if (nid == 0) then
+                  write(6,*) 'ARNOLDI: Early termination at step', mstep
+                  write(6,*) '         Lucky breakdown - invariant subspace found.'
+               end if
+               call k_copy(Q(mstep + 1), f)  ! Still copy the (near-zero) residual
+               return  ! Exit early - don't pollute basis with noise
+            end if
+
       !     --> Add the residual vector as the new Krylov vector.
             call k_copy(Q(mstep + 1), f)
       
@@ -185,6 +197,24 @@
       
       ! --> Update the Hessenberg matrix.
          H(k + 1, k) = alpha
-      
+
+      ! --> Check for "lucky breakdown" (invariant subspace found).
+      !     When H(k+1,k) is very small, the Krylov process has found an
+      !     invariant subspace of dimension k. This is mathematically significant:
+      !     - The eigenvalues of H(1:k,1:k) are EXACT eigenvalues of the operator
+      !     - No spurious eigenvalues from the "noise" portion of the subspace
+      !     - Continuing iteration is wasteful and numerically unstable
+      !     A small subdiagonal also causes issues in Schur decomposition.
+         if (alpha < 1.0d-12) then
+            if (nid == 0) then
+               write(6,*) '========================================================'
+               write(6,*) 'LUCKY BREAKDOWN detected at Arnoldi step k =', k
+               write(6,*) '   H(k+1,k) =', alpha
+               write(6,*) '   An invariant subspace of dimension', k, 'was found.'
+               write(6,*) '   Eigenvalues of H(1:k,1:k) are exact eigenvalues.'
+               write(6,*) '========================================================'
+            end if
+         end if
+
          return
       end subroutine update_hessenberg_matrix
