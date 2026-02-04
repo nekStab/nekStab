@@ -356,6 +356,7 @@ USR+=" IO.o"
 USR+=" postproc.o"
 USR+=" newton_krylov.o"
 USR+=" sensitivity.o"
+USR+=" modal_analysis.o"
 
 # Check if the makefile_usr file exists and source it
 if [ -f "makefile_usr" ]; then
@@ -404,33 +405,17 @@ else
     fi
 fi
 
-# Define the file and the include line
+# Define the file and the lines to write
+# We need to define NEKSTAB_SOURCE_ROOT as a makefile variable so that
+# the rules in makefile_nekStab can use $(NEKSTAB_SOURCE_ROOT) reliably
 FILE="makefile_usr.inc"
-INCLUDE_LINE="include $NEKSTAB_SOURCE_ROOT/src/makefile_nekStab"
+VAR_LINE="NEKSTAB_SOURCE_ROOT = $NEKSTAB_SOURCE_ROOT"
+INCLUDE_LINE='include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab'
 
-# Check if the file exists
-if [ -f "$FILE" ]; then
-    echo "File $FILE exists."
-
-    # Check if an include line for makefile_nekStab is in the file
-    if grep -q "^include .*/makefile_nekStab" "$FILE"; then
-        echo "Updating include path for makefile_nekStab found in $FILE."
-
-        # The include line is in the file, replace it
-        if [[ $(uname -s) == "Darwin" ]]; then
-            echo "Running on macOS. Using macOS-specific sed command to update $FILE."
-            sed -i '' "s|^include .*/makefile_nekStab|$INCLUDE_LINE|" "$FILE"
-        else
-            sed -i "s|^include .*/makefile_nekStab|$INCLUDE_LINE|" "$FILE"
-        fi
-    else
-        echo "Appending include line for makefile_nekStab not found in $FILE."
-        echo -e "\n$INCLUDE_LINE" >>"$FILE"
-    fi
-else
-    echo "File $FILE does not exist. Creating $FILE with the include line."
-    echo "$INCLUDE_LINE" >"$FILE"
-fi
+# Always rewrite makefile_usr.inc to ensure correct paths
+echo "Creating/updating $FILE with NEKSTAB_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT"
+echo "$VAR_LINE" > "$FILE"
+echo "$INCLUDE_LINE" >> "$FILE"
 
 : ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
 set +a -e
