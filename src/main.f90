@@ -180,6 +180,9 @@
          if (.not. isNekStabinit) then
             call nekStab_setDefault
             call nekStab_usrchk ! where user can change defaults or set mode flags
+      !     Broadcast user-set values to all MPI ranks (32 chars * csize bytes)
+            call bcast(nekstab_mode, 32*csize)
+            call bcast(modal_prefix, 3*csize)
             call nekStab_resolve_mode ! resolve mode from string/flags/uparam
             call nekStab_printNEKParams
 
@@ -634,9 +637,9 @@
             animate_mode_num = int(uparam(7))
 
       !  ─────────────────────────────────────────────────────────────────
-      !  Mode 5: OTD
+      !  Mode 5: OTD (tolerance-based, consistent with other modes)
       !  ─────────────────────────────────────────────────────────────────
-         elseif (floor(up1) == 5) then
+         elseif (abs(up1 - 5.0) < tol) then
             ifotd = .true.
 
       !  ─────────────────────────────────────────────────────────────────
@@ -706,6 +709,27 @@
                write (6, *) 'Choose one: eigenmode OR transient growth'
             end if
             call nek_end
+         end if
+
+      !  Check for orphaned ifFloquet (set without base mode)
+         if (ifFloquet .and. .not. (isFloquetDirect .or.
+     &       isFloquetAdjoint .or. isFloquetTransientGrowth)) then
+            if (nid == 0) then
+               write (6, *) 'ERROR: ifFloquet set without base mode'
+               write (6, *) 'Set isDirect, isAdjoint, or ',
+     &              'isTransientGrowth with ifFloquet'
+            end if
+            call nek_end
+         end if
+
+      !  Check for no mode selected (nmodes == 0 with no modal analysis)
+         if (nmodes == 0 .and. .not. (ifpod .or. ifdmd .or. ifspod))
+     &        then
+            if (nid == 0) then
+               write (6, *) 'WARNING: No operating mode selected'
+               write (6, *) 'Defaulting to DNS mode (uparam(1)=0)'
+            end if
+            ifDNS = .true.
          end if
 
       end subroutine nekStab_validate_mode
