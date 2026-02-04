@@ -6,16 +6,12 @@
 /_/ /_/ \___//_/|_|/____/ \__/ \__,_//_.___/
 ```
 
-[![CI Build](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml)
-
-### Build Matrix
-
 | OS | Arch | Compiler | MPI | Status |
 |:---|:----:|:---------|:----|:------:|
 | Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI 4.x | [![Ubuntu GCC OpenMPI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | Ubuntu 24.04 | x86_64 | gfortran 14 | MPICH 4.x | [![Ubuntu GCC MPICH](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| macOS 15 | ARM64 | gfortran 14 | OpenMPI 5.x | [![macOS GCC OpenMPI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| macOS 15 | ARM64 | gfortran 14 | MPICH 4.x | [![macOS GCC MPICH](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 26 | ARM64 | gfortran 14 | OpenMPI 5.x | [![macOS GCC OpenMPI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 26 | ARM64 | gfortran 14 | MPICH 4.x | [![macOS GCC MPICH](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | Ubuntu 24.04 | x86_64 | ifort 2024.2 | Intel MPI 2021 | [![Ubuntu ifort](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | Ubuntu 24.04 | x86_64 | ifx 2025.2 | Intel MPI 2021 | [![Ubuntu ifx](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 
