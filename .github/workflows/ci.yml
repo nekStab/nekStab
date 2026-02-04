@@ -110,6 +110,8 @@ jobs:
       - name: Build cylinder CI test
         run: |
           export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
+          export NEKSTAB_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT
+          export NEK_SOURCE_ROOT=$NEK_SOURCE_ROOT
           cd example/cylinder/ci_test
           if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
             # Source Intel oneAPI environment (MKL + MPI) with --force since it may already be sourced
