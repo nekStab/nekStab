@@ -205,7 +205,8 @@ elif command -v ifort >/dev/null 2>&1; then
         CFLAGS+=" -diag-disable=10441 -diag-disable=42"
         FFLAGS+=" -diag-disable=10441 -warn noalign"
     elif [ -n "$CI" ]; then
-        FFLAGS+=" -xCORE-AVX2"  # Portable AVX2 for CI
+        # No CPU-specific flags for CI - ifort's -x flags require Intel CPUs
+        echo "CI: using generic optimization (no -xHost)"
     else
         FFLAGS+=" -xHost"
     fi
