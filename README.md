@@ -14,13 +14,87 @@
 
 **nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
-**Features:**
-- Base flow computation (SFD, BoostConv, Newton-Krylov)
-- Linear stability analysis (direct and adjoint eigenmodes)
-- Floquet analysis for time-periodic flows
-- Transient growth and optimal perturbations
-- Sensitivity analysis (wavemaker, forcing response)
-- Matrix-free Krylov methods, scales to millions of DoFs
+## Features
+
+### Steady-State & Periodic Orbit Computation
+| Method | Description |
+|--------|-------------|
+| **SFD** | Selective Frequency Damping for unstable steady states |
+| **BoostConv** | Residual acceleration for slow convergence |
+| **TDF** | Time-Delayed Feedback for periodic orbits |
+| **Newton-Krylov** | Quadratic convergence for fixed points and UPOs |
+
+### Global Stability Analysis
+| Analysis | Steady Flows | Time-Periodic (Floquet) |
+|----------|:------------:|:-----------------------:|
+| **Direct eigenmodes** | ✓ | ✓ |
+| **Adjoint eigenmodes** | ✓ | ✓ |
+| **Transient growth** | ✓ | ✓ |
+
+### Sensitivity & Receptivity
+- **Wavemaker** — structural sensitivity to feedback
+- **Base flow sensitivity** — response to mean flow modifications
+- **Forcing response** — optimal and localized forcing analysis
+
+### Modal Decomposition
+| Method | Description |
+|--------|-------------|
+| **POD** | Proper Orthogonal Decomposition (energy-ranked modes) |
+| **DMD** | Dynamic Mode Decomposition (frequency-ranked modes) |
+| **SPOD** | Spectral POD (frequency-resolved coherent structures) |
+
+### Advanced Capabilities
+- **OTD modes** — real-time Lyapunov vectors for chaotic flows
+- **Linearized DNS** — perturbation evolution around base flows
+- **Scalar transport** — temperature and passive scalar stability
+- **Sponge zones** — non-reflecting boundaries for open flows
+- **Vortex identification** — λ₂, Q-criterion, Ω-criterion output
+
+### Why nekStab?
+- **Matrix-free**: No Jacobian storage — scales to millions of DoFs
+- **Spectral accuracy**: Leverages Nek5000's high-order elements
+- **MPI parallel**: Efficient on laptops to supercomputers
+- **Validated**: Benchmarked against canonical flows (cylinder, cavity, jets)
+
+## Quick Reference
+
+| Mode | String | Description |
+|:----:|--------|-------------|
+| 0 | `'dns'` | Direct Numerical Simulation |
+| 0.1 | `'linear_dns'` | Linearized DNS (perturbation) |
+| 1.1 | `'sfd'` | Selective Frequency Damping |
+| 1.2 | `'boostconv'` | BoostConv acceleration |
+| 1.4 | `'tdf'` | Time-Delayed Feedback |
+| 2.0 | `'newton_fp'` | Newton for fixed points |
+| 2.1 | `'newton_po'` | Newton for periodic orbits |
+| 3.1 | `'direct'` | Direct stability eigenmodes |
+| 3.11 | `'floquet_direct'` | Floquet direct analysis |
+| 3.2 | `'adjoint'` | Adjoint stability eigenmodes |
+| 3.21 | `'floquet_adjoint'` | Floquet adjoint analysis |
+| 3.3 | `'transient_growth'` | Optimal perturbations |
+| 3.31 | `'floquet_tg'` | Floquet transient growth |
+| 4.1 | `'energy_budget'` | Kinetic energy budget |
+| 4.2 | `'wavemaker'` | Structural sensitivity |
+| 4.3 | `'bf_sensitivity'` | Base flow sensitivity |
+| 5 | `'otd'` | Optimally Time-Dependent modes |
+| 6.1 | `'pod'` | Proper Orthogonal Decomposition |
+| 6.2 | `'dmd'` | Dynamic Mode Decomposition |
+| 6.3 | `'spod'` | Spectral POD |
+
+See [DOC.md](DOC.md) for full parameter reference (includes animation and forcing modes).
+
+## Examples
+
+Ready-to-run cases in `example/`:
+
+| Case | Physics | Demonstrated Features |
+|------|---------|----------------------|
+| `cylinder/` | 2D/3D wake | DNS, Newton, stability, Floquet, wavemaker |
+| `back_fstep/` | Separation | Convective instability, transient growth |
+| `lid_driven/` | Confined | Steady bifurcations |
+| `blasius/` | Boundary layer | Tollmien-Schlichting waves |
+| `torus/` | Curved pipe | Dean instability, 3D modes |
+| `thersyphon/` | Convection | Pitchfork + Hopf bifurcations |
 
 ## First Steps
 
@@ -109,30 +183,15 @@ killall nek5000
 
 For more information, see the [Documentation](DOC.md).
 
-## Mode Configuration
+## Mode Selection
 
-nekStab supports three equivalent ways to select the operating mode:
+Three equivalent ways to select operating mode:
 
-**Method 1: String mode** (human-readable, recommended)
-```fortran
-! In nekStab_usrchk subroutine in your .usr file:
-nekstab_mode = 'floquet_adjoint'
-```
-
-**Method 2: Flag mode** (flexible)
-```fortran
-! In nekStab_usrchk subroutine:
-isAdjoint = .true.
-ifFloquet = .true.   ! modifier flag
-```
-
-**Method 3: uparam** (automation-friendly, backward compatible)
-```
-# In .par file [PROBLEMTYPE] section:
-userParam01 = 3.21
-```
-
-All three methods produce identical behavior. See [DOC.md](DOC.md) for the complete mode reference table.
+| Method | Where | Example |
+|--------|-------|---------|
+| String | `.usr` | `nekstab_mode = 'floquet_adjoint'` |
+| Flags | `.usr` | `isAdjoint = .true.` + `ifFloquet = .true.` |
+| uparam | `.par` | `userParam01 = 3.21` |
 
 ## Development
 
