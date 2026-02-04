@@ -1,0 +1,135 @@
+{
+  "cylinder_hopf": {
+    "description": "2D cylinder wake - Hopf bifurcation (Re=50, just above critical Re_c≈46.6)",
+    "case_dir": "cylinder/stability/direct",
+    "casename": "1cyl",
+    "output_file": "Spectre_NSd.dat",
+    "Re": 50,
+    "validation": {
+      "type": "eigenvalue",
+      "checks": [
+        {
+          "name": "growth_rate",
+          "description": "Leading eigenvalue real part (growth rate) should be positive (unstable)",
+          "metric": "leading_sigma_real",
+          "expected": 0.0156,
+          "comparison": "relative",
+          "tolerance": 0.05
+        },
+        {
+          "name": "strouhal_number",
+          "description": "Strouhal number St = omega / (2*pi) ≈ 0.12",
+          "metric": "leading_strouhal",
+          "expected": 0.1204,
+          "comparison": "relative",
+          "tolerance": 0.05
+        }
+      ]
+    },
+    "notes": "Reference: AMR paper Table 1, Barkley & Henderson (1996)"
+  },
+
+  "backstep_tg": {
+    "description": "Backward-facing step - Transient growth (Re=500)",
+    "case_dir": "back_fstep/transient_growth",
+    "casename": "bfs",
+    "output_file": "Spectre_NSd.dat",
+    "Re": 500,
+    "validation": {
+      "type": "transient_growth",
+      "checks": [
+        {
+          "name": "optimal_time",
+          "description": "Optimal growth time τ_opt ≈ 58",
+          "metric": "tau_opt",
+          "expected": 58.0,
+          "comparison": "relative",
+          "tolerance": 0.05
+        }
+      ]
+    },
+    "notes": "Reference: Blackburn et al. (2008), Barkley et al. (2002)"
+  },
+
+  "thermosyphon_pitchfork": {
+    "description": "Thermosyphon - Stability at Ra=400 (below critical Ra_c1≈494)",
+    "case_dir": "thersyphon/stability/direct",
+    "casename": "tsyphon",
+    "output_file": "Spectre_NSd.dat",
+    "Ra": 400,
+    "validation": {
+      "type": "eigenvalue",
+      "checks": [
+        {
+          "name": "stable_below_critical",
+          "description": "Leading eigenvalue should be negative (stable, Ra < Ra_c)",
+          "metric": "leading_sigma_real",
+          "expected": -0.05,
+          "comparison": "absolute",
+          "tolerance": 0.1
+        },
+        {
+          "name": "pitchfork_type",
+          "description": "Leading eigenvalue should be real (pitchfork mode)",
+          "metric": "leading_sigma_imag",
+          "expected": 0.0,
+          "comparison": "absolute",
+          "tolerance": 0.01
+        }
+      ]
+    },
+    "notes": "Reference: AMR paper, pitchfork bifurcation at Ra_c1≈494. At Ra=400 flow is stable."
+  },
+
+  "flipflop_ns": {
+    "description": "Side-by-side cylinders - Floquet at Re=60 (below critical Re_c2≈61.17)",
+    "case_dir": "flip_flop/stability/direct_Floquet",
+    "casename": "2cyl",
+    "output_file": "Spectre_Hd.dat",
+    "Re": 60,
+    "validation": {
+      "type": "floquet",
+      "checks": [
+        {
+          "name": "floquet_magnitude",
+          "description": "Leading Floquet multiplier magnitude |μ| < 1 (stable, Re < Re_c)",
+          "metric": "leading_mu_magnitude",
+          "expected": 0.95,
+          "comparison": "absolute",
+          "tolerance": 0.1
+        }
+      ]
+    },
+    "notes": "Reference: Carini et al. (2015), Neimark-Sacker at Re_c2≈61.17. At Re=60 flow is stable."
+  },
+
+  "tpjet_pd": {
+    "description": "Forced jet - Period-doubling at Re=1900 (above critical Re_c≈1371)",
+    "case_dir": "tpjet/stability/direct_Floquet",
+    "casename": "tpjet",
+    "output_file": "Spectre_Hd.dat",
+    "Re": 1900,
+    "validation": {
+      "type": "floquet",
+      "checks": [
+        {
+          "name": "period_doubling",
+          "description": "Leading Floquet multiplier μ < -1 (unstable period-doubling)",
+          "metric": "leading_mu_real",
+          "expected": -1.2,
+          "comparison": "absolute",
+          "tolerance": 0.3
+        },
+        {
+          "name": "mu_imaginary",
+          "description": "Floquet multiplier should be real (μ_imag ≈ 0)",
+          "metric": "leading_mu_imag",
+          "expected": 0.0,
+          "comparison": "absolute",
+          "tolerance": 0.1
+        }
+      ]
+    },
+    "notes": "Reference: AMR paper, period-doubling at Re_c≈1371. At Re=1900 flow is unstable."
+  }
+}
