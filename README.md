@@ -113,13 +113,21 @@ macOS
 brew install mpich gfortran fftw wget git cmake htop
 ```
 
-**Cloning the repository and Nek5000**
+**Installation**
 
 ```bash
 git clone --depth=50 https://github.com/nekStab/nekStab.git
 cd nekStab
 ./Nek5000setup.sh
 ```
+
+| Command | What it does |
+|---------|--------------|
+| `git clone --depth=50 ...` | Downloads nekStab with recent history only (faster than full clone) |
+| `cd nekStab` | Enter the nekStab directory |
+| `./Nek5000setup.sh` | Downloads and configures Nek5000 inside `nekStab/Nek5000/` |
+
+> **Note:** The setup script clones Nek5000 as a subdirectory, keeping both codes together for easier version management.
 
 Add to your shell config (`~/.bashrc` or `~/.zshrc`):
 ```bash
