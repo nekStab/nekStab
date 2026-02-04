@@ -4,8 +4,8 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       call nekStab
-      call hpts
-      call nekStab_torque('lift_drag.dat', 10)
+      ! hpts disabled for CI - no history file needed
+      ! call nekStab_torque('lift_drag.dat', 10)  ! disabled for CI
 
       end
 c-----------------------------------------------------------------------
