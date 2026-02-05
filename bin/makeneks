@@ -18,10 +18,12 @@ target=""
 #-------------------------------------------------------------------------------
 
 show_usage () {
-    echo "Usage: $0 [case] [--debug] [--fresh]"
-    echo "  case     : Case name to compile"
-    echo "  --debug  : Enable debug mode"
-    echo "  --fresh  : Clean before compilation"
+    echo "Usage: $0 [case|clean|full_clean] [--debug] [--fresh]"
+    echo "  case       : Case name to compile"
+    echo "  clean      : Remove build files (makefile, obj/, logs)"
+    echo "  full_clean : Remove EVERYTHING (field files, plots, data, obj/)"
+    echo "  --debug    : Enable debug mode"
+    echo "  --fresh    : Clean before compilation"
     exit 1
 }
 
@@ -64,6 +66,22 @@ do_clean () {
     manage_compiler_flags "restore"
 }
 
+do_full_clean () {
+    echo "=== FULL CLEAN (hardcore) ==="
+    do_clean
+    echo "Removing Nek5000 field files (*.f?????)..."
+    rm -f *.f[0-9][0-9][0-9][0-9][0-9]
+    echo "Removing output data files..."
+    rm -f *.dat *.his
+    echo "Removing plots..."
+    rm -f *.png *.pdf
+    echo "Removing binary and object files..."
+    rm -rf obj nek5000 *.o *.a
+    echo "Removing misc generated files..."
+    rm -f fort.* ioinfo SESSION.NAME.* core.[0-9]*
+    echo "=== FULL CLEAN COMPLETE ==="
+}
+
 # Intel compiler common flags (shared by ifx and ifort)
 setup_intel_common_flags () {
     FFLAGS+=" -fpp"             # Fortran preprocessor
@@ -97,9 +115,7 @@ setup_ifx_flags () {
         FFLAGS+=" -xHost"
     fi
 
-    # Compatibility and performance flags for ifx
-    FFLAGS+=" -fno-strict-overflow"        # Integer overflow behavior like ifort
-    FFLAGS+=" -heap-arrays"                # Allocate arrays on heap instead of stack
+    # Performance flags for ifx
     FFLAGS+=" -mprefer-vector-width=512"   # Encourage AVX-512 vectorization
     FFLAGS+=" -align array64byte"          # 64-byte alignment for AVX-512
 }
@@ -196,6 +212,12 @@ fi
 # Handle "clean" command
 if [ "$target" = "clean" ]; then
     do_clean
+    exit 0
+fi
+
+# Handle "full_clean" command (hardcore - removes all output)
+if [ "$target" = "full_clean" ]; then
+    do_full_clean
     exit 0
 fi
 
