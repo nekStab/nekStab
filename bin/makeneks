@@ -361,10 +361,11 @@ touch ${target}.usr
 # Override Nek5000's auto-detected flags with our complete set
 if [ -f makefile ]; then
     echo "Overriding FFLAGS in generated makefile..."
-    sed_inplace "s/^FFLAGS+=.*/FFLAGS+=${FFLAGS}/" makefile
+    # Use | as delimiter since FFLAGS contains /
+    sed_inplace "s|^FFLAGS+=.*|FFLAGS+=${FFLAGS}|" makefile
     if [ -n "$NEKSTAB_OPT" ]; then
         echo "Overriding optimization level: L2 = $NEKSTAB_OPT"
-        sed_inplace "s/^L2 = .*/L2 = $NEKSTAB_OPT/" makefile
+        sed_inplace "s|^L2 = .*|L2 = $NEKSTAB_OPT|" makefile
     fi
 fi
 
