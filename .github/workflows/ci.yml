@@ -74,18 +74,15 @@ jobs:
           # FFTW bottle depends on open-mpi, so we only support OpenMPI on macOS
           brew install open-mpi fftw
 
-      - name: Configure Intel MPI and MKL environment
-        if: matrix.mpi == 'intelmpi'
+      - name: Verify Intel oneAPI installation
+        if: matrix.toolchain.compiler == 'intel'
         run: |
-          # Source Intel oneAPI environment (MPI + MKL)
+          # Verify Intel compilers are available (setvars.sh will be sourced in build steps)
           source /opt/intel/oneapi/setvars.sh --force
-          # Export key variables to GITHUB_ENV for subsequent steps
-          echo "I_MPI_FC=ifx" >> $GITHUB_ENV
-          echo "I_MPI_CC=icx" >> $GITHUB_ENV
-          echo "I_MPI_CXX=icpx" >> $GITHUB_ENV
-          echo "MKLROOT=$MKLROOT" >> $GITHUB_ENV
-          echo "PATH=$PATH" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "Intel compilers available:"
+          which ifx && ifx --version | head -1
+          which icx && icx --version | head -1
+          which mpiifx && mpiifx --version | head -1
 
       # --- Nek5000 setup (uses our setup script) ---
       - name: Setup Nek5000
@@ -105,11 +102,19 @@ jobs:
       # --- Build and run CI test ---
       - name: Build cylinder CI test
         run: |
+          # Source Intel oneAPI environment if available (provides complete compiler env)
+          if [ -f /opt/intel/oneapi/setvars.sh ]; then
+            source /opt/intel/oneapi/setvars.sh --force
+          fi
           cd example/cylinder/ci_test
           mks 1cyl
 
       - name: Run smoke test (10 timesteps, 2 procs)
         run: |
+          # Source Intel oneAPI environment if available (for MPI runtime)
+          if [ -f /opt/intel/oneapi/setvars.sh ]; then
+            source /opt/intel/oneapi/setvars.sh --force
+          fi
           # Set stack size (unlimited on Linux, skip on macOS)
           ulimit -s unlimited 2>/dev/null || true
           cd example/cylinder/ci_test
