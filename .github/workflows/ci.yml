@@ -93,54 +93,41 @@ jobs:
           echo "PATH=$PATH" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
-      - name: Clone Nek5000
+      # --- Nek5000 setup (uses our setup script) ---
+      - name: Setup Nek5000
         run: |
-          git clone --depth=1 https://github.com/Nek5000/Nek5000.git
+          # Run Nek5000setup.sh with all defaults (just press Enter)
+          yes "" | ./Nek5000setup.sh
 
-      - name: Build Nek5000 tools
+      - name: Set environment paths
         run: |
-          cd Nek5000/tools
-          # Nek5000 tools (genmap, genbox) are serial - always build with GCC
-          # since maketools doesn't recognize ifx yet
-          FC=gfortran CC=gcc ./maketools genmap genbox
+          # Export paths as documented in README.md
+          echo "NEKSTAB_SOURCE_ROOT=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "NEK_SOURCE_ROOT=${{ github.workspace }}/Nek5000" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+          echo "${{ github.workspace }}/Nek5000/bin" >> $GITHUB_PATH
 
+      # --- Build and run CI test ---
       - name: Build cylinder CI test
         run: |
-          export PATH=$NEK_SOURCE_ROOT/bin:$NEKSTAB_SOURCE_ROOT/bin:$PATH
           cd example/cylinder/ci_test
-          if [ "${{ matrix.toolchain.compiler }}" = "intel" ]; then
-            source /opt/intel/oneapi/setvars.sh --force || true
-            NEKSTAB_FC=ifx mks 1cyl
-          elif [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
-            source /opt/intel/oneapi/setvars.sh --force || true
-            NEKSTAB_FC=ifort mks 1cyl
-          else
-            NEKSTAB_FC=gcc mks 1cyl
-          fi
+          mks 1cyl
 
-      - name: Run smoke test (10 timesteps)
+      - name: Run smoke test (10 timesteps, 2 procs)
         run: |
+          ulimit -s unlimited
           cd example/cylinder/ci_test
-          if [ "${{ matrix.toolchain.compiler }}" = "intel" ] || [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
-            source /opt/intel/oneapi/setvars.sh --force || true
-            # Enable MKL support for AMD CPUs (GitHub runners may be AMD)
-            export MKL_DEBUG_CPU_TYPE=5
-          fi
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
-          # SIZE now supports lpmin=1 for CI flexibility
-          # Try 2 processes, fall back to 1 if needed
-          mpirun -np 2 ./nek5000 || mpirun -np 1 ./nek5000
-          echo "Test completed successfully"
+          mpirun -np 2 ./nek5000
 
       - name: Verify output
         run: |
           cd example/cylinder/ci_test
-          ls -la nek5000
-          # Check logfile exists and contains "finished" or similar
-          if grep -q "FINISHED RUN" logfile 2>/dev/null || grep -q "End of time-step loop" logfile 2>/dev/null; then
+          if grep -q "FINISHED RUN" logfile; then
             echo "Simulation completed successfully"
           else
-            echo "WARNING: Could not verify simulation completion in logfile"
-            tail -50 logfile 2>/dev/null || true
+            echo "ERROR: Simulation did not complete"
+            tail -50 logfile
+            exit 1
           fi
