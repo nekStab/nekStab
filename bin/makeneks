@@ -78,7 +78,7 @@ do_full_clean () {
     echo "Removing binary and object files..."
     rm -rf obj nek5000 *.o *.a
     echo "Removing misc generated files..."
-    rm -f fort.* ioinfo SESSION.NAME.* core.[0-9]*
+    rm -f fort.* ioinfo SESSION.NAME.* core.[0-9]* *.nek5000
     echo "=== FULL CLEAN COMPLETE ==="
 }
 
