@@ -65,8 +65,8 @@ jobs:
           wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add -
           sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
           sudo apt-get update
-          # Install MKL and Intel MPI
-          sudo apt-get install -y intel-oneapi-mkl-devel intel-oneapi-mpi-devel
+          # Install MKL, Intel MPI, and gfortran (needed for Nek5000 tools)
+          sudo apt-get install -y intel-oneapi-mkl-devel intel-oneapi-mpi-devel gfortran liblapack-dev libblas-dev
 
       - name: Install MPI and FFTW3 (macOS)
         if: runner.os == 'macOS'
@@ -96,8 +96,9 @@ jobs:
       # --- Nek5000 setup (uses our setup script) ---
       - name: Setup Nek5000
         run: |
-          # Run Nek5000setup.sh with all defaults (just press Enter)
-          yes "" | ./Nek5000setup.sh
+          # Nek5000 tools (genmap, genbox) need gfortran - maketools doesn't recognize ifx
+          # Temporarily override FC/CC for the setup script
+          FC=gfortran CC=gcc yes "" | ./Nek5000setup.sh
 
       - name: Set environment paths
         run: |
@@ -119,15 +120,15 @@ jobs:
           cd example/cylinder/ci_test
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
-          mpirun -np 2 ./nek5000
+          mpirun -np 2 ./nek5000 > logfile 2>&1
 
       - name: Verify output
         run: |
           cd example/cylinder/ci_test
-          if grep -q "FINISHED RUN" logfile; then
+          cat logfile | tail -20
+          if grep -q "run successful" logfile; then
             echo "Simulation completed successfully"
           else
             echo "ERROR: Simulation did not complete"
-            tail -50 logfile
             exit 1
           fi
