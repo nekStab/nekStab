@@ -379,4 +379,4 @@ if ls *.mod >/dev/null 2>&1; then
 fi
 
 # Restore original compiler flags if debug mode was enabled
-[ "$debug" = true ] && manage_compiler_flags "restore"
+[ "$debug" = true ] && manage_compiler_flags "restore" || true
