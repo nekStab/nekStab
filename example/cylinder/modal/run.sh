@@ -38,6 +38,32 @@ case "$1" in
         echo "Run './run.sh modal' to perform modal analysis"
         ;;
 
+    washout)
+        echo "Running DNS washout to eliminate transients..."
+        echo "Running from t=50 to t=150 (100 time units)"
+
+        # Backup original par file
+        cp ${CASE}.par ${CASE}.par.bak
+
+        # Use washout parameters
+        cp ${CASE}_washout.par ${CASE}.par
+
+        # Run
+        mpirun -np $NPROCS ./nek5000
+
+        # Restore and update restart file for fresh snapshots
+        cp ${CASE}.par.bak ${CASE}.par
+
+        # The output file will be 1cyl0.f00101 (next after 100)
+        # Rename it to be the new restart
+        NEWRST=$(ls -1 ${CASE}0.f* | tail -1)
+        if [ -f "$NEWRST" ]; then
+            cp "$NEWRST" rst_${CASE}0.f00001
+            echo "Washout complete. New restart: rst_${CASE}0.f00001"
+            echo "Now run './run.sh dns' to generate fresh snapshots"
+        fi
+        ;;
+
     modal)
         echo "Running modal analysis (POD/DMD/SPOD)..."
 
@@ -83,10 +109,11 @@ case "$1" in
         ;;
 
     *)
-        echo "Usage: $0 {build|dns|modal|plot|clean} [nprocs]"
+        echo "Usage: $0 {build|dns|washout|modal|plot|clean} [nprocs]"
         echo ""
         echo "  build       - Compile nekStab"
         echo "  dns [n]     - Run DNS to generate snapshots (n processors)"
+        echo "  washout [n] - Run DNS 100 time units to wash out transients"
         echo "  modal [n]   - Run modal analysis on snapshots"
         echo "  plot        - Plot results with Python"
         echo "  clean       - Remove output files"

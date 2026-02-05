@@ -107,6 +107,36 @@ class SPODSpectrum:
         print(f'  {self.nfreq} frequencies, {self.nblk} SPOD modes per frequency')
 
 
+class PODFFTSpectrum:
+    """Read POD-FFT spectrum from pod_fft_spectrum.dat"""
+
+    def __init__(self, filename='pod_fft_spectrum.dat'):
+        if not os.path.exists(filename):
+            raise FileNotFoundError(f'{filename} not found')
+
+        print(f'Reading {filename}')
+        data = np.genfromtxt(filename, comments='#')
+
+        if data.size == 0:
+            raise ValueError(f'{filename} is empty')
+
+        self.St = data[:, 0]                    # Strouhal numbers
+        self.power = data[:, 1:]                # power spectra (nfreq x nmodes)
+        self.nfreq = len(self.St)
+        self.nmodes = self.power.shape[1]
+
+        # Find peak frequency for each mode (excluding DC)
+        self.peak_St = []
+        self.peak_power = []
+        for i in range(self.nmodes):
+            idx = np.argmax(self.power[1:, i]) + 1  # Skip DC (index 0)
+            self.peak_St.append(self.St[idx])
+            self.peak_power.append(self.power[idx, i])
+
+        print(f'  {self.nfreq} frequencies, {self.nmodes} POD modes')
+        print(f'  Peak St for mode 1: {self.peak_St[0]:.4f}')
+
+
 # -----------------------------------------------------------------------------
 # Plotting functions
 # -----------------------------------------------------------------------------
@@ -252,6 +282,45 @@ def plot_spod(spod, max_modes=5):
     plt.close()
 
 
+def plot_pod_fft(pod_fft, max_modes=5):
+    """Plot POD-FFT spectrum: power vs Strouhal for each POD mode"""
+
+    fig, ax = plt.subplots(figsize=(5.5, 3.5))
+
+    # Color palette
+    colors = plt.cm.tab10(np.linspace(0, 1, min(max_modes, pod_fft.nmodes)))
+
+    n_to_plot = min(max_modes, pod_fft.nmodes)
+    for i in range(n_to_plot):
+        power = pod_fft.power[:, i]
+        # Avoid log(0) issues
+        power = np.maximum(power, 1e-20)
+
+        lw = 1.8 if i < 2 else 1.0
+        alpha = 1.0 if i < 2 else 0.7
+        ax.semilogy(pod_fft.St, power, 'o-', color=colors[i], linewidth=lw,
+                    markersize=4, alpha=alpha, label=f'POD mode {i+1}')
+
+    # Mark expected vortex shedding frequency
+    ax.axvline(0.164, color='red', linestyle='--', linewidth=1.0,
+               alpha=0.7, label=r'$St \approx 0.164$')
+
+    ax.set_xlabel(r'Strouhal number $St$')
+    ax.set_ylabel('Power spectral density')
+    ax.set_xlim(0, min(1.0, max(pod_fft.St)))
+    ax.legend(loc='best', fontsize=7)
+    ax.set_title('POD-FFT Spectral Analysis')
+    ax.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
+    ax.grid(True, which='minor', linestyle=':', linewidth=0.2, alpha=0.3)
+
+    fig.tight_layout()
+
+    fname = f'pod_fft_spectrum.{FORMAT}'
+    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
+    print(f'Saved {fname}')
+    plt.close()
+
+
 # -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
@@ -295,6 +364,14 @@ if __name__ == '__main__':
             plots_made += 1
         except (FileNotFoundError, ValueError) as e:
             print(f'  Skipping SPOD: {e}')
+
+    # POD-FFT (try if SPOD file not found or if explicitly requested)
+    try:
+        pod_fft = PODFFTSpectrum()
+        plot_pod_fft(pod_fft)
+        plots_made += 1
+    except (FileNotFoundError, ValueError) as e:
+        print(f'  Skipping POD-FFT: {e}')
 
     print('-' * 50)
     if plots_made == 0:
