@@ -99,3 +99,4 @@ Nek5000/
 # User-specific files
 # -----------------------------------------------------------------------------
 .usr
+example/cylinder/dns/benchmark_results
