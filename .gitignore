@@ -23,6 +23,7 @@ nek5000.dbg
 *.f?????
 *log*
 *.info
+*.his
 *.dat*
 fort.*
 .state
