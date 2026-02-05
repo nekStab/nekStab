@@ -54,15 +54,19 @@ c       Number of modes to save
 
 c       Which methods to run
         ifpod = .true.;  call bcast(ifpod, lsize)
-        ifdmd = .true.; call bcast(ifdmd, lsize)
+        ifdmd = .true.;  call bcast(ifdmd, lsize)
         ifspod = .true.; call bcast(ifspod, lsize)
+
+c       Window normalization: .true. = PySPOD compatible (amplitude)
+c                            .false. = Parseval (energy-preserving)
+        ifwinamp = .true.; call bcast(ifwinamp, lsize)
 
 c       DMD: fixed rank for better dynamics capture
 c       (auto-rank 0 gives r=3, missing oscillations)
         dmd_rank = 20
         call bcast(dmd_rank, isize)
 
-c       POD-FFT: FFT block size and overlap for spectral analysis
+c       POD-FFT/SPOD: FFT block size and overlap
 c       nfft=64 with dt=0.5 gives df = 1/(64*0.5) = 0.03125 St
 c       With 100 snaps, noverlap=48: nblk = (100-64)/(64-48)+1 = 3 blocks
         spod_nfft = 64
