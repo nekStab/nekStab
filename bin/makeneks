@@ -59,6 +59,20 @@ if [[ $1 != --* && $1 != "" ]]; then
     shift
 fi
 
+# Handle "clean" command - just clean and exit
+if [ "$target" = "clean" ]; then
+    echo "Cleaning up build files..."
+    if [ -f makefile ]; then
+        make clean
+    fi
+    echo "Removing session and log files..."
+    rm -f SESSION.NAME *log* makefile NEKSTAB.inc *.mod
+    rm -f KRY* HES*
+    echo "Cleanup completed."
+    manage_compiler_flags "restore"
+    exit 0
+fi
+
 # Parse remaining options
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -80,15 +94,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Handle fresh (clean) operation if requested
+# Handle fresh (clean + rebuild) operation if requested
 if [ "$fresh" = true ]; then
     echo "Cleaning up build files..."
-    make clean
+    if [ -f makefile ]; then
+        make clean
+    fi
     echo "Removing session and log files..."
     rm -f SESSION.NAME *log* makefile NEKSTAB.inc *.mod
     rm -f KRY* HES*
     echo "Cleanup completed."
     manage_compiler_flags "restore"
+    # Continue to rebuild...
 fi
 
 # Fetch version information to print in the initialisation message
@@ -105,7 +122,10 @@ fi
 #-------------------------------------------------------------------------------
 # Compiler Detection
 #-------------------------------------------------------------------------------
-# NEKSTAB_FC environment variable can force: "ifort", "ifx", or "gcc"
+# NEKSTAB_FC environment variable can force compiler selection:
+#   - "ifx"     : Intel LLVM compiler (recommended, modern)
+#   - "ifort"   : Intel Classic compiler (deprecated, for benchmarking)
+#   - "gcc"     : GCC/gfortran (portable, fallback)
 # CI environment uses portable flags (no CPU-specific optimizations)
 if [ -n "$CI" ]; then
     echo "CI environment detected - using portable compiler flags"
@@ -118,6 +138,9 @@ if [ "$NEKSTAB_FC" = "ifx" ] && command -v ifx >/dev/null 2>&1; then
     FC="mpiifx"
     CC="mpiicx"
 
+    # Essential Nek5000 flags (we override makenek.inc's auto-detection)
+    FFLAGS+=" -fpp"             # Fortran preprocessor
+    FFLAGS+=" -r8 -fpconstant"  # Double precision reals
     FFLAGS+=" -fixed"
     FFLAGS+=" -extend-source"
     # Use portable x86-64-v3 in CI, native optimization otherwise
@@ -144,6 +167,57 @@ if [ "$NEKSTAB_FC" = "ifx" ] && command -v ifx >/dev/null 2>&1; then
         FFLAGS+=" -g3 -traceback"
     fi
 
+elif [ "$NEKSTAB_FC" = "ifort" ] && command -v ifort >/dev/null 2>&1; then
+    # Forced ifort selection (Intel Classic, deprecated as of 2024)
+    echo "Using Intel Compiler Classic (ifort) [forced via NEKSTAB_FC]..."
+    FC="mpiifort"
+    # Use mpiicx if icc is not available (Intel 2024+)
+    if command -v icc >/dev/null 2>&1; then
+        CC="mpiicc"
+    else
+        CC="mpiicx"
+    fi
+
+    # Essential Nek5000 flags (we override makenek.inc's auto-detection)
+    FFLAGS+=" -fpp"             # Fortran preprocessor
+    FFLAGS+=" -r8 -fpconstant"  # Double precision reals
+    FFLAGS+=" -fixed"
+    FFLAGS+=" -extend-source"
+
+    # Extract ifort version for version-specific settings
+    MPIIFORT_VERSION_FULL=$(mpiifort --version 2>&1 | grep "(IFORT)" | head -n 1)
+    IFORT_VERSION=$(echo "$MPIIFORT_VERSION_FULL" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    IFORT_MINOR=$(echo "$IFORT_VERSION" | cut -d. -f2)
+    echo "Detected ifort version: $IFORT_VERSION"
+
+    if [ "$IFORT_VERSION" = "2021.9.0" ]; then
+        echo "Applying ifort 2021.9.0 specific settings."
+        CFLAGS+=" -diag-disable=10441 -diag-disable=42"
+        FFLAGS+=" -diag-disable=10441 -warn noalign"
+    elif [ "$IFORT_MINOR" -ge 13 ] 2>/dev/null; then
+        # ifort 2021.13+ (oneAPI 2024+) shows deprecation warning (remark #10448)
+        echo "Suppressing ifort deprecation warning (remark #10448)."
+        FFLAGS+=" -diag-disable=10448"
+    fi
+
+    # Add xHost for native optimization (skip in CI)
+    if [ -z "$CI" ]; then
+        FFLAGS+=" -xHost"
+    else
+        echo "CI: using generic optimization (no -xHost)"
+    fi
+
+    export PPLIST="VENDOR_BLAS"
+    if [ -z "$MKLROOT" ]; then
+        echo "Warning: MKLROOT not set, MKL linking may fail"
+    fi
+    FFLAGS+=" -qmkl=sequential"
+
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled"
+        FFLAGS+=" -g3 -traceback"
+    fi
+
 elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
     # Forced GCC selection - jump directly to GCC configuration
     FC="mpif90"
@@ -152,6 +226,10 @@ elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
     echo "Compiler found: $(which $FC)"
     echo "$($FC --version | head -n1)"
 
+    # Essential Nek5000 flags (we override makenek.inc's auto-detection)
+    FFLAGS+=" -cpp"                              # C preprocessor (FCPP)
+    FFLAGS+=" -fdefault-real-8 -fdefault-double-8"  # Double precision reals (FR8)
+    FFLAGS+=" -w -std=legacy"                    # Suppress warnings, legacy extensions (FF77)
     FFLAGS+=" -ffixed-form"
     FFLAGS+=" -ffixed-line-length-none"
     # Use portable flags in CI, native optimization otherwise
@@ -185,52 +263,15 @@ elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
         USR_LFLAGS+=" -lfftw3"
     fi
 
-elif command -v ifort >/dev/null 2>&1; then
-    # Intel Classic (ifort) available
-    echo "Using Intel Compiler Classic (ifort)..."
-    FC="mpiifort"
-    # Use mpiicx if icc is not available (Intel 2024+)
-    if command -v icc >/dev/null 2>&1; then
-        CC="mpiicc"
-    else
-        CC="mpiicx"
-    fi
-
-    FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
-    FFLAGS+=" -extend-source" # Accepts line with longer than 72 characters (132 characters)
-
-    MPIIFORT_VERSION=$(mpiifort --version | head -n 1)
-    if [ "$MPIIFORT_VERSION" = "ifort (IFORT) 2021.9.0 20230302" ]; then
-        echo "Detected mpiifort version 2021.9.0 20230302. Applying specific settings."
-        CFLAGS+=" -diag-disable=10441 -diag-disable=42"
-        FFLAGS+=" -diag-disable=10441 -warn noalign"
-    elif [ -n "$CI" ]; then
-        # No CPU-specific flags for CI - ifort's -x flags require Intel CPUs
-        echo "CI: using generic optimization (no -xHost)"
-    else
-        FFLAGS+=" -xHost"
-    fi
-
-    export PPLIST="VENDOR_BLAS"
-    # Dynamic MKL: best performance via runtime CPU dispatching
-    # Note: Requires Intel environment at runtime (module load intel)
-    if [ -z "$MKLROOT" ]; then
-        echo "Warning: MKLROOT not set, MKL linking may fail"
-    fi
-    FFLAGS+=" -qmkl=sequential"
-
-    # Handle debug mode for ifort
-    if [ "$debug" = true ]; then
-        echo "Debug mode enabled"
-        FFLAGS+=" -g3 -traceback"
-    fi
-
 elif command -v ifx >/dev/null 2>&1; then
-    # Intel LLVM (ifx) available - Intel 2025+
+    # Intel LLVM (ifx) available - preferred over ifort (which is deprecated)
     echo "Using Intel Compiler LLVM (ifx)..."
     FC="mpiifx"
     CC="mpiicx"
 
+    # Essential Nek5000 flags (we override makenek.inc's auto-detection)
+    FFLAGS+=" -fpp"             # Fortran preprocessor
+    FFLAGS+=" -r8 -fpconstant"  # Double precision reals
     FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
     FFLAGS+=" -extend-source" # Accepts line with longer than 72 characters (132 characters)
     # Use portable flags in CI, native optimization otherwise
@@ -261,10 +302,65 @@ elif command -v ifx >/dev/null 2>&1; then
         # FFLAGS+=" -fpe-all=0" # Floating point exception trapping.
         # FFLAGS+=" -debug extended" # Enables all runtime checks.
         # FFLAGS+=" -check all,nobounds,nouninit" # Nek500 fails for array subscript/character substring expressions and uninitialized variables.
-        # FFLAGS+=" -warn all,noexternal,nointerfaces -diag-enable remark" 
-        # FFLAGS+=" -stand f18" # adhere strictly to the standards of f90/f95/f03/f08/f15 
+        # FFLAGS+=" -warn all,noexternal,nointerfaces -diag-enable remark"
+        # FFLAGS+=" -stand f18" # adhere strictly to the standards of f90/f95/f03/f08/f15
     fi
 
+elif command -v ifort >/dev/null 2>&1; then
+    # Intel Classic (ifort) - fallback, deprecated as of 2024
+    echo "Using Intel Compiler Classic (ifort)..."
+    FC="mpiifort"
+    # Use mpiicx if icc is not available (Intel 2024+)
+    if command -v icc >/dev/null 2>&1; then
+        CC="mpiicc"
+    else
+        CC="mpiicx"
+    fi
+
+    # Essential Nek5000 flags (we override makenek.inc's auto-detection)
+    FFLAGS+=" -fpp"             # Fortran preprocessor
+    FFLAGS+=" -r8 -fpconstant"  # Double precision reals
+    FFLAGS+=" -fixed" # Nek5000 is in fixed form .f, while NekStab is in free form .f90
+    FFLAGS+=" -extend-source" # Accepts line with longer than 72 characters (132 characters)
+
+    # Extract ifort version: "ifort (IFORT) 2021.13.1 20240703" -> "2021.13.1"
+    # Note: oneAPI 2024.x bundles ifort 2021.13.x (confusing versioning!)
+    # Match "(IFORT)" to avoid matching the remark line which also contains "ifort"
+    MPIIFORT_VERSION_FULL=$(mpiifort --version 2>&1 | grep "(IFORT)" | head -n 1)
+    IFORT_VERSION=$(echo "$MPIIFORT_VERSION_FULL" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    IFORT_MINOR=$(echo "$IFORT_VERSION" | cut -d. -f2)
+    echo "Detected ifort version: $IFORT_VERSION"
+
+    if [ "$IFORT_VERSION" = "2021.9.0" ]; then
+        echo "Applying ifort 2021.9.0 specific settings."
+        CFLAGS+=" -diag-disable=10441 -diag-disable=42"
+        FFLAGS+=" -diag-disable=10441 -warn noalign"
+    elif [ "$IFORT_MINOR" -ge 13 ] 2>/dev/null; then
+        # ifort 2021.13+ (oneAPI 2024+) shows deprecation warning (remark #10448)
+        echo "Suppressing ifort deprecation warning (remark #10448)."
+        FFLAGS+=" -diag-disable=10448"
+    fi
+
+    # Add xHost for native optimization (skip in CI)
+    if [ -z "$CI" ]; then
+        FFLAGS+=" -xHost"
+    else
+        echo "CI: using generic optimization (no -xHost)"
+    fi
+
+    export PPLIST="VENDOR_BLAS"
+    # Dynamic MKL: best performance via runtime CPU dispatching
+    # Note: Requires Intel environment at runtime (module load intel)
+    if [ -z "$MKLROOT" ]; then
+        echo "Warning: MKLROOT not set, MKL linking may fail"
+    fi
+    FFLAGS+=" -qmkl=sequential"
+
+    # Handle debug mode for ifort
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled"
+        FFLAGS+=" -g3 -traceback"
+    fi
 
 else # GCC
 
@@ -274,6 +370,10 @@ else # GCC
     echo "Compiler found: $(which $FC)"
     echo "$($FC --version | head -n1)"
 
+    # Essential Nek5000 flags (we override makenek.inc's auto-detection)
+    FFLAGS+=" -cpp"                              # C preprocessor (FCPP)
+    FFLAGS+=" -fdefault-real-8 -fdefault-double-8"  # Double precision reals (FR8)
+    FFLAGS+=" -w -std=legacy"                    # Suppress warnings, legacy extensions (FF77)
     FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     # Use portable flags in CI, native optimization otherwise
@@ -452,12 +552,31 @@ $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
 set -o pipefail
 touch ${target}.usr
 
+# Override Nek5000's auto-detected flags with our complete set
+# This replaces makenek.inc's FCPP/FR8/FF77 + user FFLAGS with just our FFLAGS
+# Note: Our FFLAGS must include essential flags: -fpp (preprocessor), -r8 -fpconstant (double precision)
+if [ -f makefile ]; then
+    echo "Overriding FFLAGS in generated makefile..."
+    sed -i "s/^FFLAGS+=.*/FFLAGS+=${FFLAGS}/" makefile
+    # Override optimization levels if NEKSTAB_OPT is set (default: -O2)
+    # L0/L2/L3 control optimization for different source files
+    if [ -n "$NEKSTAB_OPT" ]; then
+        echo "Overriding optimization level: L2 = $NEKSTAB_OPT"
+        sed -i "s/^L2 = .*/L2 = $NEKSTAB_OPT/" makefile
+    fi
+fi
+
 # Unset FFLAGS/CFLAGS to prevent make from reading them twice (makefile + environment)
 unset FFLAGS CFLAGS
 make -j4 2>&1 | tee -a build.log
 set +o pipefail
+# Move .mod files to obj/ if it exists, otherwise remove them
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
-    mv *.mod obj
+    if [ -d obj ]; then
+        mv *.mod obj
+    else
+        rm -f *.mod
+    fi
 fi
 
 # Restore original compiler flags if debug mode was enabled
