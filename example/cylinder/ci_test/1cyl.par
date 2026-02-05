@@ -12,7 +12,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = timeStep
-writeInterval = 100  # Don't write during short test
+writeInterval = 10
 
 dealiasing = yes
 filtering = explicit
