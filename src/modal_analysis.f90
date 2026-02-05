@@ -52,6 +52,11 @@
             write(6,'(A,L1)')   '  POD:        ', ifpod
             write(6,'(A,L1)')   '  DMD:        ', ifdmd
             write(6,'(A,L1)')   '  SPOD:       ', ifspod
+            if (ifwinamp) then
+               write(6,'(A)')   '  Window:     Amplitude norm (PySPOD)'
+            else
+               write(6,'(A)')   '  Window:     Energy norm (Parseval)'
+            end if
             write(6,*) ''
          end if
 
@@ -98,9 +103,9 @@
          if (nid == 0) write(6,*) '  Saved mean field as mea*'
 
 !  -----------------------------------------------------------------
-!  PHASE 3: POD
+!  PHASE 3: POD (also needed for POD-FFT spectral analysis)
 !  -----------------------------------------------------------------
-         if (ifpod) then
+         if (ifpod .or. ifspod) then
             if (nid == 0) then
                write(6,*) ''
                write(6,*) '-------------------------------------------'
@@ -125,16 +130,37 @@
          end if
 
 !  -----------------------------------------------------------------
-!  PHASE 5: SPOD
+!  PHASE 5: POD-FFT Spectral Analysis
+!  -----------------------------------------------------------------
+!  Analyze frequency content of POD temporal coefficients.
+!  Runs automatically with POD to identify dominant frequencies.
+!  -----------------------------------------------------------------
+         if (ifpod .or. ifspod) then
+            if (nid == 0) then
+               write(6,*) ''
+               write(6,*) '-------------------------------------------'
+               write(6,*) '  POD-FFT Spectral Analysis'
+               write(6,*) '-------------------------------------------'
+            end if
+            call pod_fft_spectrum(snaps, modal_nsnap, modal_dt,
+     $                            spod_nfft, spod_noverlap)
+         end if
+
+!  -----------------------------------------------------------------
+!  PHASE 6: SPOD (Spectral POD) - Streaming Algorithm
+!  -----------------------------------------------------------------
+!  Uses streaming SPOD for efficiency (perfect cache locality).
+!  Batch SPOD (spod_compute) is retained for reference but disabled
+!  because per-point FFT is ~100x slower than streaming DFT.
 !  -----------------------------------------------------------------
          if (ifspod) then
             if (nid == 0) then
                write(6,*) ''
                write(6,*) '-------------------------------------------'
-               write(6,*) '  SPOD (Spectral POD)'
+               write(6,*) '  SPOD (Spectral POD) - Streaming'
                write(6,*) '-------------------------------------------'
             end if
-            call spod_compute(snaps, modal_nsnap, modal_dt,
+            call spod_streaming_batch(snaps, modal_nsnap, modal_dt,
      $                        spod_nfft, spod_noverlap, modal_nsave)
          end if
 
@@ -360,12 +386,13 @@
      $           mode%vx, mode%vy, mode%vz, mode%pr, mode%t)
             call outpost2(vx, vy, vz, pr, t, 0, prefix)
 
+!           Compute norm (ALL ranks must call - uses MPI_Allreduce)
+            call k_norm(mode_norm, mode)
+
             if (nid == 0) then
-               call k_norm(mode_norm, mode)
                write(6,'(A,I4,A,E12.4,A,F8.4)')
      $              '    Mode', m, ': lambda =', eigvals(m),
      $              ', ||Phi|| =', mode_norm
-               call flush(6)
             end if
          end do
 
@@ -409,14 +436,279 @@
       end subroutine pod_write_spectrum
 
 !-----------------------------------------------------------------------
-      subroutine dmd_compute(snaps, nsnap, delta_t, rank, nsave)
-!     Projected DMD (Schmid, 2010; Tu et al., 2014)
+      subroutine pod_fft_spectrum(snaps, nsnap, delta_t, nfft, noverlap)
+!  =====================================================================
+!  POD-FFT SPECTRAL ANALYSIS
+!  =====================================================================
 !
-!     1. Form data matrices: X = [x1,...,x_{n-1}], Y = [x2,...,x_n]
-!     2. SVD of X via eigendecomposition of X^T X
-!     3. Project dynamics: Atilde = U^H Y V Sum^{-1}
-!     4. Eigendecomposition of Atilde gives DMD eigenvalues
-!     5. DMD modes: Phi = U W (or Y V Sum^{-1} W for exact DMD)
+!  Fast alternative to field-based SPOD. Instead of FFT on every spatial
+!  point (expensive!), we FFT the POD temporal coefficients (cheap!).
+!
+!  Method:
+!  -------
+!  1. Compute POD via correlation matrix: C(i,j) = <x_i, x_j>
+!  2. Eigensolve: C v_k = λ_k v_k
+!  3. Temporal coefficients: a_k(t) = sqrt(λ_k * n) * v_k(t)
+!  4. FFT each coefficient: â_k(f)
+!  5. Power spectrum: P_k(f) = |â_k(f)|^2
+!
+!  Output:
+!  -------
+!  pod_fft_spectrum.dat with columns:
+!    St, P_1(St), P_2(St), ..., P_r(St)
+!
+!  This tells us which frequencies are present in each POD mode.
+!  For vortex shedding, modes 1-2 should show a peak at St ≈ 0.166.
+!
+!  =====================================================================
+
+         use krylov_subspace
+         use fourier
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         integer, intent(in) :: nsnap, nfft, noverlap
+         real, intent(in) :: delta_t
+         type(krylov_vector), intent(in) :: snaps(nsnap)
+
+         real, allocatable :: C(:,:), eigvals(:), eigvecs(:,:)
+         real, allocatable :: coeffs(:,:)
+         real, allocatable :: window(:), power(:,:), freq(:)
+         real, allocatable :: time_series(:)
+         complex(kind=kind(0.0d0)), allocatable :: spectrum(:)
+         real :: win_weight, df, norm_factor
+         integer :: i, j, k, m, nblk, nfreq, blk_start, r
+         integer :: unit_spec
+         real, parameter :: PI_VAL = 3.14159265358979323846d0
+
+!  -----------------------------------------------------------------
+!  Step 1: Compute POD correlation matrix and eigenvectors
+!  -----------------------------------------------------------------
+         if (nid == 0) write(6,*) '  Computing POD correlation matrix...'
+
+         allocate(C(nsnap, nsnap))
+         allocate(eigvals(nsnap), eigvecs(nsnap, nsnap))
+
+!        Form correlation matrix C(i,j) = <x_i, x_j>
+         do j = 1, nsnap
+            do i = 1, j
+               call k_dot(C(i,j), snaps(i), snaps(j))
+               C(j,i) = C(i,j)
+            end do
+         end do
+         C = C / dble(nsnap)
+
+!        Eigensolve (returns descending order)
+         call eig_symmetric(C, eigvals, eigvecs, nsnap)
+
+!  -----------------------------------------------------------------
+!  Step 2: Determine number of modes to analyze
+!  -----------------------------------------------------------------
+!        Analyze at least 10 modes, or up to 99.99% energy
+         r = nsnap
+         do i = 1, nsnap
+            if (sum(eigvals(1:i)) / sum(eigvals) > 0.9999d0) then
+               r = i
+               exit
+            end if
+         end do
+         r = max(r, min(10, nsnap))  ! At least 10 modes
+         r = min(r, 30)              ! Cap at 30 for readability
+
+         if (nid == 0) write(6,'(A,I4,A)')
+     $        '  Analyzing', r, ' POD modes'
+
+!  -----------------------------------------------------------------
+!  Step 3: Extract temporal coefficients
+!  -----------------------------------------------------------------
+!        a_k(t) = sqrt(λ_k * n) * v_k(t)
+!        eigvecs(t, k) is the temporal coefficient for mode k at time t
+         allocate(coeffs(nsnap, r))
+         do k = 1, r
+            if (eigvals(k) > 0) then
+               do i = 1, nsnap
+                  coeffs(i, k) = eigvecs(i, k) * sqrt(eigvals(k) * nsnap)
+               end do
+            else
+               coeffs(:, k) = 0.0d0
+            end if
+         end do
+
+         deallocate(C, eigvals, eigvecs)
+
+!  -----------------------------------------------------------------
+!  Step 4: Setup FFT parameters
+!  -----------------------------------------------------------------
+         nblk = (nsnap - nfft) / (nfft - noverlap) + 1
+         nfreq = nfft / 2 + 1
+         df = 1.0d0 / (nfft * delta_t)
+
+         if (nblk < 1) then
+            if (nid == 0) then
+               write(6,*) '  ERROR: Not enough snapshots for FFT'
+               write(6,*) '    nsnap =', nsnap, ', nfft =', nfft
+            end if
+            deallocate(coeffs)
+            return
+         end if
+
+         if (nid == 0) then
+            write(6,'(A,I6)') '    nfft:     ', nfft
+            write(6,'(A,I6)') '    noverlap: ', noverlap
+            write(6,'(A,I6)') '    nblk:     ', nblk
+            write(6,'(A,I6)') '    nfreq:    ', nfreq
+            write(6,'(A,E12.4)') '    dSt:      ', df
+         end if
+
+!  -----------------------------------------------------------------
+!  Step 5: Compute Welch power spectrum for each mode
+!  -----------------------------------------------------------------
+         if (nid == 0) write(6,*) '  Computing power spectra...'
+
+         allocate(window(nfft), freq(nfreq))
+         allocate(power(nfreq, r))
+         allocate(time_series(nfft), spectrum(nfreq))
+
+!        Hamming window
+         call hamming_window(nfft, window, win_weight)
+
+!        Frequency array
+         do i = 1, nfreq
+            freq(i) = dble(i - 1) * df
+         end do
+
+!        Initialize power to zero
+         power = 0.0d0
+
+!        Welch method: average over blocks
+         do k = 1, r
+            do m = 1, nblk
+               blk_start = (m - 1) * (nfft - noverlap) + 1
+
+!              Window the time series
+               do i = 1, nfft
+                  time_series(i) = window(i) * coeffs(blk_start + i - 1, k)
+               end do
+
+!              FFT
+               call fft_r2c(nfft, time_series, spectrum)
+
+!              Accumulate power (one-sided spectrum)
+               do i = 1, nfreq
+                  norm_factor = 2.0d0 / (dble(nfft) * win_weight)
+                  if (i == 1 .or. i == nfreq) norm_factor = norm_factor / 2.0d0
+                  power(i, k) = power(i, k) +
+     $                 (real(spectrum(i))**2 + aimag(spectrum(i))**2)
+     $                 * norm_factor**2
+               end do
+            end do
+
+!           Average over blocks
+            power(:, k) = power(:, k) / dble(nblk)
+         end do
+
+!  -----------------------------------------------------------------
+!  Step 6: Write spectrum file
+!  -----------------------------------------------------------------
+         unit_spec = 79
+         if (nid == 0) then
+            open(unit=unit_spec, file='pod_fft_spectrum.dat',
+     $           status='replace')
+            write(unit_spec, '(A)', advance='no') '# St'
+            do k = 1, r
+               write(unit_spec, '(A,I3)', advance='no') '  P_mode', k
+            end do
+            write(unit_spec, *)
+
+!           Write data
+            do i = 1, nfreq
+               write(unit_spec, '(E14.6)', advance='no') freq(i)
+               do k = 1, r
+                  write(unit_spec, '(E14.6)', advance='no') power(i, k)
+               end do
+               write(unit_spec, *)
+            end do
+
+            close(unit_spec)
+            write(6,*) '  Wrote pod_fft_spectrum.dat'
+
+!           Report peak frequencies for first few modes
+            write(6,*) ''
+            write(6,*) '  Peak frequencies (excluding DC):'
+            do k = 1, min(r, 10)
+               j = 2  ! Start from index 2 to skip DC
+               do i = 3, nfreq
+                  if (power(i, k) > power(j, k)) j = i
+               end do
+               write(6,'(A,I3,A,F8.4,A,E12.4)')
+     $              '    Mode', k, ': St =', freq(j),
+     $              ', power =', power(j, k)
+            end do
+         end if
+
+         deallocate(coeffs, window, freq, power, time_series, spectrum)
+
+         if (nid == 0) write(6,*) '  POD-FFT analysis complete'
+
+      end subroutine pod_fft_spectrum
+
+!-----------------------------------------------------------------------
+      subroutine dmd_compute(snaps, nsnap, delta_t, rank, nsave)
+!  =====================================================================
+!  PROJECTED DYNAMIC MODE DECOMPOSITION (DMD)
+!  =====================================================================
+!
+!  References:
+!    - Schmid, P.J. (2010) "Dynamic mode decomposition of numerical
+!      and experimental data", JFM 656:5-28
+!    - Tu et al. (2014) "On dynamic mode decomposition: Theory and
+!      applications", J. Comp. Dyn. 1(2):391-421
+!
+!  Algorithm Overview:
+!  -------------------
+!  Given snapshots x_1, x_2, ..., x_n at times t, t+dt, ..., t+(n-1)*dt,
+!  DMD finds the best-fit linear operator A such that x_{k+1} ≈ A x_k.
+!
+!  The eigenvalues μ of A (called Ritz values) encode:
+!    - Growth/decay rate: σ = log|μ| / dt
+!    - Frequency: ω = arg(μ) / dt, or St = ω / (2π)
+!
+!  For oscillatory dynamics (like vortex shedding), eigenvalues come
+!  in complex conjugate pairs: μ = |μ| e^{±iω dt}
+!
+!  Projected DMD Algorithm:
+!  ------------------------
+!  1. Define data matrices:
+!       X = [x_1, x_2, ..., x_{n-1}]   (input snapshots)
+!       Y = [x_2, x_3, ..., x_n]       (time-shifted snapshots)
+!     So Y ≈ A X represents the dynamics.
+!
+!  2. Compute SVD of X via Gram matrix (memory efficient):
+!       G = X^T X  (Gram matrix, n×n instead of storing full X)
+!       G = V Λ V^T where Λ = diag(σ_1^2, ..., σ_n^2)
+!       This gives X ≈ U Σ V^T where U_i = X V_i / σ_i
+!
+!  3. Project operator onto POD basis:
+!       Ã = U^H A U = U^H Y V Σ^{-1}
+!
+!     In terms of inner products (key formula!):
+!       Ã(i,j) = Σ_k Σ_m ⟨x_{k+1}, x_m⟩ V(m,i) V(k,j) / (σ_i σ_j) × σ_i
+!
+!     IMPORTANT: We need the FULL shifted Gram matrix:
+!       G_shift(k,m) = ⟨Y_k, X_m⟩ = ⟨x_{k+1}, x_m⟩  for ALL k,m pairs
+!
+!     This is NOT symmetric: G_shift(k,m) ≠ G_shift(m,k) in general.
+!     The asymmetry is what produces complex eigenvalues!
+!
+!  4. Eigendecomposition of Ã:
+!       Ã W = W Λ_dmd
+!     where Λ_dmd contains the DMD eigenvalues (Ritz values).
+!
+!  5. DMD modes (optional):
+!       Φ = X V Σ^{-1} W  (projected DMD modes)
+!
+!  =====================================================================
 
          use krylov_subspace
          implicit none
@@ -427,22 +719,26 @@
          real, intent(in) :: delta_t
          type(krylov_vector), intent(in) :: snaps(nsnap)
 
-         integer :: n, r, i, j, m
+         integer :: n, r, i, j, k, m
          real, allocatable :: G(:,:), S(:), Vt(:,:), Sinv(:)
+         real, allocatable :: G_shift(:,:)
          real, allocatable :: Atilde(:,:), Atilde_work(:,:)
-         real, allocatable :: Y_proj(:,:)
          complex(kind=kind(0.0d0)), allocatable :: dmd_evals(:)
          complex(kind=kind(0.0d0)), allocatable :: dmd_evecs(:,:)
          real :: alpha, total_energy, cumsum, tol
          real, parameter :: PI_VAL = 3.14159265358979323846d0
 
-!        n-1 snapshot pairs for DMD
+!        Number of snapshot pairs for DMD
+!        X = [x_1, ..., x_{n-1}], Y = [x_2, ..., x_n]
          n = nsnap - 1
 
          if (nid == 0) write(6,*) '  Using', n, 'snapshot pairs'
 
 !  -----------------------------------------------------------------
-!  Step 1: Form Gram matrix G = X^T X
+!  STEP 1: Form Gram matrix G = X^T X
+!  -----------------------------------------------------------------
+!  G(i,j) = ⟨x_i, x_j⟩ for i,j = 1,...,n (using first n snapshots)
+!  This is symmetric: G(i,j) = G(j,i), so we only compute upper triangle.
 !  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Computing Gram matrix...'
 
@@ -451,25 +747,33 @@
          do j = 1, n
             do i = 1, j
                call k_dot(G(i,j), snaps(i), snaps(j))
-               G(j,i) = G(i,j)
+               G(j,i) = G(i,j)  ! Symmetry
             end do
          end do
 
 !  -----------------------------------------------------------------
-!  Step 2: SVD via eigendecomposition of G
+!  STEP 2: SVD of X via eigendecomposition of Gram matrix
+!  -----------------------------------------------------------------
+!  G = V Λ V^T where Λ = diag(σ_1^2, ..., σ_n^2)
+!  This is equivalent to X = U Σ V^T where:
+!    - V are the right singular vectors (temporal modes)
+!    - Σ = diag(σ_1, ..., σ_n) are singular values
+!    - U = X V Σ^{-1} are left singular vectors (spatial modes)
+!
+!  We truncate to rank r to reduce computational cost and noise.
 !  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Computing SVD via eigendecomp...'
 
          allocate(S(n), Vt(n, n))
          call eig_symmetric(G, S, Vt, n)
 
-!        S now contains sigma^2, need sqrt for singular values
-!        Also determine rank (truncation)
+!        S now contains σ^2 (eigenvalues of G), sorted descending
+!        Determine rank r based on energy threshold or user input
          total_energy = sum(S)
          if (rank > 0) then
             r = min(rank, n)
          else
-!           Auto-rank: capture 99% energy
+!           Auto-rank: capture 99% of total energy
             cumsum = 0.0d0
             r = n
             do i = 1, n
@@ -485,7 +789,7 @@
      $        '  Using rank r =', r, ' (',
      $        100.0d0 * sum(S(1:r)) / total_energy, '% energy)'
 
-!        Convert eigenvalues to singular values and compute inverse
+!        Convert eigenvalues (σ^2) to singular values (σ) and inverses
          allocate(Sinv(r))
          tol = 1.0d-12 * S(1)
          do i = 1, r
@@ -499,43 +803,76 @@
          end do
 
 !  -----------------------------------------------------------------
-!  Step 3: Project Y onto POD basis and form Atilde
+!  STEP 3: Form shifted Gram matrix and projected operator Ã
 !  -----------------------------------------------------------------
+!  The shifted Gram matrix captures the time-shift dynamics:
+!    G_shift(k,m) = ⟨Y_k, X_m⟩ = ⟨x_{k+1}, x_m⟩
+!
+!  CRITICAL: This is NOT symmetric! G_shift(k,m) ≠ G_shift(m,k)
+!  The asymmetry encodes the temporal dynamics and is essential
+!  for producing complex eigenvalues in oscillatory systems.
+!
+!  The projected operator is:
+!    Ã(i,j) = [Σ^{-1} V^T G_shift V Σ^{-1}](i,j) × σ_i
+!           = Σ_k Σ_m G_shift(k,m) V(m,i) V(k,j) Sinv(i) Sinv(j) × S(i)
+!           = Σ_k Σ_m ⟨x_{k+1}, x_m⟩ V(m,i) V(k,j) Sinv(j)
+!  -----------------------------------------------------------------
+!        Allocate shifted Gram matrix (NOT symmetric!)
+         allocate(G_shift(n, n))
+
+!        Compute G_shift(k,m) = ⟨x_{k+1}, x_m⟩ for all k,m = 1,...,n
+!        Note: x_{k+1} is snaps(k+1), x_m is snaps(m)
+!
+!        Optimization: Many elements overlap with G (already computed)
+!        G(i,j) = ⟨x_i, x_j⟩, so G_shift(k,m) = G(k+1,m) for k+1 <= n
+!        Only need to compute elements involving snaps(n+1) = snaps(nsnap)
+!
+!        Reuse from G where possible (k+1 ranges 2..n, m ranges 1..n)
+         do m = 1, n
+            do k = 1, n-1
+!              G_shift(k,m) = ⟨x_{k+1}, x_m⟩ = G(k+1, m)
+               G_shift(k,m) = G(k+1, m)
+            end do
+!           k=n requires snaps(n+1) = snaps(nsnap), not in G
+            call k_dot(G_shift(n,m), snaps(nsnap), snaps(m))
+         end do
+
          if (nid == 0) write(6,*) '  Forming projected operator...'
 
-!        Atilde(i,j) = Sum_k Sum_l <U_i, Y_k> V(k,j) Sum^{-1}_j
-!        where U_i = Sum_m V(m,i) X_m / sigma_i
-!        So Atilde(i,j) = Sum_k <snaps(k+1), snaps(m)> V(m,i) V(k,j) Sum^{-1}_i Sum^{-1}_j
-
-         allocate(Y_proj(r, r))
+!        Form Ã using the shifted Gram matrix
+!        Ã = U^H Y V Σ^{-1} = Σ^{-1} V^T (X^T Y) V Σ^{-1}
+!        Ã(i,j) = Σ_k Σ_m G_shift(k,m) × V(m,i) × V(k,j) × Sinv(i) × Sinv(j)
+!
+!        IMPORTANT: Both Sinv(i) and Sinv(j) are needed!
+!        - Sinv(i) comes from U_i = X V_i / σ_i
+!        - Sinv(j) comes from the explicit Σ^{-1} in U^H Y V Σ^{-1}
          allocate(Atilde(r, r))
+         Atilde = 0.0d0
 
-!        Y_proj(i,j) = <U_i, Y V Sum^{-1} e_j> = Sum_k <U_i, snaps(k+1)> V(k,j) Sum^{-1}_j
-!        But U_i = Sum_m snaps(m) V(m,i) Sum^{-1}_i
-!        So Y_proj(i,j) = Sum_k Sum_m <snaps(m), snaps(k+1)> V(m,i) V(k,j) Sum^{-1}_i Sum^{-1}_j
-
-         Y_proj = 0.0d0
-         do i = 1, r
-            do j = 1, r
-               do m = 1, n
-!                 <snaps(m), snaps(m+1)> contributes to shifted correlation
-                  call k_dot(alpha, snaps(m), snaps(m+1))
-                  Y_proj(i,j) = Y_proj(i,j) + alpha *
-     $                 Vt(m,i) * Vt(m,j) * Sinv(i) * Sinv(j)
+         do j = 1, r
+            do i = 1, r
+               do k = 1, n
+                  do m = 1, n
+                     Atilde(i,j) = Atilde(i,j) + G_shift(k,m) *
+     $                    Vt(m,i) * Vt(k,j) * Sinv(i) * Sinv(j)
+                  end do
                end do
             end do
          end do
 
-!        Atilde = Sum^{-1} U^H Y V Sum^{-1} = Y_proj (already scaled)
-!        Actually need to rescale: Atilde(i,j) = sigma_i * Y_proj(i,j)
-         do i = 1, r
-            do j = 1, r
-               Atilde(i,j) = S(i) * Y_proj(i,j)
-            end do
-         end do
+!        Note: Ã is generally NOT symmetric, which is correct!
+!        For oscillatory systems, Ã will have complex eigenvalue pairs.
 
 !  -----------------------------------------------------------------
-!  Step 4: Eigendecomposition of Atilde
+!  STEP 4: Eigendecomposition of Ã
+!  -----------------------------------------------------------------
+!  Solve Ã W = W Λ where Λ = diag(μ_1, ..., μ_r) are DMD eigenvalues.
+!
+!  For oscillatory dynamics:
+!    - Eigenvalues come in complex conjugate pairs: μ, μ*
+!    - |μ| < 1: decaying mode, |μ| > 1: growing mode, |μ| = 1: neutral
+!    - arg(μ) / dt = angular frequency ω
+!    - Strouhal number St = ω / (2π) = arg(μ) / (2π dt)
 !  -----------------------------------------------------------------
          if (nid == 0) write(6,*) '  Computing DMD eigenvalues...'
 
@@ -543,16 +880,17 @@
          allocate(Atilde_work(r, r))
          Atilde_work = Atilde
 
+!        General eigenvalue solver (not symmetric - returns complex)
          call eig(Atilde_work, dmd_evecs, dmd_evals, r)
 
 !  -----------------------------------------------------------------
-!  Step 5: Write spectrum and reconstruct modes
+!  STEP 5: Output spectrum and reconstruct modes
 !  -----------------------------------------------------------------
          call dmd_write_spectrum(dmd_evals, r, delta_t)
          call dmd_reconstruct_modes(snaps, Vt, S, Sinv,
      $        dmd_evecs, dmd_evals, n, r, nsave)
 
-         deallocate(G, S, Vt, Sinv, Y_proj, Atilde, Atilde_work)
+         deallocate(G, G_shift, S, Vt, Sinv, Atilde, Atilde_work)
          deallocate(dmd_evals, dmd_evecs)
 
          if (nid == 0) write(6,*) '  DMD complete'
@@ -619,17 +957,20 @@
          real, parameter :: PI_VAL = 3.14159265358979323846d0
          character(len=3) :: prefix_re, prefix_im
 
-         prefix_re = 'dRe'
-         prefix_im = 'dIm'
+         prefix_re = 'dm1'
+         prefix_im = 'dm2'
          nmodes = min(nsave, r)
 
 !        DMD mode m: Phi_m = X V Sum^{-1} w_m
 !        where w_m is eigenvector of Atilde
+         if (nid == 0) write(6,'(A,I4,A)')
+     $      '   Reconstructing ', nmodes, ' DMD modes...'
+
          do m = 1, nmodes
             call k_zero(mode_re)
             call k_zero(mode_im)
 
-!           Phi_m = Sum_i snaps(i) * (Sum_j V(i,j) Sum^{-1}_j w_m(j))
+!           Phi_m = Sum_i snaps(i) * (Sum_j V(i,j) Sinv(j) w_m(j))
             do i = 1, n
                coef_re = 0.0d0
                coef_im = 0.0d0
@@ -643,6 +984,16 @@
                call k_add2s2(mode_im, snaps(i), coef_im)
             end do
 
+!           Compute mode norm (ALL ranks must call - uses MPI_Allreduce)
+            call k_norm(mode_norm, mode_re)
+
+!           Skip output if mode is invalid (NaN or very large)
+            if (mode_norm /= mode_norm .or. mode_norm > 1.0d30) then
+               if (nid == 0) write(6,*) '  WARNING: DMD mode', m,
+     $              'has invalid values, skipping'
+               cycle
+            end if
+
 !           Output real part
             call nopcopy(vx, vy, vz, pr, t,
      $           mode_re%vx, mode_re%vy, mode_re%vz,
@@ -655,11 +1006,11 @@
      $           mode_im%pr, mode_im%t)
             call outpost2(vx, vy, vz, pr, t, 0, prefix_im)
 
+!           Print mode info
             if (nid == 0) then
                mu_mag = abs(evals(m))
                freq = atan2(aimag(evals(m)), real(evals(m))) /
      $              (2.0d0 * PI_VAL * modal_dt)
-               call k_norm(mode_norm, mode_re)
                write(6,'(A,I4,A,F8.4,A,F10.4,A,E12.4)')
      $              '    Mode', m, ': |mu| =', mu_mag,
      $              ', St =', freq, ', ||Phi_re|| =', mode_norm
@@ -667,6 +1018,52 @@
          end do
 
       end subroutine dmd_reconstruct_modes
+
+!-----------------------------------------------------------------------
+      subroutine spod_streaming_batch(snaps, nsnap, delta_t,
+     $                                nfft, noverlap, nsave)
+!  =====================================================================
+!  STREAMING SPOD (BATCH MODE)
+!  =====================================================================
+!
+!  Process pre-loaded snapshots using streaming SPOD algorithm.
+!  This is faster than the per-point FFT approach in spod_compute()
+!  because it has perfect cache locality (O(nfreq × nblk) k_add2s2
+!  operations per snapshot vs per-point FFT with terrible stride).
+!
+!  Usage: Can replace spod_compute() in modal_analysis() dispatcher.
+!
+!  =====================================================================
+
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         integer, intent(in) :: nsnap, nfft, noverlap, nsave
+         real, intent(in) :: delta_t
+         type(krylov_vector), intent(in) :: snaps(nsnap)
+
+         integer :: i
+
+         if (nid == 0) then
+            write(6,*) ''
+            write(6,*) '  Using STREAMING SPOD algorithm (batch mode)'
+            write(6,*) ''
+         end if
+
+!        Initialize streaming SPOD
+         call spod_stream_init(nfft, noverlap, delta_t)
+
+!        Process each snapshot
+         do i = 1, nsnap
+            call spod_stream_update(snaps(i), i)
+         end do
+
+!        Finalize and output results
+         call spod_stream_finalize(nsave)
+
+      end subroutine spod_streaming_batch
 
 !-----------------------------------------------------------------------
       subroutine spod_compute(snaps, nsnap, delta_t, nfft, noverlap, nsave)
@@ -678,7 +1075,7 @@
 !     4. Eigendecomposition gives SPOD modes at that frequency
 
          use krylov_subspace
-         use fourier_fftw
+         use fourier
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -748,7 +1145,14 @@
 !  -----------------------------------------------------------------
 !  Loop over frequencies
 !  -----------------------------------------------------------------
+         if (nid == 0) write(6,'(A,I4,A)')
+     $      '   Processing ', nfreq, ' frequencies...'
+
          do ifreq = 1, nfreq
+
+            if (nid == 0 .and. mod(ifreq,5) == 1) then
+               write(6,'(A,I4,A,I4)') '     freq ', ifreq, ' / ', nfreq
+            end if
 
 !           FFT each block at this frequency
             do iblk = 1, nblk
@@ -806,14 +1210,11 @@
      $     window, win_weight, delta_t, ifreq, out_re, out_im)
 !     FFT a block of snapshots and extract frequency component ifreq
 !
-!     For each spatial point:
-!       1. Apply window: x_windowed(j) = window(j) * snaps(j)%field
-!       2. FFT the time series
-!       3. Extract real/imag at frequency ifreq
-!       4. Apply normalization
+!     Uses per-point FFT for efficiency (O(nfft log nfft) vs O(nfft²))
+!     Point loop is internal implementation detail, not exposed to caller
 
          use krylov_subspace
-         use fourier_fftw
+         use fourier
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -832,7 +1233,6 @@
          nfreq = nfft / 2 + 1
 
 !        Normalization for one-sided spectrum
-!        Factor of 2 for discarding negative frequencies
          norm_factor = 2.0d0 / (dble(nfft) * win_weight)
          if (ifreq == 1 .or. ifreq == nfreq) then
             norm_factor = norm_factor / 2.0d0  ! DC and Nyquist
@@ -844,7 +1244,7 @@
          nv = nx1*ny1*nz1*nelv
          nt = nx1*ny1*nz1*nelt
 
-!        Process vx component
+!        Process velocity components
          do ipt = 1, nv
             do j = 1, nfft
                time_series(j) = window(j) *
@@ -855,7 +1255,6 @@
             out_im%vx(ipt) = aimag(spectrum(ifreq)) * norm_factor
          end do
 
-!        Process vy component
          do ipt = 1, nv
             do j = 1, nfft
                time_series(j) = window(j) *
@@ -866,7 +1265,6 @@
             out_im%vy(ipt) = aimag(spectrum(ifreq)) * norm_factor
          end do
 
-!        Process vz component (if 3D)
          if (if3d) then
             do ipt = 1, nv
                do j = 1, nfft
@@ -1061,12 +1459,29 @@
 
 !-----------------------------------------------------------------------
       subroutine hamming_window(n, window, win_weight)
-!     Compute Hamming window and its energy normalization factor
+!     Compute Hamming window and normalization weight
+!
+!     Usage: norm_factor = 2 / (nfft * win_weight)  for one-sided spectrum
+!
+!     Normalization convention controlled by ifwinamp:
+!       ifwinamp = .true.   -> Amplitude: win_weight = mean(window) [PySPOD]
+!       ifwinamp = .false.  -> Energy: win_weight = sqrt(sum(w²)/n) [Parseval]
+!
+!     For Hamming window:
+!       - mean(w) ≈ 0.54 (amplitude-preserving normalization)
+!       - sqrt(sum(w²)/n) ≈ 0.63 (energy-preserving normalization)
+!       - Power spectrum ratio: (0.63/0.54)² ≈ 1.36
+!
+!     PySPOD compatible: `ifwinamp = .true.` (default)
 
          implicit none
+         include 'SIZE'
+!        Note: NEKSTAB variables (ifwinamp) available via SIZE -> NEKSTAB.inc
+
          integer, intent(in) :: n
          real, intent(out) :: window(n), win_weight
          real, parameter :: PI_VAL = 3.14159265358979323846d0
+         real :: win_mean, win_energy
          integer :: i
 
          do i = 1, n
@@ -1074,7 +1489,548 @@
      $           dble(i-1) / dble(n-1))
          end do
 
-!        Window energy for normalization
-         win_weight = sum(window**2) / dble(n)
+!        Compute window statistics
+         win_mean = sum(window) / dble(n)           ! ≈ 0.54 for Hamming
+         win_energy = sum(window**2) / dble(n)      ! ≈ 0.397 for Hamming
+
+!        Select win_weight based on normalization convention
+!        Formula used: norm_factor = 2 / (nfft * win_weight)
+         if (ifwinamp) then
+!           Amplitude normalization (PySPOD compatible)
+!           A pure sinusoid of amplitude A produces FFT peak of amplitude A
+            win_weight = win_mean
+         else
+!           Energy normalization (Parseval's theorem)
+!           Total energy in time equals total energy in frequency domain
+            win_weight = sqrt(win_energy)
+         end if
 
       end subroutine hamming_window
+
+!-----------------------------------------------------------------------
+! STREAMING SPOD MODULE
+!-----------------------------------------------------------------------
+! Persistent state for streaming (online) SPOD computation.
+! Processes one snapshot at a time, accumulating DFT coefficients.
+!
+! Advantages over batch SPOD:
+!   - No need to store all snapshots in memory
+!   - Perfect cache locality (one snapshot at a time)
+!   - Can run online during DNS simulation
+!
+! Usage:
+!   call spod_stream_init(nfft, noverlap, dt)
+!   do istep = 1, nsteps
+!      ... DNS step produces snapshot ...
+!      call spod_stream_update(snap, istep)
+!   end do
+!   call spod_stream_finalize(nsave)
+!-----------------------------------------------------------------------
+      module spod_streaming_state
+         use krylov_subspace
+         implicit none
+         private
+
+         public :: spod_s_init, spod_s_cleanup
+         public :: spod_s_nfft, spod_s_noverlap, spod_s_nfreq, spod_s_nblk
+         public :: spod_s_dt, spod_s_win_weight
+         public :: spod_s_window, spod_s_t_idx, spod_s_n_complete
+         public :: spod_s_n_snaps, spod_s_initialized
+         public :: spod_s_mean
+         public :: spod_s_dft_re, spod_s_dft_im
+
+!        Scalar parameters (set during init)
+         integer, save :: spod_s_nfft = 0
+         integer, save :: spod_s_noverlap = 0
+         integer, save :: spod_s_nfreq = 0
+         integer, save :: spod_s_nblk = 0
+         real, save :: spod_s_dt = 0.0d0
+         real, save :: spod_s_win_weight = 0.0d0
+         integer, save :: spod_s_n_snaps = 0
+         logical, save :: spod_s_initialized = .false.
+
+!        Allocatable arrays
+         real, allocatable, save :: spod_s_window(:)
+         integer, allocatable, save :: spod_s_t_idx(:)
+         integer, allocatable, save :: spod_s_n_complete(:)
+
+!        Mean snapshot (running average)
+         type(krylov_vector), save :: spod_s_mean
+
+!        DFT accumulators: dft_re(ifreq, iblk), dft_im(ifreq, iblk)
+!        Stored as 1D array indexed as (ifreq-1)*nblk + iblk
+         type(krylov_vector), allocatable, save :: spod_s_dft_re(:)
+         type(krylov_vector), allocatable, save :: spod_s_dft_im(:)
+
+      contains
+
+         subroutine spod_s_init(nfft, noverlap, dt, nblk_in)
+            integer, intent(in) :: nfft, noverlap, nblk_in
+            real, intent(in) :: dt
+            integer :: i, idx
+
+            spod_s_nfft = nfft
+            spod_s_noverlap = noverlap
+            spod_s_dt = dt
+            spod_s_nfreq = nfft / 2 + 1
+            spod_s_nblk = nblk_in
+            spod_s_n_snaps = 0
+
+!           Allocate window
+            allocate(spod_s_window(nfft))
+            allocate(spod_s_t_idx(spod_s_nblk))
+            allocate(spod_s_n_complete(spod_s_nblk))
+
+!           Initialize block indices with staggered starts
+!           Block 1 starts at 0, block 2 at -(nfft-noverlap), etc.
+            do i = 1, spod_s_nblk
+               spod_s_t_idx(i) = -(i-1) * (nfft - noverlap)
+               spod_s_n_complete(i) = 0
+            end do
+
+!           Allocate DFT accumulators
+            allocate(spod_s_dft_re(spod_s_nfreq * spod_s_nblk))
+            allocate(spod_s_dft_im(spod_s_nfreq * spod_s_nblk))
+
+!           Initialize to zero
+            call k_zero(spod_s_mean)
+            do idx = 1, spod_s_nfreq * spod_s_nblk
+               call k_zero(spod_s_dft_re(idx))
+               call k_zero(spod_s_dft_im(idx))
+            end do
+
+            spod_s_initialized = .true.
+
+         end subroutine spod_s_init
+
+         subroutine spod_s_cleanup()
+            if (allocated(spod_s_window)) deallocate(spod_s_window)
+            if (allocated(spod_s_t_idx)) deallocate(spod_s_t_idx)
+            if (allocated(spod_s_n_complete)) deallocate(spod_s_n_complete)
+            if (allocated(spod_s_dft_re)) deallocate(spod_s_dft_re)
+            if (allocated(spod_s_dft_im)) deallocate(spod_s_dft_im)
+            spod_s_initialized = .false.
+            spod_s_n_snaps = 0
+         end subroutine spod_s_cleanup
+
+      end module spod_streaming_state
+
+!-----------------------------------------------------------------------
+      subroutine spod_stream_init(nfft_in, noverlap_in, delta_t_in)
+!     Initialize streaming SPOD computation
+!
+!     Parameters:
+!       nfft_in     - FFT block size (e.g., 64)
+!       noverlap_in - Block overlap (e.g., 32 for 50%)
+!       delta_t_in  - Time between snapshots
+!
+!     Call this once before starting to process snapshots.
+
+         use spod_streaming_state
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         integer, intent(in) :: nfft_in, noverlap_in
+         real, intent(in) :: delta_t_in
+
+         integer :: nblk, i
+         real :: win_mean, win_energy
+         real, parameter :: PI_VAL = 3.14159265358979323846d0
+
+!        Estimate number of blocks (will grow if more snapshots arrive)
+!        Start with a reasonable number
+         nblk = 10
+
+         if (nid == 0) then
+            write(6,*) ''
+            write(6,*) '==============================================='
+            write(6,*) '  STREAMING SPOD INITIALIZATION'
+            write(6,*) '==============================================='
+            write(6,'(A,I6)')    '    nfft:     ', nfft_in
+            write(6,'(A,I6)')    '    noverlap: ', noverlap_in
+            write(6,'(A,I6)')    '    nfreq:    ', nfft_in/2+1
+            write(6,'(A,I6)')    '    nblk:     ', nblk
+            write(6,'(A,E12.4)') '    dt:       ', delta_t_in
+            write(6,'(A,E12.4)') '    dSt:      ',
+     $           1.0d0/(nfft_in*delta_t_in)
+         end if
+
+!        Initialize state module
+         call spod_s_init(nfft_in, noverlap_in, delta_t_in, nblk)
+
+!        Compute Hamming window
+         do i = 1, nfft_in
+            spod_s_window(i) = 0.54d0 - 0.46d0 * cos(2.0d0 * PI_VAL *
+     $           dble(i-1) / dble(nfft_in-1))
+         end do
+
+!        Window normalization (amplitude-preserving for PySPOD compat)
+         win_mean = sum(spod_s_window) / dble(nfft_in)
+         win_energy = sum(spod_s_window**2) / dble(nfft_in)
+
+         if (ifwinamp) then
+            spod_s_win_weight = win_mean
+         else
+            spod_s_win_weight = sqrt(win_energy)
+         end if
+
+         if (nid == 0) then
+            write(6,*) '  Streaming SPOD initialized'
+            write(6,*) '  Call spod_stream_update() for each snapshot'
+            write(6,*) ''
+         end if
+
+      end subroutine spod_stream_init
+
+!-----------------------------------------------------------------------
+      subroutine spod_stream_update(snap, isnap)
+!     Process one snapshot for streaming SPOD
+!
+!     Parameters:
+!       snap  - Current snapshot (krylov_vector)
+!       isnap - Current snapshot index (1-based)
+!
+!     This accumulates DFT coefficients for all overlapping blocks.
+!     Call this for each snapshot during DNS or post-processing.
+
+         use krylov_subspace
+         use spod_streaming_state
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         type(krylov_vector), intent(in) :: snap
+         integer, intent(in) :: isnap
+
+         type(krylov_vector) :: x_centered
+         real :: scale, theta, w, cos_t, sin_t, norm_factor
+         integer :: iblk, ifreq, idx, t_local
+         real, parameter :: PI_VAL = 3.14159265358979323846d0
+
+         if (.not. spod_s_initialized) then
+            if (nid == 0) write(6,*)
+     $         'ERROR: spod_stream_update called before init'
+            return
+         end if
+
+!  -----------------------------------------------------------------
+!  Step 1: Update running mean
+!  -----------------------------------------------------------------
+!        mean = (n * mean + snap) / (n + 1)
+         spod_s_n_snaps = spod_s_n_snaps + 1
+         scale = dble(spod_s_n_snaps - 1) / dble(spod_s_n_snaps)
+         call k_cmult(spod_s_mean, scale)
+         scale = 1.0d0 / dble(spod_s_n_snaps)
+         call k_add2s2(spod_s_mean, snap, scale)
+
+!  -----------------------------------------------------------------
+!  Step 2: Center snapshot (subtract running mean)
+!  -----------------------------------------------------------------
+         call k_copy(x_centered, snap)
+         call k_sub2(x_centered, spod_s_mean)
+
+!  -----------------------------------------------------------------
+!  Step 3: Accumulate DFT for each block
+!  -----------------------------------------------------------------
+!        Normalization for one-sided spectrum
+         norm_factor = 2.0d0 / (dble(spod_s_nfft) * spod_s_win_weight)
+
+         do iblk = 1, spod_s_nblk
+
+!           Check if this block is active (t_idx >= 0)
+            if (spod_s_t_idx(iblk) < 0) then
+!              Block not yet started
+               spod_s_t_idx(iblk) = spod_s_t_idx(iblk) + 1
+               cycle
+            end if
+
+            t_local = spod_s_t_idx(iblk)
+
+!           Check if block is complete
+            if (t_local >= spod_s_nfft) then
+!              Block complete - reset with overlap
+               spod_s_n_complete(iblk) = spod_s_n_complete(iblk) + 1
+
+!              Reset DFT accumulators for this block
+               do ifreq = 1, spod_s_nfreq
+                  idx = (ifreq - 1) * spod_s_nblk + iblk
+                  call k_zero(spod_s_dft_re(idx))
+                  call k_zero(spod_s_dft_im(idx))
+               end do
+
+!              Reset time index (keep overlap worth of samples)
+               spod_s_t_idx(iblk) = 0
+               t_local = 0
+            end if
+
+!           Get window coefficient
+            w = spod_s_window(t_local + 1)
+
+!           Accumulate DFT for each frequency
+!           X̂(f) += w * x * exp(-2πi(f-1)*t/nfft)
+!                 = w * x * (cos(θ) - i*sin(θ))
+            do ifreq = 1, spod_s_nfreq
+               theta = 2.0d0 * PI_VAL * dble(ifreq - 1) *
+     $              dble(t_local) / dble(spod_s_nfft)
+               cos_t = cos(theta) * w * norm_factor
+               sin_t = -sin(theta) * w * norm_factor
+
+!              DC and Nyquist corrections
+               if (ifreq == 1 .or. ifreq == spod_s_nfreq) then
+                  cos_t = cos_t / 2.0d0
+                  sin_t = sin_t / 2.0d0
+               end if
+
+               idx = (ifreq - 1) * spod_s_nblk + iblk
+               call k_add2s2(spod_s_dft_re(idx), x_centered, cos_t)
+               call k_add2s2(spod_s_dft_im(idx), x_centered, sin_t)
+            end do
+
+!           Advance time index for this block
+            spod_s_t_idx(iblk) = t_local + 1
+
+         end do
+
+!        Progress output
+         if (nid == 0 .and. mod(spod_s_n_snaps, 50) == 0) then
+            write(6,'(A,I6,A,I3,A)') '    Processed ', spod_s_n_snaps,
+     $           ' snapshots, ', sum(spod_s_n_complete), ' blocks done'
+         end if
+
+      end subroutine spod_stream_update
+
+!-----------------------------------------------------------------------
+      subroutine spod_stream_finalize(nsave)
+!     Finalize streaming SPOD: compute modes and write output
+!
+!     Parameters:
+!       nsave - Number of modes to save per frequency
+!
+!     This computes the cross-spectral density matrix at each frequency,
+!     performs eigendecomposition, and outputs SPOD modes.
+
+         use krylov_subspace
+         use spod_streaming_state
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         integer, intent(in) :: nsave
+
+         integer :: ifreq, iblk, jblk, idx_i, idx_j, nblk_done, nmodes
+         real :: df
+         real, allocatable :: freq(:), spod_evals(:)
+         complex(kind=kind(0.0d0)), allocatable :: CSD(:,:)
+         complex(kind=kind(0.0d0)), allocatable :: spod_evecs(:,:)
+         complex(kind=kind(0.0d0)) :: cval
+         type(krylov_vector) :: mode_re, mode_im
+         real :: coef_re, coef_im, mode_norm
+         integer :: unit_spec, m, i
+         character(len=3) :: prefix_re, prefix_im
+         real, parameter :: PI_VAL = 3.14159265358979323846d0
+
+         if (.not. spod_s_initialized) then
+            if (nid == 0) write(6,*)
+     $         'ERROR: spod_stream_finalize called before init'
+            return
+         end if
+
+         if (nid == 0) then
+            write(6,*) ''
+            write(6,*) '==============================================='
+            write(6,*) '  STREAMING SPOD FINALIZATION'
+            write(6,*) '==============================================='
+            write(6,'(A,I6)') '    Total snapshots:   ', spod_s_n_snaps
+            write(6,'(A,I6)') '    Completed blocks:  ',
+     $           sum(spod_s_n_complete)
+         end if
+
+!        Count valid blocks (those with at least one complete cycle)
+         nblk_done = 0
+         do iblk = 1, spod_s_nblk
+            if (spod_s_n_complete(iblk) > 0) nblk_done = nblk_done + 1
+         end do
+
+         if (nblk_done < 2) then
+            if (nid == 0) then
+               write(6,*) '  ERROR: Need at least 2 complete blocks'
+               write(6,*) '    Have:', nblk_done
+               write(6,*) '    Need more snapshots or smaller nfft'
+            end if
+            call spod_s_cleanup()
+            return
+         end if
+
+         if (nid == 0) then
+            write(6,'(A,I6)') '    Valid blocks:      ', nblk_done
+         end if
+
+!        Allocate working arrays
+         df = 1.0d0 / (spod_s_nfft * spod_s_dt)
+         allocate(freq(spod_s_nfreq))
+         allocate(CSD(nblk_done, nblk_done))
+         allocate(spod_evals(nblk_done))
+         allocate(spod_evecs(nblk_done, nblk_done))
+
+!        Frequency array
+         do i = 1, spod_s_nfreq
+            freq(i) = dble(i - 1) * df
+         end do
+
+!        Open spectrum file
+         unit_spec = 79
+         prefix_re = 'sRe'
+         prefix_im = 'sIm'
+
+         if (nid == 0) then
+            open(unit=unit_spec, file='spod_stream_spectrum.dat',
+     $           status='replace')
+            write(unit_spec, '(A)')
+     $         '# Streaming SPOD Spectrum: St, eigenvalues'
+         end if
+
+!  -----------------------------------------------------------------
+!  Loop over frequencies
+!  -----------------------------------------------------------------
+         if (nid == 0) write(6,'(A,I4,A)')
+     $      '    Processing ', spod_s_nfreq, ' frequencies...'
+
+         nmodes = min(nsave, nblk_done)
+
+         do ifreq = 1, spod_s_nfreq
+
+!           Form CSD matrix (Hermitian): CSD(i,j) = <Qhat_i, Qhat_j>
+            do jblk = 1, nblk_done
+               do iblk = 1, jblk
+                  idx_i = (ifreq - 1) * spod_s_nblk + iblk
+                  idx_j = (ifreq - 1) * spod_s_nblk + jblk
+
+                  call k_dot_complex(cval,
+     $                 spod_s_dft_re(idx_i), spod_s_dft_im(idx_i),
+     $                 spod_s_dft_re(idx_j), spod_s_dft_im(idx_j))
+
+                  CSD(iblk, jblk) = cval
+                  CSD(jblk, iblk) = conjg(cval)
+               end do
+            end do
+            CSD = CSD / dble(nblk_done)
+
+!           Eigendecomposition
+            call eig_hermitian(CSD, spod_evals, spod_evecs, nblk_done)
+
+!           Write spectrum row
+            if (nid == 0) then
+               write(unit_spec, '(E14.6)', advance='no') freq(ifreq)
+               do i = 1, nblk_done
+                  write(unit_spec, '(E14.6)', advance='no')
+     $                 spod_evals(i)
+               end do
+               write(unit_spec, *)
+            end if
+
+!           Save modes at selected frequencies
+            call spod_stream_save_modes(ifreq, spod_s_nfreq, freq,
+     $           spod_evecs, spod_evals, nblk_done, nmodes)
+
+         end do
+
+         if (nid == 0) then
+            close(unit_spec)
+            write(6,*) '    Wrote spod_stream_spectrum.dat'
+         end if
+
+!        Cleanup
+         deallocate(freq, CSD, spod_evals, spod_evecs)
+         call spod_s_cleanup()
+
+         if (nid == 0) then
+            write(6,*) '  Streaming SPOD complete'
+            write(6,*) '==============================================='
+         end if
+
+      end subroutine spod_stream_finalize
+
+!-----------------------------------------------------------------------
+      subroutine spod_stream_save_modes(ifreq, nfreq, freq,
+     $     evecs, evals, nblk, nsave)
+!     Save SPOD modes at selected frequencies
+
+         use krylov_subspace
+         use spod_streaming_state
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         integer, intent(in) :: ifreq, nfreq, nblk, nsave
+         real, intent(in) :: freq(nfreq), evals(nblk)
+         complex(kind=kind(0.0d0)), intent(in) :: evecs(nblk, nblk)
+
+         type(krylov_vector) :: mode_re, mode_im
+         real :: coef_re, coef_im, mode_norm
+         integer :: m, iblk, idx, nmodes
+         character(len=3) :: prefix_re, prefix_im
+         logical :: save_this_freq
+
+!        Decide which frequencies to save
+         save_this_freq = .false.
+         if (ifreq == 1) save_this_freq = .true.
+         if (ifreq == nfreq) save_this_freq = .true.
+         if (mod(ifreq-1, max(1, nfreq/8)) == 0) save_this_freq = .true.
+
+         if (.not. save_this_freq) return
+
+         prefix_re = 'sRe'
+         prefix_im = 'sIm'
+         nmodes = min(nsave, nblk)
+
+!        Reconstruct and save modes
+         do m = 1, nmodes
+            call k_zero(mode_re)
+            call k_zero(mode_im)
+
+!           Phi_m = Sum_i w_m(i) * Qhat(i) / sqrt(lambda_m * nblk)
+            do iblk = 1, nblk
+               coef_re = real(evecs(iblk, m))
+               coef_im = aimag(evecs(iblk, m))
+
+               idx = (ifreq - 1) * spod_s_nblk + iblk
+
+!              Complex multiplication: mode += coef * blk
+               call k_add2s2(mode_re, spod_s_dft_re(idx), coef_re)
+               call k_add2s2(mode_re, spod_s_dft_im(idx), -coef_im)
+               call k_add2s2(mode_im, spod_s_dft_re(idx), coef_im)
+               call k_add2s2(mode_im, spod_s_dft_im(idx), coef_re)
+            end do
+
+!           Normalize
+            if (evals(m) > 0.0d0) then
+               coef_re = 1.0d0 / sqrt(evals(m) * dble(nblk))
+               call k_cmult(mode_re, coef_re)
+               call k_cmult(mode_im, coef_re)
+            end if
+
+!           Output real part
+            call nopcopy(vx, vy, vz, pr, t,
+     $           mode_re%vx, mode_re%vy, mode_re%vz,
+     $           mode_re%pr, mode_re%t)
+            call outpost2(vx, vy, vz, pr, t, 0, prefix_re)
+
+!           Output imaginary part
+            call nopcopy(vx, vy, vz, pr, t,
+     $           mode_im%vx, mode_im%vy, mode_im%vz,
+     $           mode_im%pr, mode_im%t)
+            call outpost2(vx, vy, vz, pr, t, 0, prefix_im)
+
+!           Compute norm (ALL ranks must call - uses MPI_Allreduce)
+            if (m == 1) then
+               call k_norm(mode_norm, mode_re)
+               if (nid == 0) then
+                  write(6,'(A,F10.4,A,E12.4,A,E12.4)')
+     $                 '      St =', freq(ifreq), ': lambda_1 =',
+     $                 evals(1), ', ||Phi|| =', mode_norm
+               end if
+            end if
+         end do
+
+      end subroutine spod_stream_save_modes
