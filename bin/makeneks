@@ -82,6 +82,34 @@ do_full_clean () {
     echo "=== FULL CLEAN COMPLETE ==="
 }
 
+# Check if gslib is compatible with current compiler; clean if not
+check_gslib_compat () {
+    local gslib_dir="$NEK_SOURCE_ROOT/3rd_party/gslib"
+    local libgs="$gslib_dir/lib/libgs.a"
+
+    [ ! -f "$libgs" ] && return 0
+
+    echo "Checking gslib compiler compatibility..."
+
+    local test_dir=$(mktemp -d)
+    # Must CALL the function to force linker to resolve gslib symbols
+    cat > "$test_dir/t.c" << 'EOF'
+extern void fgslib_gs_setup_(void*, void*, void*, void*, void*);
+int main(void) { fgslib_gs_setup_(0,0,0,0,0); return 0; }
+EOF
+
+    if $CC "$test_dir/t.c" -L"$gslib_dir/lib" -lgs -lm -o "$test_dir/t" 2>/dev/null; then
+        echo "  gslib OK"
+        rm -rf "$test_dir"
+        return 0
+    fi
+
+    rm -rf "$test_dir"
+    echo "  gslib INCOMPATIBLE - cleaning for rebuild..."
+    rm -rf "$gslib_dir/lib" "$gslib_dir/include" "$gslib_dir/install.stamp"
+    find "$gslib_dir" \( -name '*.o' -o -name '*.a' \) -delete 2>/dev/null || true
+}
+
 # Intel compiler common flags (shared by ifx and ifort)
 setup_intel_common_flags () {
     FFLAGS+=" -fpp"             # Fortran preprocessor
@@ -370,6 +398,10 @@ echo "NEKSTAB_SOURCE_ROOT = $NEKSTAB_SOURCE_ROOT" > "$FILE"
 echo 'include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab' >> "$FILE"
 
 : ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
+
+# Check gslib compatibility before building dependencies
+check_gslib_compat
+
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig "$target"
 $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
