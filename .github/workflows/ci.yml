@@ -74,22 +74,16 @@ jobs:
           # FFTW bottle depends on open-mpi, so we only support OpenMPI on macOS
           brew install open-mpi fftw
 
-      - name: Configure Intel MPI environment
+      - name: Configure Intel MPI and MKL environment
         if: matrix.mpi == 'intelmpi'
         run: |
-          # Source Intel MPI environment and export to GITHUB_ENV
-          source /opt/intel/oneapi/mpi/latest/env/vars.sh
-          # Set compilers based on toolchain
-          # Note: ifort uses icx/icpx for C/C++ (icc/icpc deprecated in oneAPI 2024+)
-          if [ "${{ matrix.toolchain.compiler }}" = "intel-classic" ]; then
-            echo "I_MPI_FC=ifort" >> $GITHUB_ENV
-            echo "I_MPI_CC=icx" >> $GITHUB_ENV
-            echo "I_MPI_CXX=icpx" >> $GITHUB_ENV
-          else
-            echo "I_MPI_FC=ifx" >> $GITHUB_ENV
-            echo "I_MPI_CC=icx" >> $GITHUB_ENV
-            echo "I_MPI_CXX=icpx" >> $GITHUB_ENV
-          fi
+          # Source Intel oneAPI environment (MPI + MKL)
+          source /opt/intel/oneapi/setvars.sh --force
+          # Export key variables to GITHUB_ENV for subsequent steps
+          echo "I_MPI_FC=ifx" >> $GITHUB_ENV
+          echo "I_MPI_CC=icx" >> $GITHUB_ENV
+          echo "I_MPI_CXX=icpx" >> $GITHUB_ENV
+          echo "MKLROOT=$MKLROOT" >> $GITHUB_ENV
           echo "PATH=$PATH" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
