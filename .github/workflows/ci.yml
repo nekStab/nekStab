@@ -91,8 +91,8 @@ jobs:
       - name: Setup Nek5000
         run: |
           # Nek5000 tools (genmap, genbox) need gfortran - maketools doesn't recognize ifx
-          # Temporarily override FC/CC for the setup script
-          FC=gfortran CC=gcc yes "" | ./Nek5000setup.sh
+          export FC=gfortran CC=gcc
+          yes "" | ./Nek5000setup.sh
 
       - name: Set environment paths
         run: |
