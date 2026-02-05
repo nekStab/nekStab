@@ -116,11 +116,12 @@ jobs:
 
       - name: Run smoke test (10 timesteps, 2 procs)
         run: |
-          ulimit -s unlimited
+          # Set stack size (unlimited on Linux, skip on macOS)
+          ulimit -s unlimited 2>/dev/null || true
           cd example/cylinder/ci_test
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
-          mpirun -np 2 ./nek5000 > logfile 2>&1
+          mpirun -np 2 ./nek5000 > logfile 2>&1 || { cat logfile; exit 1; }
 
       - name: Verify output
         run: |
