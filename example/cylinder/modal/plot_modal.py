@@ -301,9 +301,15 @@ def plot_pod_fft(pod_fft, max_modes=5):
         ax.semilogy(pod_fft.St, power, 'o-', color=colors[i], linewidth=lw,
                     markersize=4, alpha=alpha, label=f'POD mode {i+1}')
 
-    # Mark expected vortex shedding frequency
-    ax.axvline(0.164, color='red', linestyle='--', linewidth=1.0,
-               alpha=0.7, label=r'$St \approx 0.164$')
+    # Reference Strouhal number for Re=100 cylinder (from stability analysis)
+    St_ref = 0.16594721970048534
+    ax.axvline(St_ref, color='red', linestyle='--', linewidth=1.0,
+               alpha=0.7, label=rf'$St = {St_ref:.4f}$ (Re=100)')
+    # Add marker at the peak of mode 1 if it's near the reference
+    if pod_fft.nmodes > 0:
+        y_pos = pod_fft.peak_power[0]
+        ax.plot(St_ref, y_pos, 'r*', markersize=12, markeredgecolor='k',
+                markeredgewidth=0.5, zorder=5)
 
     ax.set_xlabel(r'Strouhal number $St$')
     ax.set_ylabel('Power spectral density')
