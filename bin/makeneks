@@ -114,10 +114,6 @@ setup_ifx_flags () {
     else
         FFLAGS+=" -xHost"
     fi
-
-    # Performance flags for ifx
-    FFLAGS+=" -mprefer-vector-width=512"   # Encourage AVX-512 vectorization
-    FFLAGS+=" -align array64byte"          # 64-byte alignment for AVX-512
 }
 
 # ifort-specific flags (Intel Classic)
