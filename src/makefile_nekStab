@@ -25,7 +25,12 @@ $(OBJDIR)/IO.o:                   $(NEKSTAB_SOURCE_ROOT)/src/IO.f90             
 $(OBJDIR)/postproc.o:             $(NEKSTAB_SOURCE_ROOT)/src/postproc.f90             $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/newton_krylov.o:        $(NEKSTAB_SOURCE_ROOT)/src/newton_krylov.f90        $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/sensitivity.o:          $(NEKSTAB_SOURCE_ROOT)/src/sensitivity.f90          $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/modal_analysis.o:       $(NEKSTAB_SOURCE_ROOT)/src/modal_analysis.f90       $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier.o ;$(FC) -c $(FL2) $< -o $@
+# Modal analysis modules (new modular structure)
+$(OBJDIR)/modal_pod.o:            $(NEKSTAB_SOURCE_ROOT)/src/modal_pod.f90            $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/modal_dmd.o:            $(NEKSTAB_SOURCE_ROOT)/src/modal_dmd.f90            $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/modal_spod.o:           $(NEKSTAB_SOURCE_ROOT)/src/modal_spod.f90           $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier.o $(OBJDIR)/modal_pod.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/modal_spod_streaming.o: $(NEKSTAB_SOURCE_ROOT)/src/modal_spod_streaming.f90 $(OBJDIR)/krylov_subspace.o $(OBJDIR)/modal_pod.o $(OBJDIR)/modal_spod.o ;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/modal_analysis.o:       $(NEKSTAB_SOURCE_ROOT)/src/modal_analysis.f90       $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier.o $(OBJDIR)/modal_pod.o $(OBJDIR)/modal_dmd.o $(OBJDIR)/modal_spod.o $(OBJDIR)/modal_spod_streaming.o ;$(FC) -c $(FL2) $< -o $@
 
 # Files without module dependencies
 $(OBJDIR)/argsort.o:              $(NEKSTAB_SOURCE_ROOT)/src/argsort.f90              ;$(FC) -c $(FL2) $< -o $@
