@@ -36,7 +36,7 @@
          type, public :: krylov_vector
             real, dimension(lv) :: vx, vy, vz     ! Velocity components
             real, dimension(lp) :: pr             ! Pressure field
-            real, dimension(lv, ldimt) :: t       ! Temperature/passive scalars
+            real, dimension(lt, ldimt) :: t       ! Temperature/passive scalars
             real :: time                          ! Time value
          end type krylov_vector
       
@@ -62,6 +62,7 @@
       !     - k_cmult(p,c):         p = c*p            ! Scalar multiplication
       !     - k_add2(p,q):          p = p + q          ! Vector addition
       !     - k_add2s2(p,q,c):      p = p + c*q        ! Scaled addition (AXPY)
+      !     - k_axpby(p,a,q,b):    p = a*p + b*q      ! Scaled combination (AXPBY)
       !     - k_sub2(p,q):          p = p - q          ! Vector subtraction
       !     - k_sub3(p,q,r):        p = q - r          ! Three vector operation
       !     - k_zero(p):            p = 0              ! Zero vector
@@ -97,11 +98,10 @@
          end if
       
       !     --> Time component.
-         if (uparam(1) == 2.1) then
+         if (isNewtonPO) then
             alpha = alpha + p%time*q%time
          end if
-      
-         return
+
       end subroutine k_dot
       
       subroutine k_norm(alpha, p)
@@ -114,7 +114,6 @@
       
          call k_dot(alpha, p, p)
          alpha = sqrt(alpha)
-         return
       end subroutine k_norm
       
       subroutine k_normalize(p, alpha)
@@ -163,7 +162,6 @@
             ! alpha remains 0 - DO NOT modify it
          end if
 
-         return
       end subroutine k_normalize
       
       subroutine k_cmult(p, c)
@@ -175,7 +173,6 @@
          real, intent(in) :: c
          call nopcmult(p%vx, p%vy, p%vz, p%pr, p%t, c)
          p%time = p%time*c
-         return
       end subroutine k_cmult
       
       subroutine k_add2(p, q)
@@ -187,7 +184,6 @@
          type(krylov_vector), intent(in) :: q
          call nopadd2(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = p%time + q%time
-         return
       end subroutine k_add2
 
       subroutine k_add2s2(p, q, c)
@@ -202,8 +198,22 @@
          call nopadd2s2(p%vx, p%vy, p%vz, p%pr, p%t,
      $                  q%vx, q%vy, q%vz, q%pr, q%t, c)
          p%time = p%time + c*q%time
-         return
       end subroutine k_add2s2
+
+      subroutine k_axpby(p, alpha, q, beta)
+!        p = alpha*p + beta*q  (BLAS-style AXPBY operation)
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         type(krylov_vector), intent(inout) :: p
+         real, intent(in) :: alpha
+         type(krylov_vector), intent(in) :: q
+         real, intent(in) :: beta
+         call nopaxpby(p%vx, p%vy, p%vz, p%pr, p%t,
+     $                 alpha, q%vx, q%vy, q%vz, q%pr, q%t, beta)
+         p%time = alpha*p%time + beta*q%time
+      end subroutine k_axpby
 
       subroutine k_sub2(p, q)
          use krylov_subspace
@@ -214,8 +224,6 @@
          type(krylov_vector), intent(in) :: q
          call nopsub2(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = p%time - q%time
-      
-         return
       end subroutine k_sub2
       
       subroutine k_sub3(p, q, r)
@@ -228,7 +236,6 @@
          call nopsub3(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz,
      $   q%pr, q%t, r%vx, r%vy, r%vz, r%pr, r%t)
          p%time = q%time - r%time
-         return
       end subroutine k_sub3
       
       subroutine k_zero(p)
@@ -239,7 +246,6 @@
          type(krylov_vector), intent(inout) :: p
          call noprzero(p%vx, p%vy, p%vz, p%pr, p%t)
          p%time = 0.0d0
-         return
       end subroutine k_zero
       
       subroutine k_copy(p, q)
@@ -251,53 +257,110 @@
          type(krylov_vector), intent(in) :: q
          call nopcopy(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = q%time
-         return
       end subroutine k_copy
       
       subroutine k_matmul(dq, Q, yvec, k)
+!        dq = Q(:) * yvec(:)  (matrix-vector product, zero temporary storage)
          use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      
-         integer :: i, m, k
+
+         integer, intent(in) :: k
          type(krylov_vector), intent(out) :: dq
          type(krylov_vector), dimension(k), intent(in) :: Q
          real, dimension(k), intent(in) :: yvec
-      
-         real, dimension(lv, k) :: qx, qy, qz
-         real, dimension(lp, k) :: qp
-         real, dimension(lv, k, ldimt) :: qt
-      
-         real, dimension(k) :: time_comp
-      
-         do i = 1, k
-            qx(:, i) = Q(i)%vx(:)
-            qy(:, i) = Q(i)%vy(:)
-            qp(:, i) = Q(i)%pr(:)
-            if (if3d) qz(:, i) = Q(i)%vz(:)
-            if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
-            if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
-               end do
-            end if
-            time_comp(i) = Q(i)%time
-         end do
-      
+         integer :: i
+
          call k_zero(dq)
-      
-         dq%vx(:) = matmul(qx(:, :), yvec(:))
-         dq%vy(:) = matmul(qy(:, :), yvec(:))
-         dq%pr(:) = matmul(qp(:, :), yvec(:))
-         if (if3d) dq%vz(:) = matmul(qz(:, :), yvec(:))
-         if (ifto) dq%t(:, 1) = matmul(qt(:, :, 1), yvec(:))
+         do i = 1, k
+            call k_add2s2(dq, Q(i), yvec(i))
+         end do
+      end subroutine k_matmul
+
+      subroutine allocate_orbit(nsteps_in)
+!
+!     Allocate orbit storage arrays (uor, vor, wor, tor) on the heap.
+!     Guards on if3d and ifto/ldimt ensure minimal memory usage.
+!     Call once before the first orbit integration.
+!
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'PARALLEL' ! nid
+         include 'INPUT'    ! if3d, ifto, ifpsco
+
+         integer, intent(in) :: nsteps_in
+
+         if (nid == 0) write (6, *)
+     $      'ALLOCATING ORBIT WITH NSTEPS:', nsteps_in
+
+         allocate(uor(lv, nsteps_in), vor(lv, nsteps_in))
+         if (if3d) then
+            allocate(wor(lv, nsteps_in))
+         else
+            allocate(wor(1, 1))
+         end if
+         if (ifto .or. ldimt > 1)
+     $      allocate(tor(lt, nsteps_in, ldimt))
+
+      end subroutine allocate_orbit
+
+      subroutine orbit_store(istep_in)
+!
+!     Store the current velocity (vx,vy,vz) and temperature (t) fields
+!     into the orbit arrays at the given time-step index.
+!
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'SOLN'    ! vx, vy, vz, t
+         include 'INPUT'   ! if3d, ifto, ifpsco
+
+         integer, intent(in) :: istep_in
+         integer :: m
+
+         nt = nx1*ny1*nz1*nelt
+
+         call opcopy(uor(:,istep_in), vor(:,istep_in),
+     $      wor(:,istep_in), vx, vy, vz)
+         if (ifto) call copy(tor(:,istep_in,1),
+     $      t(:,:,:,:,1), nt)
          if (ldimt > 1) then
             do m = 2, ldimt
-               if (ifpsco(m - 1)) dq%t(:, m) = matmul(qt(:, :, m), yvec(:))
+               if (ifpsco(m-1)) call copy(
+     $            tor(:,istep_in,m), t(:,:,:,:,m), nt)
             end do
          end if
-         dq%time = dot_product(time_comp(:), yvec(:))
-      
-         return
-      end subroutine k_matmul
+
+      end subroutine orbit_store
+
+      subroutine orbit_restore(istep_in)
+!
+!     Restore the velocity (vx,vy,vz) and temperature (t) fields
+!     from the orbit arrays at the given time-step index.
+!
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'SOLN'    ! vx, vy, vz, t
+         include 'INPUT'   ! if3d, ifto, ifpsco
+
+         integer, intent(in) :: istep_in
+         integer :: m
+
+         nt = nx1*ny1*nz1*nelt
+
+         call opcopy(vx, vy, vz,
+     $      uor(:,istep_in), vor(:,istep_in),
+     $      wor(:,istep_in))
+         if (ifto) call copy(t(:,:,:,:,1),
+     $      tor(:,istep_in,1), nt)
+         if (ldimt > 1) then
+            do m = 2, ldimt
+               if (ifpsco(m-1)) call copy(
+     $            t(:,:,:,:,m), tor(:,istep_in,m), nt)
+            end do
+         end if
+
+      end subroutine orbit_restore
