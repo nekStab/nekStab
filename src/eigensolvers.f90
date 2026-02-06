@@ -414,6 +414,7 @@
          character(len=80) filename
          character(len=20) fich1, fich2, fich3, fich4, fmt2, fmt3, fmt4, fmt5, fmt6
          character(len=3) nRe, nIm, nRv
+         character(len=2) ci
          integer :: outp
 
          nv = nx1*ny1*nz1*nelv
@@ -609,7 +610,8 @@
             write (844, fmt2) 'e/rank=          ', nelgv/np
             write (844, '(A)') '[userParams]'
             do i = 1, 10
-               write (844, fmt4) 'uparam0'//trim(char(i))//'=        ', uparam(i)
+               write (ci, '(I2.2)') i
+               write (844, fmt4) 'uparam'//ci//'=        ',uparam(i)
             end do
             write (844, '(A)') '[solver]'
             write (844, fmt3) 'ctarg=           ', ctarg
