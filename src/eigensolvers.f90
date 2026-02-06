@@ -34,7 +34,7 @@
          real, dimension(lv), intent(in) :: px, py, pz
          real, dimension(lv), intent(in) :: qx, qy, qz
          real, dimension(lp), intent(in) :: pp, qp !not used
-         real, dimension(lv, ldimt), intent(in) :: pt, qt
+         real, dimension(lt, ldimt), intent(in) :: pt, qt
 
          real, intent(out) :: alpha
          real :: glsc3
@@ -65,7 +65,7 @@
 
          real, intent(in), dimension(lv) :: qx, qy, qz
          real, intent(in), dimension(lp) :: qp
-         real, intent(in), dimension(lv, ldimt) :: qt
+         real, intent(in), dimension(lt, ldimt) :: qt
          real, intent(out) :: alpha
 
          call inner_product(alpha, qx, qy, qz, qp, qt, qx, qy, qz, qp, qt)
@@ -97,7 +97,7 @@
       !     ----- Miscellaneous -----
          type(krylov_vector) :: wrk, wrk2
 
-         integer :: mstart, converged_eigenvalues, m
+         integer :: mstart, converged_eigenvalues, m, total_matvecs
          real :: alpha
          logical :: converged
          integer :: i, j
@@ -260,11 +260,13 @@
       !     ======================================
 
          schur_cnt = 0
+         total_matvecs = 0
          converged = .false.
 
          do while (.not. converged)
 
       !     --> Arnoldi factorization.
+            total_matvecs = total_matvecs + (k_dim - mstart + 1)
             call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
 
       !     if(nid.eq.0) then
@@ -340,13 +342,19 @@
       !  end do
       !  if (nid == 0) close (unit=99)
 
-         if (nid == 0) write (6, *) 'Converged eigenvalues: ', converged_eigenvalues
+         if (nid == 0) then
+            write (6, *) 'Converged eigenvalues: ',
+     $           converged_eigenvalues
+            write (6, *) 'Total matrix-vector products: ',
+     $           total_matvecs
+         end if
 
          if (converged_eigenvalues > 0) then
             if (nid == 0) then
                write (6, *) 'Exporting modes...'
             end if
-            call outpost_ks(vals, vecs, Q, residual, converged_eigenvalues)
+            call outpost_ks(vals, vecs, Q, residual,
+     $           converged_eigenvalues, total_matvecs)
          end if
 
          if (nid == 0) write (6, *) 'Eigenproblem solver finished.'
@@ -363,7 +371,8 @@
 
       !----------------------------------------------------------------------
 
-      subroutine outpost_ks(vals, vecs, Q, residual, converged)
+      subroutine outpost_ks(vals, vecs, Q, residual, converged,
+     $     total_matvecs)
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -376,28 +385,30 @@
       ! Krylov basis V for the projection M*V = V*H
          type(krylov_vector), dimension(k_dim + 1), intent(in) :: Q
          real, dimension(k_dim), intent(in) :: residual
-         integer, intent(in) :: converged
+         integer, intent(in) :: converged, total_matvecs
 
       ! Krylov vectors
          type(krylov_vector) :: qq
          type(krylov_vector) :: ff
-      ! Arrays for Krylov basis
-         real, dimension(lv, k_dim + 1) :: qx, qy, qz
-         real, dimension(lp, k_dim + 1) :: qp
-         real, dimension(lt, ldimt, k_dim + 1) :: qt
+      ! Arrays for Krylov basis (heap-allocated to avoid stack overflow)
+         real, allocatable :: qx(:,:), qy(:,:), qz(:,:)
+         real, allocatable :: qp(:,:)
+         real, allocatable :: qt(:,:,:)
 
       ! Arrays for the storage/output of a given eigenmode of the NS operator
-         complex(kind=kind(0.0d0)), dimension(lv) :: fp_cx, fp_cy, fp_cz
-         complex(kind=kind(0.0d0)), dimension(lp) :: fp_cp
-         complex(kind=kind(0.0d0)), dimension(lt, ldimt) :: fp_ct
+         complex(kind=kind(0.0d0)), allocatable :: fp_cx(:), fp_cy(:), fp_cz(:)
+         complex(kind=kind(0.0d0)), allocatable :: fp_cp(:)
+         complex(kind=kind(0.0d0)), allocatable :: fp_ct(:,:)
+
+      ! Work arrays for dgemv (real/imag split)
+         real, allocatable :: vecs_re(:), vecs_im(:)
+         real, allocatable :: work_re(:), work_im(:)
 
       ! Miscellaneous variables
          integer :: i, m
-         real :: speriod, trim, spurious_tol !, glmin, glmax
+         real :: speriod, trim, spurious_tol
          real :: alpha, alpha_r, alpha_i, beta, old_uparam1, omega
-      !real :: norma_Re, norma_Im
          complex :: log_transform
-      !logical ifto_sav, ifpo_sav
 
       ! File handling variables
          character(len=80) filename
@@ -406,6 +417,16 @@
          integer :: outp
 
          nv = nx1*ny1*nz1*nelv
+
+      ! Allocate on heap (avoids stack overflow for large 3D cases)
+         allocate(qx(lv, k_dim), qy(lv, k_dim))
+         allocate(qz(lv, k_dim))
+         allocate(qp(lp, k_dim))
+         allocate(qt(lt, ldimt, k_dim))
+         allocate(fp_cx(lv), fp_cy(lv), fp_cz(lv))
+         allocate(fp_cp(lp), fp_ct(lt, ldimt))
+         allocate(vecs_re(k_dim), vecs_im(k_dim))
+         allocate(work_re(lv), work_im(lv))
          speriod = dt*nsteps ! sampling period
 
       !  evop (evolution operator) defined in matvec.f90
@@ -425,31 +446,41 @@
             open (unit=40, file=fich4, form='formatted', status='unknown')
          end if
 
-      ! outpost full spectrum (including spurious modes)
+      ! Copy Krylov basis into contiguous arrays for BLAS
          do i = 1, k_dim
-
             qx(:, i) = Q(i)%vx(:)
             qy(:, i) = Q(i)%vy(:)
             if (if3D) qz(:, i) = Q(i)%vz(:)
             if (ifpo) qp(:, i) = Q(i)%pr(:)
-            if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
+            if (ifto) qt(:, 1, i) = Q(i)%t(:, 1)
             if (ldimt > 1) then
                do m = 2, ldimt
-                  if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
+                  if (ifpsco(m - 1)) qt(:, m, i) = Q(i)%t(:, m)
                end do
             end if
+         end do
 
+      ! outpost full spectrum with convergence flag (4th column: 1=converged, 0=not)
+         do i = 1, k_dim
             if (nid == 0) then
-
-      !outpost the eigenspectrum of the Hessenberg matrix.
-
-               write (10, "(3E15.7)") real(vals(i)), aimag(vals(i)), residual(i)
-
-      !outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
-               write (20, "(3E15.7)") real(log_transform(vals(i)))/speriod, aimag(log_transform(vals(i)))/speriod, residual(i)
-
-            end if ! nid.eq.0
-         end do ! i = 1, k_dim
+               if (residual(i) < eigen_tol
+     $              * max(abs(vals(i)), 1.0d0)) then
+                  write (10, "(3E15.7,I2)") real(vals(i)),
+     $                 aimag(vals(i)), residual(i), 1
+                  write (20, "(3E15.7,I2)")
+     $                 real(log_transform(vals(i)))/speriod,
+     $                 aimag(log_transform(vals(i)))/speriod,
+     $                 residual(i), 1
+               else
+                  write (10, "(3E15.7,I2)") real(vals(i)),
+     $                 aimag(vals(i)), residual(i), 0
+                  write (20, "(3E15.7,I2)")
+     $                 real(log_transform(vals(i)))/speriod,
+     $                 aimag(log_transform(vals(i)))/speriod,
+     $                 residual(i), 0
+               end if
+            end if
+         end do
 
          spurious_tol = max(param(21), param(22))
          outp = 0 ! outposted modes counter
@@ -462,17 +493,32 @@
 
             else ! converged modes
 
-      !     ----- Computation of the corresponding eigenmode -----
-               fp_cx(:) = matmul(qx(:, 1:k_dim), vecs(:, i))
-               fp_cy(:) = matmul(qy(:, 1:k_dim), vecs(:, i))
-               if (if3D) fp_cz(:) = matmul(qz(:, 1:k_dim), vecs(:, i))
+      !     ----- Computation of eigenmode via dgemv (real/imag split) -----
+               vecs_re(:) = real(vecs(:, i))
+               vecs_im(:) = aimag(vecs(:, i))
+
+               call dgemv('N', nv, k_dim, 1.0d0, qx, lv, vecs_re, 1, 0.0d0, work_re, 1)
+               call dgemv('N', nv, k_dim, 1.0d0, qx, lv, vecs_im, 1, 0.0d0, work_im, 1)
+               fp_cx(:) = dcmplx(work_re, work_im)
+
+               call dgemv('N', nv, k_dim, 1.0d0, qy, lv, vecs_re, 1, 0.0d0, work_re, 1)
+               call dgemv('N', nv, k_dim, 1.0d0, qy, lv, vecs_im, 1, 0.0d0, work_im, 1)
+               fp_cy(:) = dcmplx(work_re, work_im)
+
+               if (if3D) then
+                  call dgemv('N', nv, k_dim, 1.0d0, qz, lv, vecs_re, 1, 0.0d0, work_re, 1)
+                  call dgemv('N', nv, k_dim, 1.0d0, qz, lv, vecs_im, 1, 0.0d0, work_im, 1)
+                  fp_cz(:) = dcmplx(work_re, work_im)
+               end if
+
                if (ifpo) fp_cp(:) = matmul(qp(:, 1:k_dim), vecs(:, i))
+
                if (ifto) fp_ct(:, 1) = matmul(qt(:, 1, 1:k_dim), vecs(:, i))
                if (ldimt > 1) then
                   do m = 2, ldimt
                      if (ifpsco(m - 1)) fp_ct(:, m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))
-                  end do ! m = 2,ldimt
-               end if !ldimt.gt.1
+                  end do
+               end if
 
       !        normalization to unit-norm (volume integral of FP*conj(FP) = 1.)
                call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
@@ -583,234 +629,554 @@
             write (844, fmt2) 'schur_target=    ', schur_tgt
             write (844, fmt3) 'schur_del=       ', schur_del
             write (844, fmt2) 'schur iterations=', schur_cnt
-            write (844, fmt2) 'outp=       ', outp
+            write (844, fmt2) 'total matvecs=   ', total_matvecs
+            write (844, fmt2) 'converged=       ', converged
+            write (844, fmt2) 'outp=            ', outp
             close (844)
          end if
 
-         return
+         deallocate(qx, qy, qz, qp, qt)
+         deallocate(fp_cx, fp_cy, fp_cz, fp_cp, fp_ct)
+         deallocate(vecs_re, vecs_im, work_re, work_im)
       end subroutine outpost_ks
 
       !-----------------------------------------------------------------------
 
       subroutine schur_condensation(mstart, H, Q, ksize)
 
+      !     Krylov-Schur restart (Stewart, SIMAX 2001).
+      !
+      !     Given a k-step Arnoldi factorization  A * Q = Q * H + f * e_k^T,
+      !     this subroutine compresses it to a p-step Krylov-Schur factorization
+      !     by keeping only the p "wanted" Ritz pairs and discarding the rest.
+      !     Arnoldi then resumes from position p+1.
+      !
+      !     Algorithm outline:
+      !     1. Compute real Schur decomposition:  H = V * T * V^T
+      !     2. Select p wanted eigenvalues (near unit circle + nev+4 largest)
+      !     3. Reorder Schur form so wanted eigenvalues are in T(1:p, 1:p)
+      !     4. Rotate Krylov basis:  Q_new(:,1:p) = Q_old(:,1:k) * V(:,1:p)
+      !     5. Set coupling row:  H(p+1, 1:p) = beta * e_k^T * V(:, 1:p)
+      !     6. Copy Q(k+1) -> Q(p+1) as new starting vector
+      !
+      !     Memory optimization (this revision):
+      !     - Fields are rotated one at a time (vx, then vy, then vz, ...)
+      !       to reduce peak memory from O(nfields * nv * k) to O(nv * k).
+      !     - Only p (= nsel) output columns are computed via dgemm, not
+      !       all k columns.  FLOP savings: O(nv * k * (k - p)) per field.
+      !     - Explicit out-of-place dgemm avoids hidden temporaries that
+      !       Fortran's matmul would create for in-place A = matmul(A, B).
+      !
+      !     INPUTS / OUTPUTS
+      !     ----------------
+      !     mstart (inout) : on entry, previous restart index (from uparam(2))
+      !                      on exit, set to nsel + 1 (restart position)
+      !     H (inout)      : (ksize+1, ksize) Hessenberg matrix from Arnoldi;
+      !                      overwritten with condensed Schur form
+      !     Q (inout)      : (ksize+1) array of krylov_vectors;
+      !                      Q(1:nsel) overwritten with rotated Schur basis,
+      !                      Q(nsel+1) = former Q(ksize+1) (residual vector)
+      !     ksize (in)     : dimension of the Krylov subspace (= k_dim)
+      !
          use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
 
-      !     =================================================
-      !     =====                                       =====
-      !     ===== Declaration of the required variables =====
-      !     =====                                       =====
-      !     =================================================
-
          integer, intent(inout) :: mstart
          integer, intent(in) :: ksize
 
-      !     ----- Krylov basis V for the projection M*V = V*H -----
-
+      !     ----- Krylov basis V for the projection A*V = V*H + f*e_k^T -----
          type(krylov_vector), dimension(ksize + 1) :: Q
-         real, dimension(lv, ksize + 1) :: qx, qy, qz
-         real, dimension(lp, ksize + 1) :: qp
-         real, dimension(lt, ldimt, ksize + 1) :: qt
 
       !     ----- Upper Hessenberg matrix -----
-
          real, dimension(ksize + 1, ksize) :: H
+
+      !     b_vec = H(k+1,k) * e_k  (residual coupling row before rotation)
          real, dimension(ksize) :: b_vec
 
-      !     ----- Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix -----
-
+      !     ----- Eigenvalues and Schur vectors -----
+      !     vals  : eigenvalues of H(1:k, 1:k) from Schur decomposition
+      !     vecs  : orthogonal Schur vectors (columns of V in H = V*T*V^T)
+      !     selected : logical mask for wanted eigenvalues
          complex(kind=kind(0.0d0)), dimension(ksize) :: vals
-
-      !     ----- Miscellaneous -----
-         integer :: i, m
+         real, dimension(ksize, ksize) :: vecs
          logical, dimension(ksize) :: selected
 
-      !     ----- Schur and Hessenberg decomposition -----
-         real, dimension(ksize, ksize) :: vecs
+      !     ----- Workspace for field-by-field basis rotation -----
+      !     basis(lv, ksize)  : contiguous copy of one field from Q(1:k)
+      !     rotated(lv, nsel) : result of dgemm (out-of-place, no aliasing)
+      !
+      !     Processing one field at a time means the velocity workspace is
+      !     reused for vx, vy, vz in sequence.  Peak memory is O(nv * k)
+      !     + O(nv * nsel) regardless of the number of fields (vx/vy/vz/pr/t).
+      !     The old code allocated ALL fields simultaneously: O(3*nv*k) just
+      !     for velocity, plus Fortran's matmul created hidden temporaries.
+         real, allocatable :: basis(:,:), rotated(:,:)
 
-      !     --> Initialize arrays.
+      !     ----- Miscellaneous -----
+         integer :: i, j, m, nsel, n_locked
+         real :: res
+         real, dimension(ksize) :: time_old, schur_res
+
+         nv = nx1*ny1*nz1*nelv
+
+      !     =====================================================
+      !     Step 1 : Extract residual coupling and Schur decompose
+      !     =====================================================
+
+      !     b_vec captures the only nonzero in row k+1 of the Arnoldi relation.
+      !     After rotation: b_new = b_vec * V, giving the coupling between
+      !     the residual vector and the new Schur basis.
          b_vec = 0.0d0; b_vec(ksize) = H(ksize + 1, ksize)
          vals = (0.0d0, 0.0d0); vecs = 0.0d0
 
-      !     --> Perform the Schur decomposition.
+      !     Compute H(1:k,1:k) = V * T * V^T  via LAPACK dgees.
+      !     On return: H is overwritten with T (quasi-upper-triangular),
+      !                vecs contains V (orthogonal Schur vectors),
+      !                vals contains eigenvalues.
          call schur(H(1:ksize, 1:ksize), vecs, vals, ksize)
 
-      !     --> Partition the eigenvalues in wanted / unwanted.
-         call select_eigenvalues(selected, mstart, vals, schur_del, schur_tgt, ksize)
-         if (nid == 0) write (6, *) mstart, 'Ritz eigenpairs have been selected.'
+      !     =====================================================
+      !     Step 2 : Select wanted eigenvalues
+      !     =====================================================
 
-      !     --> Re-order the Schur decomposition based on the partition.
+      !     Compute per-Schur-vector residuals for adaptive selection.
+      !     Since b_vec = [0,...,0, H(k+1,k)], the dot product with
+      !     Schur vector j reduces to: beta * V(k, j).
+         do i = 1, ksize
+            schur_res(i) = abs(b_vec(ksize) * vecs(ksize, i))
+         end do
+
+      !     Adaptive selection: keep eigenvalues near unit circle,
+      !     partially converged (residual < sqrt(tol)), and at least
+      !     nev+2 by magnitude.  Conjugate pairs kept together.
+         call select_eigenvalues(selected, mstart, vals,
+     $        schur_res, schur_del, schur_tgt, ksize)
+         nsel = mstart
+         if (nid == 0) write (6, *) nsel,
+     $        'Ritz eigenpairs have been selected.'
+
+      !     =====================================================
+      !     Step 3 : Reorder Schur form (LAPACK dtrsen)
+      !     =====================================================
+
+      !     After reordering, the quasi-upper-triangular T has the nsel wanted
+      !     eigenvalues in T(1:nsel, 1:nsel) and the unwanted in the lower-right.
+      !     The Schur vectors V are reordered correspondingly.
          call ordschur(H(1:ksize, 1:ksize), vecs, selected, ksize)
 
-      !     --> Zero-out the unwanted blocks of the Schur matrix.
-         H(1:mstart, mstart + 1:ksize) = 0.0d0
-         H(mstart + 1:ksize + 1, :) = 0.0d0
+      !     =====================================================
+      !     Step 4 : Truncate Hessenberg matrix
+      !     =====================================================
 
-      !     --> Re-order the Krylov basis accordingly.
-         do i = 1, k_dim + 1
-            qx(:, i) = Q(i)%vx(:)
-            qy(:, i) = Q(i)%vy(:)
-            if (if3D) qz(:, i) = Q(i)%vz(:)
-            if (ifpo) qp(:, i) = Q(i)%pr(:)
-            if (ifto) qt(:, i, 1) = Q(i)%t(:, 1)
-            if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) qt(:, i, m) = Q(i)%t(:, m)
-               end do
+      !     Zero the off-diagonal coupling between wanted and unwanted subspaces,
+      !     and all rows below nsel (these will be filled by the next Arnoldi run).
+         H(1:nsel, nsel + 1:ksize) = 0.0d0
+         H(nsel + 1:ksize + 1, :) = 0.0d0
+
+      !     =====================================================
+      !     Step 5 : Residual coupling in the new basis
+      !     =====================================================
+
+      !     The Arnoldi residual transforms as:  f * e_k^T * V.
+      !     Since b_vec = beta * e_k, the new coupling row is b_vec * V.
+      !     Only the first nsel entries are needed (the rest couple to zeroed blocks).
+      !     This row goes into H(nsel+1, 1:nsel); Arnoldi will overwrite
+      !     H(nsel+1, nsel+1:k) when it resumes.
+         H(nsel + 1, 1:nsel) = matmul(b_vec, vecs(:, 1:nsel))
+
+      !     =====================================================
+      !     Step 5b: Lock converged eigenvalues (zero coupling)
+      !     =====================================================
+      !
+      !     Walk the quasi-upper-triangular T(1:nsel, 1:nsel) to
+      !     identify converged eigenvalues.  A 2x2 block at (j,j)
+      !     has H(j+1,j) /= 0 (complex conjugate pair); otherwise
+      !     it's a 1x1 block (real eigenvalue).
+      !
+      !     If the coupling entry |H(nsel+1, j)| < eigen_tol (or
+      !     norm2 for a 2x2 block), the eigenvalue is converged.
+      !     Zeroing the coupling entry "locks" it: the eigenvalue
+      !     remains in the Schur basis but Arnoldi no longer
+      !     perturbs it through the residual vector.  This prevents
+      !     converged eigenvalues from drifting after restarts.
+      !
+      !     This is "option 2" from Stewart (2001): zero coupling
+      !     row entries only, without full block decoupling.
+         n_locked = 0
+         j = 1
+         do while (j <= nsel)
+            if (j < nsel .and.
+     $          H(j+1, j) /= 0.0d0) then
+      !        2x2 block (complex conjugate pair).
+               res = sqrt(H(nsel+1, j)**2 + H(nsel+1, j+1)**2)
+               if (res < eigen_tol) then
+                  H(nsel+1, j)   = 0.0d0
+                  H(nsel+1, j+1) = 0.0d0
+                  n_locked = n_locked + 2
+               end if
+               j = j + 2
+            else
+      !        1x1 block (real eigenvalue).
+               if (abs(H(nsel+1, j)) < eigen_tol) then
+                  H(nsel+1, j) = 0.0d0
+                  n_locked = n_locked + 1
+               end if
+               j = j + 1
             end if
          end do
-         qx(:, 1:ksize) = matmul(qx(:, 1:ksize), vecs)
-         qy(:, 1:ksize) = matmul(qy(:, 1:ksize), vecs)
-         if (if3D) qz(:, 1:ksize) = matmul(qz(:, 1:ksize), vecs)
-         if (ifpo) qp(:, 1:ksize) = matmul(qp(:, 1:ksize), vecs)
-         if (ifto) qt(:, 1, 1:ksize) = matmul(qt(:, 1, 1:ksize), vecs)
-         if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) qt(:, m, 1:ksize) = matmul(qt(:, m, 1:ksize), vecs)
+         if (nid == 0 .and. n_locked > 0) then
+            write(6, *) n_locked,
+     $           'eigenvalues locked (coupling zeroed).'
+         end if
+
+      !     =====================================================
+      !     Step 6 : Basis rotation via dgemm (field-by-field)
+      !     =====================================================
+      !
+      !     The key operation is:  Q_new(:, j) = sum_i Q(:, i) * V(i, j)
+      !     for j = 1, ..., nsel.  In matrix form:
+      !
+      !        Q_new(:, 1:nsel) = Q(:, 1:ksize) * V(:, 1:nsel)
+      !
+      !     This is a matrix-matrix product computed via BLAS dgemm.
+      !
+      !     Why dgemm instead of matmul?
+      !     - matmul(A, B) where A is (lv, k) creates a hidden temporary of
+      !       size (lv, k) before assigning back.  For lv = 10M, k = 100,
+      !       that's ~8 GB per field — invisible in the source but real.
+      !     - dgemm writes directly into a separate output buffer (rotated),
+      !       avoiding the hidden allocation entirely.
+      !
+      !     Why field-by-field?
+      !     - The krylov_vector derived type stores vx, vy, vz, pr, t as
+      !       separate arrays.  They cannot be passed as a single contiguous
+      !       block to dgemm without copying.
+      !     - By processing one field at a time, we need only ONE workspace
+      !       of size (lv, ksize) instead of THREE (or more) simultaneously.
+      !       Peak memory: ~(lv * ksize + lv * nsel) * 8 bytes total,
+      !       reused for each field in turn.
+      !
+      !     Why only nsel columns?
+      !     - After reordering, columns nsel+1:ksize of V correspond to the
+      !       unwanted eigenvalues.  Those rotated Krylov vectors are never
+      !       used — Arnoldi will overwrite positions nsel+1:ksize anyway.
+      !     - Savings: for ksize=100, nsel=34, we compute 34 columns
+      !       instead of 100 → ~3x fewer FLOPs in the rotation.
+      !
+      !     dgemm calling convention:
+      !       call dgemm('N','N', M, N, K, alpha, A, LDA, B, LDB, beta, C, LDC)
+      !       C(M,N) = alpha * A(M,K) * B(K,N) + beta * C(M,N)
+      !     Here: M = nv (active grid points), N = nsel, K = ksize,
+      !           LDA = lv (compile-time leading dimension of basis),
+      !           LDB = ksize (leading dimension of vecs),
+      !           LDC = lv (compile-time leading dimension of rotated).
+
+      !     --- Rotate velocity fields (vx, vy, vz) ---
+      !     Allocate workspace: basis holds one field from ALL k vectors,
+      !     rotated holds the nsel wanted columns of the product.
+         allocate(basis(lv, ksize), rotated(lv, nsel))
+
+      !     vx: gather from Q(1:k) into contiguous array, rotate, scatter back.
+      !     After scatter, Q(1:nsel)%vx contains the rotated data.
+      !     Q(nsel+1:ksize)%vx still has old data (irrelevant, will be overwritten).
+         do i = 1, ksize
+            basis(:, i) = Q(i)%vx(:)
+         end do
+         call dgemm('N', 'N', nv, nsel, ksize,
+     $        1.0d0, basis, lv, vecs, ksize,
+     $        0.0d0, rotated, lv)
+         do i = 1, nsel
+            Q(i)%vx(:) = rotated(:, i)
+         end do
+
+      !     vy: same pattern, reusing basis and rotated arrays.
+      !     Safe because we only modify Q(i)%vy, not Q(i)%vx (already done).
+         do i = 1, ksize
+            basis(:, i) = Q(i)%vy(:)
+         end do
+         call dgemm('N', 'N', nv, nsel, ksize,
+     $        1.0d0, basis, lv, vecs, ksize,
+     $        0.0d0, rotated, lv)
+         do i = 1, nsel
+            Q(i)%vy(:) = rotated(:, i)
+         end do
+
+      !     vz: only for 3D problems.
+         if (if3D) then
+            do i = 1, ksize
+               basis(:, i) = Q(i)%vz(:)
+            end do
+            call dgemm('N', 'N', nv, nsel, ksize,
+     $           1.0d0, basis, lv, vecs, ksize,
+     $           0.0d0, rotated, lv)
+            do i = 1, nsel
+               Q(i)%vz(:) = rotated(:, i)
             end do
          end if
 
-      !     --> Update the Schur matrix with b.T @ Q corresponding to
-      !     the residual beta in the new basis.
-         b_vec = matmul(b_vec, vecs)
-         H(mstart + 1, :) = b_vec
+      !     Free velocity workspace before allocating pressure (different size).
+         deallocate(basis, rotated)
 
-      !     --> Add the last generated Krylov vector as the new starting one.
-         mstart = mstart + 1
+      !     --- Rotate pressure field ---
+      !     Pressure uses PN-2/PN discretization: different grid size lp, n2.
+         if (ifpo) then
+            n2 = nx2*ny2*nz2*nelv
+            allocate(basis(lp, ksize), rotated(lp, nsel))
+            do i = 1, ksize
+               basis(:, i) = Q(i)%pr(:)
+            end do
+            call dgemm('N', 'N', n2, nsel, ksize,
+     $           1.0d0, basis, lp, vecs, ksize,
+     $           0.0d0, rotated, lp)
+            do i = 1, nsel
+               Q(i)%pr(:) = rotated(:, i)
+            end do
+            deallocate(basis, rotated)
+         end if
 
-         call nopcopy(qx(:, mstart), qy(:, mstart), qz(:, mstart), qp(:, mstart), qt(:, :, mstart),
-     $   qx(:, ksize + 1), qy(:, ksize + 1), qz(:, ksize + 1), qp(:, ksize + 1), qt(:, :, ksize + 1))
+      !     --- Rotate temperature and passive scalars ---
+      !     krylov_vector%t is (lt, ldimt) where lt = lx1*ly1*lz1*lelt.
+      !     For CHT (lelt > lelv), lt > lv and nt > nv; workspace must
+      !     use lt as the leading dimension to match the array stride.
+         if (ifto .or. ldimt > 1) then
+            nt = nx1*ny1*nz1*nelt
+            allocate(basis(lt, ksize), rotated(lt, nsel))
+         end if
 
-         do i = 1, k_dim + 1
-            Q(i)%vx(:) = qx(:, i)
-            Q(i)%vy(:) = qy(:, i)
-            if (if3D) Q(i)%vz(:) = qz(:, i)
-            if (ifpo) Q(i)%pr(:) = qp(:, i)
-            if (ifto) Q(i)%t(:, 1) = qt(:, 1, i)
-            if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) Q(i)%t(:, m) = qt(:, m, i)
-               end do
-            end if
-         end do
+      !     Temperature (first scalar field).
+         if (ifto) then
+            do i = 1, ksize
+               basis(:, i) = Q(i)%t(:, 1)
+            end do
+            call dgemm('N', 'N', nt, nsel, ksize,
+     $           1.0d0, basis, lt, vecs, ksize,
+     $           0.0d0, rotated, lt)
+            do i = 1, nsel
+               Q(i)%t(:, 1) = rotated(:, i)
+            end do
+         end if
 
-         return
+      !     Additional passive scalars (ifpsco flags which are active).
+      !     Reuses the same basis/rotated workspace for each scalar.
+         if (ldimt > 1) then
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) then
+                  do i = 1, ksize
+                     basis(:, i) = Q(i)%t(:, m)
+                  end do
+                  call dgemm('N', 'N', nt, nsel, ksize,
+     $                 1.0d0, basis, lt, vecs, ksize,
+     $                 0.0d0, rotated, lt)
+                  do i = 1, nsel
+                     Q(i)%t(:, m) = rotated(:, i)
+                  end do
+               end if
+            end do
+         end if
+
+         if (allocated(basis)) deallocate(basis, rotated)
+
+      !     --- Rotate time component (Newton periodic orbits) ---
+      !     For Newton PO (uparam(1)==2.1), the krylov_vector includes a
+      !     scalar time component in the inner product.  It must be rotated
+      !     along with the spatial fields to keep the basis consistent.
+      !     We save the old values first since the rotation reads from all
+      !     k vectors but writes to only nsel of them.
+         if (isNewtonPO) then
+            do i = 1, ksize
+               time_old(i) = Q(i)%time
+            end do
+            do i = 1, nsel
+               Q(i)%time = dot_product(time_old, vecs(:, i))
+            end do
+         end if
+
+      !     =====================================================
+      !     Step 7 : Set up for Arnoldi restart
+      !     =====================================================
+      !
+      !     After condensation, the factorization is:
+      !        A * Q(:,1:nsel) = Q(:,1:nsel) * H(1:nsel,1:nsel)
+      !                        + Q(:,nsel+1) * H(nsel+1, 1:nsel)
+      !     where Q(:,nsel+1) is the last generated Krylov vector (residual
+      !     direction).  Arnoldi resumes from mstart = nsel + 1, extending
+      !     the factorization back to ksize columns.
+         mstart = nsel + 1
+         call k_copy(Q(mstart), Q(ksize + 1))
+
       end subroutine schur_condensation
 
       !-----------------------------------------------------------------------
 
-      subroutine select_eigenvalues(selected, converged_eigenvalues, vals, delta, nev, n)
-      !     This function selects the eigenvalues to be placed in the upper left corner
-      !     during the Schur condensation phase.
+      subroutine select_eigenvalues(selected, nsel, vals,
+     $     residuals, delta, nev, n)
+
+      !     Adaptive eigenvalue selection for Krylov-Schur restart.
+      !
+      !     Selects which eigenvalues to keep during Schur condensation
+      !     using three complementary criteria:
+      !
+      !     1. Near unit circle: |lambda| >= 1 - delta
+      !        These are the stability-relevant eigenvalues.
+      !
+      !     2. Partially converged: Schur residual < sqrt(eigen_tol)
+      !        If eigen_tol = 1e-6, this keeps eigenvalues with
+      !        residual < 1e-3.  Discarding these wastes ~100 matvecs
+      !        of convergence progress per eigenvalue.
+      !
+      !     3. Minimum guarantee: at least nev + 2 by magnitude
+      !        Ensures the target eigenvalues are always retained.
+      !
+      !     The selection is bounded:  nev+2 <= nsel <= n - nev
+      !     to leave room for Arnoldi to make progress each cycle.
+      !     Conjugate pairs are kept together (real Schur form).
       !
       !     INPUTS
       !     ------
+      !     vals      : complex(n)  — eigenvalues from Schur decomposition
+      !     residuals : real(n)     — per-Schur-vector Arnoldi residuals
+      !     delta     : real        — magnitude selection radius (schur_del)
+      !     nev       : integer     — number of desired eigenvalues (schur_tgt)
+      !     n         : integer     — total number of eigenvalues (k_dim)
       !
-      !     vals : n-dimensional complex array.
-      !     Array containing the eigenvalues.
-      !
-      !     delta : real
-      !     All eigenvalues outside the circle of radius 1-delta will be selected.
-      !
-      !     nev : integer
-      !     Number of desired eigenvalues. At least nev+4 eigenvalues will be selected
-      !     to ensure "smooth" convergence of the Krylov-Schur iterations.
-      !
-      !     n : integer
-      !     Total number of eigenvalues.
-      !
-      !     RETURNS
+      !     OUTPUTS
       !     -------
-      !
-      !     selected : n-dimensional logical array.
-      !     Array indicating which eigenvalue has been selected (.true.).
-      !
-      !     converged_eigenvalues : integer
-      !     Number of selected eigenvalues. converged_eigenvalues >= nev + 4.
-      !
-      !     Last edit : April 2nd 2020 by JC Loiseau.
+      !     selected  : logical(n)  — which eigenvalues to keep
+      !     nsel      : integer     — count of selected eigenvalues
 
          implicit none
          include 'SIZE'
          include 'TOTAL'
-      !     ----- Input arguments -----
-         integer :: nev
-         integer :: n
+
+      !     ----- Arguments -----
+         integer, intent(in) :: nev, n
+         complex(kind=kind(0.0d0)), dimension(n), intent(in) :: vals
+         real, dimension(n), intent(in) :: residuals
+         real, intent(in) :: delta
+         logical, dimension(n), intent(out) :: selected
+         integer, intent(out) :: nsel
+
+      !     ----- Local variables -----
+         integer :: i, min_keep, max_keep
          integer, dimension(n) :: idx
-         complex(kind=kind(0.0d0)), dimension(n) :: vals
-         real :: delta
+         real, dimension(n) :: work_arr
+         real :: sqrt_tol
+         integer :: n_circle, n_resid
 
-      !     ----- Output argument -----
-         logical, dimension(n) :: selected
-         integer :: converged_eigenvalues
+         sqrt_tol = sqrt(eigen_tol)
+         selected = .false.
 
-      !     ----- Miscellaneous -----
-         integer :: i
-
-      !     --> Sort eigenvalues based on their magnitudes (Note : the array vals itself is not sorted).
+      !     --> Criterion 1: eigenvalues near the unit circle.
          do i = 1, n
-            idx(i) = i
+            if (abs(vals(i)) >= (1.0d0 - delta))
+     $           selected(i) = .true.
          end do
-         call argsort(n, abs(vals), idx)
+         n_circle = count(selected)
 
-      !     --> Select eigenvalues closer to the unit circle.
-         selected = abs(vals) >= (1.0d0 - delta)
+      !     --> Criterion 2: partially converged eigenvalues.
+      !         Residual < sqrt(tol) means close to convergence;
+      !         discarding these wastes the matvecs already invested.
+         do i = 1, n
+            if (residuals(i) < sqrt_tol)
+     $           selected(i) = .true.
+         end do
+         n_resid = count(selected) - n_circle
 
-      !     --> Select at least the nev+4 largest eigenvalues.
-         selected(idx(n - (nev + 3):n)) = .true.
+      !     --> Criterion 3: guarantee at least nev+2 by magnitude.
+      !         Use argsort (ascending) — largest magnitudes at end.
+         min_keep = nev + 2
+         if (count(selected) < min_keep) then
+            do i = 1, n
+               idx(i) = i
+            end do
+            work_arr = abs(vals)
+            call argsort(n, work_arr, idx)
+            do i = n, 1, -1
+               if (count(selected) >= min_keep) exit
+               selected(idx(i)) = .true.
+            end do
+         end if
 
-!     --> Ensure complex conjugate pairs are kept together during Schur reordering.
-!         For a true conjugate pair: real parts equal, imaginary parts opposite.
-!         We check BOTH conditions with relative tolerances to avoid:
-!         1. Splitting true conjugates due to roundoff
-!         2. Mis-pairing eigenvalues with opposite imaginaries but different reals
-!         Tolerance scales with eigenvalue magnitude for numerical robustness.
-         call check_conjugate_pair(vals(idx(n-(nev+3))), vals(idx(n-(nev+4))),
-     &                             selected(idx(n-(nev+4))))
+      !     --> Ensure conjugate pairs are not split.
+         call ensure_conjugate_pairs(selected, vals, n)
 
-         converged_eigenvalues = count(selected)
+      !     --> Cap: keep at most n - nev to leave room for Arnoldi.
+      !         If over budget, drop eigenvalues with largest residual.
+         max_keep = n - nev
+         if (count(selected) > max_keep) then
+            do i = 1, n
+               idx(i) = i
+            end do
+            work_arr = residuals
+            call argsort(n, work_arr, idx)
+      !        Rebuild selection: keep max_keep with smallest residuals.
+            selected = .false.
+            do i = 1, max_keep
+               selected(idx(i)) = .true.
+            end do
+            call ensure_conjugate_pairs(selected, vals, n)
+         end if
+
+         nsel = count(selected)
+
+         if (nid == 0) then
+            write(6, '(A,I4,A,I4,A)')
+     $           ' Adaptive restart: keeping ', nsel,
+     $           ' of ', n, ' Ritz values.'
+            write(6, '(A,I4,A,I4,A,I4)')
+     $           '   unit circle: ', n_circle,
+     $           ', near-converged: ', n_resid,
+     $           ', floor: ', min_keep
+         end if
 
          return
       end subroutine select_eigenvalues
 
       !     ------------------------------------------------------------------------------------
 
-      subroutine check_conjugate_pair(lambda1, lambda2, is_conjugate)
+      subroutine ensure_conjugate_pairs(selected, vals, n)
 
-      !     Check if two complex eigenvalues form a conjugate pair.
-      !     For true conjugates: real(lambda1) = real(lambda2), imag(lambda1) = -imag(lambda2)
-      !
-      !     Uses relative tolerance scaled by eigenvalue magnitude to handle both
-      !     small and large eigenvalues correctly. This prevents:
-      !     - Splitting true conjugate pairs due to roundoff
-      !     - Mis-pairing eigenvalues with opposite imaginaries but different reals
+      !     Ensure that if one eigenvalue of a complex conjugate pair
+      !     is selected, the other is also selected.  In the Schur
+      !     decomposition from dgees, conjugate pairs are consecutive:
+      !     vals(j) and vals(j+1) have equal real parts and opposite
+      !     imaginary parts.  We walk consecutive pairs and enforce
+      !     symmetric selection to preserve the real Schur form.
 
          implicit none
-         complex(kind=kind(0.0d0)), intent(in) :: lambda1, lambda2
-         logical, intent(out) :: is_conjugate
+         integer, intent(in) :: n
+         complex(kind=kind(0.0d0)), dimension(n), intent(in) :: vals
+         logical, dimension(n), intent(inout) :: selected
 
+         integer :: i
          real :: real_diff, imag_sum, scale, tol
          real, parameter :: REL_TOL = 1.0d-10
-         real, parameter :: ABS_FLOOR = 1.0d-14
 
-      !     --> Scale tolerance by the larger eigenvalue magnitude.
-         scale = max(abs(lambda1), abs(lambda2), 1.0d0)
-         tol = REL_TOL * scale
-
-      !     --> Check real parts are equal (within tolerance).
-         real_diff = abs(real(lambda1) - real(lambda2))
-
-      !     --> Check imaginary parts are opposite (sum should be zero).
-         imag_sum = abs(aimag(lambda1) + aimag(lambda2))
-
-      !     --> Both conditions must be satisfied for a true conjugate pair.
-         is_conjugate = (real_diff < tol) .and. (imag_sum < tol)
+         i = 1
+         do while (i < n)
+      !     --> Check if vals(i) and vals(i+1) form a conjugate pair.
+            if (aimag(vals(i)) /= 0.0d0) then
+               scale = max(abs(vals(i)), 1.0d0)
+               tol = REL_TOL * scale
+               real_diff = abs(real(vals(i)) - real(vals(i+1)))
+               imag_sum = abs(aimag(vals(i)) + aimag(vals(i+1)))
+               if (real_diff < tol .and. imag_sum < tol) then
+      !           Conjugate pair: select both if either is selected.
+                  if (selected(i) .or. selected(i+1)) then
+                     selected(i) = .true.
+                     selected(i+1) = .true.
+                  end if
+                  i = i + 2
+                  cycle
+               end if
+            end if
+            i = i + 1
+         end do
 
          return
-      end subroutine check_conjugate_pair
+      end subroutine ensure_conjugate_pairs
 
       !     ------------------------------------------------------------------------------------
 

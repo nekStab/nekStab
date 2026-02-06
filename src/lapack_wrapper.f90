@@ -289,3 +289,115 @@
       
          return
       end subroutine lstsq
+
+      !-----------------------------------------------------------------------
+
+      subroutine eig_symmetric(A, eigvals, eigvecs, n)
+!     Wrapper for LAPACK DSYEV (symmetric eigenvalue problem).
+!     Returns eigenvalues in DESCENDING order (largest first).
+
+         implicit none
+         integer, intent(in) :: n
+         real, intent(in) :: A(n, n)
+         real, intent(out) :: eigvals(n), eigvecs(n, n)
+
+         real, allocatable :: work(:), Acopy(:,:)
+         real :: tmp_val
+         real, allocatable :: tmp_vec(:)
+         integer :: lwork, info, i, j
+
+!        Copy input (DSYEV overwrites)
+         allocate(Acopy(n,n), tmp_vec(n))
+         Acopy = A
+
+!        Query optimal workspace
+         allocate(work(1))
+         call dsyev('V', 'U', n, Acopy, n, eigvals, work, -1, info)
+         lwork = int(work(1))
+         deallocate(work)
+         allocate(work(lwork))
+
+!        Compute eigenvalues/vectors (ascending order from LAPACK)
+         call dsyev('V', 'U', n, Acopy, n, eigvals, work, lwork, info)
+
+         if (info /= 0) then
+            write(6,*) 'ERROR: DSYEV failed with info =', info
+            call nek_end
+         end if
+
+         eigvecs = Acopy
+
+!        Reverse to descending order
+         do i = 1, n/2
+            j = n - i + 1
+
+            tmp_val = eigvals(i)
+            eigvals(i) = eigvals(j)
+            eigvals(j) = tmp_val
+
+            tmp_vec = eigvecs(:, i)
+            eigvecs(:, i) = eigvecs(:, j)
+            eigvecs(:, j) = tmp_vec
+         end do
+
+         deallocate(work, Acopy, tmp_vec)
+
+      end subroutine eig_symmetric
+
+      !-----------------------------------------------------------------------
+
+      subroutine eig_hermitian(A, eigvals, eigvecs, n)
+!     Wrapper for LAPACK ZHEEV (complex Hermitian eigenvalue problem).
+!     Returns eigenvalues in DESCENDING order (largest first).
+
+         implicit none
+         integer, intent(in) :: n
+         complex(kind=kind(0.0d0)), intent(in) :: A(n, n)
+         real, intent(out) :: eigvals(n)
+         complex(kind=kind(0.0d0)), intent(out) :: eigvecs(n, n)
+
+         complex(kind=kind(0.0d0)), allocatable :: work(:), Acopy(:,:)
+         real, allocatable :: rwork(:)
+         complex(kind=kind(0.0d0)), allocatable :: tmp_vec(:)
+         real :: tmp_val
+         integer :: lwork, info, i, j
+
+!        Copy input (ZHEEV overwrites)
+         allocate(Acopy(n,n), rwork(max(1, 3*n-2)), tmp_vec(n))
+         Acopy = A
+
+!        Query optimal workspace
+         allocate(work(1))
+         call zheev('V', 'U', n, Acopy, n, eigvals,
+     $        work, -1, rwork, info)
+         lwork = int(real(work(1)))
+         deallocate(work)
+         allocate(work(max(1, lwork)))
+
+!        Compute eigenvalues/vectors (ascending order from LAPACK)
+         call zheev('V', 'U', n, Acopy, n, eigvals,
+     $        work, lwork, rwork, info)
+
+         if (info /= 0) then
+            write(6,*) 'ERROR: ZHEEV failed with info =', info
+            call nek_end
+         end if
+
+         eigvecs = Acopy
+
+!        Reverse to descending order
+         do i = 1, n/2
+            j = n - i + 1
+
+            tmp_val = eigvals(i)
+            eigvals(i) = eigvals(j)
+            eigvals(j) = tmp_val
+
+            tmp_vec = eigvecs(:, i)
+            eigvecs(:, i) = eigvecs(:, j)
+            eigvecs(:, j) = tmp_vec
+         end do
+
+         deallocate(work, rwork, Acopy, tmp_vec)
+
+      end subroutine eig_hermitian
