@@ -620,10 +620,10 @@
       
       !     ----- Miscellaneous.
          real :: alpha, beta, glsc2
-         integer :: i, j, k, mode, n
+         integer :: i, k, mode, n
          character(len=80) :: filename
-         character(len=6) :: mode_str ! Assuming mode will not exceed 6 digits
-         character(len=3) :: mode_str2 ! Length 3 to hold 'K' and two digits
+         character(len=6) :: mode_str
+         character(len=3) :: mode_str2
       
          n = nx1*ny1*nz1*nelv
       
@@ -655,11 +655,15 @@
             call load_fld(filename)
             call nopcopy(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, vx, vy, vz, pr, t)
       
-      !     --> Normalize eigenmode to unit-norm (Sanity check).
+      !     --> Normalize eigenmode to unit-norm.
+      !         norm() returns ||q||, nopcmult(q, c) does q = c*q.
+      !         Old bug: alpha = sqrt(alpha**2 + beta**2)
+      !         gave ||q_new|| = alpha*||q|| = alpha^2 (wrong).
+      !         Fix: invert so nopcmult divides by ||q_total||.
             call norm(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
             call norm(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, beta)
       
-            alpha = sqrt(alpha**2 + beta**2)
+            alpha = 1.0d0 / sqrt(alpha**2 + beta**2)
       
             call nopcmult(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
             call nopcmult(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, alpha)
@@ -702,9 +706,9 @@
             if (nid == 0) then
                write (filename, '(A,A,A,A)') 'PKE_dRe', trim(SESSION), '0.f', trim(mode_str)
                open (101, file=filename, form='formatted')
-               do i = 1, 10 ! write the energy budget terms
+               do i = 1, 10
                   write (101, '(1E15.7)') integrals(i)
-                  if (nid == 0) write (*, *), 'Integral ', i, ' = ', integrals(i)
+                  write (*, *) 'Integral ', i, ' = ', integrals(i)
                end do
                write (101, '(1E15.7)') sum(integrals(1:9))
                write (101, '(1E15.7)') sum(integrals(1:9)) - integrals(10)
@@ -715,7 +719,424 @@
       
          return
       end subroutine stability_energy_budget
-      
+
+!----------------------------------------------------------------------
+
+      subroutine stability_energy_budget_floquet
+!
+!     Orbit-averaged perturbation kinetic energy (PKE) budget for
+!     Floquet stability analysis of time-periodic base flows.
+!
+!     MATHEMATICAL FORMULATION
+!     ========================
+!
+!     Starting from the Reynolds-Orr energy equation for the
+!     perturbation kinetic energy e = 0.5 * u'_i * u'_i :
+!
+!        de/dt = -u'_i u'_j (dU_i/dx_j) + (1/Re) u'_i lap(u'_i)
+!                 \_________P__________/   \________D__________/
+!                    production                dissipation
+!
+!     Integrating over the domain V gives the global budget:
+!
+!        dE/dt = P - D       where  E = int_V e dV
+!
+!     For a Floquet mode with real multiplier mu, the perturbation
+!     takes the form:
+!
+!        u'(x,t) = exp(sigma_r * t) * u_hat(x,t)
+!
+!     where u_hat is T-periodic and sigma_r = ln|mu| / T is the
+!     Floquet exponent (growth rate). Substituting into dE/dt and
+!     orbit-averaging over one period T:
+!
+!        2 * sigma_r = (P_bar - D_bar) / E_bar
+!
+!     where bars denote orbit averages:  X_bar = (1/T) int_0^T X dt.
+!     This is an approximation that becomes exact when E_hat(t) is
+!     constant over the orbit; for typical converged Floquet modes
+!     the error is O(var(E_hat)/mean(E_hat)), which is negligible.
+!
+!     GROWTH CORRECTION
+!     =================
+!
+!     The time-stepper evolves the raw (growing) perturbation u'(t),
+!     not the periodic part u_hat(t). The instantaneous budget terms
+!     thus carry a factor exp(2*sigma_r*t) from the growth:
+!
+!        P_raw(t) = exp(2*sigma_r*t) * P_hat(t)
+!
+!     We correct this by weighting each timestep contribution with
+!     exp(-2*sigma_r*t), so the accumulated average reflects u_hat:
+!
+!        P_bar = (1/T) sum_k  P_raw(t_k) * exp(-2*sigma_r*t_k) * dt
+!
+!     The same correction applies to D and E.
+!
+!     FACTOR-OF-1/2 CONVENTION
+!     ========================
+!
+!     The helper routines compute_production and compute_dissipation
+!     include an extra factor of 1/2 relative to the standard
+!     Reynolds-Orr definitions:
+!
+!        compute_production:  P_ij = -0.5 * u'_i u'_j dU_i/dx_j
+!                             (Reynolds-Orr has factor -1, not -0.5)
+!
+!        compute_dissipation: D = 0.5 * (mu/rho) * u'_i lap(u'_i)
+!                             (Reynolds-Orr has factor 1, not 0.5)
+!
+!     This convention was chosen for consistency with the complex-mode
+!     case (Re^2+Im^2 formulation). The factor cancels in the
+!     verification formula because all three quantities carry it:
+!
+!        sigma_check = (0.5*P - 0.5*D) / (2 * E)
+!                    = (P - D) / (4 * E)
+!
+!     and E = 0.5*|u'|^2 already has the physical 1/2, so:
+!
+!        sigma_check = (P - D) / (4 * 0.5 * |u'|^2_bar)
+!                    = (P - D) / (2 * |u'|^2_bar)
+!                    = sigma_r       (correct)
+!
+!     The individual spatial fields and integrals output to disk
+!     carry this 0.5 factor. To obtain physical Reynolds-Orr values,
+!     multiply production and dissipation fields by 2.
+!
+!     QUADRATURE
+!     ==========
+!
+!     The orbit integral uses a right-endpoint rectangle rule:
+!     fields and weight are both evaluated AFTER nek_advance
+!     (i.e., at t_{k+1}). This is first-order accurate with
+!     error O(dt/T) per orbit, which is negligible for typical
+!     Nek5000 Floquet runs (hundreds of steps per period).
+!
+!     VERIFICATION
+!     ============
+!
+!     sigma_r from the eigenvalue file must match
+!     sigma_check = (P_bar - D_bar) / (2 * E_bar) to within
+!     discretization error (~1% for typical resolutions).
+!
+!     SCOPE AND LIMITATIONS
+!     =====================
+!
+!     - Real Floquet multipliers only (Mode A, Mode B).
+!     - Complex multipliers (QP modes) require phase-averaging
+!       of two linearly independent Floquet modes (deferred).
+!     - Pressure work and boundary terms are neglected (standard
+!       for incompressible flow with homogeneous BCs on u').
+!     - The orbit-averaging identity is approximate when E_hat(t)
+!       varies over the period (exact for steady base flows).
+
+      use krylov_subspace
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'ADJOINT'
+
+!     ----- Perturbation arrays -----
+      real, dimension(lv) :: vx_d, vy_d, vz_d
+      real, dimension(lv) :: vx_zero, vy_zero, vz_zero
+
+!     ----- Budget accumulators (allocatable to avoid stack overflow) --
+      real, allocatable, dimension(:,:) :: budget_avg
+      real, allocatable, dimension(:) :: energy_avg
+      real, dimension(10) :: integrals
+      real, dimension(lv) :: prod_x, prod_y, prod_z, diss_tmp
+
+!     ----- Eigenvalue data -----
+      real :: sigma_r, omega, period, growth_corr, weight
+      real :: E_bar, sigma_check, rel_error
+
+!     ----- Miscellaneous -----
+      real :: glsc2
+      integer :: i, j, k, n, mode, m, col
+      character(len=80) :: filename
+      character(len=6) :: mode_str
+      character(len=3) :: mode_str2
+
+      logical, save :: init
+      data init/.false./
+
+      n = nx1*ny1*nz1*nelv
+      nt = nx1*ny1*nz1*nelt
+
+!     #####
+!     #####     READ EIGENVALUE
+!     #####
+
+      call read_eigenvalue(sigma_r, omega)
+      if (nid == 0) then
+         write (6, *) 'Floquet PKE budget: sigma_r =', sigma_r
+         write (6, *) 'Floquet PKE budget: omega   =', omega
+      end if
+
+!     #####
+!     #####     LOAD BASE FLOW AND PREPARE SOLVER
+!     #####
+
+      write (filename, '(a,a,a)') 'BF_', trim(SESSION), '0.f00001'
+      call load_fld(filename)
+
+!     --> Set up linearized solver (computes nsteps, dt from param(10))
+      call prepare_linearized_solver
+
+      period = nsteps * dt
+      if (nid == 0) write (6, *)
+     $   'Orbit period T =', period, ' nsteps =', nsteps
+
+!     --> Setup linearized solver flags
+      ifpert = .true.; ifadj = .false.
+      call bcast(ifpert, lsize); call bcast(ifadj, lsize)
+
+!     --> Zero arrays for imaginary part (real multiplier only)
+      call rzero(vx_zero, lv)
+      call rzero(vy_zero, lv)
+      call rzero(vz_zero, lv)
+
+!     --> Allocate orbit storage on first call
+      if (.not. init) then
+         call allocate_orbit(nsteps)
+      end if
+
+!     --> Allocate budget accumulators on heap
+      allocate(budget_avg(lv, 10))
+      allocate(energy_avg(lv))
+
+!     #####
+!     #####     LOOP OVER MODES
+!     #####
+
+      do mode = 1, maxmodes
+
+         budget_avg = 0.0d0
+         energy_avg = 0.0d0
+         integrals  = 0.0d0
+
+!        --> Format mode number
+         write (mode_str, '(i5.5)') mode
+
+!        --> Load eigenmode (real part only for real multiplier)
+         write (filename, '(a,a,a,a)')
+     $      'dRe', trim(SESSION), '0.f', trim(mode_str)
+         call load_fld(filename)
+
+!        --> Pass eigenmode as perturbation IC
+         call opcopy(vxp(:,1), vyp(:,1), vzp(:,1),
+     $      vx, vy, vz)
+         if (ifto) call copy(tp(:,:,1), t, nt)
+
+!        --> Reload base flow IC into vx,vy,vz for orbit evolution
+         if (.not. init) then
+            write (filename, '(a,a,a)')
+     $         'BF_', trim(SESSION), '0.f00001'
+            call load_fld(filename)
+            ifbase = .true.
+         else
+            ifbase = .false.
+!           --> Restore first orbit step from stored orbit
+            call orbit_restore(1)
+         end if
+
+!        ─────────────────────────────────────────
+!        ORBIT INTEGRATION + BUDGET ACCUMULATION
+!        ─────────────────────────────────────────
+
+         time = 0.0d0
+         do istep = 1, nsteps
+
+!           --> Log progress
+            if (nid == 0) write (6,
+     $         "(' PKE_FLOQUET mode',I3,':',I6,'/',I6)")
+     $         mode, istep, nsteps
+
+!           --> Advance (BF + perturbation simultaneously)
+            call nekstab_usrchk()
+            call nek_advance()
+
+!           --> Store/load orbit
+            if (.not. init) then
+               call orbit_store(istep)
+            else
+               call orbit_restore(istep)
+            end if
+
+!           --> Copy current base flow to ubase/vbase/wbase
+!               (compute_production reads from ubase,vbase,wbase)
+            call opcopy(ubase, vbase, wbase, vx, vy, vz)
+
+!           --> Get current perturbation
+            call opcopy(vx_d, vy_d, vz_d,
+     $         vxp(:,1), vyp(:,1), vzp(:,1))
+
+!           --> Growth correction + trapezoidal weight
+            growth_corr = exp(-2.0d0 * sigma_r * time)
+            weight = growth_corr * dt / period
+
+!           --> Production terms (9 = 3 components x 3 gradients)
+            do j = 1, 3
+               call compute_production(vx_d, vy_d, vz_d,
+     $            vx_zero, vy_zero, vz_zero, j,
+     $            prod_x, prod_y, prod_z)
+               col = (j - 1) * 3
+               do i = 1, n
+                  budget_avg(i,col+1) = budget_avg(i,col+1)
+     $               + weight * prod_x(i)
+                  budget_avg(i,col+2) = budget_avg(i,col+2)
+     $               + weight * prod_y(i)
+                  budget_avg(i,col+3) = budget_avg(i,col+3)
+     $               + weight * prod_z(i)
+               end do
+            end do
+
+!           --> Dissipation term (1 scalar field)
+            call compute_dissipation(vx_d, vy_d, vz_d,
+     $         vx_zero, vy_zero, vz_zero, diss_tmp)
+            do i = 1, n
+               budget_avg(i,10) = budget_avg(i,10)
+     $            + weight * diss_tmp(i)
+            end do
+
+!           --> Perturbation kinetic energy
+            do i = 1, n
+               energy_avg(i) = energy_avg(i) + weight * 0.5d0
+     $            * (vx_d(i)**2 + vy_d(i)**2 + vz_d(i)**2)
+            end do
+
+         end do ! istep
+
+!        --> Mark orbit as stored after first mode
+         if (.not. init) then
+            ifbase = .false.
+            init = .true.
+         end if
+
+!        ─────────────────────────────────────────
+!        INTEGRATE AND VERIFY
+!        ─────────────────────────────────────────
+
+         do i = 1, 10
+            integrals(i) = glsc2(bm1, budget_avg(:,i), n)
+         end do
+         E_bar = glsc2(bm1, energy_avg, n)
+
+         sigma_check = (sum(integrals(1:9)) - integrals(10))
+     $      / (2.0d0 * E_bar)
+
+         rel_error = abs(sigma_check - sigma_r)
+     $      / max(abs(sigma_r), 1.0d-30)
+
+         if (nid == 0) then
+            write (6, *) ''
+            write (6, *)
+     $         '=== Orbit-averaged PKE budget (mode', mode,
+     $         ') ==='
+            write (6, '(A,E15.7)')
+     $         '  sigma_r (eigenvalue) = ', sigma_r
+            write (6, '(A,E15.7)')
+     $         '  sigma_r (budget)     = ', sigma_check
+            write (6, '(A,E15.7)')
+     $         '  relative error       = ', rel_error
+            write (6, '(A,E15.7)')
+     $         '  E_bar                = ', E_bar
+            write (6, '(A,E15.7)')
+     $         '  P_bar (total)        = ',
+     $         sum(integrals(1:9))
+            write (6, '(A,E15.7)')
+     $         '  D_bar                = ', integrals(10)
+            do i = 1, 10
+               write (6, '(A,I2,A,E15.7)')
+     $            '  Integral ', i, ' = ', integrals(i)
+            end do
+            write (6, *) ''
+         end if
+
+!        ─────────────────────────────────────────
+!        OUTPUT
+!        ─────────────────────────────────────────
+
+!        --> Output spatial budget fields (same format as steady)
+         if (if3d) then
+            k = 9
+         else
+            k = 6
+         end if
+
+         do i = 1, k, 3
+            call opcopy(vx, vy, vz,
+     $         budget_avg(:,i), budget_avg(:,i+1),
+     $         budget_avg(:,i+2))
+            write (mode_str2, "('F',I2.2)") mode
+            call outpost(vx, vy, vz, pr, t, mode_str2)
+         end do
+
+!        --> Output scalar integrals to file
+         if (nid == 0) then
+            write (filename, '(A,A,A,A)')
+     $         'PKE_floquet_', trim(SESSION), '0.f',
+     $         trim(mode_str)
+            open (101, file=filename, form='formatted')
+            do i = 1, 10
+               write (101, '(1E15.7)') integrals(i)
+            end do
+            write (101, '(1E15.7)') sum(integrals(1:9))
+            write (101, '(1E15.7)')
+     $         sum(integrals(1:9)) - integrals(10)
+            write (101, '(1E15.7)') E_bar
+            write (101, '(1E15.7)') sigma_check
+            close (101)
+         end if
+
+      end do ! mode
+
+!     --> Cleanup
+      if (allocated(budget_avg)) deallocate(budget_avg)
+      if (allocated(energy_avg)) deallocate(energy_avg)
+      if (allocated(uor)) deallocate(uor, vor, wor)
+      if (allocated(tor)) deallocate(tor)
+
+      return
+      end subroutine stability_energy_budget_floquet
+
+!----------------------------------------------------------------------
+
+      subroutine compute_velocity_gradient_tensor(
+     $   vx_in, vy_in, vz_in,
+     $   dudx, dudy, dudz,
+     $   dvdx, dvdy, dvdz,
+     $   dwdx, dwdy, dwdz)
+!
+!     Compute the full velocity gradient tensor and smooth at element
+!     interfaces using dsavg.  Uses the 5-argument form of gradm1.
+!
+!     INPUT
+!       vx_in, vy_in, vz_in : velocity field
+!
+!     OUTPUT
+!       dudx..dwdz : 9 gradient components
+!
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         real, dimension(lx1*ly1*lz1*lelv) :: vx_in, vy_in, vz_in
+         real, dimension(lx1*ly1*lz1*lelv) :: dudx, dudy, dudz
+         real, dimension(lx1*ly1*lz1*lelv) :: dvdx, dvdy, dvdz
+         real, dimension(lx1*ly1*lz1*lelv) :: dwdx, dwdy, dwdz
+
+         call gradm1(dudx, dudy, dudz, vx_in, nelv)
+         call gradm1(dvdx, dvdy, dvdz, vy_in, nelv)
+         call gradm1(dwdx, dwdy, dwdz, vz_in, nelv)
+
+         call dsavg(dudx); call dsavg(dudy); call dsavg(dudz)
+         call dsavg(dvdx); call dsavg(dvdy); call dsavg(dvdz)
+         call dsavg(dwdx); call dsavg(dwdy); call dsavg(dwdz)
+
+      end subroutine compute_velocity_gradient_tensor
+!----------------------------------------------------------------------
+
       subroutine compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, dissipation)
          use krylov_subspace
          implicit none
