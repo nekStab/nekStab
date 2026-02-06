@@ -77,6 +77,7 @@
 | 3.3 | `'transient_growth'` | Optimal perturbations |
 | 3.31 | `'floquet_tg'` | Floquet transient growth |
 | 4.1 | `'energy_budget'` | Kinetic energy budget |
+| 4.11 | `'energy_budget_floquet'` | Floquet energy budget |
 | 4.2 | `'wavemaker'` | Structural sensitivity |
 | 4.3 | `'bf_sensitivity'` | Base flow sensitivity |
 | 5 | `'otd'` | Optimally Time-Dependent modes |
@@ -92,12 +93,15 @@ Ready-to-run cases in `example/`:
 
 | Case | Physics | Demonstrated Features |
 |------|---------|----------------------|
-| `cylinder/` | 2D/3D wake | DNS, Newton, stability, Floquet, wavemaker |
+| `cylinder/` | 2D/3D wake | DNS, Newton, stability, Floquet, wavemaker, OTD, POD/DMD/SPOD |
 | `back_fstep/` | Separation | Convective instability, transient growth |
 | `lid_driven/` | Confined | Steady bifurcations |
 | `blasius/` | Boundary layer | Tollmien-Schlichting waves |
+| `flip_flop/` | Side-by-side cylinders | Neimark-Sacker, Floquet |
+| `thersyphon/` | Buoyancy-driven | Pitchfork + Hopf bifurcations |
 | `torus/` | Curved pipe | Dean instability, 3D modes |
-| `thersyphon/` | Convection | Pitchfork + Hopf bifurcations |
+| `tpjet/` | Forced jet | Floquet period-doubling |
+| `slot_FST/` | Free-stream turbulence | Synthetic inflow generation |
 
 ## First Steps
 
