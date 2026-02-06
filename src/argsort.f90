@@ -1,9 +1,19 @@
-!----------------------------------------------------------------------
-!     Insertion sort with index tracking (argsort)
-!     Sorts array in ascending order while tracking original indices.
-!     Stable sort: equal elements maintain their relative order.
-!     O(n^2) but optimal for small arrays (n < 100).
-!----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! argsort.f90 — Insertion sort with index tracking
+      !
+      ! Purpose:
+      !   Sorts an array in ascending order while tracking original indices.
+      !   Stable sort: equal elements maintain their relative order.
+      !   O(n^2) but optimal for small arrays (n < 100).
+      !
+      ! Public interface:
+      !   argsort(n, arr, idx)
+      !
+      ! Dependencies:
+      !   None
+      !-----------------------------------------------------------------------
+
+      ! argsort — Sort array ascending with index tracking
       subroutine argsort(n, arr, idx)
       implicit none
       integer, intent(in) :: n
@@ -28,4 +38,3 @@
       end do
 
       end subroutine argsort
-!----------------------------------------------------------------------

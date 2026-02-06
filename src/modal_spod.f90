@@ -1,10 +1,19 @@
-!-----------------------------------------------------------------------
-!     modal_spod.f90: Spectral POD (Towne et al., 2018) - batch version
-!
-!     1. Divide snapshots into overlapping blocks
-!     2. Apply window and FFT each block
-!     3. For each frequency, form CSD matrix and eigensolve
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! modal_spod.f90 — Spectral POD (Towne et al., 2018) batch version
+      !
+      ! Purpose:
+      !   1. Divide snapshots into overlapping blocks
+      !   2. Apply window and FFT each block
+      !   3. For each frequency, form CSD matrix and eigensolve
+      !
+      ! Public interface:
+      !   spod_compute    — Full batch SPOD computation
+      !   k_dot_complex   — Hermitian inner product for complex fields
+      !   spod_save_modes — Save SPOD modes at selected frequencies
+      !
+      ! Dependencies:
+      !   krylov_subspace, fourier, modal_pod, SIZE, TOTAL
+      !-----------------------------------------------------------------------
       module modal_spod
 
          use krylov_subspace
@@ -20,10 +29,11 @@
 
       contains
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! spod_compute — Spectral POD via batch processing
+      !-----------------------------------------------------------------------
       subroutine spod_compute(snaps, nsnap, delta_t, nfft, noverlap,
      $                        nsave)
-!     Spectral POD via batch processing
 
          implicit none
          include 'SIZE'
@@ -142,10 +152,11 @@
 
       end subroutine spod_compute
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! fft_block_at_freq — FFT a block of snapshots, extract one frequency
+      !-----------------------------------------------------------------------
       subroutine fft_block_at_freq(snaps, blk_start, nfft,
      $     window, win_weight, delta_t, ifreq, out_re, out_im)
-!     FFT a block of snapshots and extract frequency component ifreq
 
          implicit none
          include 'SIZE'
@@ -225,10 +236,13 @@
 
       end subroutine fft_block_at_freq
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! k_dot_complex — Hermitian inner product: <p, q> = p^H * W * q
+      !
+      !   <p,q> = <p_re,q_re> + <p_im,q_im>
+      !         + i(<p_re,q_im> - <p_im,q_re>)
+      !-----------------------------------------------------------------------
       subroutine k_dot_complex(alpha, p_re, p_im, q_re, q_im)
-!     Hermitian inner product: <p, q> = p^H * W * q
-!     <p,q> = <p_re,q_re> + <p_im,q_im> + i(<p_re,q_im> - <p_im,q_re>)
 
          implicit none
          include 'SIZE'
@@ -248,10 +262,13 @@
 
       end subroutine k_dot_complex
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! spod_save_modes — Save SPOD modes at selected frequencies
+      !
+      !   Saves at DC, Nyquist, and every 8th frequency.
+      !-----------------------------------------------------------------------
       subroutine spod_save_modes(blk_re, blk_im, evecs, evals,
      $     nblk, ifreq, nfreq, freq, nsave)
-!     Save SPOD modes at selected frequencies (DC, Nyquist, every 8th)
 
          implicit none
          include 'SIZE'
