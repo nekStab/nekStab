@@ -137,33 +137,49 @@
          include 'SIZE'
          include 'TOTAL'
 
-         real, dimension(lv) :: vx_dRe, vy_dRe, vz_dRe
-         real, dimension(lv) :: vx_dIm, vy_dIm, vz_dIm
-         real, dimension(lv) :: vx_aRe, vy_aRe, vz_aRe
-         real, dimension(lv) :: vx_aIm, vy_aIm, vz_aIm
-
-         real, dimension(lv) :: dudx_dRe, dudy_dRe, dudz_dRe
-         real, dimension(lv) :: dvdx_dRe, dvdy_dRe, dvdz_dRe
-         real, dimension(lv) :: dwdx_dRe, dwdy_dRe, dwdz_dRe
-
-         real, dimension(lv) :: dudx_dIm, dudy_dIm, dudz_dIm
-         real, dimension(lv) :: dvdx_dIm, dvdy_dIm, dvdz_dIm
-         real, dimension(lv) :: dwdx_dIm, dwdy_dIm, dwdz_dIm
-
-         real, dimension(lv) :: dudx_aRe, dudy_aRe, dudz_aRe
-         real, dimension(lv) :: dvdx_aRe, dvdy_aRe, dvdz_aRe
-         real, dimension(lv) :: dwdx_aRe, dwdy_aRe, dwdz_aRe
-
-         real, dimension(lv) :: dudx_aIm, dudy_aIm, dudz_aIm
-         real, dimension(lv) :: dvdx_aIm, dvdy_aIm, dvdz_aIm
-         real, dimension(lv) :: dwdx_aIm, dwdy_aIm, dwdz_aIm
-
-         real, dimension(lv) :: vx_tr, vy_tr, vz_tr
-         real, dimension(lv) :: vx_ti, vy_ti, vz_ti
-         real, dimension(lv) :: vx_pr, vy_pr, vz_pr
-         real, dimension(lv) :: vx_pi, vy_pi, vz_pi
+         real, allocatable :: vx_dRe(:), vy_dRe(:), vz_dRe(:)
+         real, allocatable :: vx_dIm(:), vy_dIm(:), vz_dIm(:)
+         real, allocatable :: vx_aRe(:), vy_aRe(:), vz_aRe(:)
+         real, allocatable :: vx_aIm(:), vy_aIm(:), vz_aIm(:)
+         real, allocatable :: dudx_dRe(:), dudy_dRe(:), dudz_dRe(:)
+         real, allocatable :: dvdx_dRe(:), dvdy_dRe(:), dvdz_dRe(:)
+         real, allocatable :: dwdx_dRe(:), dwdy_dRe(:), dwdz_dRe(:)
+         real, allocatable :: dudx_dIm(:), dudy_dIm(:), dudz_dIm(:)
+         real, allocatable :: dvdx_dIm(:), dvdy_dIm(:), dvdz_dIm(:)
+         real, allocatable :: dwdx_dIm(:), dwdy_dIm(:), dwdz_dIm(:)
+         real, allocatable :: dudx_aRe(:), dudy_aRe(:), dudz_aRe(:)
+         real, allocatable :: dvdx_aRe(:), dvdy_aRe(:), dvdz_aRe(:)
+         real, allocatable :: dwdx_aRe(:), dwdy_aRe(:), dwdz_aRe(:)
+         real, allocatable :: dudx_aIm(:), dudy_aIm(:), dudz_aIm(:)
+         real, allocatable :: dvdx_aIm(:), dvdy_aIm(:), dvdz_aIm(:)
+         real, allocatable :: dwdx_aIm(:), dwdy_aIm(:), dwdz_aIm(:)
+         real, allocatable :: vx_tr(:), vy_tr(:), vz_tr(:)
+         real, allocatable :: vx_ti(:), vy_ti(:), vz_ti(:)
+         real, allocatable :: vx_pr(:), vy_pr(:), vz_pr(:)
+         real, allocatable :: vx_pi(:), vy_pi(:), vz_pi(:)
 
          character(len=80) :: filename
+
+         allocate(vx_dRe(lv), vy_dRe(lv), vz_dRe(lv))
+         allocate(vx_dIm(lv), vy_dIm(lv), vz_dIm(lv))
+         allocate(vx_aRe(lv), vy_aRe(lv), vz_aRe(lv))
+         allocate(vx_aIm(lv), vy_aIm(lv), vz_aIm(lv))
+         allocate(dudx_dRe(lv), dudy_dRe(lv), dudz_dRe(lv))
+         allocate(dvdx_dRe(lv), dvdy_dRe(lv), dvdz_dRe(lv))
+         allocate(dwdx_dRe(lv), dwdy_dRe(lv), dwdz_dRe(lv))
+         allocate(dudx_dIm(lv), dudy_dIm(lv), dudz_dIm(lv))
+         allocate(dvdx_dIm(lv), dvdy_dIm(lv), dvdz_dIm(lv))
+         allocate(dwdx_dIm(lv), dwdy_dIm(lv), dwdz_dIm(lv))
+         allocate(dudx_aRe(lv), dudy_aRe(lv), dudz_aRe(lv))
+         allocate(dvdx_aRe(lv), dvdy_aRe(lv), dvdz_aRe(lv))
+         allocate(dwdx_aRe(lv), dwdy_aRe(lv), dwdz_aRe(lv))
+         allocate(dudx_aIm(lv), dudy_aIm(lv), dudz_aIm(lv))
+         allocate(dvdx_aIm(lv), dvdy_aIm(lv), dvdz_aIm(lv))
+         allocate(dwdx_aIm(lv), dwdy_aIm(lv), dwdz_aIm(lv))
+         allocate(vx_tr(lv), vy_tr(lv), vz_tr(lv))
+         allocate(vx_ti(lv), vy_ti(lv), vz_ti(lv))
+         allocate(vx_pr(lv), vy_pr(lv), vz_pr(lv))
+         allocate(vx_pi(lv), vy_pi(lv), vz_pi(lv))
 
 ! real :: alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa
 ! alpha   = 0.0d0
@@ -233,19 +249,19 @@
       !     computation of real part of base flow sensitivity term related to downstream transport of perturbations
          call oprzero(vx_tr, vy_tr, vz_tr)
          call opaddcol3(vx_tr, vy_tr, vz_tr, -vx_aRe, -vx_aRe, -vx_aRe, dudx_dRe, dudy_dRe, dudz_dRe)
-         call opaddcol3(vx_tr, vy_tr, vz_tr, -vy_aRe, -vy_aRe, -vy_aRe, dvdx_dRe, dvdy_dRe, dwdz_dRe)
+         call opaddcol3(vx_tr, vy_tr, vz_tr, -vy_aRe, -vy_aRe, -vy_aRe, dvdx_dRe, dvdy_dRe, dvdz_dRe)
          call opaddcol3(vx_tr, vy_tr, vz_tr, -vz_aRe, -vz_aRe, -vz_aRe, dwdx_dRe, dwdy_dRe, dwdz_dRe)
          call opaddcol3(vx_tr, vy_tr, vz_tr, -vx_aIm, -vx_aIm, -vx_aIm, dudx_dIm, dudy_dIm, dudz_dIm)
-         call opaddcol3(vx_tr, vy_tr, vz_tr, -vy_aIm, -vy_aIm, -vy_aIm, dvdx_dIm, dvdy_dIm, dwdz_dIm)
+         call opaddcol3(vx_tr, vy_tr, vz_tr, -vy_aIm, -vy_aIm, -vy_aIm, dvdx_dIm, dvdy_dIm, dvdz_dIm)
          call opaddcol3(vx_tr, vy_tr, vz_tr, -vz_aIm, -vz_aIm, -vz_aIm, dwdx_dIm, dwdy_dIm, dwdz_dIm)
 
       !     computation of imaginary part of base flow sensitivity term related to downstream transport of perturbations
          call oprzero(vx_ti, vy_ti, vz_ti)
          call opaddcol3(vx_ti, vy_ti, vz_ti, vx_aRe, vx_aRe, vx_aRe, dudx_dIm, dudy_dIm, dudz_dIm)
-         call opaddcol3(vx_ti, vy_ti, vz_ti, vy_aRe, vy_aRe, vy_aRe, dvdx_dIm, dvdy_dIm, dwdz_dIm)
+         call opaddcol3(vx_ti, vy_ti, vz_ti, vy_aRe, vy_aRe, vy_aRe, dvdx_dIm, dvdy_dIm, dvdz_dIm)
          call opaddcol3(vx_ti, vy_ti, vz_ti, vz_aRe, vz_aRe, vz_aRe, dwdx_dIm, dwdy_dIm, dwdz_dIm)
          call opaddcol3(vx_ti, vy_ti, vz_ti, -vx_aIm, -vx_aIm, -vx_aIm, dudx_dRe, dudy_dRe, dudz_dRe)
-         call opaddcol3(vx_ti, vy_ti, vz_ti, -vy_aIm, -vy_aIm, -vy_aIm, dvdx_dRe, dvdy_dRe, dwdz_dRe)
+         call opaddcol3(vx_ti, vy_ti, vz_ti, -vy_aIm, -vy_aIm, -vy_aIm, dvdx_dRe, dvdy_dRe, dvdz_dRe)
          call opaddcol3(vx_ti, vy_ti, vz_ti, -vz_aIm, -vz_aIm, -vz_aIm, dwdx_dRe, dwdy_dRe, dwdz_dRe)
 
       !     computation of real part of base flow sensitivity term related to perturbations production
@@ -476,6 +492,10 @@
       call norm(vx_dIm, vy_dIm, vz_dIm, pr_dIm, t_dIm, beta)
       beta = beta**2
 
+      if (alpha + beta < 1e-60) then
+         if (nid == 0) write (6, *) 'WARNING: zero-norm direct mode in biorthogonalize'
+         return
+      end if
       gamma = 1.0d+00/sqrt(alpha + beta)
 
       call opcmult(vx_dRe, vy_dRe, vz_dRe, gamma)
@@ -491,6 +511,10 @@
       delta = alpha - beta ! Complex part of the inner product
 
       !     --> Bi-orthonormalize the adjoint mode.
+      if (gamma**2 + delta**2 < 1e-60) then
+         if (nid == 0) write (6, *) 'WARNING: degenerate adjoint-direct pairing in biorthogonalize'
+         return
+      end if
       wk1_vx = (gamma*vx_aRe - delta*vx_aIm)/(gamma**2 + delta**2)
       wk2_vx = (gamma*vx_aIm + delta*vx_aRe)/(gamma**2 + delta**2)
 

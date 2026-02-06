@@ -572,6 +572,10 @@
                if (nid == 0) write (6, *) '       norm Re/Im:', alpha_r, alpha_i
 
                alpha = alpha_r**2 + alpha_i**2
+               if (alpha < 1e-60) then
+                  if (nid == 0) write (6, *) 'WARNING: zero-norm eigenvector', i
+                  cycle
+               end if
                beta = 1.0d0/sqrt(alpha)
 
       !call norm_grad(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), norma_Re)

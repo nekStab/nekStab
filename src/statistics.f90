@@ -50,7 +50,7 @@
             if (nid == 0) write (6, *) 'ABORT: wrong size of ax1,ay1,az1 in avg_all(), check SIZE!'
             call exitt
          end if
-         if (ax2 /= lx2 .or. ay2 /= ay2 .or. az2 /= lz2) then
+         if (ax2 /= lx2 .or. ay2 /= ly2 .or. az2 /= lz2) then
             if (nid == 0) write (6, *) 'ABORT: wrong size of ax2,ay2,az2 in avg_all(), check SIZE!'
             call exitt
          end if
