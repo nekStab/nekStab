@@ -21,6 +21,9 @@
 
          private
 
+         ! Mathematical constants
+         real, public, parameter :: NEKSTAB_PI = 4.0d0*atan(1.0d0)
+
          ! Spectral element dimensions (fixed at compile time)
          integer, public, parameter :: lv = lx1*ly1*lz1*lelv  ! Velocity/temp points
          integer, public, parameter :: lt = lx1*ly1*lz1*lelt  ! Temperature points

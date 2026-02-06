@@ -30,8 +30,6 @@
       !   to ensure MPI consistency.
       !-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-         use nekstab_otd, only: otd_printStep,
-     $      otd_gsStep, otd_FTLEPeriod
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -306,7 +304,7 @@
          use nekstab_eigensolvers
          use nekstab_energy_budget
          use nekstab_sensitivity
-         use nekstab_otd
+         use nekstab_otd, only: otd
          use nekstab_modal_analysis
          implicit none
          include 'SIZE'
@@ -346,6 +344,9 @@
 
             call nekStab_outpost
             call nekStab_comment
+
+            call oprzero(fcx, fcy, fcz)
+            call rzero(fct, nx1*ny1*nz1*nelt*ldimt)
 
             if (ifSFD) then
                call SFD

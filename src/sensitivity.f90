@@ -612,8 +612,8 @@
          call read_eigenvalue(sigma, omega)
 
 ! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
-! frequency = omega / (8.0d0*atan(1.0d0))  ! f = omega / (2 * pi)
-! omega = 8.0d0*atan(1.0d0) * frequency  ! omega = 2 * pi * f
+! frequency = omega / (2.0d0 * NEKSTAB_PI)  ! f = omega / (2 * pi)
+! omega = 2.0d0 * NEKSTAB_PI * frequency  ! omega = 2 * pi * f
 
          call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
          call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
@@ -772,8 +772,8 @@
          call read_eigenvalue(sigma, omega)
 
 ! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
-! frequency = omega / (8.0d0*atan(1.0d0))  ! f = omega / (2 * pi)
-! omega = 8.0d0*atan(1.0d0) * frequency  ! omega = 2 * pi * f
+! frequency = omega / (2.0d0 * NEKSTAB_PI)  ! f = omega / (2 * pi)
+! omega = 2.0d0 * NEKSTAB_PI * frequency  ! omega = 2 * pi * f
 
          call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
          call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
@@ -859,7 +859,7 @@
 
          call load_mode_pair(mode, Re, Im)
 
-         period = 8.0d0*atan(1.0d0)/omega ! period of leading mode
+         period = 2.0d0*NEKSTAB_PI/omega ! period of leading mode
          fintim = 1.0d0*period ! add more periods here !
 ! compute for fintim and not period, as we might have n periods
          timeio = fintim/dble(num_of_files)

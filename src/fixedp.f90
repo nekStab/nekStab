@@ -47,7 +47,7 @@
          real, dimension(lv) :: do1, do2, do3
          real :: h1, semi, l2, linf, rate, tol
          real, save :: residu0, gain, porbit
-         integer, save :: i, norbit, m
+         integer, save :: i, norbit, m, ibuf
       
          logical, save :: init
          data init/.false./
@@ -71,7 +71,7 @@
             if (nid == 0) write (6, *) ' veryfing current CFL and target=', ctarg, param(26)
             param(12) = -abs(param(12))
       
-            gain = -0.04432d0*8*atan(1.0d0)/porbit ! Theoretical optimal feedback parameter see reference
+            gain = -0.04432d0*2.0d0*NEKSTAB_PI/porbit ! Theoretical optimal feedback parameter see reference
       
             if (nid == 0) write (6, *) 'Allocating TDF orbit with nsteps:', norbit, norbit*dt
             allocate (uor(lv, norbit), vor(lv, norbit))
@@ -83,11 +83,11 @@
             call oprzero(uor(:, :), vor(:, :), wor(:, :))
       
             if (ifto .or. ldimt > 1) then
-               allocate (tor(lv, norbit, ldimt))
+               allocate (tor(lt, norbit, ldimt))
                tor(:, :, :) = 0.0d0
             end if
-      
-            rate = 0.0d0; residu0 = 0.0d0
+
+            rate = 0.0d0; residu0 = 0.0d0; ibuf = 0
             open (unit=10, file='residu.dat')
       
             init = .true.
@@ -106,31 +106,21 @@
                end if
       
             else !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
-      
-               call opsub3(do1, do2, do3, vx, vy, vz, uor(:, 1), vor(:, 1), wor(:, 1)) !ub=v-vold
-               if (istep > norbit + 1) call normvc(h1, semi, l2, linf, do1, do2, do3); rate = (l2 - residu0); residu0 = l2
-      
-               call opcmult(do1, do2, do3, gain) !f=fc*-chi
-               call opadd2(fcx, fcy, fcz, do1, do2, do3) !FORCE HERE DO NOT COPY, ADD!
-      
-               do i = 1, norbit - 1 !discard the i=1 solution
-      
-                  uor(:, i) = uor(:, i + 1)
-                  vor(:, i) = vor(:, i + 1)
-                  if (if3d) wor(:, i) = wor(:, i + 1)
-                  if (ifto) tor(:, i, 1) = tor(:, i + 1, 1)
-                  if (ldimt > 1) then
-                     do m = 2, ldimt
-                        if (ifpsco(m - 1)) tor(:, i, m) = tor(:, i + 1, m)
-                     end do
-                  end if
-      
-               end do !store the last one
-               call opcopy(uor(1, norbit), vor(1, norbit), wor(1, norbit), vx, vy, vz) !store solution
-               if (ifto) call copy(tor(1, norbit, 1), t(:, :, :, :, 1), nt)
+
+               ibuf = mod(ibuf, norbit) + 1
+               call opsub3(do1, do2, do3, vx, vy, vz, uor(:, ibuf), vor(:, ibuf), wor(:, ibuf))
+               call normvc(h1, semi, l2, linf, do1, do2, do3)
+               rate = (l2 - residu0)
+               residu0 = l2
+
+               call opcmult(do1, do2, do3, gain)
+               call opadd2(fcx, fcy, fcz, do1, do2, do3)
+
+               call opcopy(uor(1, ibuf), vor(1, ibuf), wor(1, ibuf), vx, vy, vz)
+               if (ifto) call copy(tor(1, ibuf, 1), t(:, :, :, :, 1), nt)
                if (ldimt > 1) then
                   do m = 2, ldimt
-                     if (ifpsco(m - 1)) call copy(tor(1, norbit, m), t(:, :, :, :, m), nt)
+                     if (ifpsco(m - 1)) call copy(tor(1, ibuf, m), t(:, :, :, :, m), nt)
                   end do
                end if
       
@@ -176,7 +166,7 @@
          real adt, bdt, cdt, cutoff, gain, res, h1, l2, semi, linf, oldRes, frq, sig, rate, dtol
          save oldRes, dtol
       
-         frq = abs(uparam(04))*8*atan(1.0d0) ! St to omega
+         frq = abs(uparam(04))*2.0d0*NEKSTAB_PI ! St to omega
          sig = abs(uparam(05))
       
          if (uparam(5) > 0) then
@@ -216,9 +206,9 @@
                call k_add2(oldQ, tempM)
             end if
       
-            call k_sub3(tempD, oldV, oldQ)
-            call k_cmult(tempD, gain)
-            call nopadd2(fcx, fcy, fcz, fcp, fct, tempD%vx, tempD%vy, tempD%vz, tempD%pr, tempD%t)
+            call opsub3(tempD%vx, tempD%vy, tempD%vz, vx, vy, vz, oldQ%vx, oldQ%vy, oldQ%vz)
+            call opcmult(tempD%vx, tempD%vy, tempD%vz, gain)
+            call opadd2(fcx, fcy, fcz, tempD%vx, tempD%vy, tempD%vz)
       
          elseif (nid == 0) then
       

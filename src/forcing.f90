@@ -19,7 +19,6 @@
       !-----------------------------------------------------------------------
 
       module nekstab_forcing_mod
-         use nekstab_otd, only: OTDfx, OTDfy, OTDfz
          implicit none
          private
          public :: nekStab_forcing, nekStab_forcing_temp,

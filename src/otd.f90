@@ -30,68 +30,10 @@
          include 'SIZE'
          private
 
-      ! ── OTD mode arrays ──
-         real, public,
-     $      dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $      OTDfx, OTDfy, OTDfz,
-     $      OTDmrx, OTDmry, OTDmrz,
-     $      OTDmix, OTDmiy, OTDmiz
-
-      ! ── OTD parameters ──
-         real, public :: otd_FTLEPeriod
-         integer, public :: otd_printStep, otd_gsStep
-         logical, public :: otd_computeFTLE,
-     $      gsstep_override
-
-      ! ── OTD operator work arrays ──
-         real, public,
-     $      dimension(lx1, ly1, lz1, lelv) ::
-     $      ubic, vbic, wbic
-         real, public,
-     $      dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $      upic, vpic, wpic,
-     $      vxpic, vypic, vzpic,
-     $      convx, convy, convz,
-     $      gradpx, gradpy, gradpz,
-     $      diffx, diffy, diffz
-
-      ! ── OTD reduced operator ──
-         real, public,
-     $      dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $      otd_Lux, otd_Luy, otd_Luz
-         real, public,
-     $      dimension(lpert, lpert) :: phi_rot, otd_Lr
-         integer, public,
-     $      dimension(lpert) :: otd_idx
-
-      ! ── FTLE arrays ──
-         real, public,
-     $      dimension(lpert) :: FTLEv, LEintegral
-
-      ! ── OTD eigenvalue arrays ──
-         real, public,
-     $      dimension(lpert) :: EIGR, EIGI,
-     $      OSIGMA, RCL, RCR
-         real, public,
-     $      dimension(lpert, lpert) :: EVR, EVRR, EVRI,
-     $      EVL, VMATX, VMATXT
-
-      ! ── LAPACK workspace ──
-         integer, public, parameter ::
-     $      LWORKR = 5*LPERT*LPERT
-     $             + 4*LPERT + 3*LPERT
-         integer, public, parameter ::
-     $      LWORKI = 3*LPERT*2 + 11*LPERT
-         integer, public, parameter ::
-     $      LWORKC = 2*LPERT + LPERT
-         real, public,
-     $      dimension(LWORKR) :: RWORK
-         integer, public,
-     $      dimension(LWORKI) :: otd_IWORK
-         complex, public,
-     $      dimension(LWORKC) :: CWORK
-         real, public,
-     $      dimension(LPERT, LPERT) :: ALU, SINGV
+      ! OTD variables come from NEKSTAB.inc (via include 'SIZE').
+      ! Common blocks: OTD_modes, OTD_params, OTD_oper, OTD_Lu,
+      !   OTD_FTLE, OTD_dgeev, rlpvec, ilpvec, clpvec.
+      ! Variables are NOT re-exported; use include 'SIZE' to access.
 
       ! ── Public subroutines ──
          public :: otd, otd_construct_linear_operator,
@@ -273,7 +215,7 @@
       !       phi_rot(i,j) = -phi_rot(j,i)
       !
       !     e.g. to obtain an evolution that corresponds to continuously
-      !     performing Gram-Schmidt on the basis (i.e. turning otd_Lr into a lower
+      !     performing Gram-Schmidt on the basis (i.e. turning otd_Lr into an upper
       !     triangular matrix), set the rotation matrix to
       !
       !                  / -<Lu_j,u_i>     j < i
@@ -438,51 +380,84 @@
 
       !-----------------------------------------------------------------------
       ! otd_white_noise — initialize all IC fields to white noise
+      !
+      ! Purpose:
+      !   Fills vxpic/vypic/vzpic with deterministic pseudo-random noise.
+      !   Each mode gets a DISTINCT pattern because sin(i)^2 scales the
+      !   frequency coefficients BEFORE hashing (not after), so the hash
+      !   function produces genuinely different fields per mode.
+      !   DSS averaging and velocity BCs are applied after generation.
       !-----------------------------------------------------------------------
       subroutine otd_white_noise
+         use nekstab_noise, only: mth_rand
          implicit none
          include 'SIZE'
          include 'INPUT'
-         include 'NEKUSE'
          include 'GEOM'
          include 'PARALLEL'
+         include 'SOLN'
 
-         integer :: x_idx, y_idx, z_idx, e_idx, ieg, per_idx, iidx
-         real :: coords(LDIM), fc(3), sin2
+         integer :: i, ix, iy, iz, ie, ieg, nv, ijke
+         real :: xl(ldim), fc(3), sin2
+         real :: glmin, glmax, nmin, nmax
 
-         do per_idx = 1, npert
-            do x_idx = 1, lx1
-               do y_idx = 1, ly1
-                  do z_idx = 1, lz1
-                     do e_idx = 1, lelv
-                        coords(1) = XM1(x_idx, y_idx, z_idx, e_idx)
-                        coords(2) = YM1(x_idx, y_idx, z_idx, e_idx)
-                        if (if3d) coords(NDIM) = ZM1(x_idx, y_idx, z_idx, e_idx)
-                        iidx = x_idx + lx1*((y_idx - 1) + ly1*((z_idx - 1) + lz1*(e_idx - 1)))
-                        ieg = lglel(e_idx)
-                        sin2 = sin(real(per_idx))**2
+         nv = nx1*ny1*nz1*nelv
 
-                        fc(1) = sin2*3.0d4
-                        fc(2) = sin2*(-1.5d3)
-                        fc(3) = sin2*0.5d5
-                        vxpic(iidx, per_idx) = mth_rand(x_idx, y_idx, z_idx, ieg, coords, fc)
+         do i = 1, npert
+            sin2 = sin(real(i))**2
+            call rzero(vxpic(1, i), nv)
+            call rzero(vypic(1, i), nv)
+            if (if3d) call rzero(vzpic(1, i), nv)
 
-                        fc(1) = sin2*2.3d4
-                        fc(2) = sin2*2.3d3
-                        fc(3) = sin2*(-2.0d5)
-                        vypic(iidx, per_idx) = mth_rand(x_idx, y_idx, z_idx, ieg, coords, fc)
+            do ie = 1, nelv
+               do iz = 1, nz1
+                  do iy = 1, ny1
+                     do ix = 1, nx1
+                        xl(1) = xm1(ix, iy, iz, ie)
+                        xl(2) = ym1(ix, iy, iz, ie)
+                        if (if3d) xl(ndim) = zm1(ix, iy, iz, ie)
+                        ijke = ix + lx1*((iy - 1)
+     $                       + ly1*((iz - 1) + lz1*(ie - 1)))
+                        ieg = lglel(ie)
+
+                        fc(1) = sin2*3.0e4
+                        fc(2) = sin2*(-1.5e3)
+                        fc(3) = sin2*0.5e5
+                        vxpic(ijke, i) =
+     $                       mth_rand(ix, iy, iz, ieg, xl, fc)
+
+                        fc(1) = sin2*2.3e4
+                        fc(2) = sin2*2.3e3
+                        fc(3) = sin2*(-2.0e5)
+                        vypic(ijke, i) =
+     $                       mth_rand(ix, iy, iz, ieg, xl, fc)
 
                         if (if3d) then
-                           fc(1) = sin2*2.0d4
-                           fc(2) = sin2*1.0d3
-                           fc(3) = sin2*1.0d5
-                           vzpic(iidx, per_idx) = mth_rand(x_idx, y_idx, z_idx, ieg, coords, fc)
+                           fc(1) = sin2*2.0e4
+                           fc(2) = sin2*1.0e3
+                           fc(3) = sin2*1.0e5
+                           vzpic(ijke, i) =
+     $                          mth_rand(ix, iy, iz, ieg, xl, fc)
                         end if
                      end do
                   end do
                end do
             end do
+
+      !     DSS averaging + velocity BCs
+            call opdssum(vxpic(1, i), vypic(1, i), vzpic(1, i))
+            call opcolv(vxpic(1, i), vypic(1, i),
+     $           vzpic(1, i), vmult)
+            call dsavg(vxpic(1, i))
+            call dsavg(vypic(1, i))
+            if (if3d) call dsavg(vzpic(1, i))
+            call bcdirVC(vxpic(1, i), vypic(1, i),
+     $           vzpic(1, i), v1mask, v2mask, v3mask)
          end do
+
+         nmin = glmin(vxpic, nv)
+         nmax = glmax(vxpic, nv)
+         if (nid == 0) write (6, *) 'OTD noise min,max', nmin, nmax
 
       end subroutine otd_white_noise
 
@@ -496,7 +471,7 @@
          include 'INPUT'
          include 'TSTEP'
 
-         integer nv; nv = lx1*ly1*lz1*nelv
+         integer nv; nv = lx1*ly1*lz1*lelv
          call mxm(VXP, nv, otd_Lr, lpert, OTDfx, npert)
          call mxm(VYP, nv, otd_Lr, lpert, OTDfy, npert)
          if (if3d) call mxm(VZP, nv, otd_Lr, lpert, OTDfz, npert)
@@ -549,24 +524,34 @@
       ! otd_compute_FTLE — compute finite-time Lyapunov exponents
       !-----------------------------------------------------------------------
       subroutine otd_compute_FTLE
+      !
+      !  Compute finite-time Lyapunov exponents via trapezoidal
+      !  quadrature of the diagonal of L_r:
+      !
+      !     lambda_i(T) = (1/T) * integral_0^T  L_r(i,i) dt
+      !
+      !  When otd_FTLEPeriod > 0, the integral resets every period.
+      !  Otherwise it accumulates from the first call onward.
+      !
          implicit none
          include 'SIZE'
          include 'TSTEP'
 
          integer i
-         real pfrac ! current fraction of the FTLE comp. period
-         real ftledt ! dt for FTLE computation
-         real Lrc(lpert, lpert) ! (linear approx.) of otd_Lr at end of int. interval
+         real pfrac ! time past the most recent period boundary
+         real ftledt ! sub-step width for integration
+         real Lrc(lpert, lpert) ! interpolated L_r at period boundary
          real fact, period
          integer, save :: icalld
          data icalld/0/
-         real, save :: t0, Lrp(lpert, lpert), Lrpp(lpert, lpert)
+         real, save :: t0, Lrp(lpert, lpert)
          data t0/0.0d0/
          logical, save :: init
          data init/.false./
          character(len=20) fmte
 
-         if (otd_FTLEPeriod > 0.0d0) then ! determine FTLE horizon
+      !  --- Determine FTLE horizon ---
+         if (otd_FTLEPeriod > 0.0d0) then
             period = otd_FTLEPeriod
             pfrac = mod(time, period)
          else
@@ -578,124 +563,90 @@
             pfrac = time - t0
          end if
 
-         if (.not. init) then ! initialisation
+      !  --- First call: initialise ---
+         if (.not. init) then
             call copy(Lrp, otd_Lr, lpert*lpert)
-            call copy(Lrpp, otd_Lr, lpert*lpert)
             init = .true.
             if (nid == 0) then
-               open (unit=459, file='otd_Le.dat', status='replace', form='formatted'); close (459)
+               open (unit=459, file='otd_Le.dat',
+     $              status='replace', form='formatted')
+               close (459)
             end if
          end if
 
-         if (pfrac < dt) then ! compute approximation of Lrc at end of period (linear interp.)
-
+      !  --- Integrate L_r(i,i) with trapezoidal rule ---
+         if (pfrac < dt) then
+      !     We just crossed a period boundary.  Split the step:
+      !       [t_prev .. t_boundary]  then  [t_boundary .. t_curr]
+      !     Linearly interpolate L_r at the boundary.
             ftledt = dt - pfrac
-            call copy(Lrc, Lrp, lpert*lpert) ! Lrp = Lrc
+            call copy(Lrc, Lrp, lpert*lpert)
             fact = ftledt/dt
             call add2s2(Lrc, Lrp, -fact, lpert*lpert)
             call add2s2(Lrc, otd_Lr, fact, lpert*lpert)
 
-            call integrate_Euler(Lrp, Lrc, period, ftledt)
-            call integrate_ABBD(Lrpp, Lrp, Lrc, period, ftledt)
+      !     Finish previous period
+            call integrate_trap(Lrp, Lrc, period, ftledt)
 
             if (nid == 0) then
-               write (6, *) '[OTD] FTLE PRD', istep, 't=', time, (FTLEv(i), i=1, npert)
+               write (6, *) '[OTD] FTLE PRD', istep,
+     $              't=', time, (FTLEv(i), i=1, npert)
             end if
 
+      !     Reset and start new period
             call otd_zero_FTLE
             call copy(Lrp, Lrc, lpert*lpert)
             call copy(Lrc, otd_Lr, lpert*lpert)
+            call integrate_trap(Lrp, Lrc, period, pfrac)
 
-            call integrate_Euler(Lrp, Lrc, period, pfrac)
-            call integrate_ABBD(Lrpp, Lrp, Lrc, period, pfrac)
-
-         else ! pfrac >= dt ! here Lrc = otd_Lr
-
-            call integrate_Euler(Lrp, otd_Lr, pfrac, dt)
-            call integrate_ABBD(Lrpp, Lrp, otd_Lr, period, dt)
+         else
+      !     Normal step (no boundary crossing)
+            call integrate_trap(Lrp, otd_Lr, pfrac, dt)
 
          end if
 
-         call copy(Lrpp, Lrp, lpert*lpert) ! update Lrpp
-         call copy(Lrp, otd_Lr, lpert*lpert) ! update Lrp
+      !  --- Shift history ---
+         call copy(Lrp, otd_Lr, lpert*lpert)
 
-         if (nid == 0) then ! save to file
-            open (unit=459, file='otd_Le.dat', position='append', status='unknown', form='formatted')
+      !  --- Output ---
+         if (nid == 0) then
+            open (unit=459, file='otd_Le.dat',
+     $           position='append', status='unknown',
+     $           form='formatted')
             write (fmte, '("(",I0,"(E15.7,1X))")') npert + 1
             write (459, fmte) time, (FTLEv(i), i=1, npert)
             close (459)
          end if
 
-         if (nid == 0 .and. mod(istep, otd_printStep) == 0) then
-            write (6, *) '[OTD] FTLE (t)', istep, 't=', time, pfrac, (FTLEv(i), i=1, npert)
+         if (nid == 0 .and.
+     $       mod(istep, otd_printStep) == 0) then
+            write (6, *) '[OTD] FTLE', istep, 't=', time,
+     $           pfrac, (FTLEv(i), i=1, npert)
          end if
 
       contains
 
-         subroutine integrate_Euler(Lrp, Lrc, deltat, ftledt)
+         subroutine integrate_trap(Lrprev, Lrcurr,
+     $                             deltat, hstep)
+      !     Trapezoidal quadrature: accumulate LEintegral and
+      !     update FTLEv = LEintegral / deltat.
             implicit none
             include 'SIZE'
             include 'TSTEP'
 
-            real, intent(in) :: deltat ! time interval for FTLE computation
-            real, intent(in) :: ftledt ! dt for otd_phi_matrix advection
-            real, intent(in), dimension(lpert, lpert) :: Lrp ! otd_Lr matrix from previous step
-            real, intent(in), dimension(lpert, lpert) :: Lrc ! otd_Lr matrix for current step
+            real, intent(in) :: deltat ! FTLE averaging window
+            real, intent(in) :: hstep ! integration sub-step
+            real, intent(in), dimension(lpert, lpert) :: Lrprev
+            real, intent(in), dimension(lpert, lpert) :: Lrcurr
             integer :: i
 
             do i = 1, npert
-               LEintegral(i) = LEintegral(i) + 0.50d0*ftledt*(Lrp(i, i) + Lrc(i, i))
+               LEintegral(i) = LEintegral(i)
+     $              + 0.50d0*hstep*(Lrprev(i, i) + Lrcurr(i, i))
                FTLEv(i) = LEintegral(i)/deltat
             end do
-            if (nid == 0) then
-               write (6, *) '[OTD] FTLE (Euler)', istep, 't=', time, (FTLEv(i), i=1, npert)
-            end if
 
-         end subroutine integrate_Euler
-
-         subroutine integrate_ABBD(Lrpp, Lrp, Lrc, deltat, ftledt)
-            implicit none
-            include 'SIZE'
-            include 'TSTEP'
-
-            real, intent(in) :: deltat
-            real, intent(in) :: ftledt
-            real, intent(in), dimension(lpert, lpert) :: Lrpp ! lag(2) with ab2 or AB(3)
-            real, intent(in), dimension(lpert, lpert) :: Lrp ! lag(1) with ab1 or AB(2)
-            real, intent(in), dimension(lpert, lpert) :: Lrc ! lag(0) with ab0 or AB(1)
-            integer :: i
-
-            real, dimension(3) :: ab_
-
-            ab_(1) = -1.0d0/12.0d0
-            ab_(2) = 8.0d0/12.0d0
-            ab_(3) = 5.0d0/12.0d0
-            if (nid == 0) then
-               write (6, *) 'AB ref', ab_(1), ab_(2), ab_(3), ab_(1) + ab_(2) + ab_(3)
-            end if
-            do i = 1, npert
-               LEintegral(i) = LEintegral(i) + ftledt*(Lrc(i, i)*ab_(1) + Lrp(i, i)*ab_(2) + Lrpp(i, i)*ab_(3))
-               FTLEv(i) = LEintegral(i)/deltat
-            end do
-            if (nid == 0) then
-               write (6, *) '[OTD] FTLE (AB3 ref)', istep, 't=', time, (FTLEv(i), i=1, npert)
-            end if
-
-            LEintegral(:) = 0.0d0
-
-            call setab3(ab_(1), ab_(2), ab_(3))
-            if (nid == 0) then
-               write (6, *) 'AB var', ab_(1), ab_(2), ab_(3), ab_(1) + ab_(2) + ab_(3)
-            end if
-            do i = 1, npert
-               LEintegral(i) = LEintegral(i) + (Lrc(i, i)*ab_(1) + Lrp(i, i)*ab_(2) + Lrpp(i, i)*ab_(3))
-               FTLEv(i) = LEintegral(i)/deltat
-            end do
-            if (nid == 0) then
-               write (6, *) '[OTD] FTLE (AB3 var)', istep, 't=', time, (FTLEv(i), i=1, npert)
-            end if
-
-         end subroutine integrate_ABBD
+         end subroutine integrate_trap
 
       end subroutine otd_compute_FTLE
 
@@ -813,7 +764,7 @@
          lxyz = lx1*ly1*lz1
          nel = nx1 - 1
          call gradm1(ux, uy, uz, up)
-         do e = 1, lelt
+         do e = 1, nelv
             if (if3d) then
                call local_grad3(otd_ur, otd_us, otd_ut, ux, nel, e, dxm1, dxtm1)
                do i = 1, lxyz
@@ -931,8 +882,8 @@
       !       enddo
       !     enddo
       !
-      !        with proj_{u_i} (v_j) = < v_j , u_i >/||u_i|| * v_j
-      !                              = < v_j , u_i > * v_j   since ||u_i|| = 1
+      !        with proj_{u_i} (v_j) = < v_j , u_i >/||u_i|| * u_i
+      !                              = < v_j , u_i > * u_i   since ||u_i|| = 1
          implicit none
          include 'SIZE'
          include 'INPUT' ! if3d
@@ -1053,7 +1004,7 @@
             EIGI(j) = wrk2(id) ! extract corresponding imaginary part
             mk(id) = .false. ! update mask
             otd_idx(j) = id
-            if (EIGI(j) == 0.0) then
+            if (abs(EIGI(j)) < 1.0d-12) then
                do i = 1, npert
                   EVRR(i, j) = EVR(i, id)
                end do
