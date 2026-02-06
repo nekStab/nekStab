@@ -1,7 +1,19 @@
-!-----------------------------------------------------------------------
-!     modal_pod.f90: POD via method of snapshots (Sirovich, 1987)
-!     Includes POD-FFT spectral analysis of temporal coefficients.
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! modal_pod.f90 — POD via method of snapshots (Sirovich, 1987)
+      !
+      ! Purpose:
+      !   Computes Proper Orthogonal Decomposition using the snapshot
+      !   method. Includes POD-FFT spectral analysis of temporal
+      !   coefficients via Welch's method.
+      !
+      ! Public interface:
+      !   pod_compute      — Full POD: correlation, eigensolve, modes
+      !   pod_fft_spectrum — Welch power spectrum of POD temporal coeffs
+      !   hamming_window   — Hamming window with amplitude/energy norm
+      !
+      ! Dependencies:
+      !   krylov_subspace, fourier, SIZE, TOTAL
+      !-----------------------------------------------------------------------
       module modal_pod
 
          use krylov_subspace
@@ -16,12 +28,14 @@
 
       contains
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! pod_compute — POD via method of snapshots
+      !
+      !   C(i,j) = <snaps(i), snaps(j)>_E / n
+      !   C v = lambda v
+      !   Phi_k = Sum_i v_k(i) snaps(i) / sqrt(lambda_k * n)
+      !-----------------------------------------------------------------------
       subroutine pod_compute(snaps, nsnap, nsave)
-!     POD via method of snapshots:
-!       C(i,j) = <snaps(i), snaps(j)>_E / n
-!       C v = lambda v
-!       Phi_k = Sum_i v_k(i) snaps(i) / sqrt(lambda_k * n)
 
          implicit none
          include 'SIZE'
@@ -72,10 +86,13 @@
 
       end subroutine pod_compute
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! pod_reconstruct_modes — Reconstruct and output POD spatial modes
+      !
+      !   Phi_m = Sum_i v_m(i) * snaps(i) / sqrt(lambda_m * nsnap)
+      !-----------------------------------------------------------------------
       subroutine pod_reconstruct_modes(snaps, eigvecs, eigvals,
      $                                  nsnap, nsave, norms)
-!     Phi_m = Sum_i v_m(i) * snaps(i) / sqrt(lambda_m * nsnap)
 
          implicit none
          include 'SIZE'
@@ -122,9 +139,10 @@
 
       end subroutine pod_reconstruct_modes
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! pod_write_spectrum — Write POD eigenvalue spectrum to file
+      !-----------------------------------------------------------------------
       subroutine pod_write_spectrum(eigvals, n, norms, nnorms)
-!     Write POD eigenvalue spectrum to file
 
          implicit none
          include 'SIZE'
@@ -166,12 +184,14 @@
 
       end subroutine pod_write_spectrum
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! pod_fft_spectrum — Welch power spectrum of POD temporal coefficients
+      !
+      !   Fast alternative to field-based SPOD: FFT the POD temporal
+      !   coefficients a_k(t) = sqrt(lambda_k * n) * v_k(t) instead of
+      !   every spatial point.
+      !-----------------------------------------------------------------------
       subroutine pod_fft_spectrum(snaps, nsnap, delta_t, nfft, noverlap)
-!     Welch power spectrum of POD temporal coefficients.
-!     Fast alternative to field-based SPOD: FFT the POD temporal
-!     coefficients a_k(t) = sqrt(lambda_k * n) * v_k(t) instead of
-!     every spatial point.
 
          implicit none
          include 'SIZE'
@@ -384,11 +404,13 @@
 
       end subroutine pod_fft_spectrum
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! hamming_window — Compute Hamming window and normalization weight
+      !
+      !   ifwinamp = .true.  -> Amplitude: win_weight = mean(w)  [PySPOD]
+      !   ifwinamp = .false. -> Energy: win_weight = sqrt(sum(w^2)/n)
+      !-----------------------------------------------------------------------
       subroutine hamming_window(n, window, win_weight)
-!     Compute Hamming window and normalization weight.
-!     ifwinamp = .true.  -> Amplitude: win_weight = mean(w)  [PySPOD]
-!     ifwinamp = .false. -> Energy: win_weight = sqrt(sum(w^2)/n) [Parseval]
 
          implicit none
          include 'SIZE'

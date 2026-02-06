@@ -1,9 +1,21 @@
       !-----------------------------------------------------------------------
-      ! newton_krylov: Main solver routine implementing Newton's method with GMRES for
-      ! finding steady-state solutions or periodic orbits.
+      ! newton_krylov.f90 — Newton-Krylov solver for fixed points and UPOs
       !
-      ! Note: This file is compiled with -fixed flag, requiring fixed-format Fortran.
-      ! Line continuations must use '$' in column 6 instead of '&' despite .f90 extension.
+      ! Purpose:
+      !   Implements Newton's method with GMRES for finding steady-state
+      !   solutions or periodic orbits. Includes adaptive tolerance and
+      !   residual monitoring.
+      !
+      ! Public interface:
+      !   newton_krylov, ts_gmres, initialize_gmres_vector,
+      !   nonlinear_forward_map, set_nek5000_tolerances, spec_tole
+      !
+      ! Dependencies:
+      !   krylov_subspace, SIZE, TOTAL
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! newton_krylov — Main Newton iteration loop
       !
       ! The algorithm solves F(q) = q using Newton iteration:
       ! 1. Compute residual: f = F(q) - q
@@ -13,13 +25,13 @@
       !
       ! Sign convention:
       ! - Residual f = F(q) - q (computed in nonlinear_forward_map)
-      ! - GMRES solves J(q)δq = -f for the Newton step δq
-      ! - Update uses q = q - δq to move toward the fixed point
+      ! - GMRES solves J(q)dq = -f for the Newton step dq
+      ! - Update uses q = q - dq to move toward the fixed point
       !
       ! Key variables:
       ! - q: Current solution estimate
       ! - f: Nonlinear residual f(q) = F(q) - q
-      ! - dq: Newton correction step (δq)
+      ! - dq: Newton correction step (dq)
       ! - dtol: Target tolerance for Newton convergence
       ! - tol: Current GMRES solver tolerance (may be relaxed if ifdyntol=true)
       !-----------------------------------------------------------------------
@@ -48,18 +60,18 @@
          real :: spec_tole ! Function declaration
 
       !     ----- Call Counting Logic -----
-      ! Each nonlinear solve costs nsteps calls (in nonlinear_forward_map)
-      ! Each Arnoldi iteration costs nsteps calls (in ts_gmres)
-      ! Total linear calls = sum of all GMRES/Arnoldi calls + 1 per GMRES restart
-      ! The +1 accounts for the matvec operation in initialize_gmres_vector (r = b - Ax)
-      ! Total nonlinear calls = sum of all nonlinear solver calls
-      ! Total calls = nonlin_calls + lin_calls
-      ! Calls per iteration = total_calls - prev_total_calls
-      ! Each GMRES iteration costs 1 call to initialize_gmres_vector
-      ! Each GMRES restart costs 1 call to initialize_gmres_vector
-      ! Total calls per GMRES iteration = nsteps + 1
-      ! Total calls per GMRES restart = nsteps + 1
-      ! Total calls per Newton iteration = nsteps + (nsteps + 1) * (GMRES iterations + GMRES restarts)
+! Each nonlinear solve costs nsteps calls (in nonlinear_forward_map)
+! Each Arnoldi iteration costs nsteps calls (in ts_gmres)
+! Total linear calls = sum of all GMRES/Arnoldi calls + 1 per GMRES restart
+! The +1 accounts for the matvec operation in initialize_gmres_vector (r = b - Ax)
+! Total nonlinear calls = sum of all nonlinear solver calls
+! Total calls = nonlin_calls + lin_calls
+! Calls per iteration = total_calls - prev_total_calls
+! Each GMRES iteration costs 1 call to initialize_gmres_vector
+! Each GMRES restart costs 1 call to initialize_gmres_vector
+! Total calls per GMRES iteration = nsteps + 1
+! Total calls per GMRES restart = nsteps + 1
+! Total calls per Newton iteration = nsteps + (nsteps + 1) * (GMRES iterations + GMRES restarts)
 
          real, save :: dtol = 0.0d0 ! Target residual for Newton convergence
          if (dtol == 0.0d0) then ! Initialize counters at first call
@@ -174,7 +186,7 @@
 
             if (nid == 0) write (6, *) '  Solving linear system with GMRES for rhs = f = F(q) - q'
             call ts_gmres(f, dq, maxiter_gmres, k_dim, tol, calls, k_out, i, dtol)
-            ! J(q)dq=rhs=F(q)−q, with dq being the solution (denoted sol in ts_gmres).
+            ! J(q)dq=rhs=F(q)-q, with dq being the solution (denoted sol in ts_gmres).
             lin_calls = lin_calls + calls + 1  ! Add GMRES calls + 1 for matvec in initialize_gmres_vector
             total_calls = total_calls + lin_calls
             tottime = tottime + calls*dt
@@ -229,9 +241,7 @@
       end subroutine
 
       !-----------------------------------------------------------------------
-
-      !-----------------------------------------------------------------------
-      ! ts_gmres: Time-stepper GMRES solver for the Newton correction equation
+      ! ts_gmres — Time-stepper GMRES solver for the Newton correction equation
       !
       ! This implements a restarted GMRES method to solve the linear system:
       !    J(q)dq = -f(q)
@@ -378,7 +388,7 @@
                   exit arnoldi
                end if
 
-      ! --> Relaxed exit condition if finite-difference approximation of the operator is considered.
+! --> Relaxed exit condition if finite-difference approximation of the operator is considered.
                if ((iffindiff) .and. (beta2 < 1e-8)) then ! count of calls to linearized solver
                   exit arnoldi
                end if
@@ -424,12 +434,11 @@
          deallocate (Q, H, yvec, evec)
 
          k_out = k  ! Save final k value
+
       end subroutine ts_gmres
 
       !-----------------------------------------------------------------------
-
-      !-----------------------------------------------------------------------
-      ! initialize_gmres_vector: Prepares initial vector for GMRES iterations
+      ! initialize_gmres_vector — Prepare initial vector for GMRES iterations
       !
       ! This routine:
       ! 1. Computes initial residual r = b - Ax for the system Ax = b
@@ -440,8 +449,8 @@
       ! Krylov subspace used in the Arnoldi process.
       !-----------------------------------------------------------------------
       subroutine initialize_gmres_vector(beta, q, rhs)
-         use krylov_subspace
 
+         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -454,9 +463,9 @@
          type(krylov_vector) :: f
          real, intent(out) :: beta
 
-         call matvec(f, q)         ! f = A·q
-         call k_sub2(f, rhs)       ! f = A·q - rhs (residual calculation)
-         call k_cmult(f, -1.0d0)   ! f = -(A·q - rhs) = rhs - A·q (standard residual form)
+         call matvec(f, q)         ! f = A*q
+         call k_sub2(f, rhs)       ! f = A*q - rhs (residual calculation)
+         call k_cmult(f, -1.0d0)   ! f = -(A*q - rhs) = rhs - A*q (standard residual form)
          call k_normalize(f, beta) ! Normalizes f
          call k_copy(q, f)         ! Sets q as normalized residual
 
@@ -464,14 +473,12 @@
       end subroutine initialize_gmres_vector
 
       !-----------------------------------------------------------------------
-
-      !-----------------------------------------------------------------------
-      ! nonlinear_forward_map: Computes nonlinear residual f(q) = F(q) - q
+      ! nonlinear_forward_map — Compute nonlinear residual f(q) = F(q) - q
       !
       ! Newton iteration requires the residual r = F(q) - q where:
       ! - F(q) is computed by time-stepping from q
       ! - The residual f = F(q) - q measures how far q is from a fixed point
-      ! - For convergence, we want ||f|| → 0
+      ! - For convergence, we want ||f|| -> 0
       !
       ! Steps:
       ! 1. Set initial condition from q
@@ -484,6 +491,7 @@
       ! - Handles both natural (2.1) and forced (2.2) UPO cases
       !-----------------------------------------------------------------------
       subroutine nonlinear_forward_map(f, q)
+
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -496,6 +504,7 @@
 
          integer :: m
          real :: gmres_target
+
          nt = nx1*ny1*nz1*nelt
 
       !     --> Copy the initial condition to Nek.
@@ -538,31 +547,36 @@
       end subroutine nonlinear_forward_map
 
       !-----------------------------------------------------------------------
+      ! set_nek5000_tolerances — Update solver tolerances
+      !-----------------------------------------------------------------------
+      subroutine set_nek5000_tolerances(solver_tol)
 
-      subroutine set_nek5000_tolerances(solver_tol) ! set solver tolerances
          implicit none
          include 'SIZE'
          include 'TOTAL'
+
          real, intent(in) :: solver_tol ! New tolerance value to be set
+
          if (nid == 0) write (6, "('  TOLERANCE set from:',1PE15.6,' to:', 1PE15.6) ") param(21), abs(solver_tol)
          param(21:22) = abs(solver_tol)  ! Set both tolerances at once
          call bcast(param(21:22), 2*wdsize)  ! Broadcast both values in one call
+
       end subroutine set_nek5000_tolerances
 
       !-----------------------------------------------------------------------
-
-      !-----------------------------------------------------------------------
-      ! spec_tole: Computes relaxed tolerance for GMRES solver
+      ! spec_tole — Compute relaxed tolerance for GMRES solver
+      !
       ! This implements an adaptive tolerance strategy:
-      ! - Early iterations: Use relaxed tolerance ≈ relaxation_factor * residual
+      ! - Early iterations: Use relaxed tolerance ~ relaxation_factor * residual
       !   to avoid over-solving when far from solution
       ! - Later iterations: Tolerance approaches dtol as residual decreases
-      ! - Bounded between dtol (lower bound) and min_tol (upper bound) for stability
+      ! - Bounded between dtol (lower bound) and min_tol (upper bound)
       ! - residual: Current Newton residual norm
       ! - dtol: Target tolerance for Newton convergence
       ! - relaxation_factor: Controls how much to relax tolerance (typically 0.1)
       !-----------------------------------------------------------------------
       function spec_tole(residual, dtol, relaxation_factor) result(nwtol)
+
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -573,11 +587,11 @@
          real :: nwtol ! Returned new tolerance
          real, parameter :: min_tol = 1.0e-5 ! Minimum allowed tolerance
 
-      ! Compute new time stepper tolerances based on Newton residual
-      ! Adjusts how accurately we solve the time stepping problem:
-      ! - Early Newton iterations: Relaxed tolerances (≈ relaxation_factor * residual)
-      ! - Later iterations: Stricter tolerances approaching dtol
-      ! - Bounded by dtol (lower bound) and min_tol (upper bound) for stability
+! Compute new time stepper tolerances based on Newton residual
+! Adjusts how accurately we solve the time stepping problem:
+! - Early Newton iterations: Relaxed tolerances (~ relaxation_factor * residual)
+! - Later iterations: Stricter tolerances approaching dtol
+! - Bounded by dtol (lower bound) and min_tol (upper bound) for stability
          nwtol = max(min(residual*relaxation_factor, min_tol), dtol)
          if (nid == 0) then
             if (nwtol == min_tol) then

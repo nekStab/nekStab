@@ -1,37 +1,35 @@
       !-----------------------------------------------------------------------
-      ! krylov_subspace: High-performance Krylov operations for spectral elements
+      ! krylov_subspace.f90 — Krylov vector type and subspace operations
       !
       ! Purpose:
-      ! - Optimized vector operations for Krylov subspace methods
-      ! - MPI-compatible for parallel execution on supercomputers
-      ! - Minimizes memory usage and FLOPs in critical operations
+      !   Defines the krylov_vector derived type and provides optimized
+      !   vector operations for Krylov subspace methods in spectral
+      !   element discretizations. MPI-compatible for parallel execution.
       !
-      ! Data Layout:
-      ! - Velocity/Temperature: lv = lx1*ly1*lz1*lelv (first-order elements)
-      ! - Pressure: lp = lx2*ly2*lz2*lelv (second-order elements)
-      ! - Temperature scalars: lt = lx1*ly1*lz1*lelt
+      ! Public interface:
+      !   k_dot, k_norm, k_normalize, k_cmult, k_add2, k_add2s2,
+      !   k_axpby, k_sub2, k_sub3, k_zero, k_copy, k_matmul,
+      !   allocate_orbit, orbit_store, orbit_restore
       !
-      ! Memory Management:
-      ! - Static allocation for vectors to avoid runtime overhead
-      ! - Minimal temporary storage in vector operations
-      ! - Optional orbit storage for UPO computations (deallocated when unused)
+      ! Dependencies:
+      !   SIZE, TOTAL, SOLN, PARALLEL, INPUT
       !-----------------------------------------------------------------------
        module krylov_subspace
          implicit none
          include 'SIZE'
-      
+
          private
-      
+
          ! Spectral element dimensions (fixed at compile time)
          integer, public, parameter :: lv = lx1*ly1*lz1*lelv  ! Velocity/temp points
          integer, public, parameter :: lt = lx1*ly1*lz1*lelt  ! Temperature points
          integer, public, parameter :: lp = lx2*ly2*lz2*lelv  ! Pressure points
-         
+
          ! Runtime dimensions (may be smaller than max)
          integer, save, public :: nv    ! Active velocity/temp points
-         integer, save, public :: nt    ! Active temperature points  
+         integer, save, public :: nt    ! Active temperature points
          integer, save, public :: n2    ! Active pressure points (renamed from np for MPI)
-      
+
          ! Core data structure for Krylov operations
          type, public :: krylov_vector
             real, dimension(lv) :: vx, vy, vz     ! Velocity components
@@ -39,39 +37,36 @@
             real, dimension(lt, ldimt) :: t       ! Temperature/passive scalars
             real :: time                          ! Time value
          end type krylov_vector
-      
+
          ! Global storage (minimized to essential data only)
          type(krylov_vector), save, public :: ic_nwt, fc_nwt  ! Newton conditions
          real, save, allocatable, dimension(:, :), public :: uor, vor, wor  ! Velocity orbits
          real, save, allocatable, dimension(:, :, :), public :: tor        ! Temperature orbits
-      
+
       contains
       end module krylov_subspace
 
-      !====================================================================
-      !     Module: krylov_subspace
-      !     
-      !     Purpose: Implements Krylov subspace operations for numerical computations
-      !              with support for velocity, pressure, and temperature fields.
-      !              Designed for both serial and MPI parallel processing.
+      !-----------------------------------------------------------------------
+      ! Krylov vector operations
       !
-      !     Operations:
-      !     - k_dot(alpha,p,q):      alpha = <p,q>     ! Inner product
-      !     - k_norm(alpha,p):       alpha = ||p||      ! L2 norm
-      !     - k_normalize(p,alpha):  p = p/||p||        ! Returns norm in alpha
-      !     - k_cmult(p,c):         p = c*p            ! Scalar multiplication
-      !     - k_add2(p,q):          p = p + q          ! Vector addition
-      !     - k_add2s2(p,q,c):      p = p + c*q        ! Scaled addition (AXPY)
-      !     - k_axpby(p,a,q,b):    p = a*p + b*q      ! Scaled combination (AXPBY)
-      !     - k_sub2(p,q):          p = p - q          ! Vector subtraction
-      !     - k_sub3(p,q,r):        p = q - r          ! Three vector operation
-      !     - k_zero(p):            p = 0              ! Zero vector
-      !     - k_copy(p,q):          p = q              ! Copy vector
-      !     - k_matmul(dq,Q,y,k):   dq = Q*y          ! Matrix-vector product
-      !     
-      !     Note: All operations preserve MPI compatibility
-      !====================================================================
-      
+      ! Operations:
+      !   k_dot(alpha,p,q):      alpha = <p,q>      Inner product
+      !   k_norm(alpha,p):       alpha = ||p||       L2 norm
+      !   k_normalize(p,alpha):  p = p/||p||         Returns norm in alpha
+      !   k_cmult(p,c):          p = c*p             Scalar multiplication
+      !   k_add2(p,q):           p = p + q           Vector addition
+      !   k_add2s2(p,q,c):       p = p + c*q         Scaled addition (AXPY)
+      !   k_axpby(p,a,q,b):      p = a*p + b*q       Scaled combination
+      !   k_sub2(p,q):           p = p - q           Vector subtraction
+      !   k_sub3(p,q,r):         p = q - r           Three vector operation
+      !   k_zero(p):             p = 0               Zero vector
+      !   k_copy(p,q):           p = q               Copy vector
+      !   k_matmul(dq,Q,y,k):    dq = Q*y            Matrix-vector product
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! k_dot — Weighted inner product of two Krylov vectors
+      !-----------------------------------------------------------------------
       subroutine k_dot(alpha, p, q)
          use krylov_subspace
          implicit none
@@ -81,14 +76,14 @@
          real, intent(out) :: alpha
          real :: glsc3
          integer m
-      
+
          nv = nx1*ny1*nz1*nelv
          nt = nx1*ny1*nz1*nelt
-      
+
       !     --> Kinetic energy. ! Note : glsc3(a,b,mult,n)
          alpha = glsc3(p%vx, q%vx, bm1s, nv) + glsc3(p%vy, q%vy, bm1s, nv)
          if (if3d) alpha = alpha + glsc3(p%vz, q%vz, bm1s, nv)
-      
+
       !     --> Potential energy.
          if (ifto) alpha = alpha + glsc3(p%t(:, 1), q%t(:, 1), bm1s, nt)
          if (ldimt > 1) then
@@ -96,14 +91,17 @@
                if (ifpsco(m - 1)) alpha = alpha + glsc3(p%t(:, m), q%t(:, m), bm1s, nt)
             end do
          end if
-      
+
       !     --> Time component.
          if (isNewtonPO) then
             alpha = alpha + p%time*q%time
          end if
 
       end subroutine k_dot
-      
+
+      !-----------------------------------------------------------------------
+      ! k_norm — L2 norm of a Krylov vector
+      !-----------------------------------------------------------------------
       subroutine k_norm(alpha, p)
          use krylov_subspace
          implicit none
@@ -111,11 +109,15 @@
          include 'TOTAL'
          type(krylov_vector), intent(in) :: p
          real, intent(out) :: alpha
-      
+
          call k_dot(alpha, p, p)
          alpha = sqrt(alpha)
+
       end subroutine k_norm
-      
+
+      !-----------------------------------------------------------------------
+      ! k_normalize — Normalize a Krylov vector to unit norm
+      !-----------------------------------------------------------------------
       subroutine k_normalize(p, alpha)
          use krylov_subspace
          implicit none
@@ -163,7 +165,10 @@
          end if
 
       end subroutine k_normalize
-      
+
+      !-----------------------------------------------------------------------
+      ! k_cmult — Scalar multiplication p = c*p
+      !-----------------------------------------------------------------------
       subroutine k_cmult(p, c)
          use krylov_subspace
          implicit none
@@ -171,10 +176,15 @@
          include 'TOTAL'
          type(krylov_vector), intent(inout) :: p
          real, intent(in) :: c
+
          call nopcmult(p%vx, p%vy, p%vz, p%pr, p%t, c)
          p%time = p%time*c
+
       end subroutine k_cmult
-      
+
+      !-----------------------------------------------------------------------
+      ! k_add2 — Vector addition p = p + q
+      !-----------------------------------------------------------------------
       subroutine k_add2(p, q)
          use krylov_subspace
          implicit none
@@ -182,12 +192,16 @@
          include 'TOTAL'
          type(krylov_vector), intent(inout) :: p
          type(krylov_vector), intent(in) :: q
+
          call nopadd2(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = p%time + q%time
+
       end subroutine k_add2
 
+      !-----------------------------------------------------------------------
+      ! k_add2s2 — Scaled addition p = p + c*q (AXPY)
+      !-----------------------------------------------------------------------
       subroutine k_add2s2(p, q, c)
-!        p = p + c*q  (BLAS-style AXPY operation)
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -195,13 +209,17 @@
          type(krylov_vector), intent(inout) :: p
          type(krylov_vector), intent(in) :: q
          real, intent(in) :: c
+
          call nopadd2s2(p%vx, p%vy, p%vz, p%pr, p%t,
      $                  q%vx, q%vy, q%vz, q%pr, q%t, c)
          p%time = p%time + c*q%time
+
       end subroutine k_add2s2
 
+      !-----------------------------------------------------------------------
+      ! k_axpby — Scaled combination p = alpha*p + beta*q (AXPBY)
+      !-----------------------------------------------------------------------
       subroutine k_axpby(p, alpha, q, beta)
-!        p = alpha*p + beta*q  (BLAS-style AXPBY operation)
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -210,11 +228,16 @@
          real, intent(in) :: alpha
          type(krylov_vector), intent(in) :: q
          real, intent(in) :: beta
+
          call nopaxpby(p%vx, p%vy, p%vz, p%pr, p%t,
      $                 alpha, q%vx, q%vy, q%vz, q%pr, q%t, beta)
          p%time = alpha*p%time + beta*q%time
+
       end subroutine k_axpby
 
+      !-----------------------------------------------------------------------
+      ! k_sub2 — Vector subtraction p = p - q
+      !-----------------------------------------------------------------------
       subroutine k_sub2(p, q)
          use krylov_subspace
          implicit none
@@ -222,10 +245,15 @@
          include 'TOTAL'
          type(krylov_vector), intent(inout) :: p
          type(krylov_vector), intent(in) :: q
+
          call nopsub2(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = p%time - q%time
+
       end subroutine k_sub2
-      
+
+      !-----------------------------------------------------------------------
+      ! k_sub3 — Three-vector subtraction p = q - r
+      !-----------------------------------------------------------------------
       subroutine k_sub3(p, q, r)
          use krylov_subspace
          implicit none
@@ -233,21 +261,31 @@
          include 'TOTAL'
          type(krylov_vector), intent(inout) :: p
          type(krylov_vector), intent(in) :: q, r
+
          call nopsub3(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz,
      $   q%pr, q%t, r%vx, r%vy, r%vz, r%pr, r%t)
          p%time = q%time - r%time
+
       end subroutine k_sub3
-      
+
+      !-----------------------------------------------------------------------
+      ! k_zero — Zero all fields of a Krylov vector
+      !-----------------------------------------------------------------------
       subroutine k_zero(p)
          use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
          type(krylov_vector), intent(inout) :: p
+
          call noprzero(p%vx, p%vy, p%vz, p%pr, p%t)
          p%time = 0.0d0
+
       end subroutine k_zero
-      
+
+      !-----------------------------------------------------------------------
+      ! k_copy — Copy Krylov vector q into p
+      !-----------------------------------------------------------------------
       subroutine k_copy(p, q)
          use krylov_subspace
          implicit none
@@ -255,12 +293,16 @@
          include 'TOTAL'
          type(krylov_vector), intent(out) :: p
          type(krylov_vector), intent(in) :: q
+
          call nopcopy(p%vx, p%vy, p%vz, p%pr, p%t, q%vx, q%vy, q%vz, q%pr, q%t)
          p%time = q%time
+
       end subroutine k_copy
-      
+
+      !-----------------------------------------------------------------------
+      ! k_matmul — Matrix-vector product dq = Q * yvec
+      !-----------------------------------------------------------------------
       subroutine k_matmul(dq, Q, yvec, k)
-!        dq = Q(:) * yvec(:)  (matrix-vector product, zero temporary storage)
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -276,14 +318,13 @@
          do i = 1, k
             call k_add2s2(dq, Q(i), yvec(i))
          end do
+
       end subroutine k_matmul
 
+      !-----------------------------------------------------------------------
+      ! allocate_orbit — Allocate orbit storage arrays on the heap
+      !-----------------------------------------------------------------------
       subroutine allocate_orbit(nsteps_in)
-!
-!     Allocate orbit storage arrays (uor, vor, wor, tor) on the heap.
-!     Guards on if3d and ifto/ldimt ensure minimal memory usage.
-!     Call once before the first orbit integration.
-!
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -306,11 +347,10 @@
 
       end subroutine allocate_orbit
 
+      !-----------------------------------------------------------------------
+      ! orbit_store — Store current fields into orbit arrays
+      !-----------------------------------------------------------------------
       subroutine orbit_store(istep_in)
-!
-!     Store the current velocity (vx,vy,vz) and temperature (t) fields
-!     into the orbit arrays at the given time-step index.
-!
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -335,11 +375,10 @@
 
       end subroutine orbit_store
 
+      !-----------------------------------------------------------------------
+      ! orbit_restore — Restore fields from orbit arrays
+      !-----------------------------------------------------------------------
       subroutine orbit_restore(istep_in)
-!
-!     Restore the velocity (vx,vy,vz) and temperature (t) fields
-!     from the orbit arrays at the given time-step index.
-!
          use krylov_subspace
          implicit none
          include 'SIZE'

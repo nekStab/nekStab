@@ -1,11 +1,18 @@
-!-----------------------------------------------------------------------
-!     modal_dmd.f90: Projected DMD (Schmid, 2010; Tu et al., 2014)
-!
-!     Given snapshots x_1..x_n, finds best-fit linear operator A
-!     such that x_{k+1} ~ A x_k. Eigenvalues mu encode:
-!       growth rate sigma = log|mu| / dt
-!       frequency   St    = arg(mu) / (2*pi*dt)
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! modal_dmd.f90 — Projected DMD (Schmid, 2010; Tu et al., 2014)
+      !
+      ! Purpose:
+      !   Given snapshots x_1..x_n, finds best-fit linear operator A
+      !   such that x_{k+1} ~ A x_k. Eigenvalues mu encode:
+      !     growth rate sigma = log|mu| / dt
+      !     frequency   St    = arg(mu) / (2*pi*dt)
+      !
+      ! Public interface:
+      !   dmd_compute — Full DMD: Gram matrix, SVD, projected operator
+      !
+      ! Dependencies:
+      !   krylov_subspace, SIZE, TOTAL
+      !-----------------------------------------------------------------------
       module modal_dmd
 
          use krylov_subspace
@@ -17,14 +24,16 @@
 
       contains
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! dmd_compute — Projected DMD algorithm
+      !
+      !   1. Form Gram matrix G = X^T X (symmetric)
+      !   2. SVD via eigendecomp of G: G = V Lambda V^T
+      !   3. Shifted Gram: G_shift(k,m) = <x_{k+1}, x_m> (NOT symmetric)
+      !   4. Project operator: Atilde = Sinv V^T G_shift V Sinv
+      !   5. Eigendecomp of Atilde -> DMD eigenvalues and modes
+      !-----------------------------------------------------------------------
       subroutine dmd_compute(snaps, nsnap, delta_t, rank, nsave)
-!     Projected DMD algorithm:
-!     1. Form Gram matrix G = X^T X (symmetric)
-!     2. SVD via eigendecomp of G: G = V Lambda V^T
-!     3. Shifted Gram: G_shift(k,m) = <x_{k+1}, x_m> (NOT symmetric)
-!     4. Project operator: Atilde = Sinv V^T G_shift V Sinv
-!     5. Eigendecomp of Atilde -> DMD eigenvalues and modes
 
          implicit none
          include 'SIZE'
@@ -180,10 +189,11 @@
 
       end subroutine dmd_compute
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! dmd_write_spectrum — Write DMD eigenvalue spectrum to file
+      !-----------------------------------------------------------------------
       subroutine dmd_write_spectrum(evals, r, delta_t,
      $                              norms, nnorms)
-!     Write DMD eigenvalue spectrum
 
          implicit none
          include 'SIZE'
@@ -224,10 +234,13 @@
 
       end subroutine dmd_write_spectrum
 
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! dmd_reconstruct_modes — Reconstruct DMD spatial modes
+      !
+      !   DMD modes: Phi = X V Sinv W (projected DMD modes)
+      !-----------------------------------------------------------------------
       subroutine dmd_reconstruct_modes(snaps, V, S, Sinv,
      $     evecs, evals, n, r, nsave, norms)
-!     DMD modes: Phi = X V Sinv W (projected DMD modes)
 
          implicit none
          include 'SIZE'

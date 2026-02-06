@@ -1,7 +1,22 @@
       !-----------------------------------------------------------------------
-      
-      subroutine schur(A, vecs, vals, n)
-      
+      ! lapack_wrapper.f90 — Wrappers for LAPACK eigenvalue and least-squares routines
+      !
+      ! Purpose:
+      !   Provides simplified Fortran interfaces to LAPACK routines for
+      !   Schur decomposition, eigenvalue problems, reordering, and
+      !   least-squares solves used throughout the eigensolver.
+      !
+      ! Public interface:
+      !   schur, ordschur, eig, sort_eigendecomp, select_eigvals,
+      !   lstsq, eig_symmetric, eig_hermitian
+      !
+      ! Dependencies:
+      !   LAPACK (dgees, dtrsen, dgeev, dgels, dsyev, zheev)
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! schur — Schur decomposition of a general matrix
+      !
       !     This function computes the Schur decomposition of a general matrix A.
       !     Both the eigenvalues and the corresponding Schur basis are returned.
       !     Note that the matrix A is overwritten with its Schur factorization.
@@ -26,37 +41,38 @@
       !
       !     vals : n-dimensional complex array.
       !     Unsorted eigenvalues of matrix A.
-      !
-      
+      !-----------------------------------------------------------------------
+      subroutine schur(A, vecs, vals, n)
+
          implicit none
          character(len=1) :: jobvs = "V", sort = "S"
-         integer :: n, lda, sdim, ldvs, lwork, info
+         integer, intent(in) :: n
+         integer :: lda, sdim, ldvs, lwork, info
          real, dimension(n, n), intent(inout) :: A
          real, dimension(n, n), intent(out) :: vecs
          real, dimension(n) :: wr, wi
          real, dimension(3*n) :: work
          logical, dimension(n) :: bwork
          complex(kind=kind(0.0d0)), dimension(n), intent(out) :: vals
-      
+
          external select_eigvals
-      
+
       !     --> Perform the Schur decomposition.
          lda = max(1, n)
          ldvs = max(1, n)
          lwork = max(1, 3*n)
-      
+
          call dgees(jobvs, sort, select_eigvals, n, A, lda, sdim, wr, wi, vecs, ldvs, work, lwork, bwork, info)
-      
+
       !     --> Eigenvalues.
          vals = wr*(1.0d0, 0.0d0) + wi*(0.0d0, 1.0d0)
-      
+
          return
       end subroutine schur
-      
+
       !-----------------------------------------------------------------------
-      
-      subroutine ordschur(T, Q, selected, n)
-      
+      ! ordschur — Reorder Schur decomposition
+      !
       !     Given a matrix T in canonical Schur form and the corresponding Schur basis Q,
       !     this function reorder the Schur factorization and returns the reorder Schur
       !     matrix and corresponding Schur vectors such that the selected eigenvalues are
@@ -88,30 +104,33 @@
       !     Reordered Schur vectors.
       !
       !     Last edit : April 1st 2020 by JC Loiseau.
-      
+      !-----------------------------------------------------------------------
+      subroutine ordschur(T, Q, selected, n)
+
          implicit none
          character(len=1) :: job = "N", compq = "V"
-         integer :: info, ldq, ldt, liwork, lwork, m, n
+         integer, intent(in) :: n
+         integer :: info, ldq, ldt, liwork, lwork, m
          double precision :: s, sep
-         logical, dimension(n) :: selected
-         real, dimension(n, n) :: T, Q
+         logical, dimension(n), intent(inout) :: selected
+         real, dimension(n, n), intent(inout) :: T, Q
          real, dimension(n) :: work, wr, wi
          integer, dimension(1) :: iwork
-      
+
       !     --> Order the Schur decomposition.
          ldt = max(1, n)
          ldq = n
          lwork = max(1, n)
          liwork = 1
-      
+
          call dtrsen(job, compq, selected, n, T, ldt, Q, ldq, wr, wi, m, s, sep, work, lwork, iwork, liwork, info)
-      
+
          return
       end subroutine ordschur
-      
+
       !-----------------------------------------------------------------------
-      subroutine eig(A, vecs, vals, n)
-      
+      ! eig — Eigendecomposition of a general matrix
+      !
       !     This function computes the eigendecomposition of a general matrix A.
       !     Both the eigenvalues and the right eigenvectors are returned.
       !
@@ -132,31 +151,35 @@
       !
       !     vals : n-dimensional complex array.
       !     Array containing the eigenvalues.
-      !
+      !-----------------------------------------------------------------------
+      subroutine eig(A, vecs, vals, n)
+
          implicit none
          character(len=1) :: jobvl = "N", jobvr = "V"
-         integer :: n, lwork, info, lda, ldvl, ldvr
-         real, dimension(n, n) :: A, A_tilde, vr
+         integer, intent(in) :: n
+         integer :: lwork, info, lda, ldvl, ldvr
+         real, dimension(n, n), intent(in) :: A
+         real, dimension(n, n) :: A_tilde, vr
          real, dimension(1, n) :: vl
          real, dimension(4*n) :: work
          real, dimension(n) :: wr, wi
-         complex(kind=kind(0.0d0)), dimension(n, n) :: vecs
-         complex(kind=kind(0.0d0)), dimension(n) :: vals
+         complex(kind=kind(0.0d0)), dimension(n, n), intent(out) :: vecs
+         complex(kind=kind(0.0d0)), dimension(n), intent(out) :: vals
          integer :: i
-      
+
       !     --> Compute the eigendecomposition of A.
          lda = n
          ldvl = 1
          ldvr = n
          lwork = 4*n
          A_tilde = A
-      
+
          call dgeev(jobvl, jobvr, n, A_tilde, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork, info)
-      
+
       !     --> Transform from real to complex arithmetic.
          vals = wr*(1.0d0, 0.0d0) + wi*(0.0d0, 1.0d0)
          vecs = vr*(1.0d0, 0.0d0)
-      
+
          do i = 1, n - 1 ! Process pairs up to n-1 to avoid buffer overflow
             if (wi(i) > 0) then
                vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0) + vr(:, i + 1)*(0.0d0, 1.0d0)
@@ -165,17 +188,16 @@
       !   vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0)
             end if
          end do
-      
+
       !     --> Sort the eigenvalues and eigenvectors by decreasing magnitudes.
          call sort_eigendecomp(vals, vecs, n)
-      
+
          return
       end subroutine eig
-      
+
       !-----------------------------------------------------------------------
-      
-      subroutine sort_eigendecomp(vals, vecs, n)
-      
+      ! sort_eigendecomp — Sort eigenvalues by decreasing magnitude
+      !
       !     This function sorts the eigenvalues in decreasing magnitude using a very
       !     naive sorting algorithm.
       !
@@ -191,17 +213,19 @@
       !     the reordered eigenvectors as output.
       !
       !     Last edit : April 2nd by JC Loiseau
-      
+      !-----------------------------------------------------------------------
+      subroutine sort_eigendecomp(vals, vecs, n)
+
          implicit none
-         integer :: n
-         complex(kind=kind(0.0d0)), dimension(n) :: vals
-         complex(kind=kind(0.0d0)), dimension(n, n) :: vecs
+         integer, intent(in) :: n
+         complex(kind=kind(0.0d0)), dimension(n), intent(inout) :: vals
+         complex(kind=kind(0.0d0)), dimension(n, n), intent(inout) :: vecs
          real, dimension(n) :: norm
          real :: temp_real
          complex(kind=kind(0.0d0)) :: temp_complex
          complex(kind=kind(0.0d0)), dimension(n) :: temp_n
          integer :: k, l
-      
+
       !     ----- Sorting the eigenvalues according to their norm -----
          temp_n = (0.0d0, 0.0d0)
          norm = sqrt(real(vals)**2 + aimag(vals)**2)
@@ -220,30 +244,31 @@
                end if
             end do
          end do
+
          return
       end subroutine sort_eigendecomp
-      
-      !     -------------------------------------------------------------------
-      
+
+      !-----------------------------------------------------------------------
+      ! select_eigvals — Eigenvalue selection function for dgees
+      !-----------------------------------------------------------------------
       function select_eigvals(wr, wi)
          implicit none
-      
+
       !     ----- Miscellaneous declarations     -----
          logical :: select_eigvals
-         real :: wr, wi
+         real, intent(in) :: wr, wi
          real, parameter :: EIGVAL_MAG_THRESHOLD = 0.9d0  ! Select eigenvalues near unit circle
-      
+
       !     --> Select eigenvalues based on its magnitude.
-         
+
          select_eigvals = (sqrt(wr**2 + wi**2) > EIGVAL_MAG_THRESHOLD)
-      
+
          return
       end function select_eigvals
-      
-      !     -------------------------------------------------------------------
-      
-      subroutine lstsq(A, b, x, m, n)
-      
+
+      !-----------------------------------------------------------------------
+      ! lstsq — Linear least-squares solver
+      !
       !     Wrapper for the LAPACK linear least-squares solver. Given the matrix A
       !     and right-hand side vector b, it solves for x that minimizes
       !
@@ -265,15 +290,20 @@
       !     x : n x 1 real vector.
       !
       !     Last edit : March 22nd 2021 by JC Loiseau.
-      
+      !-----------------------------------------------------------------------
+      subroutine lstsq(A, b, x, m, n)
+
          implicit none
          character(len=1) :: trans = "N"
-         integer :: m, n, nrhs, lda, ldb, lwork, info
-         real, dimension(m, n) :: A, A_tilde
-         real, dimension(m) :: b, b_tilde
-         real, dimension(n) :: x
+         integer, intent(in) :: m, n
+         integer :: nrhs, lda, ldb, lwork, info
+         real, dimension(m, n), intent(in) :: A
+         real, dimension(m, n) :: A_tilde
+         real, dimension(m), intent(in) :: b
+         real, dimension(m) :: b_tilde
+         real, dimension(n), intent(out) :: x
          real, dimension(2*m*n) :: work
-      
+
       !     --> Solve the least-squares problem min || Ax - b ||_2.
          nrhs = 1
          lda = m
@@ -281,20 +311,20 @@
          lwork = 2*m*n
          A_tilde = A
          b_tilde = b
-      
+
          call dgels(trans, m, n, nrhs, A_tilde, lda, b_tilde, ldb, work, lwork, info)
-      
+
       !     --> Return solution.
          x = b_tilde(1:n)
-      
+
          return
       end subroutine lstsq
 
       !-----------------------------------------------------------------------
-
+      ! eig_symmetric — Symmetric eigenvalue problem (DSYEV wrapper)
+      !     Returns eigenvalues in DESCENDING order (largest first).
+      !-----------------------------------------------------------------------
       subroutine eig_symmetric(A, eigvals, eigvecs, n)
-!     Wrapper for LAPACK DSYEV (symmetric eigenvalue problem).
-!     Returns eigenvalues in DESCENDING order (largest first).
 
          implicit none
          integer, intent(in) :: n
@@ -345,10 +375,10 @@
       end subroutine eig_symmetric
 
       !-----------------------------------------------------------------------
-
+      ! eig_hermitian — Complex Hermitian eigenvalue problem (ZHEEV wrapper)
+      !     Returns eigenvalues in DESCENDING order (largest first).
+      !-----------------------------------------------------------------------
       subroutine eig_hermitian(A, eigvals, eigvecs, n)
-!     Wrapper for LAPACK ZHEEV (complex Hermitian eigenvalue problem).
-!     Returns eigenvalues in DESCENDING order (largest first).
 
          implicit none
          integer, intent(in) :: n
