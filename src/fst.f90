@@ -1,6 +1,33 @@
-      
-      ! FST FST FST !!
-      !----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! fst.f90 -- Freestream turbulence inflow generation
+      !
+      ! Purpose:
+      !   Generates synthetic turbulent inflow boundary conditions using
+      !   a superposition of discrete modes with a von Karman energy
+      !   spectrum. Original implementation by M. A. Bucci.
+      !
+      ! Public interface:
+      !   fst              -- main driver (init + update each step)
+      !   initWavenumbers  -- read wavenumber data from files
+      !   initModes        -- read velocity mode shapes from files
+      !   defineBC         -- build pointer to inlet boundary points
+      !   interpolateModes -- spline-interpolate modes onto inlet mesh
+      !   computeBC        -- generate turbulent velocity at inlet
+      !   computeTurbu     -- synthesize turbulent fluctuations
+      !   spline           -- cubic spline second-derivative setup
+      !   splint           -- cubic spline evaluation
+      !
+      ! Dependencies:
+      !   SIZE, TOTAL
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! fst -- Main driver for freestream turbulence generation
+      !
+      ! Purpose:
+      !   On first call initializes wavenumbers, modes, inlet points,
+      !   and interpolation. Every call updates the turbulent BC.
+      !-----------------------------------------------------------------------
       subroutine fst
       ! Freestream turbulence (original implementation by M A Bucci)
          implicit none
@@ -18,7 +45,10 @@
          call computeBC
       
       end subroutine fst
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! initWavenumbers -- Read wavenumber/frequency data from FST_data/
+      !-----------------------------------------------------------------------
       subroutine initWavenumbers
          implicit none
          include 'SIZE'
@@ -36,7 +66,10 @@
             close (299)
          end do
       end subroutine initWavenumbers
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! initModes -- Read velocity mode shapes from FST_data/
+      !-----------------------------------------------------------------------
       subroutine initModes
          implicit none
          include 'SIZE'
@@ -58,8 +91,11 @@
             end do
          end do
       end subroutine initModes
-      !----------------------------------------------------------------------
-      subroutine defineBC ! Define a pointer containing the points located at the inlet
+
+      !-----------------------------------------------------------------------
+      ! defineBC -- Identify inlet boundary points for FST injection
+      !-----------------------------------------------------------------------
+      subroutine defineBC
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -91,7 +127,10 @@
             end do
          end do
       end subroutine defineBC
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! interpolateModes -- Spline-interpolate mode shapes onto inlet mesh
+      !-----------------------------------------------------------------------
       subroutine interpolateModes
          implicit none
          include 'SIZE'
@@ -133,7 +172,10 @@
             end do
          end do
       end subroutine interpolateModes
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! computeBC -- Generate turbulent velocity field at inlet points
+      !-----------------------------------------------------------------------
       subroutine computeBC
          implicit none
          include 'SIZE'
@@ -156,7 +198,13 @@
          end do
       
       end subroutine computeBC
-      !---------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! computeTurbu -- Synthesize turbulent fluctuations from mode basis
+      !
+      ! Arguments:
+      !   u_turbu [out] -- turbulent velocity at inlet points (npointBC,3)
+      !-----------------------------------------------------------------------
       subroutine computeTurbu(u_turbu)
          implicit none
          include 'SIZE'
@@ -284,13 +332,16 @@
       
       !       return
       !       END SUBROUTINE splint
-      ! !----------------------------------------------------------------------
-      
-      ! This subroutine performs cubic spline interpolation of input data.
-      ! It takes as input arrays of x and y data, the number of data points,
-      ! and two values representing the first derivative of the function at
-      ! the start and end points. It outputs an array y2 which contains the
-      ! second derivatives of the interpolating function at the input x values.
+      !-----------------------------------------------------------------------
+      ! spline -- Cubic spline second-derivative setup
+      !
+      ! Arguments:
+      !   x, y   [in]  -- data arrays (n points)
+      !   n      [in]  -- number of data points
+      !   yp1    [in]  -- first derivative at x(1) (>0.99e30 = natural)
+      !   ypn    [in]  -- first derivative at x(n) (>0.99e30 = natural)
+      !   y2     [out] -- second derivatives at data points
+      !-----------------------------------------------------------------------
       subroutine spline(x, y, n, yp1, ypn, y2)
          implicit none
          integer, intent(in) :: n
@@ -344,11 +395,17 @@
       
          deallocate (u)
       end subroutine spline
-      !----------------------------------------------------------------------
-      ! This subroutine performs cubic spline evaluation.
-      ! It takes as input arrays of x and y data, their second derivatives y2a (computed by `spline`),
-      ! the number of data points, and a value x at which the spline is to be evaluated.
-      ! It outputs the interpolated value y at the input x and an error code.
+
+      !-----------------------------------------------------------------------
+      ! splint -- Cubic spline evaluation at a single point
+      !
+      ! Arguments:
+      !   xa, ya [in]  -- data arrays (n points)
+      !   y2a    [in]  -- second derivatives from spline()
+      !   n      [in]  -- number of data points
+      !   x      [in]  -- evaluation point
+      !   y      [out] -- interpolated value
+      !-----------------------------------------------------------------------
       subroutine splint(xa, ya, y2a, n, x, y)
          implicit none
          integer, intent(in) :: n
@@ -383,4 +440,5 @@
          b = (x - xa(klo))/h
       
          y = a*ya(klo) + b*ya(khi) + ((a**3 - a)*y2a(klo) + (b**3 - b)*y2a(khi))*h**2/6.0
+
       end subroutine splint

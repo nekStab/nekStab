@@ -463,6 +463,7 @@
          include 'SIZE'
          include 'TSTEP'
 
+         integer i
          real pfrac ! current fraction of the FTLE comp. period
          real ftledt ! dt for FTLE computation
          real Lrc(lpert, lpert) ! (linear approx.) of otd_Lr at end of int. interval

@@ -1,23 +1,51 @@
-      !----------------------------------------------------------------------
-      subroutine whereyouwant(resnam, posfil) !file numbering suffix counter
-         character(len=3) resnam
-         integer posfil, iprefix
+      !-----------------------------------------------------------------------
+      ! IO.f90 -- File I/O utilities for nekStab
+      !
+      ! Purpose:
+      !   Provides routines for file numbering, loading eigenvalues,
+      !   loading eigenmodes, and reading snapshot sequences from disk.
+      !
+      ! Public interface:
+      !   whereyouwant    -- set file numbering suffix counter
+      !   read_eigenvalue -- read leading eigenvalue from convergence file
+      !   load_mode_pair  -- load real/imaginary eigenmode pair
+      !   load_files      -- load a sequence of Krylov snapshots
+      !   k_load          -- load a single field into a krylov_vector
+      !
+      ! Dependencies:
+      !   krylov_subspace, SIZE, TOTAL, PARALLEL, TSTEP
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! whereyouwant -- Set file numbering suffix counter
+      !
+      ! Arguments:
+      !   resnam [in] -- 3-character file prefix
+      !   posfil [in] -- starting file number
+      !-----------------------------------------------------------------------
+      subroutine whereyouwant(resnam, posfil)
+         character(len=3), intent(in) :: resnam
+         integer, intent(in) :: posfil
+         integer :: iprefix
          common/nopenf2/nopen(1000, 2)
       
          iprefix = i_find_prefix(resnam, 99)
          nopen(iprefix, 1) = posfil - 1
       
-      end
-      !----------------------------------------------------------------------
+      end subroutine whereyouwant
+
+      !-----------------------------------------------------------------------
+      ! read_eigenvalue -- Read leading eigenvalue from convergence file
+      !
+      ! Purpose:
+      !   Reads (sigma, omega) from Spectre_NSd_conv.dat on rank 0
+      !   and broadcasts to all MPI ranks.
+      !
+      ! Arguments:
+      !   sigma [out] -- real part (growth rate)
+      !   omega [out] -- imaginary part (frequency), returned as abs
+      !-----------------------------------------------------------------------
       subroutine read_eigenvalue(sigma, omega)
-!
-!     Read the leading eigenvalue (sigma, omega) from the convergence
-!     file written by the eigensolver, and broadcast to all MPI ranks.
-!
-!     OUTPUT
-!       sigma : real part (growth rate)
-!       omega : imaginary part (frequency), returned as abs(omega)
-!
          implicit none
          include 'SIZE'
          include 'PARALLEL'  ! nid
@@ -38,12 +66,20 @@
          call bcast(omega, wdsize)
 
       end subroutine read_eigenvalue
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! load_mode_pair -- Load real/imaginary eigenmode pair from disk
+      !
+      ! Purpose:
+      !   Loads the real and imaginary parts of a direct ('d') or
+      !   adjoint ('a') eigenmode pair into krylov_vectors.
+      !
+      ! Arguments:
+      !   mode [in]  -- 'd' for direct, 'a' for adjoint
+      !   Re   [out] -- real part of the eigenmode
+      !   Im   [out] -- imaginary part of the eigenmode
+      !-----------------------------------------------------------------------
       subroutine load_mode_pair(mode, Re, Im)
-!
-!     Load the real and imaginary parts of a direct ('d') or adjoint ('a')
-!     eigenmode pair into krylov_vectors Re and Im.
-!
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -60,7 +96,16 @@
          end if
 
       end subroutine load_mode_pair
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! load_files -- Load a sequence of snapshots into Krylov vectors
+      !
+      ! Arguments:
+      !   Q      [out]   -- array of krylov_vectors to fill
+      !   mstart [in]    -- number of snapshots to load
+      !   kd     [in]    -- declared dimension of Q
+      !   fname  [in]    -- 3-character file prefix
+      !-----------------------------------------------------------------------
       subroutine load_files(Q, mstart, kd, fname)
          use krylov_subspace
          implicit none
@@ -82,7 +127,14 @@
             call nopcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, Q(i)%pr, Q(i)%t, vx, vy, vz, pr, t)
          end do
       end subroutine load_files
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! k_load -- Load a single field file into a krylov_vector
+      !
+      ! Arguments:
+      !   Q     [out] -- krylov_vector to fill
+      !   fname [in]  -- file prefix or full filename
+      !-----------------------------------------------------------------------
       subroutine k_load(Q, fname)
          use krylov_subspace
          implicit none

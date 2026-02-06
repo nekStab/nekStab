@@ -1,31 +1,41 @@
       !-----------------------------------------------------------------------
+      ! eigensolvers.f90 -- Eigensolver framework for nekStab
+      !
+      ! Purpose:
+      !   Implements the Krylov-Schur eigensolver for computing leading
+      !   eigenvalues/eigenmodes of the linearized Navier-Stokes operator,
+      !   including Arnoldi factorization, Schur condensation with
+      !   adaptive restart, eigenmode output, and checkpointing.
+      !
+      ! Public interface:
+      !   inner_product         -- weighted L2 inner product
+      !   norm                  -- vector norm from inner product
+      !   krylov_schur          -- main Krylov-Schur eigensolver
+      !   outpost_ks            -- eigenmode output and spectrum files
+      !   schur_condensation    -- Krylov-Schur restart via Schur form
+      !   select_eigenvalues    -- adaptive eigenvalue selection
+      !   ensure_conjugate_pairs -- keep conjugate pairs together
+      !   arnoldi_checkpoint    -- save Krylov state for restart
+      !   log_transform         -- complex logarithm for eigenvalues
+      !
+      ! Dependencies:
+      !   krylov_subspace, SIZE, TOTAL
+      !-----------------------------------------------------------------------
 
+      !-----------------------------------------------------------------------
+      ! inner_product -- Weighted L2 inner product <p, q>
+      !
+      ! Purpose:
+      !   Computes the mass-matrix-weighted inner product over velocity
+      !   (and optionally temperature/scalar) fields using bm1s (sponge-
+      !   masked mass matrix).
+      !
+      ! Arguments:
+      !   alpha              [out] -- inner product value
+      !   px, py, pz, pp, pt [in]  -- first vector fields
+      !   qx, qy, qz, qp, qt [in] -- second vector fields
+      !-----------------------------------------------------------------------
       subroutine inner_product(alpha, px, py, pz, pp, pt, qx, qy, qz, qp, qt)
-
-      !     This function provides the user-defined inner product to be used throughout
-      !     the computation.
-      !
-      !     INPUTS
-      !     ------
-      !
-      !     px, py, pz : nek arrays of size lv = lx1*ly1*lz1*lelv.
-      !     Arrays containing the velocity fields of the first vector.
-      !
-      !     pp : nek array of size lp = lx2*ly2*lz2*lelt
-      !     Array containing the pressure field of the first vector.
-      !
-      !     qx, qy, qz : nek arrays of size lv = lx1*ly1*lz1*lelv.
-      !     Arrays containing the velocity fields of the second vector.
-      !
-      !     qp : nek array of size lp = lx2*ly2*lz2*lelt
-      !     Array containing the pressure field of the second vector.
-      !
-      !     RETURN
-      !     ------
-      !
-      !     alpha : real
-      !     Value of the inner-product alpha = <p, q>.
-      !
          use krylov_subspace
          implicit none
          include "SIZE"
@@ -55,9 +65,14 @@
          return
       end subroutine inner_product
 
-      !--------------------------------------------------------------------------
-
-      subroutine norm(qx, qy, qz, qp, qt, alpha) ! Compute vector norm
+      !-----------------------------------------------------------------------
+      ! norm -- Compute vector norm: alpha = sqrt(<q, q>)
+      !
+      ! Arguments:
+      !   qx, qy, qz, qp, qt [in]  -- vector fields
+      !   alpha               [out] -- norm value
+      !-----------------------------------------------------------------------
+      subroutine norm(qx, qy, qz, qp, qt, alpha)
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -74,7 +89,14 @@
       end subroutine norm
 
       !-----------------------------------------------------------------------
-
+      ! krylov_schur -- Main Krylov-Schur eigensolver
+      !
+      ! Purpose:
+      !   Builds a Krylov subspace via Arnoldi factorization, computes
+      !   eigenvalues of the Hessenberg matrix, and applies Schur
+      !   condensation restarts until convergence. Outputs converged
+      !   eigenmodes to disk.
+      !-----------------------------------------------------------------------
       subroutine krylov_schur
          use krylov_subspace
          implicit none
@@ -369,8 +391,13 @@
 
       end subroutine krylov_schur
 
-      !----------------------------------------------------------------------
-
+      !-----------------------------------------------------------------------
+      ! outpost_ks -- Output converged eigenmodes and spectrum files
+      !
+      ! Purpose:
+      !   Reconstructs eigenmodes from Krylov basis via dgemv, normalizes
+      !   them, and writes real/imaginary parts plus spectrum data files.
+      !-----------------------------------------------------------------------
       subroutine outpost_ks(vals, vecs, Q, residual, converged,
      $     total_matvecs)
          use krylov_subspace
@@ -1136,7 +1163,7 @@
          return
       end subroutine select_eigenvalues
 
-      !     ------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------
 
       subroutine ensure_conjugate_pairs(selected, vals, n)
 
@@ -1180,7 +1207,7 @@
          return
       end subroutine ensure_conjugate_pairs
 
-      !     ------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------
 
       subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
 
@@ -1289,11 +1316,14 @@
          return
       end subroutine arnoldi_checkpoint
 
-      !     ------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! log_transform -- Complex logarithm (real part if imaginary is zero)
+      !-----------------------------------------------------------------------
       function log_transform(x)
          implicit none
          complex, intent(in) :: x
          complex :: log_transform
          log_transform = log(x)
          if (aimag(x) == 0) log_transform = real(log_transform)
+
       end function log_transform

@@ -1,18 +1,19 @@
-!-----------------------------------------------------------------------
-! fourier.f90: Fourier decomposition/reconstruction for nekStab
-!
-! Purpose:
-!   - Temporal FFT decomposition of velocity snapshots
-!   - Reconstruction of velocity fields from Fourier modes
-!   - Foundation for SPOD (Spectral Proper Orthogonal Decomposition)
-!
-! This module provides nekStab-compatible wrappers around the
-! fourier_fftw low-level FFT interface. Works with both FFTW3 (GCC)
-! and Intel MKL via the FFTW3 wrapper interface.
-!
-! Author: nekStab team
-! Date: 2026
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! fourier.f90 — Fourier decomposition with energy ranking
+      !
+      ! Purpose:
+      !   Provides nekStab-compatible wrappers around the fourier_fftw
+      !   low-level FFT interface with energy-based mode sorting.
+      !   Works with both FFTW3 (GCC) and Intel MKL.
+      !
+      ! Public interface:
+      !   nek_fourier_decomposition — FFT with energy-ranked modes
+      !   (re-exports: fourier_decomposition, fourier_reconstruction,
+      !    fft_init, fft_cleanup, fft_r2c, fft_c2r, fft_frequencies)
+      !
+      ! Dependencies:
+      !   krylov_subspace, fourier_fftw, iso_c_binding
+      !-----------------------------------------------------------------------
 module fourier
   use krylov_subspace, only: lv
   use fourier_fftw
@@ -29,24 +30,25 @@ module fourier
 
 contains
 
-  !---------------------------------------------------------------------
-  ! nek_fourier_decomposition: Fourier decomposition with energy ranking
+  !-----------------------------------------------------------------------
+  ! nek_fourier_decomposition — Fourier decomposition with energy ranking
   !
-  ! Performs FFT, computes energy per mode, sorts by energy descending.
+  ! Purpose:
+  !   Performs FFT, computes energy per mode, sorts by energy descending.
   !
   ! Arguments:
-  !   npts     - Number of spatial points
-  !   nsnap    - Number of time snapshots
-  !   vx,vy,vz - Velocity components (npts x nsnap), MODIFIED
-  !   time     - Time array (nsnap)
-  !   bm1      - Mass matrix for energy weighting (npts)
-  !   nmodes   - Output: number of modes (nsnap/2+1)
-  !   freq_out - Output: frequencies sorted by energy (nmodes)
-  !   energy   - Output: energy of each mode, sorted (nmodes)
-  !   vx_hat   - Output: FFT coefficients sorted by energy (npts x nmodes)
-  !   vy_hat   - Output: FFT coefficients sorted by energy (npts x nmodes)
-  !   vz_hat   - Output: FFT coefficients sorted by energy (npts x nmodes)
-  !---------------------------------------------------------------------
+  !   npts     [in]    — number of spatial points
+  !   nsnap    [in]    — number of time snapshots
+  !   vx,vy,vz [inout] — velocity components (npts x nsnap)
+  !   time     [in]    — time array (nsnap)
+  !   bm1      [in]    — mass matrix for energy weighting (npts)
+  !   nmodes   [out]   — number of modes (nsnap/2+1)
+  !   freq_out [out]   — frequencies sorted by energy (nmodes)
+  !   energy   [out]   — energy of each mode, sorted (nmodes)
+  !   vx_hat   [out]   — FFT coefficients sorted by energy (npts x nmodes)
+  !   vy_hat   [out]   — FFT coefficients sorted by energy (npts x nmodes)
+  !   vz_hat   [out]   — FFT coefficients sorted by energy (npts x nmodes)
+  !-----------------------------------------------------------------------
   subroutine nek_fourier_decomposition(npts, nsnap, vx, vy, vz, time, bm1, &
                                         nmodes, freq_out, energy, &
                                         vx_hat, vy_hat, vz_hat)
@@ -103,10 +105,9 @@ contains
     deallocate(vx_tmp, vy_tmp, vz_tmp)
   end subroutine nek_fourier_decomposition
 
-  !---------------------------------------------------------------------
-  ! sort_by_energy: Sort indices by energy in descending order
-  ! Note: energy array is modified (sorted in place)
-  !---------------------------------------------------------------------
+  !-----------------------------------------------------------------------
+  ! sort_by_energy — sort indices by energy (descending, in-place)
+  !-----------------------------------------------------------------------
   subroutine sort_by_energy(n, energy, order)
     integer, intent(in) :: n
     real(C_DOUBLE), intent(inout) :: energy(n)

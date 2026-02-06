@@ -1,24 +1,21 @@
-!-----------------------------------------------------------------------
-! fourier_fftw.f90: Modern FFT module using FFTW3 interface
-!
-! Purpose:
-!   - Temporal FFT decomposition/reconstruction for spectral analysis
-!   - Compatible with both FFTW3 (GCC) and MKL (Intel) via FFTW3 interface
-!   - Foundation for SPOD (Spectral Proper Orthogonal Decomposition)
-!
-! Build:
-!   GCC:   gfortran ... -lfftw3
-!   Intel: ifort/ifx ... -qmkl (MKL provides FFTW3 wrappers)
-!
-! Usage:
-!   call fft_init(nsamples)         ! Initialize plans (once)
-!   call fft_r2c(signal, spectrum)  ! Real-to-complex FFT
-!   call fft_c2r(spectrum, signal)  ! Complex-to-real IFFT
-!   call fft_cleanup()              ! Free plans (at end)
-!
-! Author: nekStab team
-! Date: 2026
-!-----------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! fourier_fftw.f90 — Low-level FFT module using FFTW3 interface
+      !
+      ! Purpose:
+      !   Provides temporal FFT decomposition/reconstruction for spectral
+      !   analysis. Compatible with both FFTW3 (GCC) and MKL (Intel)
+      !   via the FFTW3 wrapper interface.
+      !
+      ! Public interface:
+      !   fft_init, fft_cleanup       — plan management
+      !   fft_r2c, fft_c2r            — forward/inverse FFT
+      !   fft_frequencies              — compute frequency array
+      !   fourier_decomposition        — multi-point temporal FFT
+      !   fourier_reconstruction       — inverse from Fourier modes
+      !
+      ! Dependencies:
+      !   iso_c_binding (FFTW3 C bindings)
+      !-----------------------------------------------------------------------
 module fourier_fftw
   use, intrinsic :: iso_c_binding
   implicit none
@@ -86,17 +83,17 @@ module fourier_fftw
 
 contains
 
-  !---------------------------------------------------------------------
-  ! fft_init: Initialize FFTW plans for a given transform size
+  !-----------------------------------------------------------------------
+  ! fft_init — initialize FFTW plans for a given transform size
+  !
+  ! Purpose:
+  !   Create forward/inverse FFT plans. Plans are cached; calling
+  !   with the same n is a no-op. Calling with different n destroys
+  !   old plans and creates new ones.
   !
   ! Arguments:
-  !   n - Number of real samples (time points)
-  !
-  ! Notes:
-  !   - Plans are cached; calling with same n is a no-op
-  !   - Calling with different n destroys old plans and creates new ones
-  !   - FFTW_ESTIMATE is fast; use FFTW_MEASURE for repeated use
-  !---------------------------------------------------------------------
+  !   n [in] — number of real samples (time points)
+  !-----------------------------------------------------------------------
   subroutine fft_init(n)
     integer, intent(in) :: n
     real(C_DOUBLE), allocatable :: tmp_in(:)
@@ -123,9 +120,9 @@ contains
     initialized = .true.
   end subroutine fft_init
 
-  !---------------------------------------------------------------------
-  ! fft_cleanup: Destroy FFTW plans and free resources
-  !---------------------------------------------------------------------
+  !-----------------------------------------------------------------------
+  ! fft_cleanup — destroy FFTW plans and free resources
+  !-----------------------------------------------------------------------
   subroutine fft_cleanup()
     if (c_associated(plan_r2c)) call fftw_destroy_plan(plan_r2c)
     if (c_associated(plan_c2r)) call fftw_destroy_plan(plan_c2r)
@@ -135,19 +132,18 @@ contains
     initialized = .false.
   end subroutine fft_cleanup
 
-  !---------------------------------------------------------------------
-  ! fft_r2c: Real-to-complex forward FFT
+  !-----------------------------------------------------------------------
+  ! fft_r2c — real-to-complex forward FFT
+  !
+  ! Purpose:
+  !   Compute forward FFT. Output is NOT normalized (multiply by 1/n
+  !   for standard normalization). Only positive frequencies stored.
   !
   ! Arguments:
-  !   n      - Number of real samples
-  !   input  - Real input array (n elements)
-  !   output - Complex output array (n/2+1 elements)
-  !
-  ! Notes:
-  !   - Output is NOT normalized (multiply by 1/n for standard normalization)
-  !   - Output has Hermitian symmetry: output(k) = conj(output(n-k))
-  !   - Only positive frequencies are stored (0 to Nyquist)
-  !---------------------------------------------------------------------
+  !   n      [in]    — number of real samples
+  !   input  [inout] — real input array (n elements)
+  !   output [out]   — complex output array (n/2+1 elements)
+  !-----------------------------------------------------------------------
   subroutine fft_r2c(n, input, output)
     integer, intent(in) :: n
     real(C_DOUBLE), intent(inout) :: input(n)
@@ -157,18 +153,18 @@ contains
     call fftw_execute_dft_r2c(plan_r2c, input, output)
   end subroutine fft_r2c
 
-  !---------------------------------------------------------------------
-  ! fft_c2r: Complex-to-real inverse FFT
+  !-----------------------------------------------------------------------
+  ! fft_c2r — complex-to-real inverse FFT
+  !
+  ! Purpose:
+  !   Compute inverse FFT. Input array IS MODIFIED by FFTW (c2r
+  !   destroys input). Output is scaled by n.
   !
   ! Arguments:
-  !   n      - Number of real samples (output size)
-  !   input  - Complex input array (n/2+1 elements, modified!)
-  !   output - Real output array (n elements)
-  !
-  ! Notes:
-  !   - Input array IS MODIFIED by FFTW (c2r destroys input)
-  !   - Output is scaled by n (divide by n for normalized IFFT)
-  !---------------------------------------------------------------------
+  !   n      [in]    — number of real samples (output size)
+  !   input  [inout] — complex input array (n/2+1 elements, modified!)
+  !   output [out]   — real output array (n elements)
+  !-----------------------------------------------------------------------
   subroutine fft_c2r(n, input, output)
     integer, intent(in) :: n
     complex(C_DOUBLE_COMPLEX), intent(inout) :: input(n/2+1)
@@ -178,17 +174,18 @@ contains
     call fftw_execute_dft_c2r(plan_c2r, input, output)
   end subroutine fft_c2r
 
-  !---------------------------------------------------------------------
-  ! fft_frequencies: Compute frequency array for FFT output
+  !-----------------------------------------------------------------------
+  ! fft_frequencies — compute frequency array for FFT output
+  !
+  ! Purpose:
+  !   Returns frequencies in Hz: f(k) = k / (n * dt) for k = 0..n/2.
+  !   For angular frequency (rad/s): omega = 2*pi*freq.
   !
   ! Arguments:
-  !   n      - Number of samples
-  !   dt     - Time step (sampling interval)
-  !   freq   - Output frequency array (n/2+1 elements)
-  !
-  ! Returns frequencies in Hz: f(k) = k / (n * dt) for k = 0, 1, ..., n/2
-  ! For angular frequency (rad/s): omega = 2*pi*freq
-  !---------------------------------------------------------------------
+  !   n    [in]  — number of samples
+  !   dt   [in]  — time step (sampling interval)
+  !   freq [out] — frequency array (n/2+1 elements)
+  !-----------------------------------------------------------------------
   subroutine fft_frequencies(n, dt, freq)
     integer, intent(in) :: n
     real(C_DOUBLE), intent(in) :: dt
@@ -202,32 +199,25 @@ contains
     end do
   end subroutine fft_frequencies
 
-  !=====================================================================
-  ! High-level interface (compatible with nekStab workflow)
-  !=====================================================================
-
-  !---------------------------------------------------------------------
-  ! fourier_decomposition: Decompose velocity field into Fourier modes
+  !-----------------------------------------------------------------------
+  ! fourier_decomposition — decompose velocity into Fourier modes
   !
-  ! Performs temporal FFT at each spatial point, computes energy per mode,
-  ! sorts by energy, and outputs dominant modes.
+  ! Purpose:
+  !   Performs temporal FFT at each spatial point. Returns normalized
+  !   complex coefficients and frequency array.
   !
   ! Arguments:
-  !   npts     - Number of spatial points (lv)
-  !   nsnap    - Number of time snapshots
-  !   vx,vy,vz - Velocity components (npts x nsnap)
-  !   time     - Time array (nsnap)
-  !   bm1      - Mass matrix for energy weighting (npts)
-  !   nfreq    - Output: number of positive frequencies (nsnap/2+1)
-  !   freq     - Output: frequency array (nfreq)
-  !   vx_hat   - Output: FFT of vx (npts x nfreq), complex
-  !   vy_hat   - Output: FFT of vy (npts x nfreq), complex
-  !   vz_hat   - Output: FFT of vz (npts x nfreq), complex
-  !
-  ! Notes:
-  !   - This is a lower-level routine; high-level nekStab interface TBD
-  !   - For SPOD: use cross-spectral density from these outputs
-  !---------------------------------------------------------------------
+  !   npts     [in]    — number of spatial points (lv)
+  !   nsnap    [in]    — number of time snapshots
+  !   vx,vy,vz [inout] — velocity components (npts x nsnap)
+  !   time     [in]    — time array (nsnap)
+  !   bm1      [in]    — mass matrix for energy weighting (npts)
+  !   nfreq    [out]   — number of positive frequencies (nsnap/2+1)
+  !   freq     [out]   — frequency array (nfreq)
+  !   vx_hat   [out]   — FFT of vx (npts x nfreq), complex
+  !   vy_hat   [out]   — FFT of vy (npts x nfreq), complex
+  !   vz_hat   [out]   — FFT of vz (npts x nfreq), complex
+  !-----------------------------------------------------------------------
   subroutine fourier_decomposition(npts, nsnap, vx, vy, vz, time, bm1, &
                                     nfreq, freq, vx_hat, vy_hat, vz_hat)
     integer, intent(in) :: npts, nsnap
@@ -279,25 +269,25 @@ contains
     end do
   end subroutine fourier_decomposition
 
-  !---------------------------------------------------------------------
-  ! fourier_reconstruction: Reconstruct velocity at time t from modes
+  !-----------------------------------------------------------------------
+  ! fourier_reconstruction — reconstruct velocity at time t from modes
+  !
+  ! Purpose:
+  !   Inverse Fourier synthesis from complex coefficients at a single
+  !   time instant. Accounts for Hermitian symmetry (factor 2) and
+  !   Nyquist frequency for even-length transforms.
   !
   ! Arguments:
-  !   npts     - Number of spatial points
-  !   nfreq    - Number of frequencies
-  !   freq     - Frequency array (Hz)
-  !   vx_hat   - FFT coefficients for vx (npts x nfreq)
-  !   vy_hat   - FFT coefficients for vy (npts x nfreq)
-  !   vz_hat   - FFT coefficients for vz (npts x nfreq)
-  !   t        - Time at which to reconstruct
-  !   vx,vy,vz - Output: reconstructed velocity (npts)
-  !
-  ! Formula: v(t) = sum_k [ real(v_hat(k)) * cos(2*pi*f*t)
-  !                       - imag(v_hat(k)) * sin(2*pi*f*t) ]
-  !
-  ! nsnap: original number of time snapshots (needed to determine if
-  !        Nyquist frequency exists - only for even nsnap)
-  !---------------------------------------------------------------------
+  !   npts     [in]  — number of spatial points
+  !   nfreq    [in]  — number of frequencies
+  !   nsnap    [in]  — original number of snapshots (even/odd check)
+  !   freq     [in]  — frequency array (Hz)
+  !   vx_hat   [in]  — FFT coefficients for vx (npts x nfreq)
+  !   vy_hat   [in]  — FFT coefficients for vy (npts x nfreq)
+  !   vz_hat   [in]  — FFT coefficients for vz (npts x nfreq)
+  !   t        [in]  — time at which to reconstruct
+  !   vx,vy,vz [out] — reconstructed velocity (npts)
+  !-----------------------------------------------------------------------
   subroutine fourier_reconstruction(npts, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
                                      t, vx, vy, vz)
     integer, intent(in) :: npts, nfreq, nsnap

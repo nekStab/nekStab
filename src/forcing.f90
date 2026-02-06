@@ -1,11 +1,42 @@
-      !--------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! forcing.f90 -- Volume forcing and sponge zone routines
+      !
+      ! Purpose:
+      !   Provides volume forcing callbacks for Nek5000 (velocity and
+      !   temperature), sponge zone initialization and evaluation, and
+      !   the smooth step function for sponge profiles.
+      !
+      ! Public interface:
+      !   nekStab_forcing      -- velocity forcing callback (SFD/TDF/sponge)
+      !   nekStab_forcing_temp -- temperature forcing callback
+      !   activate_sponge      -- initialize sponge zone
+      !   spng_init            -- set sponge parameters and reference fields
+      !   spng_set             -- compute sponge spatial function
+      !   mth_stepf            -- smooth step function for sponge profile
+      !
+      ! Dependencies:
+      !   krylov_subspace, SIZE, TOTAL
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! nekStab_forcing -- Velocity forcing callback
+      !
+      ! Purpose:
+      !   Adds nekStab volume forcing (SFD, TDF, sponge, OTD) at each
+      !   grid point. Called by Nek5000 during the solve.
+      !
+      ! Arguments:
+      !   ffx, ffy, ffz [inout] -- force components, accumulated
+      !   ix, iy, iz    [in]    -- local grid indices
+      !   ieg            [in]    -- global element number
+      !-----------------------------------------------------------------------
       subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         real ffx, ffy, ffz
-         integer ix, iy, iz, ieg
-         integer iel, ip
+         real, intent(inout) :: ffx, ffy, ffz
+         integer, intent(in) :: ix, iy, iz, ieg
+         integer :: iel, ip
       
          iel = gllel(ieg) ! local element number
       
@@ -40,14 +71,27 @@
          end if
          return
       end subroutine nekStab_forcing
-      !--------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! nekStab_forcing_temp -- Temperature forcing callback
+      !
+      ! Purpose:
+      !   Adds nekStab temperature forcing (sponge) at each grid point.
+      !
+      ! Arguments:
+      !   temp           [inout] -- temperature force, accumulated
+      !   ix, iy, iz     [in]    -- local grid indices
+      !   ieg            [in]    -- global element number
+      !   m              [in]    -- scalar field index
+      !-----------------------------------------------------------------------
       subroutine nekStab_forcing_temp(temp, ix, iy, iz, ieg, m)
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         real temp
-         integer ix, iy, iz, ieg
-         integer iel, m, ip
+         real, intent(inout) :: temp
+         integer, intent(in) :: ix, iy, iz, ieg
+         integer, intent(in) :: m
+         integer :: iel, ip
       
       ! local element number
          iel = gllel(ieg)
@@ -68,7 +112,13 @@
          return
       end subroutine nekStab_forcing_temp
       
-      !--------------------------------------------------------------------
+      !-----------------------------------------------------------------------
+      ! activate_sponge -- Initialize sponge zone and mask mass matrix
+      !
+      ! Purpose:
+      !   Sets up the sponge zone function and zeros the mass matrix
+      !   inside the sponge region so eigensolver ignores that region.
+      !-----------------------------------------------------------------------
       subroutine activate_sponge
          use krylov_subspace
          implicit none
@@ -102,7 +152,10 @@
             if (nid == 0) write (6, *)
          end if
       end subroutine activate_sponge
-      !--------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! spng_init -- Compute sponge widths and save reference fields
+      !-----------------------------------------------------------------------
       subroutine spng_init
       
          implicit none
@@ -142,7 +195,10 @@
       
          return
       end subroutine spng_init
-      !--------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! spng_set -- Compute spatial sponge function on the mesh
+      !-----------------------------------------------------------------------
       subroutine spng_set
       ! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
       !     set sponge function and refernece fields
@@ -224,11 +280,14 @@
       
          return
       end subroutine spng_set
-      !--------------------------------------------------------------------
-      real function mth_stepf(x) ! credits to KTH Toolbox
-      !     compute sponge function
+
+      !-----------------------------------------------------------------------
+      ! mth_stepf -- Smooth step function for sponge profile (KTH Toolbox)
+      !-----------------------------------------------------------------------
+      real function mth_stepf(x)
          implicit none
-         real x, xdmin, xdmax
+         real, intent(in) :: x
+         real :: xdmin, xdmax
          parameter(xdmin=0.0010d0, xdmax=0.9990d0)
          if (x <= xdmin) then
             mth_stepf = 0.0d0
