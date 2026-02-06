@@ -27,7 +27,73 @@
          use nekstab_io
          use nekstab_noise
          implicit none
+         include 'SIZE'
          private
+
+      ! ── OTD mode arrays ──
+         real, public,
+     $      dimension(lx1*ly1*lz1*lelv, lpert) ::
+     $      OTDfx, OTDfy, OTDfz,
+     $      OTDmrx, OTDmry, OTDmrz,
+     $      OTDmix, OTDmiy, OTDmiz
+
+      ! ── OTD parameters ──
+         real, public :: otd_FTLEPeriod
+         integer, public :: otd_printStep, otd_gsStep
+         logical, public :: otd_computeFTLE,
+     $      gsstep_override
+
+      ! ── OTD operator work arrays ──
+         real, public,
+     $      dimension(lx1, ly1, lz1, lelv) ::
+     $      ubic, vbic, wbic
+         real, public,
+     $      dimension(lx1*ly1*lz1*lelv, lpert) ::
+     $      upic, vpic, wpic,
+     $      vxpic, vypic, vzpic,
+     $      convx, convy, convz,
+     $      gradpx, gradpy, gradpz,
+     $      diffx, diffy, diffz
+
+      ! ── OTD reduced operator ──
+         real, public,
+     $      dimension(lx1*ly1*lz1*lelv, lpert) ::
+     $      otd_Lux, otd_Luy, otd_Luz
+         real, public,
+     $      dimension(lpert, lpert) :: phi_rot, otd_Lr
+         integer, public,
+     $      dimension(lpert) :: otd_idx
+
+      ! ── FTLE arrays ──
+         real, public,
+     $      dimension(lpert) :: FTLEv, LEintegral
+
+      ! ── OTD eigenvalue arrays ──
+         real, public,
+     $      dimension(lpert) :: EIGR, EIGI,
+     $      OSIGMA, RCL, RCR
+         real, public,
+     $      dimension(lpert, lpert) :: EVR, EVRR, EVRI,
+     $      EVL, VMATX, VMATXT
+
+      ! ── LAPACK workspace ──
+         integer, public, parameter ::
+     $      LWORKR = 5*LPERT*LPERT
+     $             + 4*LPERT + 3*LPERT
+         integer, public, parameter ::
+     $      LWORKI = 3*LPERT*2 + 11*LPERT
+         integer, public, parameter ::
+     $      LWORKC = 2*LPERT + LPERT
+         real, public,
+     $      dimension(LWORKR) :: RWORK
+         integer, public,
+     $      dimension(LWORKI) :: otd_IWORK
+         complex, public,
+     $      dimension(LWORKC) :: CWORK
+         real, public,
+     $      dimension(LPERT, LPERT) :: ALU, SINGV
+
+      ! ── Public subroutines ──
          public :: otd, otd_construct_linear_operator,
      $             otd_compute_OTD_modes,
      $             otd_outpost_OTD_modes,

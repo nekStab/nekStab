@@ -30,7 +30,8 @@
       !   to ensure MPI consistency.
       !-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-
+         use nekstab_otd, only: otd_printStep,
+     $      otd_gsStep, otd_FTLEPeriod
          implicit none
          include 'SIZE'
          include 'TOTAL'

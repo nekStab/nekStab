@@ -34,10 +34,9 @@ $(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O
 $(O)/noise.o:             $(NS)/noise.f90             $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 $(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 $(O)/statistics.o:        $(NS)/statistics.f90        $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o $(O)/otd.o ;$(FC) -c $(FL2) $< -o $@
 $(O)/diagnostics.o:       $(NS)/diagnostics.f90       $(O)/krylov_subspace.o $(O)/vortex.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o $(O)/noise.o ;$(FC) -c $(FL2) $< -o $@
 $(O)/fst.o:               $(NS)/fst.f90               $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
@@ -48,12 +47,13 @@ $(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace
 # ─────────────────────────────────────────────────────────────────────
 # Level 4: eigensolvers (depends on krylov_decomposition + many Level 0)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/argsort.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/argsort.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o $(O)/noise.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 5: Modules that depend on eigensolvers
 # ─────────────────────────────────────────────────────────────────────
-$(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o $(O)/newton_krylov.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o $(O)/newton_krylov.o $(O)/energy_budget.o $(O)/torque.o ;$(FC) -c $(FL2) $< -o $@
 $(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
 $(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o ;$(FC) -c $(FL2) $< -o $@
 

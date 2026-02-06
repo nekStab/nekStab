@@ -13,16 +13,17 @@ A toolbox for global stability and bifurcation analysis using the spectral eleme
 5. [Operating Modes](#operating-modes)
 6. [Parameter Reference](#parameter-reference)
 7. [Code Architecture](#code-architecture)
-8. [Vector Operations](#vector-operations)
-9. [Mesh Generation](#mesh-generation)
-10. [Examples](#examples)
-11. [Validation](#validation)
-12. [Continuous Integration](#continuous-integration)
-13. [Theoretical Background](#theoretical-background)
-14. [Troubleshooting](#troubleshooting)
-15. [Citation](#citation)
-16. [License](#license)
-17. [Contact](#contact)
+8. [Module Reference](#module-reference)
+9. [Vector Operations](#vector-operations)
+10. [Mesh Generation](#mesh-generation)
+11. [Examples](#examples)
+12. [Validation](#validation)
+13. [Continuous Integration](#continuous-integration)
+14. [Theoretical Background](#theoretical-background)
+15. [Troubleshooting](#troubleshooting)
+16. [Citation](#citation)
+17. [License](#license)
+18. [Contact](#contact)
 
 ---
 
@@ -788,27 +789,50 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 
 ```
 nekStab/
-├── src/                     # Fortran 90 source files
-│   ├── main.f90            # Entry point, mode dispatcher
-│   ├── krylov_subspace.f90 # Data types, memory layout
-│   ├── krylov_decomposition.f90  # Arnoldi iteration
-│   ├── eigensolvers.f90    # Krylov-Schur algorithm
-│   ├── newton_krylov.f90   # Newton-GMRES solver
-│   ├── fixedp.f90          # SFD, BoostConv, TDF
-│   ├── matvec.f90          # Linearized NS operator
-│   ├── sensitivity.f90     # Wavemaker, forcing response
-│   ├── postproc.f90        # Energy budgets
-│   ├── nek_vectors.f90     # nop* vector operations
-│   ├── utils.f90           # Utilities, I/O helpers
-│   ├── otd.f90             # OTD modes
-│   ├── modal_analysis.f90  # POD, DMD, SPOD
-│   ├── fourier_fftw.f90    # FFT interface (FFTW3/MKL)
-│   ├── fourier.f90         # Fourier decomposition wrappers
-│   └── IO.f90              # File I/O routines
+├── src/                          # Fortran source files (modules unless noted)
+│   │
+│   │── main.f90                  # Entry point, mode dispatcher (bare subroutines)
+│   │── mode_config.f90           # Mode selection logic
+│   │── usr_wrappers.f90          # Bare subroutine wrappers for .usr compatibility
+│   │
+│   │── krylov_subspace.f90       # krylov_vector type, k_* operations
+│   │── krylov_decomposition.f90  # Arnoldi factorization
+│   │── eigensolvers.f90          # Krylov-Schur algorithm
+│   │── lapack_wrapper.f90        # LAPACK wrappers (Schur, eig, etc.)
+│   │── argsort.f90               # Sorting utilities
+│   │── nek_vectors.f90           # nop* vector operations
+│   │
+│   │── matvec.f90                # Linearized NS operator
+│   │── newton_krylov.f90         # Newton-GMRES solver
+│   │── fixedp.f90                # SFD, BoostConv, TDF
+│   │── sensitivity.f90           # Wavemaker, forcing response
+│   │── otd.f90                   # Optimally Time-Dependent modes
+│   │── fst.f90                   # Free-stream turbulence
+│   │
+│   │── energy_budget.f90         # PKE budget analysis
+│   │── vortex.f90                # Vortex identification criteria
+│   │── statistics.f90            # Time averaging
+│   │── diagnostics.f90           # Energy, enstrophy, output
+│   │
+│   │── probes.f90                # Point monitoring
+│   │── noise.f90                 # Initial condition perturbations
+│   │── torque.f90                # Force/torque computation
+│   │── forcing.f90               # External forcing, sponge
+│   │
+│   │── modal_analysis.f90        # POD/DMD/SPOD dispatcher
+│   │── modal_pod.f90             # Proper Orthogonal Decomposition
+│   │── modal_dmd.f90             # Dynamic Mode Decomposition
+│   │── modal_spod.f90            # Spectral POD
+│   │── modal_spod_streaming.f90  # Streaming SPOD
+│   │── fourier.f90               # Fourier decomposition wrappers
+│   │── fourier_fftw.f90          # FFT interface (FFTW3/MKL)
+│   │
+│   └── IO.f90                    # File I/O routines
+│
 ├── bin/
-│   └── mks                 # Build script
-├── example/                # Test cases
-└── Nek5000/                # Nek5000 solver
+│   └── mks                       # Build script
+├── example/                      # Test cases
+└── Nek5000/                      # Nek5000 solver
 ```
 
 ### Data Layout
@@ -833,10 +857,86 @@ All stability computations use this derived type:
 type :: krylov_vector
    real, dimension(lv) :: vx, vy, vz    ! Velocity components
    real, dimension(lp) :: pr            ! Pressure
-   real, dimension(lv, ldimt) :: t      ! Temperature + passive scalars
+   real, dimension(lt, ldimt) :: t      ! Temperature + passive scalars
    real :: time                         ! For UPO period optimization
 end type
 ```
+
+---
+
+## Module Reference
+
+All source files except `main.f90` and `usr_wrappers.f90` are wrapped in Fortran modules, providing explicit interfaces and compile-time type checking.
+
+### Module Map
+
+| Module | File | Key Public Interface |
+|--------|------|---------------------|
+| `krylov_subspace` | `krylov_subspace.f90` | `krylov_vector` type, `k_copy`, `k_add2`, `k_sub2`, `k_dot`, `k_norm`, `k_normalize`, `k_cmult`, `k_matmul`, `k_axpby` |
+| `nekstab_krylov_decomposition` | `krylov_decomposition.f90` | `arnoldi_factorization`, `gram_schmidt` |
+| `nekstab_eigensolvers` | `eigensolvers.f90` | `krylov_schur`, `inner_product`, `norm`, `outpost_ks`, `schur_condensation` |
+| `nekstab_vectors` | `nek_vectors.f90` | `nopcopy`, `nopadd2`, `nopsub2`, `nopcmult`, `noprzero`, `nopaxpby` |
+| `nekstab_lapack` | `lapack_wrapper.f90` | `lapack_schur`, `lapack_eig`, `lapack_svd` |
+| `nekstab_argsort` | `argsort.f90` | `argsort_real`, `argsort_complex` |
+| `nekstab_matvec` | `matvec.f90` | `matvec_direct`, `matvec_adjoint`, `matvec_floquet` |
+| `nekstab_io` | `IO.f90` | `whereyouwant`, `load_files`, `save_files` |
+| `nekstab_newton` | `newton_krylov.f90` | `newton_gmres`, `hookstep` |
+| `nekstab_fixedpoint` | `fixedp.f90` | `sfd`, `boostconv`, `tdf` |
+| `nekstab_sensitivity` | `sensitivity.f90` | `wavemaker`, `forcing_response`, `animate_mode` |
+| `nekstab_energy_budget` | `energy_budget.f90` | `stability_energy_budget`, `stability_energy_budget_floquet` |
+| `nekstab_diagnostics` | `diagnostics.f90` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort` |
+| `nekstab_vortex` | `vortex.f90` | `vortex_lambda2`, `vortex_qcriterion` |
+| `nekstab_statistics` | `statistics.f90` | `time_average`, `rms_computation` |
+| `nekstab_noise` | `noise.f90` | `noise_perturbation` |
+| `nekstab_probes` | `probes.f90` | `probe_init`, `probe_output` |
+| `nekstab_torque_mod` | `torque.f90` | `nekStab_torque` |
+| `nekstab_forcing_mod` | `forcing.f90` | `nekStab_forcing`, `sponge` |
+| `nekstab_mode_config` | `mode_config.f90` | `nekstab_mode_select` |
+| `nekstab_otd` | `otd.f90` | `otd_step`, `otd_output` |
+| `nekstab_fst` | `fst.f90` | `fst_perturbation` |
+| `nekstab_modal_analysis` | `modal_analysis.f90` | `modal_dispatcher` |
+| `modal_pod` | `modal_pod.f90` | `pod_analysis` |
+| `modal_dmd` | `modal_dmd.f90` | `dmd_analysis` |
+| `modal_spod` | `modal_spod.f90` | `spod_analysis` |
+| `modal_spod_streaming` | `modal_spod_streaming.f90` | `spod_streaming_analysis` |
+| `fourier` | `fourier.f90` | `fourier_decomposition` |
+| `fourier_fftw` | `fourier_fftw.f90` | `fft_forward`, `fft_backward` |
+
+### Upgrading to v2.x
+
+In nekStab v2.x, all source files (except `main.f90`) are wrapped in Fortran modules. This provides **explicit interfaces** and **compile-time type checking**, catching argument mismatches that previously caused silent runtime errors.
+
+#### Changes for `.usr` files
+
+If your `.usr` file calls nekStab routines directly, you need to add `use` statements at the top of the relevant subroutine. Without them, the compiler will report "undefined reference" errors.
+
+```fortran
+c     BEFORE (bare subroutine, implicit interface):
+      call inner_product(alpha, px, py, pz, pp, pt,
+     $                          qx, qy, qz, qp, qt)
+
+c     AFTER (module, explicit interface -- compiler checks types):
+      use nekstab_eigensolvers, only: inner_product
+      call inner_product(alpha, px, py, pz, pp, pt,
+     $                          qx, qy, qz, qp, qt)
+```
+
+#### Commonly needed modules in `.usr` files
+
+| Module | Provides |
+|--------|----------|
+| `use nekstab_eigensolvers` | `inner_product`, `norm` |
+| `use nekstab_vectors` | `nopcopy`, `noprzero`, `nopadd2`, `nopcmult` |
+| `use nekstab_io` | `whereyouwant`, `load_files` |
+| `use nekstab_diagnostics` | `nekStab_energy`, `outpost_vort` |
+
+#### Auto-wrapped routines (no `use` needed)
+
+The following routines are called from `.usr` callback hooks and are automatically wrapped in `usr_wrappers.f90` with bare subroutine interfaces. You do **not** need `use` statements for these:
+
+- `nekStab_torque` -- called from `userbc` or `userchk`
+- `nekStab_forcing` -- called from `userf`
+- `nekStab_define_obj` -- called from `usrdat2`
 
 ---
 
