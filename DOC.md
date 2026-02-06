@@ -306,6 +306,7 @@ end subroutine
 | `'transient_growth'` | Transient growth analysis | 3.3 |
 | `'floquet_tg'` | Floquet transient growth | 3.31 |
 | `'energy_budget'` | Kinetic energy budget | 4.1 |
+| `'energy_budget_floquet'` | Floquet energy budget | 4.11 |
 | `'wavemaker'` | Wavemaker/structural sensitivity | 4.2 |
 | `'bf_sensitivity'` | Base flow sensitivity | 4.3 |
 | `'force_sensitivity_real'` | Real part forcing sensitivity | 4.41 |
@@ -319,7 +320,24 @@ end subroutine
 | `'dmd'` | Dynamic Mode Decomposition | 6.2 |
 | `'spod'` | Spectral POD | 6.3 |
 
-Mode strings are **case-insensitive** and support aliases (e.g., `'tg'` for transient growth).
+Mode strings are **case-insensitive** and support aliases:
+
+| Alias | Equivalent |
+|-------|------------|
+| `'lindns'`, `'linearized_dns'` | `'linear_dns'` |
+| `'boost'` | `'boostconv'` |
+| `'newton'` | `'newton_fp'` |
+| `'upo'` | `'newton_po'` |
+| `'forced_upo'` | `'newton_po_t'` |
+| `'floquetdirect'` | `'floquet_direct'` |
+| `'floquetadjoint'` | `'floquet_adjoint'` |
+| `'tg'` | `'transient_growth'` |
+| `'floquet_transient_growth'` | `'floquet_tg'` |
+| `'baseflow_sensitivity'` | `'bf_sensitivity'` |
+| `'force_sens_real'` | `'force_sensitivity_real'` |
+| `'force_sens_imag'` | `'force_sensitivity_imag'` |
+| `'animate'` | `'animate_mode'` |
+| `'animate_deform'` | `'animate_bf_deform'` |
 
 #### Method 2: Flag Mode (Flexible)
 
@@ -459,6 +477,7 @@ Uses GMRES to solve the Newton system. The Jacobian-vector product is computed v
 |-------|-------------|
 | `4.0` | All: budget + wavemaker + BF sensitivity |
 | `4.1` | Kinetic energy budget |
+| `4.11` | Floquet kinetic energy budget |
 | `4.2` | Wavemaker (structural sensitivity) |
 | `4.3` | Base flow sensitivity |
 | `4.41` | Real part forcing sensitivity |
@@ -683,11 +702,10 @@ where L_x is the streamwise domain extent.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `findiff_order` | 1 | Finite difference order (1 or 2) |
+| `findiff_order` | 1 | Finite difference order (1, 2, or 4) |
 | `epsilon_base` | 1e-6 | Perturbation scale ε for Jacobian approximation |
-| `nwt_maxIt` | 50 | Maximum Newton iterations |
-| `nwt_tol` | 1e-10 | Newton residual tolerance |
-| `gmr_maxIt` | 100 | Maximum GMRES iterations per Newton step |
+
+Newton iteration limits (30 Newton steps, 30 GMRES steps) are hardcoded in `newton_krylov.f90`. The GMRES tolerance adapts dynamically based on the Newton residual.
 
 **Dynamic Tolerances**: The inner GMRES solve does not need high precision early in Newton iteration. Using dynamic tolerances (starting loose, tightening as residual decreases) reduces total computation time by 5-10×.
 
@@ -769,9 +787,9 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `modal_prefix` | `'DNS'` | Snapshot file prefix (e.g., `'1cyl'` for `1cyl0.f00001`) |
+| `modal_prefix` | `'dns'` | Snapshot file prefix (e.g., `'1cyl'` for `1cyl0.f00001`) |
 | `modal_nsnap` | 100 | Number of snapshots to load |
-| `modal_dt` | 1.0 | Time step between snapshots |
+| `modal_dt` | 0.1 | Time step between snapshots |
 | `modal_nsave` | 10 | Number of modes to save to disk |
 | `ifpod` | .false. | Enable POD computation |
 | `ifdmd` | .false. | Enable DMD computation |
@@ -872,35 +890,35 @@ All source files except `main.f90` and `usr_wrappers.f90` are wrapped in Fortran
 
 | Module | File | Key Public Interface |
 |--------|------|---------------------|
-| `krylov_subspace` | `krylov_subspace.f90` | `krylov_vector` type, `k_copy`, `k_add2`, `k_sub2`, `k_dot`, `k_norm`, `k_normalize`, `k_cmult`, `k_matmul`, `k_axpby` |
-| `nekstab_krylov_decomposition` | `krylov_decomposition.f90` | `arnoldi_factorization`, `gram_schmidt` |
-| `nekstab_eigensolvers` | `eigensolvers.f90` | `krylov_schur`, `inner_product`, `norm`, `outpost_ks`, `schur_condensation` |
-| `nekstab_vectors` | `nek_vectors.f90` | `nopcopy`, `nopadd2`, `nopsub2`, `nopcmult`, `noprzero`, `nopaxpby` |
-| `nekstab_lapack` | `lapack_wrapper.f90` | `lapack_schur`, `lapack_eig`, `lapack_svd` |
-| `nekstab_argsort` | `argsort.f90` | `argsort_real`, `argsort_complex` |
-| `nekstab_matvec` | `matvec.f90` | `matvec_direct`, `matvec_adjoint`, `matvec_floquet` |
-| `nekstab_io` | `IO.f90` | `whereyouwant`, `load_files`, `save_files` |
-| `nekstab_newton` | `newton_krylov.f90` | `newton_gmres`, `hookstep` |
-| `nekstab_fixedpoint` | `fixedp.f90` | `sfd`, `boostconv`, `tdf` |
-| `nekstab_sensitivity` | `sensitivity.f90` | `wavemaker`, `forcing_response`, `animate_mode` |
-| `nekstab_energy_budget` | `energy_budget.f90` | `stability_energy_budget`, `stability_energy_budget_floquet` |
-| `nekstab_diagnostics` | `diagnostics.f90` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort` |
-| `nekstab_vortex` | `vortex.f90` | `vortex_lambda2`, `vortex_qcriterion` |
-| `nekstab_statistics` | `statistics.f90` | `time_average`, `rms_computation` |
-| `nekstab_noise` | `noise.f90` | `noise_perturbation` |
-| `nekstab_probes` | `probes.f90` | `probe_init`, `probe_output` |
-| `nekstab_torque_mod` | `torque.f90` | `nekStab_torque` |
-| `nekstab_forcing_mod` | `forcing.f90` | `nekStab_forcing`, `sponge` |
-| `nekstab_mode_config` | `mode_config.f90` | `nekstab_mode_select` |
-| `nekstab_otd` | `otd.f90` | `otd_step`, `otd_output` |
-| `nekstab_fst` | `fst.f90` | `fst_perturbation` |
-| `nekstab_modal_analysis` | `modal_analysis.f90` | `modal_dispatcher` |
-| `modal_pod` | `modal_pod.f90` | `pod_analysis` |
-| `modal_dmd` | `modal_dmd.f90` | `dmd_analysis` |
-| `modal_spod` | `modal_spod.f90` | `spod_analysis` |
-| `modal_spod_streaming` | `modal_spod_streaming.f90` | `spod_streaming_analysis` |
-| `fourier` | `fourier.f90` | `fourier_decomposition` |
-| `fourier_fftw` | `fourier_fftw.f90` | `fft_forward`, `fft_backward` |
+| `krylov_subspace` | `krylov_subspace.f90` | `krylov_vector` type, `k_dot`, `k_norm`, `k_normalize`, `k_cmult`, `k_add2`, `k_add2s2`, `k_axpby`, `k_sub2`, `k_sub3`, `k_zero`, `k_copy`, `k_matmul`, `allocate_orbit`, `orbit_store`, `orbit_restore` |
+| `nekstab_krylov_decomposition` | `krylov_decomposition.f90` | `arnoldi_factorization`, `update_hessenberg_matrix`, `arnoldi_checkpoint`, `log_transform` |
+| `nekstab_eigensolvers` | `eigensolvers.f90` | `krylov_schur`, `inner_product`, `norm`, `outpost_ks`, `schur_condensation`, `select_eigenvalues`, `ensure_conjugate_pairs` |
+| `nekstab_vectors` | `nek_vectors.f90` | `nopcopy`, `nopadd2`, `nopadd2s2`, `nopsub2`, `nopsub3`, `nopcmult`, `noprzero`, `nopaxpby`, `axpby`, `opadd3`, `opaddcol3` |
+| `nekstab_lapack` | `lapack_wrapper.f90` | `schur`, `ordschur`, `eig`, `sort_eigendecomp`, `select_eigvals`, `lstsq`, `eig_symmetric`, `eig_hermitian` |
+| `nekstab_argsort` | `argsort.f90` | `argsort` |
+| `nekstab_matvec` | `matvec.f90` | `prepare_linearized_solver`, `matvec`, `forward_linearized_map`, `forward_finite_difference_map`, `adjoint_linearized_map` |
+| `nekstab_io` | `IO.f90` | `whereyouwant`, `read_eigenvalue`, `load_mode_pair`, `load_files`, `k_load` |
+| `nekstab_newton` | `newton_krylov.f90` | `newton_krylov`, `ts_gmres`, `initialize_gmres_vector`, `nonlinear_forward_map`, `set_nek5000_tolerances` |
+| `nekstab_fixedpoint` | `fixedp.f90` | `sfd`, `BoostConv`, `tdf`, `boostconv_core`, `qr_dec`, `linear_system` |
+| `nekstab_sensitivity` | `sensitivity.f90` | `wave_maker`, `bf_sensitivity`, `ts_steady_force_sensitivity`, `biorthogonalize`, `delta_forcing`, `animate_mode_only`, `animate_mode`, `animate_mode_Floquet` |
+| `nekstab_energy_budget` | `energy_budget.f90` | `stability_energy_budget`, `stability_energy_budget_floquet`, `compute_velocity_gradient_tensor`, `compute_dissipation`, `compute_production` |
+| `nekstab_diagnostics` | `diagnostics.f90` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort`, `norm_grad`, `smooth_field`, `nekStab_outpost`, `nekStab_comment`, `nekStab_printNEKParams` |
+| `nekstab_vortex` | `vortex.f90` | `vortex_core`, `compute_omega_jc`, `compute_omega`, `compute_q`, `compute_delta`, `compute_swirling` |
+| `nekstab_statistics` | `statistics.f90` | `nekStab_avg` |
+| `nekstab_noise` | `noise.f90` | `add_noise_scal`, `op_add_noise`, `add_symmetric_seed`, `mth_rand` |
+| `nekstab_probes` | `probes.f90` | `pointcheck`, `zero_crossing` |
+| `nekstab_torque_mod` | `torque.f90` | `nekStab_torque`, `nekStab_define_obj` |
+| `nekstab_forcing_mod` | `forcing.f90` | `nekStab_forcing`, `nekStab_forcing_temp`, `activate_sponge`, `spng_init`, `spng_set`, `mth_stepf` |
+| `nekstab_mode_config` | `mode_config.f90` | `nekStab_resolve_mode`, `nekStab_mode_from_string`, `nekStab_mode_from_flags`, `nekStab_mode_from_uparam` |
+| `nekstab_otd` | `otd.f90` | `otd`, `otd_construct_linear_operator`, `otd_compute_OTD_modes`, `otd_white_noise`, `otd_generate_forces`, `otd_orthonormalize_basis`, `otd_compute_FTLE` |
+| `nekstab_fst` | `fst.f90` | `fst`, `initWavenumbers`, `initModes`, `defineBC`, `interpolateModes`, `computeBC`, `computeTurbu` |
+| `nekstab_modal_analysis` | `modal_analysis.f90` | `modal_analysis`, `modal_compute_mean`, `modal_subtract_mean` |
+| `modal_pod` | `modal_pod.f90` | `pod_compute`, `pod_fft_spectrum`, `hamming_window` |
+| `modal_dmd` | `modal_dmd.f90` | `dmd_compute` |
+| `modal_spod` | `modal_spod.f90` | `spod_compute`, `k_dot_complex`, `spod_save_modes` |
+| `modal_spod_streaming` | `modal_spod_streaming.f90` | `spod_s_init`, `spod_s_cleanup`, `spod_streaming_batch` |
+| `fourier` | `fourier.f90` | `nek_fourier_decomposition`, `fourier_decomposition`, `fourier_reconstruction`, `fft_init`, `fft_cleanup`, `fft_r2c`, `fft_c2r`, `fft_frequencies` |
+| `fourier_fftw` | `fourier_fftw.f90` | `fft_init`, `fft_cleanup`, `fft_r2c`, `fft_c2r`, `fft_frequencies`, `fourier_decomposition`, `fourier_reconstruction` |
 
 ### Upgrading to v2.x
 
@@ -926,9 +944,9 @@ c     AFTER (module, explicit interface -- compiler checks types):
 | Module | Provides |
 |--------|----------|
 | `use nekstab_eigensolvers` | `inner_product`, `norm` |
-| `use nekstab_vectors` | `nopcopy`, `noprzero`, `nopadd2`, `nopcmult` |
-| `use nekstab_io` | `whereyouwant`, `load_files` |
-| `use nekstab_diagnostics` | `nekStab_energy`, `outpost_vort` |
+| `use nekstab_vectors` | `nopcopy`, `noprzero`, `nopadd2`, `nopcmult`, `nopaxpby` |
+| `use nekstab_io` | `whereyouwant`, `load_files`, `k_load` |
+| `use nekstab_diagnostics` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort` |
 
 #### Auto-wrapped routines (no `use` needed)
 
@@ -1147,15 +1165,18 @@ genmap
 
 | Directory | Flow | Features Demonstrated |
 |-----------|------|----------------------|
-| `cylinder/` | Circular cylinder wake | DNS, Newton, stability, wavemaker |
-| `back_fstep/` | Backward-facing step | Convective instability |
-| `lid_driven/` | Lid-driven cavity | Confined flow bifurcations |
+| `cylinder/` | Circular cylinder wake | DNS, Newton, stability, Floquet, wavemaker, OTD, POD/DMD/SPOD |
+| `back_fstep/` | Backward-facing step | Transient growth |
 | `blasius/` | Flat plate boundary layer | TS waves |
 | `cubic_cavity/` | 3D cubic cavity | 3D stability |
+| `flip_flop/` | Side-by-side cylinders | Neimark-Sacker, Floquet |
+| `lid_driven/` | Lid-driven cavity | Confined flow bifurcations |
 | `naca0012/` | Airfoil at incidence | Bluff body stability |
-| `torus/` | Toroidal pipe | Dean instability |
 | `poiseuille/` | Channel flow | Canonical stability |
-| `tpjet/` | Turbulent jet | Complex geometry |
+| `slot_FST/` | Flat plate + FST | Free-stream turbulence inflow |
+| `thersyphon/` | Buoyancy-driven convection | Pitchfork + Hopf bifurcations |
+| `torus/` | Toroidal pipe | Dean instability |
+| `tpjet/` | Forced jet | Floquet period-doubling |
 
 ### Cylinder Workflow
 
