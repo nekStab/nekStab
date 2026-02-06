@@ -357,6 +357,10 @@ USR+=" IO.o"
 USR+=" postproc.o"
 USR+=" newton_krylov.o"
 USR+=" sensitivity.o"
+USR+=" modal_pod.o"
+USR+=" modal_dmd.o"
+USR+=" modal_spod.o"
+USR+=" modal_spod_streaming.o"
 USR+=" modal_analysis.o"
 
 # Source case-specific makefile if present
