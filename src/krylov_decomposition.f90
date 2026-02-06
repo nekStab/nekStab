@@ -7,11 +7,25 @@
       !   and full re-orthogonalization.
       !
       ! Public interface:
-      !   arnoldi_factorization, update_hessenberg_matrix
+      !   arnoldi_factorization, update_hessenberg_matrix,
+      !   arnoldi_checkpoint, log_transform
       !
       ! Dependencies:
-      !   krylov_subspace, SIZE, TOTAL
+      !   krylov_subspace, nekstab_lapack (eig),
+      !   nekstab_io (whereyouwant), SIZE, TOTAL
       !-----------------------------------------------------------------------
+
+      module nekstab_krylov_decomposition
+         use krylov_subspace
+         use nekstab_matvec
+         use nekstab_lapack
+         use nekstab_io
+         implicit none
+         private
+         public :: arnoldi_factorization,
+     $             update_hessenberg_matrix,
+     $             arnoldi_checkpoint, log_transform
+      contains
 
       !-----------------------------------------------------------------------
       ! arnoldi_factorization — k-step Arnoldi factorization
@@ -236,3 +250,118 @@
 
          return
       end subroutine update_hessenberg_matrix
+
+      !-----------------------------------------------------------------------
+      ! arnoldi_checkpoint — Save Krylov vector and eigenspectrum checkpoint
+      !
+      ! Purpose:
+      !   Implements checkpointing during the Arnoldi process for restart
+      !   capability. Saves the latest Krylov vector, Hessenberg eigenspectrum,
+      !   log-transformed spectrum, and the Hessenberg matrix itself.
+      !
+      ! Arguments:
+      !   f_xr, f_yr, f_zr [in] — velocity components of latest Krylov vector
+      !   f_pr              [in] — pressure field of latest Krylov vector
+      !   f_tr              [in] — temperature/passive scalar fields
+      !   H                 [in] — upper Hessenberg matrix (k+1 x k)
+      !   k                 [in] — current Arnoldi iteration
+      !-----------------------------------------------------------------------
+      subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
+
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         real, dimension(lv), intent(in) :: f_xr, f_yr, f_zr
+         real, dimension(lp), intent(in) :: f_pr
+         real, dimension(lt, ldimt), intent(in) :: f_tr
+
+         integer, intent(in) :: k
+         real, dimension(k + 1, k), intent(in) :: H
+
+         integer :: i, j, converged_eigenvalues
+         complex(kind=kind(0.0d0)), dimension(k) :: vals
+         complex(kind=kind(0.0d0)), dimension(k, k) :: vecs
+         real, dimension(k) :: residual
+         character(len=80) filename
+
+         if (nid == 0) write (6, *) 'Outposting Krylov vector to'
+
+      !     --> Outpost the latest Krylov vector.
+         call whereyouwant("KRY", k + 1)
+
+         time = time*k !order in ParaView
+         call outpost2(f_xr, f_yr, f_zr, f_pr, f_tr, nof, "KRY")
+
+      !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.
+         call eig(H(1:k, 1:k), vecs, vals, k)
+
+      !     --> Compute the residual (assume H results from classical Arnoldi factorization).
+         residual = abs(H(k + 1, k)*vecs(k, :))
+
+      ! ------> Enforce minimum value of machine epsilon
+         where (residual < epsilon(1.0d0)) residual = epsilon(1.0d0)
+
+         converged_eigenvalues = count(residual < eigen_tol)
+
+         if (nid == 0) then
+
+      !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
+            write (filename, '(A,A,i4.4,A)') 'Spectre_H', evop, k, '.dat'
+            write (6, *) 'Writing Hessenberg matrix eigenspectrum to', filename
+
+            open (67, file=trim(filename), status='unknown', form='formatted')
+            write (67, '(3E15.7)') (real(vals(i)), aimag(vals(i)),
+     $         residual(i), i=1, k)
+            close (67)
+
+      !     --> Outpost the log-transform spectrum.
+            write (filename, '(A,A,i4.4,A)') 'Spectre_NS', evop, k,
+     $         '.dat'
+            write (6, *) 'Writing log-transformed eigenspectrum to',
+     $         filename
+
+            open (67, file=trim(filename), status='unknown',
+     $         form='formatted')
+            write (67, '(3E15.7)')
+     $         (real(log_transform(vals(i)))/(dt*nsteps),
+     $         aimag(log_transform(vals(i)))/(dt*nsteps),
+     $         residual(i), i = 1, k)
+            close (67)
+
+      !     --> Outpost the Hessenberg matrix for restarting purposes.
+            write (filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
+            write (6, *) 'Writing Hessenberg matrix to', filename
+
+            open (67, file=trim(filename), status='unknown',
+     $         form='formatted')
+            write (67, *) ((H(i, j), j=1, k), i=1, k + 1)
+            close (67)
+
+      !     --> Write to logfile the current number of converged eigenvalues.
+            write (6, *) 'converged eigenvalues:',
+     $         converged_eigenvalues, 'target:', schur_tgt
+
+         end if
+
+         return
+      end subroutine arnoldi_checkpoint
+
+      !-----------------------------------------------------------------------
+      ! log_transform — Complex logarithm for eigenvalue conversion
+      !
+      ! Purpose:
+      !   Computes log(x) for a complex eigenvalue. If the imaginary part
+      !   is zero, returns a purely real result (avoids spurious imaginary
+      !   component from floating-point noise).
+      !-----------------------------------------------------------------------
+      function log_transform(x)
+         implicit none
+         complex, intent(in) :: x
+         complex :: log_transform
+         log_transform = log(x)
+         if (aimag(x) == 0) log_transform = real(log_transform)
+      end function log_transform
+
+      end module nekstab_krylov_decomposition

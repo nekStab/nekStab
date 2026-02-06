@@ -18,6 +18,14 @@
       !   krylov_subspace, SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_forcing_mod
+         implicit none
+         private
+         public :: nekStab_forcing, nekStab_forcing_temp,
+     $             activate_sponge, spng_init, spng_set,
+     $             mth_stepf
+      contains
+
       !-----------------------------------------------------------------------
       ! nekStab_forcing -- Velocity forcing callback
       !
@@ -211,7 +219,7 @@
       
          integer ntot, il, jl
          real rtmp, bmin(LDIM), bmax(LDIM)
-         real xxmax, xxmax_c, xxmin, xxmin_c, arg, mth_stepf
+         real xxmax, xxmax_c, xxmin, xxmin_c, arg
          logical ltmp, ltmp2
       
          ntot = NX1*NY1*NZ1*NELV
@@ -297,3 +305,5 @@
             mth_stepf = 1.0d0
          end if
       end function mth_stepf
+
+      end module nekstab_forcing_mod

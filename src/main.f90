@@ -220,6 +220,9 @@
       !-----------------------------------------------------------------------
       subroutine nekStab_init
          use krylov_subspace
+         use nekstab_mode_config
+         use nekstab_diagnostics
+         use nekstab_forcing_mod
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -295,6 +298,15 @@
       !   Nek5000's userchk.
       !-----------------------------------------------------------------------
       subroutine nekStab
+         use nekstab_diagnostics
+         use nekstab_noise
+         use nekstab_fixedpoint
+         use nekstab_newton
+         use nekstab_eigensolvers
+         use nekstab_energy_budget
+         use nekstab_sensitivity
+         use nekstab_otd
+         use nekstab_modal_analysis
          implicit none
          include 'SIZE'
          include 'TOTAL'

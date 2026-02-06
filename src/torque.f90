@@ -14,6 +14,12 @@
       !   SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_torque_mod
+         implicit none
+         private
+         public :: nekStab_torque, nekStab_define_obj
+      contains
+
       !-----------------------------------------------------------------------
       ! nekStab_torque — Compute drag and torque on wall boundaries
       !
@@ -243,3 +249,5 @@
 
       end subroutine nekStab_define_obj
       !-----------------------------------------------------------------------
+
+      end module nekstab_torque_mod

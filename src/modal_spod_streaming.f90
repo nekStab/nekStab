@@ -126,6 +126,7 @@
       module modal_spod_streaming
 
          use krylov_subspace
+         use nekstab_lapack
          use spod_streaming_state
          use modal_pod, only: hamming_window
          use modal_spod, only: k_dot_complex, spod_save_modes
@@ -349,6 +350,7 @@
       subroutine spod_stream_finalize(nsave)
 
          use krylov_subspace
+         use nekstab_lapack
          use spod_streaming_state
          use modal_spod, only: k_dot_complex, spod_save_modes
          implicit none
@@ -364,7 +366,6 @@
          complex(kind=kind(0.0d0)) :: cval
          integer :: i
 
-         external :: eig_hermitian
 
          if (.not. spod_s_initialized) then
             if (nid == 0) write(6,*)

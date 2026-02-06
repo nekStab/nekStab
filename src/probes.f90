@@ -14,6 +14,12 @@
       !   krylov_subspace, SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_probes
+         implicit none
+         private
+         public :: pointcheck, zero_crossing
+      contains
+
       !-----------------------------------------------------------------------
       ! pointcheck — Locate nearest grid point to probe coordinates
       !
@@ -135,3 +141,5 @@
          return
       end subroutine zero_crossing
       !-----------------------------------------------------------------------
+
+      end module nekstab_probes

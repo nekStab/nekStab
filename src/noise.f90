@@ -16,6 +16,13 @@
       !   SIZE, TOTAL (TSTEP, PARALLEL, INPUT, SOLN, GEOM)
       !-----------------------------------------------------------------------
 
+      module nekstab_noise
+         implicit none
+         private
+         public :: add_noise_scal, op_add_noise,
+     $             add_symmetric_seed, mth_rand
+      contains
+
       !-----------------------------------------------------------------------
       ! add_noise_scal — Add pseudo-random noise to a scalar field
       !
@@ -42,7 +49,7 @@
          real, intent(in) :: fc1, fc2, fc3
          real, dimension(lx1, ly1, lz1, lelt) :: q
          integer iel, ieg, il, jl, kl, nt
-         real xl(ldim), mth_rand, fc(3), nmin, nmax, glmax, glmin
+         real xl(ldim), fc(3), nmin, nmax, glmax, glmin
 
          fc(1) = fc1; fc(2) = fc2; fc(3) = fc3
          nt = nx1*ny1*nz1*nelt
@@ -96,7 +103,7 @@
 
          real, intent(inout), dimension(lx1, ly1, lz1, lelv) :: qx, qy, qz
          integer iel, ieg, il, jl, kl, nv
-         real xl(LDIM), mth_rand, fc(3), nmin, nmax, glmax, glmin
+         real xl(LDIM), fc(3), nmin, nmax, glmax, glmin
 
          nv = nx1*ny1*nz1*nelv
 
@@ -233,3 +240,5 @@
          return
       end function mth_rand
       !-----------------------------------------------------------------------
+
+      end module nekstab_noise

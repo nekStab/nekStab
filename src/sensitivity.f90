@@ -16,6 +16,26 @@
       !   krylov_subspace, SIZE, TOTAL, ADJOINT
       !-----------------------------------------------------------------------
 
+      module nekstab_sensitivity
+         use krylov_subspace
+         use nekstab_vectors
+         use nekstab_io
+         use nekstab_eigensolvers
+         use nekstab_matvec
+         use nekstab_diagnostics
+         use nekstab_newton
+         use nekstab_energy_budget
+         use nekstab_torque_mod
+         implicit none
+         private
+         public :: wave_maker, bf_sensitivity,
+     $             ts_steady_force_sensitivity,
+     $             initialize_rhs_ts_steady_force_sensitivity,
+     $             biorthogonalize, delta_forcing,
+     $             animate_mode_only, compute_omegaR,
+     $             animate_mode, animate_mode_Floquet
+      contains
+
       !-----------------------------------------------------------------------
       ! wave_maker — Compute the wavemaker from direct and adjoint modes
       !
@@ -319,7 +339,8 @@
          character(len=80) :: filename
          character(len=3) :: prefix
          real :: alpha
-         integer :: calls
+         integer :: calls, k_out, newton_iter
+         real :: dtol
 
       !     --> Load base flow.
          write (filename, '(a, a, a)') 'BF_', trim(session), '0.f00001'
@@ -347,7 +368,9 @@
          call k_normalize(rhs, alpha)
 
       !     --> Solve the linear system.
-         call ts_gmres(rhs, sol, 10, k_dim, calls)
+         dtol = 1.0d-6
+         newton_iter = 0
+         call ts_gmres(rhs, sol, 10, k_dim, 1.0d-6, calls, k_out, newton_iter, dtol)
 
       !     -->
          call k_cmult(sol, alpha)
@@ -885,7 +908,7 @@
             call set_outfld
 
             call hpts
-            call nekStab_torque('lift_drag.dat', 1)
+            call nekStab_torque('lift_drag.dat')
             if (ifoutfld) then
 
                if (nid == 0) then
@@ -916,4 +939,4 @@
 
       end subroutine animate_mode_Floquet
 
-      !-----------------------------------------------------------------------
+      end module nekstab_sensitivity

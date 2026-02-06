@@ -22,6 +22,31 @@
       !   PARALLEL, DXYZ
       !-----------------------------------------------------------------------
 
+      module nekstab_otd
+         use krylov_subspace
+         use nekstab_io
+         use nekstab_noise
+         implicit none
+         private
+         public :: otd, otd_construct_linear_operator,
+     $             otd_compute_OTD_modes,
+     $             otd_outpost_OTD_modes,
+     $             otd_outpost_orthonormal_basis,
+     $             otd_white_noise, otd_generate_forces,
+     $             otd_orthonormalize_basis,
+     $             otd_zero_FTLE, otd_compute_FTLE,
+     $             otd_construct_convective_terms,
+     $             otd_construct_pressure_gradient_terms,
+     $             otd_construct_diffusive_terms,
+     $             otd_compute_laplacian,
+     $             otd_op_glsc2, otd_inner_product,
+     $             otd_normalize_vector_field,
+     $             otd_mod_Gram_Schmidt,
+     $             otd_compute_orthonormality_measures,
+     $             otd_sort_eigenvalues,
+     $             otd_compute_eig_wrapper
+      contains
+
       !-----------------------------------------------------------------------
       ! otd — main OTD driver (initialization and time-stepping)
       !
@@ -139,7 +164,6 @@
          include 'SOLN' ! V[XYZ]P
          include 'TSTEP' ! istep
          integer ipert, jpert, nv, i
-         real otd_inner_product
 
       !     Build the elements of the linearized NS-operator L_{NS} (u_j)
       !         L_{NS} (u_j) = 1/Re (grad^2 u)_j - (grad p)_j - (Ub.grad) u_j - (u_j.grad) Ub
@@ -358,7 +382,7 @@
          include 'PARALLEL'
 
          integer :: x_idx, y_idx, z_idx, e_idx, ieg, per_idx, iidx
-         real :: coords(LDIM), fc(3), sin2, mth_rand
+         real :: coords(LDIM), fc(3), sin2
 
          do per_idx = 1, npert
             do x_idx = 1, lx1
@@ -786,7 +810,6 @@
 
          integer, intent(in) :: ipert, jpert
          integer, intent(in) :: iflag
-         real :: otd_op_glsc2
 
          otd_inner_product = 0.0d0
 
@@ -851,7 +874,7 @@
          include 'SOLN' ! V[XYZ]P
 
          integer i, j, nv
-         real invnorm, proj, otd_inner_product
+         real invnorm, proj
 
          nv = lx1*ly1*lz1*nelv
          do i = 1, npert ! orthonormalize
@@ -884,7 +907,7 @@
          logical, intent(in) :: flag
          character(len=6), intent(in) :: info
          integer :: pert_i, pert_j
-         real :: inner_product_matrix(npert, npert), otd_inner_product
+         real :: inner_product_matrix(npert, npert)
 
          do pert_i = 1, npert
             do pert_j = 1, npert
@@ -1044,4 +1067,4 @@
 
       end subroutine otd_compute_eig_wrapper
 
-      !-----------------------------------------------------------------------
+      end module nekstab_otd

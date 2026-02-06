@@ -14,6 +14,21 @@
       !   krylov_subspace, SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_newton
+         use krylov_subspace
+         use nekstab_vectors
+         use nekstab_matvec
+         use nekstab_krylov_decomposition
+         use nekstab_lapack
+         use nekstab_diagnostics
+         implicit none
+         private
+         public :: newton_krylov, ts_gmres,
+     $             initialize_gmres_vector,
+     $             nonlinear_forward_map,
+     $             set_nek5000_tolerances, spec_tole
+      contains
+
       !-----------------------------------------------------------------------
       ! newton_krylov — Main Newton iteration loop
       !
@@ -57,7 +72,6 @@
          integer, save :: k_out ! Store k from GMRES
          integer, save :: k_sum = 0 ! Accumulator for total k values across Newton iterations
          real, external :: dnekclock
-         real :: spec_tole ! Function declaration
 
       !     ----- Call Counting Logic -----
 ! Each nonlinear solve costs nsteps calls (in nonlinear_forward_map)
@@ -602,3 +616,5 @@
          end if
 
       end function spec_tole
+
+      end module nekstab_newton

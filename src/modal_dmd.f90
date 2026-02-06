@@ -16,6 +16,8 @@
       module modal_dmd
 
          use krylov_subspace
+         use nekstab_lapack
+         use nekstab_vectors
 
          implicit none
          private
@@ -53,7 +55,6 @@
          real :: total_energy, cumsum, tol
          real, parameter :: PI_VAL = 3.14159265358979323846d0
 
-         external :: eig_symmetric, eig
 
 !        Number of snapshot pairs: X = [x_1..x_{n-1}], Y = [x_2..x_n]
          n = nsnap - 1

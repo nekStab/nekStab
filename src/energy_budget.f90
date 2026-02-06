@@ -19,6 +19,20 @@
       !   krylov_subspace, SIZE, TOTAL, ADJOINT
       !-----------------------------------------------------------------------
 
+      module nekstab_energy_budget
+         use nekstab_vectors
+         use nekstab_io
+         use nekstab_matvec
+         use nekstab_eigensolvers
+         implicit none
+         private
+         public :: stability_energy_budget,
+     $             stability_energy_budget_floquet,
+     $             compute_velocity_gradient_tensor,
+     $             compute_dissipation, compute_production,
+     $             compute_gradients, compute_laplacian
+      contains
+
       !-----------------------------------------------------------------------
       ! stability_energy_budget — PKE budget for steady base flows
       !
@@ -642,3 +656,5 @@
          return
       end subroutine compute_laplacian
       !-----------------------------------------------------------------------
+
+      end module nekstab_energy_budget

@@ -19,6 +19,17 @@
       !   krylov_subspace, SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_fixedpoint
+         use krylov_subspace
+         use nekstab_vectors
+         use nekstab_diagnostics
+         use nekstab_newton
+         implicit none
+         private
+         public :: tdf, SFD, BoostConv, boostconv_core,
+     $             qr_dec, linear_system
+      contains
+
       !-----------------------------------------------------------------------
       ! tdf -- Time-Delayed Feedback stabilization
       !
@@ -476,3 +487,5 @@
          return
       end subroutine linear_system
       !-----------------------------------------------------------------------
+
+      end module nekstab_fixedpoint

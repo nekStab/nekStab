@@ -12,9 +12,10 @@
       !   allocate_orbit, orbit_store, orbit_restore
       !
       ! Dependencies:
-      !   SIZE, TOTAL, SOLN, PARALLEL, INPUT
+      !   nekstab_vectors, SIZE, TOTAL, SOLN, PARALLEL, INPUT
       !-----------------------------------------------------------------------
        module krylov_subspace
+         use nekstab_vectors
          implicit none
          include 'SIZE'
 
@@ -43,8 +44,12 @@
          real, save, allocatable, dimension(:, :), public :: uor, vor, wor  ! Velocity orbits
          real, save, allocatable, dimension(:, :, :), public :: tor        ! Temperature orbits
 
+         public :: k_dot, k_norm, k_normalize, k_cmult,
+     $             k_add2, k_add2s2, k_axpby, k_sub2, k_sub3,
+     $             k_zero, k_copy, k_matmul,
+     $             allocate_orbit, orbit_store, orbit_restore
+
       contains
-      end module krylov_subspace
 
       !-----------------------------------------------------------------------
       ! Krylov vector operations
@@ -68,7 +73,6 @@
       ! k_dot — Weighted inner product of two Krylov vectors
       !-----------------------------------------------------------------------
       subroutine k_dot(alpha, p, q)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -103,7 +107,6 @@
       ! k_norm — L2 norm of a Krylov vector
       !-----------------------------------------------------------------------
       subroutine k_norm(alpha, p)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -119,7 +122,6 @@
       ! k_normalize — Normalize a Krylov vector to unit norm
       !-----------------------------------------------------------------------
       subroutine k_normalize(p, alpha)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -170,7 +172,6 @@
       ! k_cmult — Scalar multiplication p = c*p
       !-----------------------------------------------------------------------
       subroutine k_cmult(p, c)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -186,7 +187,6 @@
       ! k_add2 — Vector addition p = p + q
       !-----------------------------------------------------------------------
       subroutine k_add2(p, q)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -202,7 +202,6 @@
       ! k_add2s2 — Scaled addition p = p + c*q (AXPY)
       !-----------------------------------------------------------------------
       subroutine k_add2s2(p, q, c)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -220,7 +219,6 @@
       ! k_axpby — Scaled combination p = alpha*p + beta*q (AXPBY)
       !-----------------------------------------------------------------------
       subroutine k_axpby(p, alpha, q, beta)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -239,7 +237,6 @@
       ! k_sub2 — Vector subtraction p = p - q
       !-----------------------------------------------------------------------
       subroutine k_sub2(p, q)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -255,7 +252,6 @@
       ! k_sub3 — Three-vector subtraction p = q - r
       !-----------------------------------------------------------------------
       subroutine k_sub3(p, q, r)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -272,7 +268,6 @@
       ! k_zero — Zero all fields of a Krylov vector
       !-----------------------------------------------------------------------
       subroutine k_zero(p)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -287,7 +282,6 @@
       ! k_copy — Copy Krylov vector q into p
       !-----------------------------------------------------------------------
       subroutine k_copy(p, q)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -303,7 +297,6 @@
       ! k_matmul — Matrix-vector product dq = Q * yvec
       !-----------------------------------------------------------------------
       subroutine k_matmul(dq, Q, yvec, k)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -325,7 +318,6 @@
       ! allocate_orbit — Allocate orbit storage arrays on the heap
       !-----------------------------------------------------------------------
       subroutine allocate_orbit(nsteps_in)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'PARALLEL' ! nid
@@ -351,7 +343,6 @@
       ! orbit_store — Store current fields into orbit arrays
       !-----------------------------------------------------------------------
       subroutine orbit_store(istep_in)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'SOLN'    ! vx, vy, vz, t
@@ -379,7 +370,6 @@
       ! orbit_restore — Restore fields from orbit arrays
       !-----------------------------------------------------------------------
       subroutine orbit_restore(istep_in)
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'SOLN'    ! vx, vy, vz, t
@@ -403,3 +393,5 @@
          end if
 
       end subroutine orbit_restore
+
+      end module krylov_subspace
