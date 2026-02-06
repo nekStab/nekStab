@@ -513,6 +513,9 @@ subroutine nekStab_usrchk
    ! Optional: SPOD windowing
    spod_nfft = 64             ! FFT block size
    spod_noverlap = 32         ! Block overlap
+
+   ! Optional: Window normalization for spectral analysis
+   ifwinamp = .true.          ! .true.=PySPOD (amplitude), .false.=Parseval (energy)
 end subroutine
 ```
 
@@ -772,6 +775,7 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 | `ifpod` | .false. | Enable POD computation |
 | `ifdmd` | .false. | Enable DMD computation |
 | `ifspod` | .false. | Enable SPOD computation |
+| `ifwinamp` | .true. | Window normalization: .true.=amplitude (PySPOD), .false.=energy (Parseval) |
 | `dmd_rank` | 0 | DMD truncation rank (0 = auto, use all) |
 | `spod_nfft` | 64 | SPOD FFT block size |
 | `spod_noverlap` | 32 | SPOD block overlap (typically nfft/2) |

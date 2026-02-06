@@ -14,9 +14,9 @@
 startFrom = rst_1cyl0.f00001
 
 stopAt = endTime
-endTime = 2000
+endTime = 2050
 
-userParam01 = 0
+userParam01 = 6
 
 dt = 0
 variableDt = yes
