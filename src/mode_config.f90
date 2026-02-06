@@ -24,7 +24,8 @@
      $             nekStab_mode_from_string,
      $             nekStab_mode_from_flags,
      $             nekStab_mode_from_uparam,
-     $             nekStab_validate_mode
+     $             nekStab_validate_mode,
+     $             nekStab_sync_uparam
       contains
 
       !-----------------------------------------------------------------------
@@ -54,6 +55,7 @@
      &        ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing
      &        .or. ifAnimateMode .or. ifAnimateBFDeform
      &        .or. ifAnimateFloquet .or. ifotd
+     &        .or. ifpod .or. ifdmd .or. ifspod
 
       !  Priority 1: String mode (nekstab_mode) - highest priority
          if (len_trim(nekstab_mode) > 0) then
@@ -75,6 +77,9 @@
 
       !  Validate: check for conflicting modes
          call nekStab_validate_mode
+
+      !  Sync uparam(1) to match resolved flags (downstream code reads it)
+         call nekStab_sync_uparam
 
       end subroutine nekStab_resolve_mode
       !-----------------------------------------------------------------------
@@ -322,6 +327,10 @@
             ifotd = .true.
 
       !  Mode 6: Modal analysis
+         elseif (abs(up1 - 6.0) < tol) then
+            ifpod = .true.
+            ifdmd = .true.
+            ifspod = .true.
          elseif (abs(up1 - 6.1) < tol) then
             ifpod = .true.
          elseif (abs(up1 - 6.2) < tol) then
@@ -364,6 +373,7 @@
      &       .or. ifAnimateMode .or. ifAnimateBFDeform
      &       .or. ifAnimateFloquet) nmodes = nmodes + 1
          if (ifotd) nmodes = nmodes + 1
+         if (ifpod .or. ifdmd .or. ifspod) nmodes = nmodes + 1
 
          if (nmodes > 1) then
             if (nid == 0) then
@@ -407,8 +417,7 @@
          end if
 
       !  Check for no mode selected
-         if (nmodes == 0 .and. .not. (ifpod .or. ifdmd .or. ifspod))
-     &        then
+         if (nmodes == 0) then
             if (nid == 0) then
                write (6, *) 'WARNING: No operating mode selected'
                write (6, *) 'Defaulting to DNS mode (uparam(1)=0)'
@@ -417,6 +426,94 @@
          end if
 
       end subroutine nekStab_validate_mode
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! nekStab_sync_uparam — Write resolved flags back to uparam(1)
+      !
+      ! Purpose:
+      !   Ensures uparam(1) matches the resolved mode flags so that
+      !   downstream code dispatching on uparam(1) works correctly
+      !   regardless of which mode-selection method was used.
+      !-----------------------------------------------------------------------
+      subroutine nekStab_sync_uparam
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+      !  Map resolved flags back to uparam(1)
+      !  Mode 0: DNS
+         if (ifDNS) then
+            uparam(1) = 0.0
+         elseif (ifLinDNS) then
+            uparam(1) = 0.1
+
+      !  Mode 1: Fixed point
+         elseif (ifSFD) then
+            uparam(1) = 1.1
+         elseif (ifBoostConv) then
+            uparam(1) = 1.2
+         elseif (ifTDF) then
+            uparam(1) = 1.4
+
+      !  Mode 2: Newton-Krylov
+         elseif (isNewtonFP) then
+            uparam(1) = 2.0
+         elseif (isNewtonPO) then
+            uparam(1) = 2.1
+         elseif (isNewtonPO_T) then
+            uparam(1) = 2.2
+
+      !  Mode 3: Stability analysis
+         elseif (isDirect) then
+            uparam(1) = 3.1
+         elseif (isFloquetDirect) then
+            uparam(1) = 3.11
+         elseif (isAdjoint) then
+            uparam(1) = 3.2
+         elseif (isFloquetAdjoint) then
+            uparam(1) = 3.21
+         elseif (isTransientGrowth) then
+            uparam(1) = 3.3
+         elseif (isFloquetTransientGrowth) then
+            uparam(1) = 3.31
+
+      !  Mode 4: Postprocessing
+         elseif (ifEnergyBudget .and. ifFloquet) then
+            uparam(1) = 4.11
+         elseif (ifEnergyBudget) then
+            uparam(1) = 4.1
+         elseif (ifWavemaker) then
+            uparam(1) = 4.2
+         elseif (ifBFSensitivity) then
+            uparam(1) = 4.3
+         elseif (ifForceSensReal) then
+            uparam(1) = 4.41
+         elseif (ifForceSensImag) then
+            uparam(1) = 4.42
+         elseif (ifDeltaForcing) then
+            uparam(1) = 4.43
+         elseif (ifAnimateMode) then
+            uparam(1) = 4.50
+         elseif (ifAnimateBFDeform) then
+            uparam(1) = 4.51
+         elseif (ifAnimateFloquet) then
+            uparam(1) = 4.52
+
+      !  Mode 5: OTD
+         elseif (ifotd) then
+            uparam(1) = 5.0
+
+      !  Mode 6: Modal analysis
+         elseif (ifpod) then
+            uparam(1) = 6.1
+         elseif (ifdmd) then
+            uparam(1) = 6.2
+         elseif (ifspod) then
+            uparam(1) = 6.3
+         end if
+
+      end subroutine nekStab_sync_uparam
       !-----------------------------------------------------------------------
 
       end module nekstab_mode_config
