@@ -1,6 +1,32 @@
-      
       !-----------------------------------------------------------------------
-      
+      ! nek_vectors.f90 -- Multi-field vector operations for Nek5000 arrays
+      !
+      ! Purpose:
+      !   Extends Nek5000's op-style vector operations (opcopy, opadd2, etc.)
+      !   to the full (velocity, pressure, temperature, passive scalars)
+      !   field tuple. Each nop* routine operates on all active fields
+      !   respecting the if3D, ifpo, ifto, ifpsco flags.
+      !
+      ! Public interface:
+      !   noprzero   -- zero all fields
+      !   nopcmult   -- scalar multiply all fields
+      !   axpby      -- x = alpha*x + beta*y (single array)
+      !   nopaxpby   -- x = alpha*x + beta*y (all fields)
+      !   nopcopy    -- copy all fields
+      !   nopsub2    -- a = a - b (all fields)
+      !   nopsub3    -- c = a - b (all fields)
+      !   nopadd2    -- a = a + b (all fields)
+      !   nopadd2s2  -- a = a + c*b (all fields)
+      !   opadd3     -- a = b + c (velocity only)
+      !   opaddcol3  -- a = a + b*c (velocity only)
+      !
+      ! Dependencies:
+      !   SIZE, TOTAL
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! noprzero -- Zero all active fields (velocity, pressure, temperature)
+      !-----------------------------------------------------------------------
       subroutine noprzero(a1, a2, a3, a4, a5)
          implicit none
          include 'SIZE'
@@ -11,6 +37,7 @@
          real, intent(inout) :: a3(lx1*ly1*lz1*nelv)
          real, intent(inout) :: a4(lx2*ly2*lz2*nelv)
          real, intent(inout) :: a5(lx1*ly1*lz1*lelt, ldimt)
+
          n = lx1*ly1*lz1*nelv
          call rzero(a1, n)
          call rzero(a2, n)
@@ -24,6 +51,9 @@
          end if
          return
       end subroutine noprzero
+
+      !-----------------------------------------------------------------------
+      ! nopcmult -- Scalar multiply all active fields: a = c * a
       !-----------------------------------------------------------------------
       subroutine nopcmult(a1, a2, a3, a4, a5, c)
          implicit none
@@ -36,6 +66,7 @@
          real, intent(inout) :: a4(lx2*ly2*lz2*nelv)
          real, intent(inout) :: a5(lx1*ly1*lz1*lelt, ldimt)
          real, intent(in) :: c
+
          n = lx1*ly1*lz1*nelv
          call cmult(a1, c, n)
          call cmult(a2, c, n)
@@ -49,6 +80,9 @@
          end if
          return
       end subroutine nopcmult
+
+      !-----------------------------------------------------------------------
+      ! axpby -- x = alpha*x + beta*y for a single array of length n
       !-----------------------------------------------------------------------
       subroutine axpby(x, alpha, y, beta, n)
          real x(1), y(1), alpha, beta
@@ -59,6 +93,10 @@
          end do
          return
       end subroutine axpby
+
+      !-----------------------------------------------------------------------
+      ! nopaxpby -- a = alpha*a + beta*b for all active fields
+      !-----------------------------------------------------------------------
       subroutine nopaxpby(a1, a2, a3, a4, a5, alpha, b1, b2, b3, b4, b5, beta)
          implicit none
          include 'SIZE'
@@ -75,6 +113,7 @@
          real, intent(in) :: b4(lx2*ly2*lz2*nelv)
          real, intent(in) :: b5(lx1*ly1*lz1*lelt, ldimt)
          real, intent(in) :: alpha, beta
+
          n = lx1*ly1*lz1*nelv
          call axpby(a1, alpha, b1, beta, n)
          call axpby(a2, alpha, b2, beta, n)
@@ -88,6 +127,10 @@
          end if
          return
       end subroutine nopaxpby
+
+      !-----------------------------------------------------------------------
+      ! nopcopy -- Copy all active fields: a = b
+      !-----------------------------------------------------------------------
       subroutine nopcopy(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)
          implicit none
          include 'SIZE'
@@ -103,6 +146,7 @@
          real, intent(in) :: b3(lx1*ly1*lz1*nelv)
          real, intent(in) :: b4(lx2*ly2*lz2*nelv)
          real, intent(in) :: b5(lx1*ly1*lz1*lelt, ldimt)
+
          n = lx1*ly1*lz1*nelv
          call copy(a1, b1, n)
          call copy(a2, b2, n)
@@ -116,6 +160,10 @@
          end if
          return
       end subroutine nopcopy
+
+      !-----------------------------------------------------------------------
+      ! nopsub2 -- Subtract all active fields in-place: a = a - b
+      !-----------------------------------------------------------------------
       subroutine nopsub2(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)
          implicit none
          include 'SIZE'
@@ -131,6 +179,7 @@
          real, intent(in) :: b3(lx1*ly1*lz1*nelv)
          real, intent(in) :: b4(lx2*ly2*lz2*nelv)
          real, intent(in) :: b5(lx1*ly1*lz1*lelt, ldimt)
+
          n = lx1*ly1*lz1*nelv
          call sub2(a1, b1, n)
          call sub2(a2, b2, n)
@@ -144,6 +193,10 @@
          end if
          return
       end subroutine nopsub2
+
+      !-----------------------------------------------------------------------
+      ! nopsub3 -- Subtract fields into output: c = a - b
+      !-----------------------------------------------------------------------
       subroutine nopsub3(c1, c2, c3, c4, c5, a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)
          implicit none
          include 'SIZE'
@@ -164,6 +217,7 @@
          real, intent(in) :: b3(lx1*ly1*lz1*nelv)
          real, intent(in) :: b4(lx2*ly2*lz2*nelv)
          real, intent(in) :: b5(lx1*ly1*lz1*lelt, ldimt)
+
          n = lx1*ly1*lz1*nelv
          call sub3(c1, a1, b1, n)
          call sub3(c2, a2, b2, n)
@@ -177,6 +231,10 @@
          end if
          return
       end subroutine nopsub3
+
+      !-----------------------------------------------------------------------
+      ! nopadd2 -- Add all active fields in-place: a = a + b
+      !-----------------------------------------------------------------------
       subroutine nopadd2(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)
          implicit none
          include 'SIZE'
@@ -192,6 +250,7 @@
          real, intent(in) :: b3(lx1*ly1*lz1*nelv)
          real, intent(in) :: b4(lx2*ly2*lz2*nelv)
          real, intent(in) :: b5(lx1*ly1*lz1*lelt, ldimt)
+
          n = lx1*ly1*lz1*nelv
          call add2(a1, b1, n)
          call add2(a2, b2, n)
@@ -205,9 +264,11 @@
          end if
          return
       end subroutine nopadd2
-!-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! nopadd2s2 -- a = a + c*b for all active fields (BLAS-style AXPY)
+      !-----------------------------------------------------------------------
       subroutine nopadd2s2(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5, c)
-!        a = a + c*b  (BLAS-style AXPY for all fields)
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -223,6 +284,7 @@
          real, intent(in) :: b4(lx2*ly2*lz2*nelv)
          real, intent(in) :: b5(lx1*ly1*lz1*lelt, ldimt)
          real, intent(in) :: c
+
          n = lx1*ly1*lz1*nelv
          call add2s2(a1, b1, c, n)
          call add2s2(a2, b2, c, n)
@@ -236,7 +298,10 @@
          end if
          return
       end subroutine nopadd2s2
-!-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! opadd3 -- a = b + c for velocity fields
+      !-----------------------------------------------------------------------
       subroutine opadd3(a1, a2, a3, b1, b2, b3, c1, c2, c3)
          implicit none
          include 'SIZE'
@@ -250,12 +315,18 @@
          real, intent(in) :: c1(lx1*ly1*lz1*nelv)
          real, intent(in) :: c2(lx1*ly1*lz1*nelv)
          real, intent(in) :: c3(lx1*ly1*lz1*nelv)
+
          n = lx1*ly1*lz1*nelv
          call add3(a1, b1, c1, n)
          call add3(a2, b2, c2, n)
          if (ndim == 3) call add3(a3, b3, c3, n)
+
          return
       end subroutine opadd3
+
+      !-----------------------------------------------------------------------
+      ! opaddcol3 -- a = a + b*c for velocity fields (column-wise multiply)
+      !-----------------------------------------------------------------------
       subroutine opaddcol3(a1, a2, a3, b1, b2, b3, c1, c2, c3)
          implicit none
          include 'SIZE'
@@ -269,9 +340,11 @@
          real, intent(in) :: c1(lx1*ly1*lz1*nelv)
          real, intent(in) :: c2(lx1*ly1*lz1*nelv)
          real, intent(in) :: c3(lx1*ly1*lz1*nelv)
+
          n = lx1*ly1*lz1*nelv
          call addcol3(a1, b1, c1, n)
          call addcol3(a2, b2, c2, n)
          if (ndim == 3) call addcol3(a3, b3, c3, n)
+
          return
       end subroutine opaddcol3

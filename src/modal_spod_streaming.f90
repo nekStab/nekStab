@@ -1,12 +1,24 @@
 !-----------------------------------------------------------------------
-!     modal_spod_streaming.f90: Streaming SPOD algorithm
+! modal_spod_streaming.f90 -- Streaming SPOD algorithm
 !
-!     Faster than batch SPOD for large datasets due to sequential
-!     access pattern and perfect cache locality.
+! Purpose:
+!   Implements a streaming variant of Spectral POD that processes
+!   snapshots one at a time, accumulating DFT coefficients on the
+!   fly. Faster than batch SPOD for large datasets due to sequential
+!   access pattern and perfect cache locality.
+!
+! Public interface:
+!   spod_streaming_batch  -- process pre-loaded snapshots via streaming
+!   spod_stream_init      -- initialize streaming SPOD state
+!   spod_stream_update    -- accumulate one snapshot into DFT
+!   spod_stream_finalize  -- CSD eigensolve and mode output
+!
+! Dependencies:
+!   krylov_subspace, spod_streaming_state, modal_pod, modal_spod
 !-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
-!     State management for streaming SPOD
+! spod_streaming_state -- State management module for streaming SPOD
 !-----------------------------------------------------------------------
       module spod_streaming_state
          use krylov_subspace
@@ -51,6 +63,7 @@
 
       contains
 
+      !  spod_s_init -- Allocate and initialize streaming SPOD state
          subroutine spod_s_init(nfft, noverlap, dt, nblk_in)
             integer, intent(in) :: nfft, noverlap, nblk_in
             real, intent(in) :: dt
@@ -92,6 +105,7 @@
 
          end subroutine spod_s_init
 
+      !  spod_s_cleanup -- Deallocate all streaming SPOD state arrays
          subroutine spod_s_cleanup()
             if (allocated(spod_s_window)) deallocate(spod_s_window)
             if (allocated(spod_s_freq)) deallocate(spod_s_freq)
@@ -124,9 +138,18 @@
       contains
 
 !-----------------------------------------------------------------------
+! spod_streaming_batch -- Process pre-loaded snapshots via streaming SPOD
+!
+! Arguments:
+!   snaps    [in] -- array of centered snapshots
+!   nsnap    [in] -- number of snapshots
+!   delta_t  [in] -- sampling interval
+!   nfft     [in] -- FFT block length
+!   noverlap [in] -- block overlap
+!   nsave    [in] -- number of modes to save per frequency
+!-----------------------------------------------------------------------
       subroutine spod_streaming_batch(snaps, nsnap, delta_t,
      $                                nfft, noverlap, nsave)
-!     Process pre-loaded snapshots using streaming SPOD algorithm.
 
          implicit none
          include 'SIZE'
@@ -158,11 +181,14 @@
       end module modal_spod_streaming
 
 !-----------------------------------------------------------------------
-!     Streaming SPOD implementation subroutines
+! spod_stream_init -- Initialize streaming SPOD computation
+!
+! Arguments:
+!   nfft_in     [in] -- FFT block length
+!   noverlap_in [in] -- block overlap
+!   delta_t_in  [in] -- sampling interval
 !-----------------------------------------------------------------------
-
       subroutine spod_stream_init(nfft_in, noverlap_in, delta_t_in)
-!     Initialize streaming SPOD computation
 
          use spod_streaming_state
          use modal_pod, only: hamming_window
@@ -202,8 +228,13 @@
       end subroutine spod_stream_init
 
 !-----------------------------------------------------------------------
+! spod_stream_update -- Accumulate one snapshot into DFT coefficients
+!
+! Arguments:
+!   snap  [in] -- current snapshot (krylov_vector)
+!   isnap [in] -- snapshot index (for progress output)
+!-----------------------------------------------------------------------
       subroutine spod_stream_update(snap, isnap)
-!     Process one snapshot: accumulate DFT (optionally center data)
 
          use krylov_subspace
          use spod_streaming_state
@@ -305,8 +336,17 @@
       end subroutine spod_stream_update
 
 !-----------------------------------------------------------------------
+! spod_stream_finalize -- Finalize streaming SPOD (CSD eigensolve)
+!
+! Purpose:
+!   Forms the cross-spectral density matrix at each frequency from
+!   the accumulated DFT coefficients, solves the Hermitian eigenproblem,
+!   and saves SPOD modes and spectrum to disk.
+!
+! Arguments:
+!   nsave [in] -- number of modes to save per frequency
+!-----------------------------------------------------------------------
       subroutine spod_stream_finalize(nsave)
-!     Finalize streaming SPOD: CSD eigensolve at each frequency
 
          use krylov_subspace
          use spod_streaming_state
@@ -444,9 +484,14 @@
       end subroutine spod_stream_finalize
 
 !-----------------------------------------------------------------------
+! spod_stream_save_modes -- Save SPOD modes at one frequency
+!
+! Purpose:
+!   Extracts DFT slices from module state and delegates to
+!   spod_save_modes for field reconstruction and output.
+!-----------------------------------------------------------------------
       subroutine spod_stream_save_modes(ifreq, nfreq, freq,
      $     evecs, evals, nblk, nsave)
-!     Extract DFT slices from module state and delegate to spod_save_modes
 
          use spod_streaming_state
          use modal_spod, only: spod_save_modes

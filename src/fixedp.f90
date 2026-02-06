@@ -1,5 +1,33 @@
-      !-----------------------------------------------------------------------c
-      subroutine tdf !Time-delayed Feedback
+      !-----------------------------------------------------------------------
+      ! fixedp.f90 -- Fixed-point solvers for base flow computation
+      !
+      ! Purpose:
+      !   Implements iterative methods to compute unstable steady states
+      !   (base flows) of the Navier-Stokes equations: Time-Delayed
+      !   Feedback (TDF), Selective Frequency Damping (SFD), and
+      !   BoostConv acceleration.
+      !
+      ! Public interface:
+      !   tdf           -- Time-Delayed Feedback stabilization
+      !   SFD           -- Selective Frequency Damping
+      !   BoostConv     -- BoostConv convergence acceleration
+      !   boostconv_core -- BoostConv inner iteration
+      !   qr_dec        -- QR decomposition for BoostConv
+      !   linear_system -- Back-substitution for upper triangular system
+      !
+      ! Dependencies:
+      !   krylov_subspace, SIZE, TOTAL
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! tdf -- Time-Delayed Feedback stabilization
+      !
+      ! Purpose:
+      !   Stabilizes unstable periodic orbits by applying a feedback
+      !   force proportional to the difference between the current
+      !   state and the state one period earlier.
+      !-----------------------------------------------------------------------
+      subroutine tdf
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -119,8 +147,14 @@
       
          return
       end subroutine TDF
+
       !-----------------------------------------------------------------------
-      
+      ! SFD -- Selective Frequency Damping
+      !
+      ! Purpose:
+      !   Damps unsteady oscillations to converge to a steady base flow
+      !   using either the Akervik or Casacuberta formulation.
+      !-----------------------------------------------------------------------
       subroutine SFD
          use krylov_subspace
          implicit none
@@ -214,9 +248,15 @@
       
          end if
       end subroutine SFD
+
+      !-----------------------------------------------------------------------
+      ! BoostConv -- BoostConv convergence acceleration
+      !
+      ! Purpose:
+      !   Accelerates convergence to steady state using Anderson-like
+      !   extrapolation from residual snapshots.
       !-----------------------------------------------------------------------
       subroutine BoostConv
-      !     boostconv core subroutine
          use krylov_subspace
          implicit none
          include 'SIZE'
@@ -263,6 +303,16 @@
       
          return
       end subroutine BoostConv
+
+      !-----------------------------------------------------------------------
+      ! boostconv_core -- Inner iteration of BoostConv acceleration
+      !
+      ! Purpose:
+      !   Performs QR-based least-squares extrapolation on residual
+      !   snapshots to accelerate convergence.
+      !
+      ! Arguments:
+      !   rbx, rby, rbz [inout] -- velocity residual, updated in-place
       !-----------------------------------------------------------------------
       subroutine boostconv_core(rbx, rby, rbz)
          use krylov_subspace
@@ -281,7 +331,8 @@
          real, allocatable, save, dimension(:, :) :: q_x, q_y, q_z
          real, allocatable, save, dimension(:, :) :: x_x, x_y, x_z, y_x, y_y, y_z
       
-         real, dimension(lv) :: rbx, rby, rbz, dumx, dumy, dumz
+         real, dimension(lv), intent(inout) :: rbx, rby, rbz
+         real, dimension(lv) :: dumx, dumy, dumz
       
          real :: glsc3
          nv = nx1*ny1*nz1*nelv
@@ -327,6 +378,18 @@
          end if
          return
       end subroutine boostconv_core
+
+      !-----------------------------------------------------------------------
+      ! qr_dec -- QR decomposition for BoostConv residual subspace
+      !
+      ! Purpose:
+      !   Computes modified Gram-Schmidt QR factorization of the
+      !   residual difference subspace used by BoostConv.
+      !
+      ! Arguments:
+      !   rr                    [out]   -- upper triangular R factor
+      !   q_x, q_y, q_z        [out]   -- orthonormal Q basis
+      !   x_x, x_y, x_z        [in]    -- input residual vectors
       !-----------------------------------------------------------------------
       subroutine qr_dec(rr, q_x, q_y, q_z, x_x, x_y, x_z)
          use krylov_subspace
@@ -338,7 +401,7 @@
          real, dimension(lv) :: dum_x1, dum_y1, dum_z1, dum_x, dum_y, dum_z
          real, dimension(bst_snp, bst_snp) :: rr
          real norma, glsc3
-      
+
          nv = nx1*ny1*nz1*nelv
          rr = 0.0d0; norma = 0.0d0
          call oprzero(Q_x(:, :), Q_y(:, :), Q_z(:, :))
@@ -383,13 +446,24 @@
          end do
          return
       end subroutine qr_dec
-      !----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! linear_system -- Back-substitution for upper triangular system
+      !
+      ! Arguments:
+      !   outp   [out] -- solution vector
+      !   inp    [in]  -- right-hand side vector
+      !   m      [in]  -- upper triangular matrix
+      !   size_m [in]  -- system dimension
+      !-----------------------------------------------------------------------
       subroutine linear_system(outp, inp, m, size_m)
          implicit none
          include 'SIZE'
          include 'TOTAL'
-         integer :: size_m, j, k
-         real :: m(size_m, size_m), inp(size_m), outp(size_m)
+         integer, intent(in) :: size_m
+         integer :: j, k
+         real, intent(in) :: m(size_m, size_m), inp(size_m)
+         real, intent(out) :: outp(size_m)
          outp = 0.0d0
          do j = size_m, 1, -1
       !outp(j) = inp(j) - sum(m(j,j+1:size_m)*outp(j+1:size_m))/m(j,j)
@@ -401,4 +475,4 @@
          end do
          return
       end subroutine linear_system
-      !----------------------------------------------------------------------
+      !-----------------------------------------------------------------------

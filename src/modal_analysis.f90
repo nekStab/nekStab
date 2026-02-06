@@ -1,12 +1,29 @@
 !-----------------------------------------------------------------------
-!     Modal analysis dispatcher for nekStab (Mode 6)
+! modal_analysis.f90 -- Modal analysis dispatcher for nekStab (Mode 6)
 !
-!     uparam(1) = 6.0  -> Run all enabled methods
-!     uparam(1) = 6.1  -> POD only
-!     uparam(1) = 6.2  -> DMD only
-!     uparam(1) = 6.3  -> SPOD only
+! Purpose:
+!   Top-level driver that loads snapshots, computes temporal mean,
+!   and dispatches to the enabled modal decomposition methods
+!   (POD, DMD, SPOD). Controlled by uparam(1):
+!     6.0 = run all enabled, 6.1 = POD only,
+!     6.2 = DMD only, 6.3 = SPOD only
+!
+! Public interface:
+!   modal_analysis       -- main dispatcher
+!   modal_compute_mean   -- compute ensemble temporal mean
+!   modal_subtract_mean  -- subtract mean from all snapshots
+!
+! Dependencies:
+!   krylov_subspace, modal_pod, modal_dmd, modal_spod,
+!   modal_spod_streaming, SIZE, TOTAL
 !-----------------------------------------------------------------------
 
+!-----------------------------------------------------------------------
+! modal_analysis -- Main modal decomposition dispatcher
+!
+! Purpose:
+!   Loads snapshot sequence, subtracts mean, then runs POD, DMD,
+!   and/or SPOD depending on user flags (ifpod, ifdmd, ifspod).
 !-----------------------------------------------------------------------
       subroutine modal_analysis
 
@@ -140,8 +157,14 @@
       end subroutine modal_analysis
 
 !-----------------------------------------------------------------------
+! modal_compute_mean -- Compute temporal mean of snapshot ensemble
+!
+! Arguments:
+!   snaps     [in]  -- array of snapshots
+!   nsnap     [in]  -- number of snapshots
+!   mean_snap [out] -- temporal mean
+!-----------------------------------------------------------------------
       subroutine modal_compute_mean(snaps, nsnap, mean_snap)
-!     Compute temporal mean of snapshot ensemble
 
          use krylov_subspace
          implicit none
@@ -166,8 +189,14 @@
       end subroutine modal_compute_mean
 
 !-----------------------------------------------------------------------
+! modal_subtract_mean -- Subtract temporal mean from all snapshots
+!
+! Arguments:
+!   snaps     [inout] -- snapshots to center
+!   nsnap     [in]    -- number of snapshots
+!   mean_snap [in]    -- temporal mean to subtract
+!-----------------------------------------------------------------------
       subroutine modal_subtract_mean(snaps, nsnap, mean_snap)
-!     Subtract temporal mean from all snapshots
 
          use krylov_subspace
          implicit none
