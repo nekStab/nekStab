@@ -54,8 +54,9 @@ nwt*
 SPG*
 BMS*
 
-# Vorticity fields
+# Vorticity fields (Nek5000 output)
 vor*
+!src/vortex.f90
 vox*
 
 # Restart files in examples
