@@ -21,6 +21,32 @@
       !   SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_fst
+         private
+         public :: fst, initWavenumbers, initModes,
+     $             defineBC, interpolateModes, computeBC,
+     $             computeTurbu, spline, splint
+
+         include 'SIZE'
+
+         ! FST parameters (override in SIZE if using FST)
+         integer, parameter :: fst_numk_default = 20
+         integer, parameter :: fst_nmodes_default = 10
+         integer, parameter :: fst_maxpoints = 9999
+
+         ! FST field arrays
+         integer :: fst_numk, fst_nmodes, npointModes, npointBC
+         real :: fst_okini, fst_okfin, fst_length, fst_tu
+         real :: fst_uin(lx1,ly1,lz1,lelv)
+         real :: fst_vin(lx1,ly1,lz1,lelv)
+         real :: fst_win(lx1,ly1,lz1,lelv)
+         real :: frec(2,fst_numk_default*fst_nmodes_default)
+         real :: pointBC(fst_maxpoints,7)
+         real :: umodes(fst_maxpoints,7,fst_numk_default*fst_nmodes_default)
+         real :: umodesBC(fst_maxpoints,6,fst_numk_default*fst_nmodes_default)
+
+      contains
+
       !-----------------------------------------------------------------------
       ! fst -- Main driver for freestream turbulence generation
       !
@@ -30,7 +56,6 @@
       !-----------------------------------------------------------------------
       subroutine fst
       ! Freestream turbulence (original implementation by M A Bucci)
-         implicit none
          include 'SIZE'
          include 'TOTAL'
       
@@ -50,7 +75,6 @@
       ! initWavenumbers -- Read wavenumber/frequency data from FST_data/
       !-----------------------------------------------------------------------
       subroutine initWavenumbers
-         implicit none
          include 'SIZE'
          include 'TOTAL'
          integer :: itervp, i
@@ -71,7 +95,6 @@
       ! initModes -- Read velocity mode shapes from FST_data/
       !-----------------------------------------------------------------------
       subroutine initModes
-         implicit none
          include 'SIZE'
          include 'TOTAL'
          integer :: i, j, k, itervp
@@ -96,7 +119,6 @@
       ! defineBC -- Identify inlet boundary points for FST injection
       !-----------------------------------------------------------------------
       subroutine defineBC
-         implicit none
          include 'SIZE'
          include 'TOTAL'
          include 'NEKUSE'
@@ -132,7 +154,6 @@
       ! interpolateModes -- Spline-interpolate mode shapes onto inlet mesh
       !-----------------------------------------------------------------------
       subroutine interpolateModes
-         implicit none
          include 'SIZE'
          include 'TOTAL'
          real y1(npointModes), y2(npointModes), y3(npointModes),
@@ -177,7 +198,6 @@
       ! computeBC -- Generate turbulent velocity field at inlet points
       !-----------------------------------------------------------------------
       subroutine computeBC
-         implicit none
          include 'SIZE'
          include 'TOTAL'
          real u_turbu(npointBC, 3)
@@ -206,7 +226,6 @@
       !   u_turbu [out] -- turbulent velocity at inlet points (npointBC,3)
       !-----------------------------------------------------------------------
       subroutine computeTurbu(u_turbu)
-         implicit none
          include 'SIZE'
          include 'TOTAL'
          real u_turbu(npointBC, 3), turbu_aux(npointBC, 3)
@@ -442,3 +461,5 @@
          y = a*ya(klo) + b*ya(khi) + ((a**3 - a)*y2a(klo) + (b**3 - b)*y2a(khi))*h**2/6.0
 
       end subroutine splint
+
+      end module nekstab_fst

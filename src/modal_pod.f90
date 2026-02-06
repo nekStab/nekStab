@@ -17,6 +17,8 @@
       module modal_pod
 
          use krylov_subspace
+         use nekstab_lapack
+         use nekstab_vectors
          use fourier
 
          implicit none
@@ -48,7 +50,6 @@
          real, allocatable :: norms(:)
          integer :: i, j
 
-         external :: eig_symmetric
 
 !        Form symmetric correlation matrix
          if (nid == 0) write(6,*) '  Forming correlation matrix...'
@@ -211,7 +212,6 @@
          integer :: npeak
          integer, allocatable :: peak_idx(:)
 
-         external :: eig_symmetric
 
 !        Compute POD correlation matrix and eigenvectors
          if (nid == 0) write(6,*) '  Computing POD correlation matrix...'

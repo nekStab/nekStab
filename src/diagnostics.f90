@@ -20,6 +20,16 @@
       !   krylov_subspace, SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_diagnostics
+         use nekstab_vortex
+         implicit none
+         private
+         public :: outpost_vort, norm_grad, smooth_field,
+     $             nekStab_outpost, nekStab_comment,
+     $             nekStab_printNEKParams, nekStab_energy,
+     $             nekStab_enstrophy
+      contains
+
       !-----------------------------------------------------------------------
       ! outpost_vort — Compute and output vorticity field
       !
@@ -439,3 +449,5 @@
          return
       end subroutine nekStab_enstrophy
       !-----------------------------------------------------------------------
+
+      end module nekstab_diagnostics

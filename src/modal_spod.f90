@@ -17,6 +17,8 @@
       module modal_spod
 
          use krylov_subspace
+         use nekstab_lapack
+         use nekstab_vectors
          use fourier
          use modal_pod, only: hamming_window
 
@@ -52,7 +54,6 @@
          complex(kind=kind(0.0d0)), allocatable :: spod_evecs(:,:)
          complex(kind=kind(0.0d0)) :: cval
 
-         external :: eig_hermitian
 
          if (nid == 0) then
             write(6,*) '  SPOD parameters:'

@@ -14,9 +14,24 @@
 !   modal_subtract_mean  -- subtract mean from all snapshots
 !
 ! Dependencies:
-!   krylov_subspace, modal_pod, modal_dmd, modal_spod,
-!   modal_spod_streaming, SIZE, TOTAL
+!   krylov_subspace, nekstab_vectors, nekstab_io,
+!   modal_pod, modal_dmd, modal_spod, modal_spod_streaming,
+!   SIZE, TOTAL
 !-----------------------------------------------------------------------
+
+      module nekstab_modal_analysis
+         use krylov_subspace
+         use nekstab_vectors
+         use nekstab_io
+         use modal_pod
+         use modal_dmd
+         use modal_spod
+         use modal_spod_streaming
+         implicit none
+         private
+         public :: modal_analysis, modal_compute_mean,
+     $             modal_subtract_mean
+      contains
 
 !-----------------------------------------------------------------------
 ! modal_analysis -- Main modal decomposition dispatcher
@@ -26,12 +41,6 @@
 !   and/or SPOD depending on user flags (ifpod, ifdmd, ifspod).
 !-----------------------------------------------------------------------
       subroutine modal_analysis
-
-         use krylov_subspace
-         use modal_pod
-         use modal_dmd
-         use modal_spod
-         use modal_spod_streaming
 
          implicit none
          include 'SIZE'
@@ -166,7 +175,6 @@
 !-----------------------------------------------------------------------
       subroutine modal_compute_mean(snaps, nsnap, mean_snap)
 
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -198,7 +206,6 @@
 !-----------------------------------------------------------------------
       subroutine modal_subtract_mean(snaps, nsnap, mean_snap)
 
-         use krylov_subspace
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -214,3 +221,5 @@
          end do
 
       end subroutine modal_subtract_mean
+
+      end module nekstab_modal_analysis

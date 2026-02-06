@@ -17,6 +17,16 @@
       !   SIZE, TOTAL (for uparam, nid, common block flags)
       !-----------------------------------------------------------------------
 
+      module nekstab_mode_config
+         implicit none
+         private
+         public :: nekStab_resolve_mode,
+     $             nekStab_mode_from_string,
+     $             nekStab_mode_from_flags,
+     $             nekStab_mode_from_uparam,
+     $             nekStab_validate_mode
+      contains
+
       !-----------------------------------------------------------------------
       ! nekStab_resolve_mode — Determine operating mode from all sources
       !
@@ -408,3 +418,5 @@
 
       end subroutine nekStab_validate_mode
       !-----------------------------------------------------------------------
+
+      end module nekstab_mode_config

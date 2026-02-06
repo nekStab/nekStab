@@ -1,72 +1,83 @@
 
-# all nekStab files are in .f90 (format for )free format source code
+# nekStab build rules — module dependency chain
+# All .f90 files compiled with fixed-format flags (FL2) except fourier*.f90
 
 # Free-form flags: replace -fixed/-ffixed-form with -free/-ffree-form
 # Intel: -fixed -> -free; GCC: -ffixed-form -> -ffree-form
 FL2_FREE = $(subst -fixed,-free,$(subst -ffixed-form,-ffree-form,$(FL2)))
 
-# ─────────────────────────────────────────────────────────────────────
-# Core modules (no dependencies)
-# ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/krylov_subspace.o:      $(NEKSTAB_SOURCE_ROOT)/src/krylov_subspace.f90      ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/argsort.o:              $(NEKSTAB_SOURCE_ROOT)/src/argsort.f90              ;$(FC) -c $(FL2) $< -o $@
+NS = $(NEKSTAB_SOURCE_ROOT)/src
+O  = $(OBJDIR)
 
 # ─────────────────────────────────────────────────────────────────────
-# Fourier modules
+# Level 0: Leaf modules (no nekStab module dependencies)
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/fourier_fftw.o:         $(NEKSTAB_SOURCE_ROOT)/src/fourier_fftw.f90         ;$(FC) -c $(FL2_FREE) $< -o $@
-$(OBJDIR)/fourier.o:              $(NEKSTAB_SOURCE_ROOT)/src/fourier.f90              $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/nek_vectors.o:       $(NS)/nek_vectors.f90       ;$(FC) -c $(FL2) $< -o $@
+$(O)/argsort.o:           $(NS)/argsort.f90           ;$(FC) -c $(FL2) $< -o $@
+$(O)/lapack_wrapper.o:    $(NS)/lapack_wrapper.f90    ;$(FC) -c $(FL2) $< -o $@
+$(O)/vortex.o:            $(NS)/vortex.f90            ;$(FC) -c $(FL2) $< -o $@
+$(O)/torque.o:            $(NS)/torque.f90            ;$(FC) -c $(FL2) $< -o $@
+$(O)/mode_config.o:       $(NS)/mode_config.f90       ;$(FC) -c $(FL2) $< -o $@
+$(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
-# Files that depend on krylov_subspace module
+# Level 1: krylov_subspace (depends on nekstab_vectors)
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/nek_vectors.o:          $(NEKSTAB_SOURCE_ROOT)/src/nek_vectors.f90          ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/krylov_decomposition.o: $(NEKSTAB_SOURCE_ROOT)/src/krylov_decomposition.f90 $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/matvec.o:               $(NEKSTAB_SOURCE_ROOT)/src/matvec.f90               $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/lapack_wrapper.o:       $(NEKSTAB_SOURCE_ROOT)/src/lapack_wrapper.f90       $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/eigensolvers.o:         $(NEKSTAB_SOURCE_ROOT)/src/eigensolvers.f90         $(OBJDIR)/krylov_subspace.o $(OBJDIR)/krylov_decomposition.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/fixedp.o:               $(NEKSTAB_SOURCE_ROOT)/src/fixedp.f90               $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/otd.o:                  $(NEKSTAB_SOURCE_ROOT)/src/otd.f90                  $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/forcing.o:              $(NEKSTAB_SOURCE_ROOT)/src/forcing.f90              $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/IO.o:                   $(NEKSTAB_SOURCE_ROOT)/src/IO.f90                   $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/newton_krylov.o:        $(NEKSTAB_SOURCE_ROOT)/src/newton_krylov.f90        $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/sensitivity.o:          $(NEKSTAB_SOURCE_ROOT)/src/sensitivity.f90          $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/krylov_subspace.o:   $(NS)/krylov_subspace.f90   $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
-# Split files from postproc.f90
+# Level 2: Modules that depend on krylov_subspace + Level 0
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/vortex.o:               $(NEKSTAB_SOURCE_ROOT)/src/vortex.f90               ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/energy_budget.o:        $(NEKSTAB_SOURCE_ROOT)/src/energy_budget.f90        $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/statistics.o:           $(NEKSTAB_SOURCE_ROOT)/src/statistics.f90           $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/fourier.o:           $(NS)/fourier.f90           $(O)/krylov_subspace.o $(O)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/IO.o:                $(NS)/IO.f90                $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/noise.o:             $(NS)/noise.f90             $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/statistics.o:        $(NS)/statistics.f90        $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/diagnostics.o:       $(NS)/diagnostics.f90       $(O)/krylov_subspace.o $(O)/vortex.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/fst.o:               $(NS)/fst.f90               $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
-# Split files from utils.f90
+# Level 3: krylov_decomposition (depends on matvec, lapack, IO)
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/probes.o:               $(NEKSTAB_SOURCE_ROOT)/src/probes.f90               $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/noise.o:                $(NEKSTAB_SOURCE_ROOT)/src/noise.f90                ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/diagnostics.o:          $(NEKSTAB_SOURCE_ROOT)/src/diagnostics.f90          $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/torque.o:               $(NEKSTAB_SOURCE_ROOT)/src/torque.f90               ;$(FC) -c $(FL2) $< -o $@
+$(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace.o $(O)/matvec.o $(O)/lapack_wrapper.o $(O)/IO.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
-# Split from main.f90
+# Level 4: eigensolvers (depends on krylov_decomposition + many Level 0)
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/mode_config.o:          $(NEKSTAB_SOURCE_ROOT)/src/mode_config.f90          ;$(FC) -c $(FL2) $< -o $@
+$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/argsort.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
-# Main entry points (depends on krylov_subspace for nekStab_init)
+# Level 5: Modules that depend on eigensolvers
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/main.o:                 $(NEKSTAB_SOURCE_ROOT)/src/main.f90                 $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Modal analysis modules
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/modal_pod.o:            $(NEKSTAB_SOURCE_ROOT)/src/modal_pod.f90            $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/modal_dmd.o:            $(NEKSTAB_SOURCE_ROOT)/src/modal_dmd.f90            $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/modal_spod.o:           $(NEKSTAB_SOURCE_ROOT)/src/modal_spod.f90           $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier.o $(OBJDIR)/modal_pod.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/modal_spod_streaming.o: $(NEKSTAB_SOURCE_ROOT)/src/modal_spod_streaming.f90 $(OBJDIR)/krylov_subspace.o $(OBJDIR)/modal_pod.o $(OBJDIR)/modal_spod.o ;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/modal_analysis.o:       $(NEKSTAB_SOURCE_ROOT)/src/modal_analysis.f90       $(OBJDIR)/krylov_subspace.o $(OBJDIR)/fourier.o $(OBJDIR)/modal_pod.o $(OBJDIR)/modal_dmd.o $(OBJDIR)/modal_spod.o $(OBJDIR)/modal_spod_streaming.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_pod.o:         $(NS)/modal_pod.f90         $(O)/krylov_subspace.o $(O)/fourier.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_dmd.o:         $(NS)/modal_dmd.f90         $(O)/krylov_subspace.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_spod.o:        $(NS)/modal_spod.f90        $(O)/krylov_subspace.o $(O)/fourier.o $(O)/modal_pod.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_spod_streaming.o: $(NS)/modal_spod_streaming.f90 $(O)/krylov_subspace.o $(O)/modal_pod.o $(O)/modal_spod.o $(O)/lapack_wrapper.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_analysis.o:    $(NS)/modal_analysis.f90    $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/fourier.o $(O)/modal_pod.o $(O)/modal_dmd.o $(O)/modal_spod.o $(O)/modal_spod_streaming.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
-# Floquet stability theory
+# Main entry points (bare subroutines, uses all modules)
 # ─────────────────────────────────────────────────────────────────────
-$(OBJDIR)/fst.o:                  $(NEKSTAB_SOURCE_ROOT)/src/fst.f90                  $(OBJDIR)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/main.o: $(NS)/main.f90 \
+   $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/mode_config.o \
+   $(O)/eigensolvers.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o \
+   $(O)/sensitivity.o $(O)/newton_krylov.o $(O)/fixedp.o \
+   $(O)/otd.o $(O)/fst.o $(O)/forcing.o $(O)/diagnostics.o \
+   $(O)/energy_budget.o $(O)/IO.o $(O)/modal_analysis.o \
+   $(O)/statistics.o $(O)/noise.o $(O)/probes.o $(O)/torque.o \
+   $(O)/vortex.o $(O)/matvec.o \
+   ;$(FC) -c $(FL2) $< -o $@
+
+$(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
+   ;$(FC) -c $(FL2) $< -o $@

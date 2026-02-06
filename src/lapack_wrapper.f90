@@ -14,6 +14,14 @@
       !   LAPACK (dgees, dtrsen, dgeev, dgels, dsyev, zheev)
       !-----------------------------------------------------------------------
 
+      module nekstab_lapack
+         implicit none
+         private
+         public :: schur, ordschur, eig, sort_eigendecomp,
+     $             select_eigvals, lstsq, eig_symmetric,
+     $             eig_hermitian
+      contains
+
       !-----------------------------------------------------------------------
       ! schur — Schur decomposition of a general matrix
       !
@@ -54,8 +62,6 @@
          real, dimension(3*n) :: work
          logical, dimension(n) :: bwork
          complex(kind=kind(0.0d0)), dimension(n), intent(out) :: vals
-
-         external select_eigvals
 
       !     --> Perform the Schur decomposition.
          lda = max(1, n)
@@ -431,3 +437,5 @@
          deallocate(work, rwork, Acopy, tmp_vec)
 
       end subroutine eig_hermitian
+
+      end module nekstab_lapack

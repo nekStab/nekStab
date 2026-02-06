@@ -13,6 +13,12 @@
       !   None
       !-----------------------------------------------------------------------
 
+      module nekstab_argsort
+         implicit none
+         private
+         public :: argsort
+      contains
+
       ! argsort — Sort array ascending with index tracking
       subroutine argsort(n, arr, idx)
       implicit none
@@ -38,3 +44,5 @@
       end do
 
       end subroutine argsort
+
+      end module nekstab_argsort

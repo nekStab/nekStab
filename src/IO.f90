@@ -16,6 +16,14 @@
       !   krylov_subspace, SIZE, TOTAL, PARALLEL, TSTEP
       !-----------------------------------------------------------------------
 
+      module nekstab_io
+         use krylov_subspace
+         use nekstab_vectors
+         private
+         public :: whereyouwant, read_eigenvalue,
+     $             load_mode_pair, load_files, k_load
+      contains
+
       !-----------------------------------------------------------------------
       ! whereyouwant -- Set file numbering suffix counter
       !
@@ -158,3 +166,5 @@
          call nopcopy(Q%vx, Q%vy, Q%vz, Q%pr, Q%t, vx, vy, vz, pr, t)
       
       end subroutine k_load
+
+      end module nekstab_io

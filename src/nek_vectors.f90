@@ -24,6 +24,14 @@
       !   SIZE, TOTAL
       !-----------------------------------------------------------------------
 
+      module nekstab_vectors
+         implicit none
+         private
+         public :: noprzero, nopcmult, axpby, nopaxpby,
+     $             nopcopy, nopsub2, nopsub3, nopadd2,
+     $             nopadd2s2, opadd3, opaddcol3
+      contains
+
       !-----------------------------------------------------------------------
       ! noprzero -- Zero all active fields (velocity, pressure, temperature)
       !-----------------------------------------------------------------------
@@ -348,3 +356,5 @@
 
          return
       end subroutine opaddcol3
+
+      end module nekstab_vectors

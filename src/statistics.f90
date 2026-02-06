@@ -13,6 +13,12 @@
       !   krylov_subspace, SIZE, TOTAL, AVG
       !-----------------------------------------------------------------------
 
+      module nekstab_statistics
+         use krylov_subspace
+         private
+         public :: nekStab_avg
+      contains
+
       !-----------------------------------------------------------------------
       ! nekStab_avg — Running mean and RMS statistics
       !
@@ -129,3 +135,5 @@
          return
       end subroutine nekStab_avg
       !-----------------------------------------------------------------------
+
+      end module nekstab_statistics

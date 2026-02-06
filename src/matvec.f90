@@ -16,6 +16,20 @@
       !   krylov_subspace, SIZE, TOTAL, ADJOINT
       !-----------------------------------------------------------------------
 
+      module nekstab_matvec
+         use krylov_subspace
+         use nekstab_vectors
+         implicit none
+         private
+         public :: prepare_linearized_solver, matvec,
+     $             forward_linearized_map,
+     $             forward_finite_difference_map,
+     $             adjoint_linearized_map,
+     $             transient_growth_map,
+     $             ts_force_sensitivity_map,
+     $             newton_linearized_map, compute_bvec
+      contains
+
       !-----------------------------------------------------------------------
       ! prepare_linearized_solver — Set up Nek parameters for linearized solver
       !-----------------------------------------------------------------------
@@ -608,3 +622,5 @@
 
          return
       end subroutine compute_bvec
+
+      end module nekstab_matvec

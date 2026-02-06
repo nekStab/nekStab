@@ -15,12 +15,29 @@
       !   schur_condensation    -- Krylov-Schur restart via Schur form
       !   select_eigenvalues    -- adaptive eigenvalue selection
       !   ensure_conjugate_pairs -- keep conjugate pairs together
-      !   arnoldi_checkpoint    -- save Krylov state for restart
-      !   log_transform         -- complex logarithm for eigenvalues
       !
       ! Dependencies:
-      !   krylov_subspace, SIZE, TOTAL
+      !   krylov_subspace, nekstab_krylov_decomposition,
+      !   nekstab_lapack, nekstab_argsort, nekstab_vectors,
+      !   nekstab_matvec, nekstab_io, SIZE, TOTAL
       !-----------------------------------------------------------------------
+
+      module nekstab_eigensolvers
+         use krylov_subspace
+         use nekstab_krylov_decomposition
+         use nekstab_lapack
+         use nekstab_argsort
+         use nekstab_vectors
+         use nekstab_matvec
+         use nekstab_io
+         use nekstab_diagnostics
+         use nekstab_noise
+         implicit none
+         private
+         public :: inner_product, norm, krylov_schur,
+     $             outpost_ks, schur_condensation,
+     $             select_eigenvalues, ensure_conjugate_pairs
+      contains
 
       !-----------------------------------------------------------------------
       ! inner_product -- Weighted L2 inner product <p, q>
@@ -435,8 +452,6 @@
          integer :: i, m
          real :: speriod, trim, spurious_tol
          real :: alpha, alpha_r, alpha_i, beta, old_uparam1, omega
-         complex :: log_transform
-
       ! File handling variables
          character(len=80) filename
          character(len=20) fich1, fich2, fich3, fich4, fmt2, fmt3, fmt4, fmt5, fmt6
@@ -1207,123 +1222,4 @@
          return
       end subroutine ensure_conjugate_pairs
 
-      !-----------------------------------------------------------------------
-
-      subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
-
-      !     This function implements a fairly simple checkpointing procedure in case one
-      !     would need to restart the computation (e.g. in case of cluster shutdown).
-      !
-      !     INPUTS
-      !     ------
-      !
-      !     f_xr, f_yr, f_zr : nek arrays of size lv = lx1*ly1*lz1*lelv
-      !     Velocity components of the latest Krylov vector.
-      !
-      !     f_pr : nek array of size lp = lx2*ly2*lz2*lelt
-      !     Pressure field of the latest Krylov vector.
-      !
-      !     H : k+1 x k real matrix.
-      !     Current upper Hessenberg matrix resulting from the k-step Arnoldi factorization.
-      !
-      !     k : int
-      !     Current iteration of the Arnoldi factorization.
-      !
-      !     Last edit : April 3rd 2020 by JC Loiseau.
-
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-
-         real, dimension(lv), intent(in) :: f_xr, f_yr, f_zr
-         real, dimension(lp), intent(in) :: f_pr
-         real, dimension(lt, ldimt), intent(in) :: f_tr
-
-         integer, intent(in) :: k
-         real, dimension(k + 1, k), intent(in) :: H
-
-         integer :: i, j, converged_eigenvalues
-         complex(kind=kind(0.0d0)), dimension(k) :: vals
-         complex(kind=kind(0.0d0)), dimension(k, k) :: vecs
-         real, dimension(k) :: residual
-         character(len=80) filename
-         complex :: log_transform
-
-         if (nid == 0) write (6, *) 'Outposting Krylov vector to'
-
-      !     --> Outpost the latest Krylov vector.
-      !     if(uparam(1).gt.3)then
-         call whereyouwant("KRY", k + 1) ! skipping one due to the initial condition
-      !     else
-      !     call whereyouwant("KRY", k) ! for restart of newton solver
-      !     endif
-
-         time = time*k !order in ParaView
-         call outpost2(f_xr, f_yr, f_zr, f_pr, f_tr, nof, "KRY")
-
-      !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.
-         call eig(H(1:k, 1:k), vecs, vals, k)
-
-      !     --> Compute the residual (assume H results from classical Arnoldi factorization).
-         residual = abs(H(k + 1, k)*vecs(k, :))
-
-      ! ------> Enforce minimum value of machine epsilon
-         where (residual < epsilon(1.0d0)) residual = epsilon(1.0d0)
-
-         converged_eigenvalues = count(residual < eigen_tol)
-
-         if (nid == 0) then
-
-      !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
-
-            write (filename, '(A,A,i4.4,A)') 'Spectre_H', evop, k, '.dat'
-            write (6, *) 'Writing Hessenberg matrix eigenspectrum to', filename
-
-            open (67, file=trim(filename), status='unknown', form='formatted')
-            write (67, '(3E15.7)') (real(vals(i)), aimag(vals(i)), residual(i), i=1, k)
-            close (67)
-
-      !     --> Outpost the log-transform spectrum (i.e. eigenspectrum of the linearized Navier-Stokes operator).
-
-            write (filename, '(A,A,i4.4,A)') 'Spectre_NS', evop, k, '.dat'
-            write (6, *) 'Writing log-transformed eigenspectrum to', filename
-
-            open (67, file=trim(filename), status='unknown', form='formatted')
-            write (67, '(3E15.7)') (real(log_transform(vals(i)))/(dt*nsteps),
-     $   aimag(log_transform(vals(i)))/(dt*nsteps), residual(i), i = 1, k)
-            close (67)
-
-      !     --> Outpost the Hessenberg matrix for restarting purposes (if needed).
-            write (filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
-            write (6, *) 'Writing Hessenberg matrix to', filename
-
-            open (67, file=trim(filename), status='unknown', form='formatted')
-            write (67, *) ((H(i, j), j=1, k), i=1, k + 1)
-            close (67)
-
-      !     --> Write to logfile the current number of converged eigenvalues.
-            write (6, *) 'converged eigenvalues:', converged_eigenvalues, 'target:', schur_tgt !keep small caps to ease grep
-
-         end if
-
-      !   if (schur_tgt > 0 .and. converged_eigenvalues >= schur_tgt) then
-      !         !ifres=.true. is required!
-      !         if(nid.eq.0)write(6,*) 'Target reached! exporting and stopping'
-      !         call nek_end
-      !   endif
-
-         return
-      end subroutine arnoldi_checkpoint
-
-      !-----------------------------------------------------------------------
-      ! log_transform -- Complex logarithm (real part if imaginary is zero)
-      !-----------------------------------------------------------------------
-      function log_transform(x)
-         implicit none
-         complex, intent(in) :: x
-         complex :: log_transform
-         log_transform = log(x)
-         if (aimag(x) == 0) log_transform = real(log_transform)
-
-      end function log_transform
+      end module nekstab_eigensolvers
