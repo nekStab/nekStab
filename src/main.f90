@@ -98,6 +98,7 @@
          ifpod = .false.      ! POD analysis
          ifdmd = .false.      ! DMD analysis
          ifspod = .false.     ! SPOD analysis
+         ifwinamp = .true.    ! Amplitude normalization (PySPOD compatible)
          modal_nsnap = 100    ! Default snapshot count
          modal_nsave = 10     ! Default number of modes to save
          modal_dt = 0.1d0     ! Default time between snapshots
@@ -167,6 +168,7 @@
          call bcast(ifpod, lsize)
          call bcast(ifdmd, lsize)
          call bcast(ifspod, lsize)
+         call bcast(ifwinamp, lsize)
          call bcast(animate_mode_num, isize)
          call bcast(modal_nsnap, isize)
          call bcast(modal_nsave, isize)
@@ -334,7 +336,13 @@
       !  ═══════════════════════════════════════════════════════════════════
       !  MODE 4: Postprocessing
       !  ═══════════════════════════════════════════════════════════════════
-         if (ifEnergyBudget) call stability_energy_budget
+         if (ifEnergyBudget) then
+            if (ifFloquet) then
+               call stability_energy_budget_floquet
+            else
+               call stability_energy_budget
+            end if
+         end if
          if (ifWavemaker) call wave_maker
          if (ifBFSensitivity) call bf_sensitivity
          if (ifForceSensReal .or. ifForceSensImag)
@@ -489,6 +497,9 @@
       !  Mode 4: Postprocessing
          case ('energy_budget')
             ifEnergyBudget = .true.
+         case ('energy_budget_floquet')
+            ifEnergyBudget = .true.
+            ifFloquet = .true.
          case ('wavemaker')
             ifWavemaker = .true.
          case ('bf_sensitivity', 'baseflow_sensitivity')
@@ -528,7 +539,9 @@
                write (6, *) '  direct, adjoint, transient_growth,'
                write (6, *) '  floquet_direct, floquet_adjoint, ',
      &              'floquet_tg,'
-               write (6, *) '  energy_budget, wavemaker, ',
+               write (6, *) '  energy_budget, ',
+     &              'energy_budget_floquet,'
+               write (6, *) '  wavemaker, ',
      &              'bf_sensitivity,'
                write (6, *) '  animate_mode, otd, pod, dmd, spod'
             end if
@@ -626,6 +639,9 @@
             ifBFSensitivity = .true.
          elseif (abs(up1 - 4.1) < tol) then
             ifEnergyBudget = .true.
+         elseif (abs(up1 - 4.11) < tol) then
+            ifEnergyBudget = .true.
+            ifFloquet = .true.
          elseif (abs(up1 - 4.2) < tol) then
             ifWavemaker = .true.
          elseif (abs(up1 - 4.3) < tol) then
@@ -723,7 +739,8 @@
 
       !  Check for orphaned ifFloquet (set without base mode)
          if (ifFloquet .and. .not. (isFloquetDirect .or.
-     &       isFloquetAdjoint .or. isFloquetTransientGrowth)) then
+     &       isFloquetAdjoint .or. isFloquetTransientGrowth .or.
+     &       ifEnergyBudget)) then
             if (nid == 0) then
                write (6, *) 'ERROR: ifFloquet set without base mode'
                write (6, *) 'Set isDirect, isAdjoint, or ',
