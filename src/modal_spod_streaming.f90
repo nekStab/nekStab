@@ -248,7 +248,6 @@
 
          real :: scale, w_norm, cos_t, sin_t
          integer :: iblk, ifreq, idx, t_local
-         real, parameter :: PI_VAL = 3.14159265358979323846d0
          real :: base_angle
 
          if (.not. spod_s_initialized) then
@@ -296,7 +295,7 @@
             w_norm = spod_s_window(t_local + 1) * 2.0d0
      $           / (dble(spod_s_nfft) * spod_s_win_weight)
 
-            base_angle = 2.0d0 * PI_VAL * dble(t_local)
+            base_angle = 2.0d0 * NEKSTAB_PI * dble(t_local)
      $           / dble(spod_s_nfft)
 
 !           DC component (half-weight for one-sided spectrum)

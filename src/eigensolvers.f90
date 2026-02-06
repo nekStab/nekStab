@@ -589,7 +589,7 @@
                   write (6, '(A, E15.7)') '  sigma = ', real(log_transform(vals(i)))/speriod
                   omega = aimag(log_transform(vals(i)))/speriod
                   write (6, '(A, E15.7)') '  omega = ', omega
-                  write (6, '(A, E15.7)') '      f = ', omega/(8.0d0*atan(1.0d0))
+                  write (6, '(A, E15.7)') '      f = ', omega/(2.0d0*NEKSTAB_PI)
                end if
                outp = outp + 1
 

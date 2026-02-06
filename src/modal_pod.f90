@@ -417,12 +417,11 @@
 
          integer, intent(in) :: n
          real, intent(out) :: window(n), win_weight
-         real, parameter :: PI_VAL = 3.14159265358979323846d0
          real :: win_mean, win_energy
          integer :: i
 
          do i = 1, n
-            window(i) = 0.54d0 - 0.46d0 * cos(2.0d0 * PI_VAL *
+            window(i) = 0.54d0 - 0.46d0 * cos(2.0d0 * NEKSTAB_PI *
      $           dble(i-1) / dble(n-1))
          end do
 

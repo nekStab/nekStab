@@ -53,8 +53,6 @@
          complex(kind=kind(0.0d0)), allocatable :: dmd_evals(:)
          complex(kind=kind(0.0d0)), allocatable :: dmd_evecs(:,:)
          real :: total_energy, cumsum, tol
-         real, parameter :: PI_VAL = 3.14159265358979323846d0
-
 
 !        Number of snapshot pairs: X = [x_1..x_{n-1}], Y = [x_2..x_n]
          n = nsnap - 1
@@ -205,7 +203,6 @@
          real, intent(in) :: delta_t, norms(nnorms)
 
          real :: sigma, omega, mu_mag, freq
-         real, parameter :: PI_VAL = 3.14159265358979323846d0
          integer :: m
 
          if (nid /= 0) return
@@ -219,7 +216,7 @@
             mu_mag = abs(evals(m))
             sigma = log(mu_mag) / delta_t
             omega = atan2(aimag(evals(m)), real(evals(m))) / delta_t
-            freq = omega / (2.0d0 * PI_VAL)
+            freq = omega / (2.0d0 * NEKSTAB_PI)
 
             if (m <= nnorms) then
                write(78, '(I6, 7E14.6)') m, mu_mag, sigma, omega,
@@ -256,7 +253,6 @@
          type(krylov_vector) :: mode_re, mode_im
          real :: coef_re, coef_im, mode_norm, mu_mag, freq
          integer :: m, i, j, nmodes
-         real, parameter :: PI_VAL = 3.14159265358979323846d0
          character(len=3) :: prefix_re, prefix_im
 
          prefix_re = 'dm1'
@@ -308,7 +304,7 @@
             if (nid == 0) then
                mu_mag = abs(evals(m))
                freq = atan2(aimag(evals(m)), real(evals(m))) /
-     $              (2.0d0 * PI_VAL * modal_dt)
+     $              (2.0d0 * NEKSTAB_PI * modal_dt)
                write(6,'(A,I4,A,F8.4,A,F10.4,A,E12.4)')
      $              '    Mode', m, ': |mu| =', mu_mag,
      $              ', St =', freq, ', ||Phi_re|| =', mode_norm
