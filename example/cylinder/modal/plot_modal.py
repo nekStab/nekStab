@@ -20,9 +20,10 @@ Output:
   pod_spectrum.png, dmd_spectrum.png, spod_spectrum.png,
   pod_fft_spectrum.png, spectral_comparison.png
 """
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import sys
 
 # -----------------------------------------------------------------------------
@@ -47,6 +48,19 @@ BBOX = 'tight'
 ST_REF = 0.16594721970048534
 
 
+def savefig(fig, name):
+    fname = f'{name}.{FORMAT}'
+    fig.tight_layout()
+    fig.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
+    print(f'Saved {fname}')
+    plt.close(fig)
+
+
+def spectral_grid(ax):
+    ax.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
+    ax.grid(True, which='minor', linestyle=':', linewidth=0.2, alpha=0.3)
+
+
 # -----------------------------------------------------------------------------
 # Data classes
 # -----------------------------------------------------------------------------
@@ -55,7 +69,7 @@ class PODSpectrum:
     """Read POD eigenvalue spectrum from pod_energy.dat"""
 
     def __init__(self, filename='pod_energy.dat'):
-        if not os.path.exists(filename):
+        if not Path(filename).exists():
             raise FileNotFoundError(f'{filename} not found')
 
         print(f'Reading {filename}')
@@ -74,7 +88,7 @@ class DMDSpectrum:
     """Read DMD eigenvalue spectrum from dmd_spectrum.dat"""
 
     def __init__(self, filename='dmd_spectrum.dat'):
-        if not os.path.exists(filename):
+        if not Path(filename).exists():
             raise FileNotFoundError(f'{filename} not found')
 
         print(f'Reading {filename}')
@@ -100,10 +114,10 @@ class SPODSpectrum:
     def __init__(self, filename=None):
         # Auto-detect file: prefer streaming SPOD
         if filename is None:
-            if os.path.exists('spod_stream_spectrum.dat'):
+            if Path('spod_stream_spectrum.dat').exists():
                 filename = 'spod_stream_spectrum.dat'
                 self.method = 'streaming'
-            elif os.path.exists('spod_spectrum.dat'):
+            elif Path('spod_spectrum.dat').exists():
                 filename = 'spod_spectrum.dat'
                 self.method = 'batch'
             else:
@@ -111,7 +125,7 @@ class SPODSpectrum:
         else:
             self.method = 'streaming' if 'stream' in filename else 'batch'
 
-        if not os.path.exists(filename):
+        if not Path(filename).exists():
             raise FileNotFoundError(f'{filename} not found')
 
         print(f'Reading {filename} ({self.method} SPOD)')
@@ -139,7 +153,7 @@ class PODFFTSpectrum:
     """Read POD-FFT spectrum from pod_fft_spectrum.dat"""
 
     def __init__(self, filename='pod_fft_spectrum.dat'):
-        if not os.path.exists(filename):
+        if not Path(filename).exists():
             raise FileNotFoundError(f'{filename} not found')
 
         print(f'Reading {filename}')
@@ -153,13 +167,9 @@ class PODFFTSpectrum:
         self.nfreq = len(self.St)
         self.nmodes = self.power.shape[1]
 
-        # Find peak frequency for each mode (excluding DC)
-        self.peak_St = []
-        self.peak_power = []
-        for i in range(self.nmodes):
-            idx = np.argmax(self.power[1:, i]) + 1  # Skip DC (index 0)
-            self.peak_St.append(self.St[idx])
-            self.peak_power.append(self.power[idx, i])
+        peak_idx = np.argmax(self.power[1:, :], axis=0) + 1
+        self.peak_St = self.St[peak_idx]
+        self.peak_power = self.power[peak_idx, np.arange(self.nmodes)]
 
         print(f'  {self.nfreq} frequencies, {self.nmodes} POD modes')
         print(f'  Peak St for mode 1: {self.peak_St[0]:.4f}')
@@ -208,12 +218,8 @@ def plot_pod(pod, max_modes=20):
 
     ax2.legend(loc='lower right', fontsize=7)
     ax1.set_title('POD Energy Spectrum')
-    fig.tight_layout()
 
-    fname = f'pod_spectrum.{FORMAT}'
-    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
-    print(f'Saved {fname}')
-    plt.close()
+    savefig(fig, 'pod_spectrum')
 
 
 def plot_dmd(dmd):
@@ -272,12 +278,7 @@ def plot_dmd(dmd):
     ax2.legend(loc='best', fontsize=7)
     ax2.set_title('DMD Growth Rates')
 
-    fig.tight_layout()
-
-    fname = f'dmd_spectrum.{FORMAT}'
-    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
-    print(f'Saved {fname}')
-    plt.close()
+    savefig(fig, 'dmd_spectrum')
 
 
 def plot_spod(spod, max_modes=5):
@@ -313,15 +314,9 @@ def plot_spod(spod, max_modes=5):
     ax.legend(loc='best', fontsize=7, ncol=2)
     title = f'SPOD Spectrum ({spod.method.capitalize()})'
     ax.set_title(title)
-    ax.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
-    ax.grid(True, which='minor', linestyle=':', linewidth=0.2, alpha=0.3)
+    spectral_grid(ax)
 
-    fig.tight_layout()
-
-    fname = f'spod_spectrum.{FORMAT}'
-    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
-    print(f'Saved {fname}')
-    plt.close()
+    savefig(fig, 'spod_spectrum')
 
 
 def plot_pod_fft(pod_fft, max_modes=5):
@@ -357,15 +352,9 @@ def plot_pod_fft(pod_fft, max_modes=5):
     ax.set_xlim(0, min(1.0, max(pod_fft.St)))
     ax.legend(loc='best', fontsize=7)
     ax.set_title('POD-FFT Spectral Analysis')
-    ax.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
-    ax.grid(True, which='minor', linestyle=':', linewidth=0.2, alpha=0.3)
+    spectral_grid(ax)
 
-    fig.tight_layout()
-
-    fname = f'pod_fft_spectrum.{FORMAT}'
-    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
-    print(f'Saved {fname}')
-    plt.close()
+    savefig(fig, 'pod_fft_spectrum')
 
 
 def plot_spectral_comparison(pod_fft=None, spod_stream=None, spod_batch=None):
@@ -412,10 +401,8 @@ def plot_spectral_comparison(pod_fft=None, spod_stream=None, spod_batch=None):
     ax.set_xlim(0, 0.8)
     ax.legend(loc='upper right', fontsize=7)
     ax.set_title('Spectral Analysis Comparison')
-    ax.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
-    ax.grid(True, which='minor', linestyle=':', linewidth=0.2, alpha=0.3)
+    spectral_grid(ax)
 
-    # Add annotation for peak
     spod = spod_stream or spod_batch
     if spod is not None:
         ax.annotate(f'Peak: St={spod.peak_St:.3f}',
@@ -424,12 +411,7 @@ def plot_spectral_comparison(pod_fft=None, spod_stream=None, spod_batch=None):
                     fontsize=8, color='red',
                     arrowprops=dict(arrowstyle='->', color='red', lw=0.8))
 
-    fig.tight_layout()
-
-    fname = f'spectral_comparison.{FORMAT}'
-    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
-    print(f'Saved {fname}')
-    plt.close()
+    savefig(fig, 'spectral_comparison')
 
 
 def plot_spod_validation(spod_batch, spod_stream):
@@ -457,10 +439,9 @@ def plot_spod_validation(spod_batch, spod_stream):
     ax1.set_ylabel('SPOD eigenvalue (mode 1)')
     ax1.legend(loc='best', fontsize=8)
     ax1.set_title('Eigenvalue Comparison')
-    ax1.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
+    spectral_grid(ax1)
 
     # --- Right panel: Relative error ---
-    # Interpolate to common grid if needed
     if len(spod_batch.St) == len(spod_stream.St):
         rel_error = np.abs(eig_stream - eig_batch) / np.maximum(eig_batch, 1e-20)
         ax2.semilogy(spod_batch.St, rel_error * 100, 'k-o', linewidth=1.2,
@@ -468,7 +449,7 @@ def plot_spod_validation(spod_batch, spod_stream):
         ax2.set_xlabel(r'Strouhal number $St$')
         ax2.set_ylabel('Relative error (%)')
         ax2.set_title('Streaming vs Batch Error')
-        ax2.grid(True, which='major', linestyle='-', linewidth=0.3, alpha=0.5)
+        spectral_grid(ax2)
 
         max_err = np.max(rel_error) * 100
         ax2.axhline(max_err, color='red', linestyle='--', linewidth=0.8,
@@ -478,12 +459,7 @@ def plot_spod_validation(spod_batch, spod_stream):
         ax2.text(0.5, 0.5, 'Different frequency grids\nCannot compute error',
                  ha='center', va='center', transform=ax2.transAxes)
 
-    fig.tight_layout()
-
-    fname = f'spod_validation.{FORMAT}'
-    plt.savefig(fname, format=FORMAT, dpi=DPI, bbox_inches=BBOX)
-    print(f'Saved {fname}')
-    plt.close()
+    savefig(fig, 'spod_validation')
 
 
 # -----------------------------------------------------------------------------
@@ -504,7 +480,6 @@ if __name__ == '__main__':
 
     plots_made = 0
     pod_fft_data = None
-    spod_data = None
 
     # POD
     if plot_pod_flag:
