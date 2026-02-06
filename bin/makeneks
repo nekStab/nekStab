@@ -368,6 +368,8 @@ USR+=" modal_dmd.o"
 USR+=" modal_spod.o"
 USR+=" modal_spod_streaming.o"
 USR+=" modal_analysis.o"
+USR+=" fst.o"
+USR+=" usr_wrappers.o"
 
 # Source case-specific makefile if present
 [ -f "makefile_usr" ] && source makefile_usr
