@@ -134,6 +134,10 @@
                      do j = j0, j1
                         do k = k0, k1
                            npointBC = npointBC + 1
+                           if (npointBC > fst_maxpoints) then
+                              if (nid == 0) write(6,*) 'ERROR: npointBC > fst_maxpoints', npointBC, fst_maxpoints
+                              call exitt
+                           end if
                            pointBC(npointBC, 1) = i
                            pointBC(npointBC, 2) = j
                            pointBC(npointBC, 3) = k
@@ -201,8 +205,7 @@
          include 'SIZE'
          include 'TOTAL'
          real u_turbu(npointBC, 3)
-         integer i, j, k, e, ieg, index
-         e = gllel(ieg)
+         integer i, j, k, e, index
       
          call computeTurbu(u_turbu) ! Generate the turbulent profile
       

@@ -412,7 +412,11 @@
          norma = glsc3(dum_x, bm1, dum_x, nv) + glsc3(dum_y, bm1, dum_y, nv)
          if (if3d) norma = norma + glsc3(dum_z, bm1, dum_z, nv)
          norma = sqrt(norma)
-      
+         if (norma < 1e-60) then
+            if (nid == 0) write (6, *) 'WARNING: qr_dec near-zero first column norm'
+            return
+         end if
+
          call opcmult(dum_x, dum_y, dum_z, 1./norma)
          call opcopy(q_x(:, 1), q_y(:, 1), q_z(:, 1), dum_x, dum_y, dum_z)
          rr(1, 1) = norma
@@ -472,7 +476,12 @@
             do k = j + 1, size_m
                outp(j) = outp(j) - m(j, k)*outp(k)
             end do
-            outp(j) = outp(j)/m(j, j)
+            if (abs(m(j, j)) < 1e-60) then
+               if (nid == 0) write (6, *) 'WARNING: linear_system singular diagonal at j=', j
+               outp(j) = 0.0d0
+            else
+               outp(j) = outp(j)/m(j, j)
+            end if
          end do
          return
       end subroutine linear_system

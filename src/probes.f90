@@ -77,7 +77,7 @@
          include 'TOTAL'
          real, intent(in) :: v_mean_init
          real, save :: T_delayed(lv, 3), do1(lv), do2(lv), do3(lv), v_mean
-         integer, parameter :: plor = 2
+         integer, parameter :: plor = 4
          real h1, l2, semi, linf
          save l2
          real :: glsum, dtime, vdot, vddot

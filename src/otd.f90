@@ -85,7 +85,8 @@
             end if
 
             if (nid == 0) write (6, *) 'OTD: saving startFrom in vx to ubic'
-            call load_fld('BF_1cyl0.f00001')
+            write (filename, '(A,A,A)') 'BF_', trim(SESSION), '0.f00001'
+            call load_fld(filename)
             call opcopy(ubic, vbic, wbic, vx, vy, vz)
             call outpost(ubic, vbic, wbic, pr, t, 'bf0')
 
@@ -852,7 +853,8 @@
          include 'INPUT' ! if3d
 
          real, dimension(lx1*ly1*lz1*lelv, 1), intent(in) :: uxp, uyp, uzp
-         real invnorm, n2, nv, op_glsc2_wt
+         integer :: nv
+         real :: invnorm, n2, op_glsc2_wt
 
          ifield = 1
          nv = lx1*ly1*lz1*lelv
@@ -861,9 +863,9 @@
             if (nid == 0) write (6, *) 'Error in otd_normalize_vector_field!'; call nek_end
          end if
          invnorm = 1.0d0/sqrt(n2)
-         call cmult(uxp(1:nv, :), invnorm, int(nv))
-         call cmult(uyp(1:nv, :), invnorm, int(nv))
-         if (if3d) call cmult(uzp(1:nv, :), invnorm, int(nv))
+         call cmult(uxp(1:nv, :), invnorm, nv)
+         call cmult(uyp(1:nv, :), invnorm, nv)
+         if (if3d) call cmult(uzp(1:nv, :), invnorm, nv)
 
       end subroutine otd_normalize_vector_field
 
