@@ -76,6 +76,8 @@
       logical :: ifpod       ! POD analysis (uparam=6.1)
       logical :: ifdmd       ! DMD analysis (uparam=6.2)
       logical :: ifspod      ! SPOD analysis (uparam=6.3)
+      logical :: ifwinamp    ! Window normalization: .true.=amplitude (PySPOD),
+                             !                       .false.=energy (Parseval)
 
       common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois,
      $   ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol,
@@ -86,7 +88,8 @@
       common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv,
      $   ifTDF, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity,
      $   ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode,
-     $   ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod
+     $   ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod,
+     $   ifwinamp
       
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
