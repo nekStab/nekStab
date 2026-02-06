@@ -6,7 +6,7 @@ Runs multiple Arnoldi/Krylov-Schur cases varying k_dim, collects spectra
 and cost metrics, generates a publication-quality comparison figure, and
 validates converged eigenvalues against Marquet et al. (2009).
 
-OUTPUTS: eigensolver_comparison.png
+OUTPUTS: validate_eigensolver.png
 USAGE:
     python validate_eigensolver.py              # Compile + run all + plot
     python validate_eigensolver.py --plot-only  # Plot from existing results/
@@ -35,7 +35,7 @@ CASE_DIR = SCRIPT.parent
 CASE_NAME = "1cyl"
 PAR_FILE = CASE_DIR / f"{CASE_NAME}.par"
 RESULTS_DIR = CASE_DIR / "results"
-OUTPUT_PNG = CASE_DIR / "eigensolver_comparison.png"
+OUTPUT_PNG = CASE_DIR / "validate_eigensolver.png"
 
 # Each case: (label, k_dim, schur_tgt, maxmodes)
 # schur_tgt=0 and maxmodes=0 use the .usr defaults (2 and schur_tgt).
@@ -158,12 +158,21 @@ def compile_once(nekstab_root, dry_run=False):
         print(f"[DRY-RUN] cd {CASE_DIR} && {' '.join(cmd)}")
         return True
 
+    # If binary already exists, skip recompilation (k_dim changes at runtime).
+    binary = CASE_DIR / "nek5000"
+    if binary.exists():
+        print(f"Binary exists ({binary}), skipping compilation.")
+        return True
+
     print(f"=== Compiling {CASE_NAME} ===")
+    # Pipe "N\n" to stdin: Nek5000's makenek.inc may prompt interactively
+    # ("rebuild 3rd party deps?") when .state changes — needs an answer
+    # to avoid EOF under set -e when running without a TTY.
     result = subprocess.run(
-        cmd, cwd=CASE_DIR, env=env,
+        cmd, cwd=CASE_DIR, env=env, input="N\n",
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     )
-    if result.returncode != 0 or not (CASE_DIR / "nek5000").exists():
+    if result.returncode != 0 or not binary.exists():
         print(result.stdout[-2000:])
         sys.exit("Compilation failed.")
 
