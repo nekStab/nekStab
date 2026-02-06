@@ -87,7 +87,7 @@
 
       !     --> Point-wise symmetric and anti-symmetric parts.
          real ss(ldim, ldim), oo(ldim, ldim)
-         real omega(lx1, ly1, lz1, lelv)
+         real omega(lx1, ly1, lz1, 1)
          real norm_a, norm_b
 
       !     --> Miscellaneous.
