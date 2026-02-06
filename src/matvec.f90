@@ -202,47 +202,28 @@
          if (ifstorebase .and. init) ifbase = .false. ! deactivte ifbase if baseflow stored
       
          if (ifstorebase .and. ifbase .and. .not. init) then
-            if (nid == 0) write (6, *) 'ALLOCATING ORBIT WITH NSTEPS:', nsteps
-            allocate (uor(lv, nsteps), vor(lv, nsteps))
-            if (if3d) then
-               allocate (wor(lv, nsteps))
-            else ! 2D
-               allocate (wor(1, 1))
-            end if
-            if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
+            call allocate_orbit(nsteps)
          end if
-      
+
       !     --> Pass the initial condition for the perturbation.
          call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1),
      $   q%vx, q%vy, q%vz, q%pr, q%t)
-      
+
          time = 0.0d+00
          do istep = 1, nsteps
       !     --> Output current info to logfile.
             if (nid == 0) write (6, "(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
-      
+
       ! --> Integrate forward in time.
             call nekstab_usrchk()
             call nek_advance()
-      
+
             if (ifstorebase .and. ifbase .and. .not. init) then !storing first time
                if (nid == 0) write (6, *) 'storing first series:', istep, '/', nsteps
-               call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
-               if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
-               if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-                  end do
-               end if
+               call orbit_store(istep)
             elseif (ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
                if (nid == 0) write (6, *) 'using stored baseflow'
-               call opcopy(vx, vy, vz, uor(:, istep), vor(:, istep), wor(:, istep))
-               if (ifto) call copy(t(:, :, :, :, 1), tor(:, istep, 1), nt)
-               if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
-                  end do
-               end if
+               call orbit_restore(istep)
             end if
          end do
          if (ifstorebase .and. .not. init .and. ifbase) then
@@ -316,64 +297,45 @@
          if (ifstorebase .and. init) ifbase = .false. ! deactivate ifbase if baseflow stored.
       
          if (ifstorebase .and. ifbase .and. .not. init) then
-            if (nid == 0) write (6, *) 'ALLOCATING ORBIT WITH NSTEPS:', nsteps
-            allocate (uor(lv, nsteps), vor(lv, nsteps))
-            if (if3d) then
-               allocate (wor(lv, nsteps))
-            else ! 2D
-               allocate (wor(1, 1))
-            end if
-            if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
+            call allocate_orbit(nsteps)
          end if
-      
+
       !-----------------------------------------------------------------------
       !-----                                                             -----
       !-----     FINITE-DIFFERENCE APPROX. OF THE FRECHET DERIVATIVE     -----
       !-----                                                             -----
       !-----------------------------------------------------------------------
-      
+
          do i = 1, findiff_order
-      
+
       ! --> Scale the perturbation.
             call k_copy(pert, q)
             call k_cmult(pert, amplitudes(i))
-      
+
       ! --> Initial condition for the each evaluation.
             call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)
             call nopadd2(vx, vy, vz, pr, t, pert%vx, pert%vy, pert%vz, pert%pr, pert%t)
             if (ifbf2d .and. if3d) then
                call rzero(vz, nv); if (nid == 0) write (6, *) 'Forcing vz=0'
             end if
-      
+
       ! --> Time-integration of the nonlinear Nek5000 equations.
             time = 0.0d+00
             do istep = 1, nsteps
       !     --> Output current info to logfile.
                if (nid == 0) write (6, "(' DIRECT FD [',I1,'/',I1,']:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") i,
      $   findiff_order, istep, nsteps, mstep, k_dim, schur_cnt
-      
+
       ! --> Nek5000 computational core.
                call nekstab_usrchk()
                call nek_advance()
-      
+
                if (i == 1 .and. ifstorebase .and. ifbase .and. .not. init) then !storing first time
                   if (nid == 0) write (6, *) 'storing first series:', istep, '/', nsteps
-                  call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
-                  if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
-                  if (ldimt > 1) then
-                     do m = 2, ldimt
-                        if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-                     end do
-                  end if
+                  call orbit_store(istep)
                elseif (i > 1 .and. ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
                   if (nid == 0) write (6, *) 'using stored baseflow'
-                  call opcopy(vx, vy, vz, uor(:, istep), vor(:, istep), wor(:, istep))
-                  if (ifto) call copy(t(:, :, :, :, 1), tor(:, istep, 1), nt)
-                  if (ldimt > 1) then
-                     do m = 2, ldimt
-                        if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
-                     end do
-                  end if
+                  call orbit_restore(istep)
                end if
             end do
             if (ifstorebase .and. .not. init .and. ifbase) then
@@ -431,50 +393,30 @@
          if (ifstorebase .and. init) ifbase = .false.
       
          if (ifstorebase .and. ifbase .and. .not. init) then
-            if (nid == 0) write (6, *) 'ALLOCATING ORBIT WITH NSTEPS:', nsteps
-            allocate (uor(lv, nsteps), vor(lv, nsteps))
-            if (if3d) then
-               allocate (wor(lv, nsteps))
-            else ! 2D
-               allocate (wor(1, 1))
-            end if
-            if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
+            call allocate_orbit(nsteps)
          end if
          if (uparam(01) == 3.31) init = .true. ! activate Floquet for intracycle transient growth (base flow already computed)
-      
+
       !     --> Pass the initial condition for the perturbation.
          call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1),
      $   q%vx, q%vy, q%vz, q%pr, q%t)
-      
+
          time = 0.0d+00
          do istep = 1, nsteps
       !     --> Output current info to logfile.
             if (nid == 0) write (6, "(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')")
      $   istep, nsteps, mstep, k_dim, schur_cnt
-      
+
       ! --> Integrate backward in time.
             call nekstab_usrchk()
             call nek_advance()
-      
+
             if (ifstorebase .and. ifbase .and. .not. init) then !storing first time
                if (nid == 0) write (6, *) 'storing first series:', istep, '/', nsteps
-               call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
-               if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
-               if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-                  end do
-               end if
-      
+               call orbit_store(istep)
             elseif (ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
                if (nid == 0) write (6, *) 'using stored baseflow'
-               call opcopy(vx, vy, vz, uor(:, istep), vor(:, istep), wor(:, istep))
-               if (ifto) call copy(t(:, :, :, :, 1), tor(:, istep, 1), nt)
-               if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) call copy(t(:, :, :, :, m), tor(:, istep, m), nt)
-                  end do
-               end if
+               call orbit_restore(istep)
             end if
          end do
          if (ifstorebase .and. .not. init .and. ifbase) then
@@ -562,8 +504,8 @@
       !     -----     NEWTON FOR UPO     -----
       !     ----------------------------------
       
-         if (uparam(1) == 2.1) then
-      
+         if (isNewtonPO) then
+
             call k_zero(bvec)
             call k_zero(btvec)
       

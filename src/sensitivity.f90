@@ -167,36 +167,28 @@
       
       !     gradient computation
       !     real part of the direct mode
-         call gradm1(dudx_dRe, dudy_dRe, dudz_dRe, vx_dRe, nelv)
-         call gradm1(dvdx_dRe, dvdy_dRe, dvdz_dRe, vy_dRe, nelv)
-         call gradm1(dwdx_dRe, dwdy_dRe, dwdz_dRe, vz_dRe, nelv)
-         call dsavg(dudx_dRe); call dsavg(dudy_dRe); call dsavg(dudz_dRe)
-         call dsavg(dvdx_dRe); call dsavg(dvdy_dRe); call dsavg(dvdz_dRe)
-         call dsavg(dwdx_dRe); call dsavg(dwdy_dRe); call dsavg(dwdz_dRe)
-      
+         call compute_velocity_gradient_tensor(vx_dRe, vy_dRe, vz_dRe,
+     $      dudx_dRe, dudy_dRe, dudz_dRe,
+     $      dvdx_dRe, dvdy_dRe, dvdz_dRe,
+     $      dwdx_dRe, dwdy_dRe, dwdz_dRe)
+
       !     imaginary part of the direct mode
-         call gradm1(dudx_dIm, dudy_dIm, dudz_dIm, vx_dIm, nelv)
-         call gradm1(dvdx_dIm, dvdy_dIm, dvdz_dIm, vy_dIm, nelv)
-         call gradm1(dwdx_dIm, dwdy_dIm, dwdz_dIm, vz_dIm, nelv)
-         call dsavg(dudx_dIm); call dsavg(dudy_dIm); call dsavg(dudz_dIm)
-         call dsavg(dvdx_dIm); call dsavg(dvdy_dIm); call dsavg(dvdz_dIm)
-         call dsavg(dwdx_dIm); call dsavg(dwdy_dIm); call dsavg(dwdz_dIm)
-      
+         call compute_velocity_gradient_tensor(vx_dIm, vy_dIm, vz_dIm,
+     $      dudx_dIm, dudy_dIm, dudz_dIm,
+     $      dvdx_dIm, dvdy_dIm, dvdz_dIm,
+     $      dwdx_dIm, dwdy_dIm, dwdz_dIm)
+
       !     real part of the adjoint mode
-         call gradm1(dudx_aRe, dudy_aRe, dudz_aRe, vx_aRe, nelv)
-         call gradm1(dvdx_aRe, dvdy_aRe, dvdz_aRe, vy_aRe, nelv)
-         call gradm1(dwdx_aRe, dwdy_aRe, dwdz_aRe, vz_aRe, nelv)
-         call dsavg(dudx_aRe); call dsavg(dudy_aRe); call dsavg(dudz_aRe)
-         call dsavg(dvdx_aRe); call dsavg(dvdy_aRe); call dsavg(dvdz_aRe)
-         call dsavg(dwdx_aRe); call dsavg(dwdy_aRe); call dsavg(dwdz_aRe)
-      
+         call compute_velocity_gradient_tensor(vx_aRe, vy_aRe, vz_aRe,
+     $      dudx_aRe, dudy_aRe, dudz_aRe,
+     $      dvdx_aRe, dvdy_aRe, dvdz_aRe,
+     $      dwdx_aRe, dwdy_aRe, dwdz_aRe)
+
       !     imaginary part of the adjoint mode
-         call gradm1(dudx_aIm, dudy_aIm, dudz_aIm, vx_aIm, nelv)
-         call gradm1(dvdx_aIm, dvdy_aIm, dvdz_aIm, vy_aIm, nelv)
-         call gradm1(dwdx_aIm, dwdy_aIm, dwdz_aIm, vz_aIm, nelv)
-         call dsavg(dudx_aIm); call dsavg(dudy_aIm); call dsavg(dudz_aIm)
-         call dsavg(dvdx_aIm); call dsavg(dvdy_aIm); call dsavg(dvdz_aIm)
-         call dsavg(dwdx_aIm); call dsavg(dwdy_aIm); call dsavg(dwdz_aIm)
+         call compute_velocity_gradient_tensor(vx_aIm, vy_aIm, vz_aIm,
+     $      dudx_aIm, dudy_aIm, dudz_aIm,
+     $      dvdx_aIm, dvdy_aIm, dvdz_aIm,
+     $      dwdx_aIm, dwdy_aIm, dwdz_aIm)
       
       !     computation of real part of base flow sensitivity term related to downstream transport of perturbations
          call oprzero(vx_tr, vy_tr, vz_tr)
@@ -542,7 +534,7 @@
          include 'SIZE'
          include 'TOTAL'
       
-         type(krylov_vector) :: BF, Re, Im, Re_sin, Im_cos
+         type(krylov_vector) :: BF, Re, Im, Re_sin
          character(len=80) :: filename
          character(len=*), intent(in) :: mode ! 'd' or 'a'
          character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
@@ -555,41 +547,28 @@
          if (nid == 0) then
             write (6, *) 'Animating mode function in mode:', mode
             write (6, *) 'Number of steps:', num_steps
-      
-            open (unit=10, file='Spectre_NSd_conv.dat', status='old', action='read')
-            read (10, '(2E15.7)') sigma, omega ! omegaR_min is recycle as dummy
-            close (10)
-            omega = abs(omega) ! if omega is read as negative
-            write (6, *) 'Read sigma, omega value from file: ', sigma, omega
-      
          end if
-         call bcast(sigma, wdsize)
-         call bcast(omega, wdsize)
-      
+
+         call read_eigenvalue(sigma, omega)
+
       ! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
       ! frequency = omega / (8.0d0*atan(1.0d0))  ! f = omega / (2 * pi)
       ! omega = 8.0d0*atan(1.0d0) * frequency  ! omega = 2 * pi * f
-      
+
          call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
          call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
          ifto = .true.
          call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
-      
+
       !u_max = glmax(vx, nv)
          A0 = 1.0e-3
          sigma = 1.0e-1 ! force a value of sigma
-      
+
       !u_max = glmax(vx, nv)
       !A0 = (2.0*u_max) / exp(sigma*fintim)
-      
-         if (mode == 'd') then ! Load real and imaginary parts of the mode
-            call k_load(Re, 'dRe')
-            call k_load(Im, 'dIm')
-         else if (mode == 'a') then
-            call k_load(Re, 'aRe')
-            call k_load(Im, 'aIm')
-         end if
-      
+
+         call load_mode_pair(mode, Re, Im)
+
       ! Loop over num_steps to create snapshots
          do i = 1, num_steps
       
@@ -604,9 +583,8 @@
      $   ') [time/period]'
             end if
       
-            call k_copy(Re_sin, Re); call k_cmult(Re_sin, cos(omega*time))
-            call k_copy(Im_cos, Im); call k_cmult(Im_cos, -sin(omega*time))
-            call k_add2(Re_sin, Im_cos)
+            call k_copy(Re_sin, Re)
+            call k_axpby(Re_sin, cos(omega*time), Im, -sin(omega*time))
             call outpost2(Re_sin%vx, Re_sin%vy, Re_sin%vz, Re_sin%pr, Re_sin%t, nof, trim(mode_local)//'Q_')
       
          end do
@@ -710,7 +688,7 @@
          character(len=*), intent(in) :: mode ! 'd' or 'a'
 
          type(krylov_vector), save :: BF, Re, Im
-         type(krylov_vector) :: Re_cos, Im_sin
+         type(krylov_vector) :: Re_cos
          real, save :: frequency, omega, sigma, u_max, A0
          character(len=80) :: filename
          character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
@@ -722,41 +700,28 @@
          if (nid == 0) then
             write (6, *) 'Animating mode function in mode:', mode
             write (6, *) 'Number of steps:', num_of_files
-      
-            open (unit=10, file='Spectre_NSd_conv.dat', status='old', action='read')
-            read (10, '(2E15.7)') sigma, omega ! omegaR_min is recycle as dummy
-            close (10)
-            omega = abs(omega) ! if omega is read as negative
-            write (6, *) 'Read sigma, omega value from file: ', sigma, omega
-      
          end if
-         call bcast(sigma, wdsize)
-         call bcast(omega, wdsize)
-      
+
+         call read_eigenvalue(sigma, omega)
+
       ! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
       ! frequency = omega / (8.0d0*atan(1.0d0))  ! f = omega / (2 * pi)
       ! omega = 8.0d0*atan(1.0d0) * frequency  ! omega = 2 * pi * f
-      
+
          call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
          call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
          ifto = .true.
          call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
-      
+
       !u_max = glmax(vx, nv)
          A0 = 1.0e-3
          sigma = 1.0e-1 ! force a value of sigma
-      
+
       !u_max = glmax(vx, nv)
       !A0 = (2.0*u_max) / exp(sigma*fintim)
-      
-         if (mode == 'd') then ! Load real and imaginary parts of the mode
-            call k_load(Re, 'dRe')
-            call k_load(Im, 'dIm')
-         else if (mode == 'a') then
-            call k_load(Re, 'aRe')
-            call k_load(Im, 'aIm')
-         end if
-      
+
+         call load_mode_pair(mode, Re, Im)
+
       ! Loop over num_of_files to create snapshots
          do i = 1, num_of_files
       
@@ -773,10 +738,9 @@
       
             ifto = .true.
       
-            call k_copy(Re_cos, Re); call k_cmult(Re_cos, +cos(omega*time))
-            call k_copy(Im_sin, Im); call k_cmult(Im_sin, -sin(omega*time))
-            call k_add2(Re_cos, Im_sin)
-      
+            call k_copy(Re_cos, Re)
+            call k_axpby(Re_cos, cos(omega*time), Im, -sin(omega*time))
+
             call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
             call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qm')
 
@@ -802,7 +766,7 @@
          character(len=*), intent(in) :: mode ! 'd' or 'a'
 
          type(krylov_vector), save :: BF, Re, Im
-         type(krylov_vector) :: Re_cos, Im_sin
+         type(krylov_vector) :: Re_cos
          real, save :: frequency, omega, sigma, u_max, A0
          character(len=80) :: filename
          character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
@@ -815,28 +779,15 @@
          if (nid == 0) then
             write (6, *) 'Animating mode function in mode:', mode
             write (6, *) 'Number of steps:', num_of_files
-      
-            open (unit=10, file='Spectre_NSd_conv.dat', status='old', action='read')
-            read (10, '(2E15.7)') sigma, omega ! omegaR_min is recycle as dummy
-            close (10)
-            omega = abs(omega) ! if omega is read as negative
-            write (6, *) 'Read sigma, omega value from file: ', sigma, omega
-      
          end if
-         call bcast(sigma, wdsize)
-         call bcast(omega, wdsize)
-      
+
+         call read_eigenvalue(sigma, omega)
+
          A0 = 1.0e-3
          sigma = 1.0e-1 ! force a value of sigma
       
-         if (mode == 'd') then ! Load real and imaginary parts of the mode
-            call k_load(Re, 'dRe')
-            call k_load(Im, 'dIm')
-         else if (mode == 'a') then
-            call k_load(Re, 'aRe')
-            call k_load(Im, 'aIm')
-         end if
-      
+         call load_mode_pair(mode, Re, Im)
+
          period = 8.0d0*atan(1.0d0)/omega ! period of leading mode
          fintim = 1.0d0*period ! add more periods here !
       ! compute for fintim and not period, as we might have n periods
@@ -898,9 +849,8 @@
                call compute_omegaR(vx, vy, vz, t(1, 1, 1, 1, 1))
                ifto = .true.
       
-               call k_copy(Re_cos, Re); call k_cmult(Re_cos, +cos(omega*time))
-               call k_copy(Im_sin, Im); call k_cmult(Im_sin, -sin(omega*time))
-               call k_add2(Re_cos, Im_sin)
+               call k_copy(Re_cos, Re)
+               call k_axpby(Re_cos, cos(omega*time), Im, -sin(omega*time))
                call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
                call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qm')
                amplitude = A0*exp(sigma*time)
