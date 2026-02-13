@@ -158,6 +158,21 @@ ulimit -c unlimited
 
 Then reload: `source ~/.bashrc` (or restart terminal).
 
+### Shell completion
+
+Enable tab completion for case names and common `mks` targets/options:
+
+```bash
+source "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash"
+```
+
+For zsh, load Bash completion first:
+
+```bash
+autoload -Uz bashcompinit && bashcompinit
+source "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash"
+```
+
 ## Compilation
 
 Go to a given example folder and compile the code:
