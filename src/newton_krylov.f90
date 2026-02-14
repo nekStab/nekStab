@@ -64,7 +64,9 @@
       !     ----- Iteration parameters
          integer :: i, j, maxiter_newton, maxiter_gmres, calls
          real :: residual, tol, tottime = 0.0d0
-         real :: prev_residual = 0.0d0 ! Track previous iteration's residual
+         real :: prev_residual = 0.0d0 ! Previous iteration residual (EW + stagnation)
+         real :: initial_residual = 0.0d0 ! For divergence guard
+         integer :: stagnation_count = 0 ! Stagnation detection counter
          real :: newton_start_time, newton_iter_time ! Timing for Newton iterations
          integer :: total_gmres_calls ! Track GMRES calls per Newton iteration
          integer :: total_calls = 0, nonlin_calls = 0, lin_calls = 0 ! Call counters
@@ -72,20 +74,12 @@
          integer, save :: k_out ! Store k from GMRES
          integer, save :: k_sum = 0 ! Accumulator for total k values across Newton iterations
          real, external :: dnekclock
+         real :: saved_tol21, saved_tol22 ! Save/restore param(21:22)
 
-      !     ----- Call Counting Logic -----
-! Each nonlinear solve costs nsteps calls (in nonlinear_forward_map)
-! Each Arnoldi iteration costs nsteps calls (in ts_gmres)
-! Total linear calls = sum of all GMRES/Arnoldi calls + 1 per GMRES restart
-! The +1 accounts for the matvec operation in initialize_gmres_vector (r = b - Ax)
-! Total nonlinear calls = sum of all nonlinear solver calls
-! Total calls = nonlin_calls + lin_calls
-! Calls per iteration = total_calls - prev_total_calls
-! Each GMRES iteration costs 1 call to initialize_gmres_vector
-! Each GMRES restart costs 1 call to initialize_gmres_vector
-! Total calls per GMRES iteration = nsteps + 1
-! Total calls per GMRES restart = nsteps + 1
-! Total calls per Newton iteration = nsteps + (nsteps + 1) * (GMRES iterations + GMRES restarts)
+      !     ----- Call Counting -----
+! total_calls  = cumulative time-steps (nonlinear + linear matvecs)
+! nonlin_calls = cumulative nonlinear time-steps
+! lin_calls    = cumulative linear matvecs (+1 per GMRES for init vector)
 
          real, save :: dtol = 0.0d0 ! Target residual for Newton convergence
          if (dtol == 0.0d0) then ! Initialize counters at first call
@@ -112,6 +106,13 @@
 
          if (nid == 0) write (6, *) 'Copying initial condition'
          call nopcopy(q%vx, q%vy, q%vz, q%pr, q%t, vx, vy, vz, pr, t)
+
+c        Save original tolerances (restored after Newton exits).
+c        Without this, EW leaves param(21:22) at whatever the last
+c        Newton iteration set — corrupting any subsequent DNS or
+c        stability run that reads param(21:22) for its own tolerances.
+         saved_tol21 = param(21)
+         saved_tol22 = param(22)
 
          newton: do i = 1, maxiter_newton
             if (nid == 0) write (6, *) '------------------------------------------------'
@@ -146,14 +147,21 @@
             end if
 
             call nonlinear_forward_map(f, q) ! rhs of Newton iteration f(q)
-            nonlin_calls = nonlin_calls + nsteps ! nsteps of the nonlinear solver
-            total_calls = total_calls + nonlin_calls
+            nonlin_calls = nonlin_calls + nsteps ! cumulative nonlinear time-steps
+            total_calls = total_calls + nsteps
             tottime = tottime + time ! use time instead of nsteps*dt
+
+c           Cache bvec/btvec for UPO (avoids recomputing per matvec)
+            if (isNewtonPO)
+     $         call cache_newton_bvec(ic_nwt, fc_nwt)
 
       !     Check residual || f(q) ||! L2 norm: square root of dot product with weighted norms by bm1s
             call k_norm(residual, f) ! Computes ||f||
             residual = residual**2 ! squared L2 norm for consistent convergence check with GMRES
             if (nid == 0) write (6, *) '  Computed residual:', residual
+
+c           Save initial residual for divergence guard
+            if (i == 1) initial_residual = residual
 
       !     --> Outpost residual fields (optional)
             time = q%time ! adjust
@@ -162,6 +170,15 @@
             call outpost2(f%vx, f%vy, f%vz, f%pr, f%t, nof, 'res')
             time = q%time ! restore
 
+
+c           Stagnation detection (before prev_residual is overwritten)
+            if (i > 1) then
+               if (residual > 0.9d0*prev_residual) then
+                  stagnation_count = stagnation_count + 1
+               else
+                  stagnation_count = 0
+               end if
+            end if
 
             if (nid == 0) then ! Output iteration information
                newton_iter_time = dnekclock() - newton_start_time
@@ -173,36 +190,43 @@
      $   merge('↑', '↓', residual > prev_residual), abs(residual - prev_residual),
      $   residual/prev_residual
                end if
+               if (stagnation_count >= 3) then
+                  write (6, *) 'WARNING: Newton stagnation',
+     $               ' (3 iterations without progress)'
+               end if
                write (6, "('          Time: ',1PE15.6,'s  GMRES calls: ', I4) ") newton_iter_time, total_gmres_calls
                open (887, file='residu_newton.dat', action='write', position='append')
                write (887, "(4I9,4(1PE15.6))") i, total_calls, total_calls - prev_total_calls, k_sum, tottime,
      $          max(param(21), param(22)), residual, dtol
                close (887)
                prev_total_calls = total_calls ! Save for next iteration
-               prev_residual = residual ! Save for next iteration
                write (6, *) '------------------------------------------------'
             end if
-
-            if (residual < dtol) then ! If residual is below tolerance, exit Newton loop
+            if (residual < dtol) then
                if (nid == 0) write (6, *) '  Converged. Exiting Newton loop...'
                exit newton
             end if
 
-      !     If ifdyntol=true, two steps occur:
-      !     1. Compute relaxed tolerance: tol = spec_tole(residual, dtol, 0.1d0)
-      !        - tol will be between dtol (lower bound) and min_tol (upper bound) for stability
-      !        - typically around 0.1*residual to avoid over-solving
-      !     2. Update Nek5000 solver tolerances via set_nek5000_tolerances(tol)
-            if (ifdyntol) then
-               tol = spec_tole(residual, dtol, 0.1d0) ! compute the relaxed tolerance
-               call set_nek5000_tolerances(tol) ! set the tolerance to the time-stepper
+c           Divergence guard: abort if residual grows excessively
+            if (i > 1 .and. residual > 1.0d8*initial_residual) then
+               if (nid == 0) write (6, *)
+     $            'NEWTON: DIVERGENCE — residual exceeds',
+     $            ' 1e8 × initial. Aborting.'
+               exit newton
             end if
+
+c           EW adaptive tolerance; sqrt converts ||r||^2 -> ||r|| for param(21:22)
+            if (ifdyntol) then
+               tol = spec_tole(residual, prev_residual, dtol)
+               call set_nek5000_tolerances(sqrt(tol))
+            end if
+            prev_residual = residual ! after stagnation check + EW use the old value
 
             if (nid == 0) write (6, *) '  Solving linear system with GMRES for rhs = f = F(q) - q'
             call ts_gmres(f, dq, maxiter_gmres, k_dim, tol, calls, k_out, i, dtol)
             ! J(q)dq=rhs=F(q)-q, with dq being the solution (denoted sol in ts_gmres).
-            lin_calls = lin_calls + calls + 1  ! Add GMRES calls + 1 for matvec in initialize_gmres_vector
-            total_calls = total_calls + lin_calls
+            lin_calls = lin_calls + calls + 1  ! cumulative linear matvecs (+1 for initialize_gmres_vector)
+            total_calls = total_calls + calls + 1
             tottime = tottime + calls*dt
             total_gmres_calls = total_gmres_calls + calls
 
@@ -222,6 +246,12 @@
             end if
 
          end do newton
+
+c        Restore original tolerances from .par so subsequent DNS or
+c        stability runs are not corrupted by EW's last setting.
+         param(21) = saved_tol21
+         param(22) = saved_tol22
+         call bcast(param(21:22), 2*wdsize)
 
          if (nid == 0) then
             if (i == maxiter_newton) then
@@ -578,42 +608,58 @@
       end subroutine set_nek5000_tolerances
 
       !-----------------------------------------------------------------------
-      ! spec_tole — Compute relaxed tolerance for GMRES solver
+      ! spec_tole — Eisenstat-Walker type 2 adaptive GMRES tolerance
       !
-      ! This implements an adaptive tolerance strategy:
-      ! - Early iterations: Use relaxed tolerance ~ relaxation_factor * residual
-      !   to avoid over-solving when far from solution
-      ! - Later iterations: Tolerance approaches dtol as residual decreases
-      ! - Bounded between dtol (lower bound) and min_tol (upper bound)
-      ! - residual: Current Newton residual norm
-      ! - dtol: Target tolerance for Newton convergence
-      ! - relaxation_factor: Controls how much to relax tolerance (typically 0.1)
+      ! Ref: Eisenstat & Walker, SIAM J. Sci. Comput. 17(1), 1996.
+      !
+      ! eta = (||F_k||/||F_{k-1}||)^alpha, alpha = 1.618 (golden ratio).
+      ! Solve GMRES loosely when far from convergence, tighten as Newton
+      ! converges. eta_max = 0.9 caps forcing (tol <= 0.81*||f||^2).
+      !
+      ! All residuals are squared norms (||f||^2). Caller must pass
+      ! sqrt(tol) to set_nek5000_tolerances for norm-based param(21:22).
+      !
+      ! Bounds: tol >= dtol (lower); ew_tol_cap > 0 adds upper bound
+      ! (set in .usr for stiff/high-Re problems, default 0 = uncapped).
       !-----------------------------------------------------------------------
-      function spec_tole(residual, dtol, relaxation_factor) result(nwtol)
+      function spec_tole(residual, prev_res, dtol) result(nwtol)
 
          implicit none
          include 'SIZE'
          include 'TOTAL'
 
-         real, intent(in) :: residual ! Current residual norm
+         real, intent(in) :: residual ! Current ||f||^2
+         real, intent(in) :: prev_res ! Previous ||f||^2
          real, intent(in) :: dtol ! Target tolerance
-         real, intent(in) :: relaxation_factor ! Relaxation factor for solver tolerances
          real :: nwtol ! Returned new tolerance
-         real, parameter :: min_tol = 1.0e-5 ! Minimum allowed tolerance
+         real :: eta ! Forcing term
+         real, parameter :: eta_max = 0.9d0 ! Cap on forcing term
+         real, parameter :: eta_initial = 0.5d0 ! First-iteration forcing
+         real, parameter :: alpha_ew = 1.618d0 ! Golden ratio exponent
 
-! Compute new time stepper tolerances based on Newton residual
-! Adjusts how accurately we solve the time stepping problem:
-! - Early Newton iterations: Relaxed tolerances (~ relaxation_factor * residual)
-! - Later iterations: Stricter tolerances approaching dtol
-! - Bounded by dtol (lower bound) and min_tol (upper bound) for stability
-         nwtol = max(min(residual*relaxation_factor, min_tol), dtol)
-         if (nid == 0) then
-            if (nwtol == min_tol) then
-               write (6, "('  [TOLERANCE at max limit:',1PE15.6,']')") min_tol
-            else if (nwtol == dtol) then
-               write (6, "('  [TOLERANCE at min limit:',1PE15.6,']')") dtol
-            end if
+         if (prev_res > 1.0d-100 .and. residual > 0.0d0) then
+c           Eisenstat-Walker type 2 forcing
+c           eta = (||F_k||/||F_{k-1}||)^alpha = (res/prev_res)^(alpha/2)
+            eta = (residual / prev_res) ** (alpha_ew / 2.0d0)
+            eta = min(eta, eta_max)
+c           GMRES tolerance: ||r||^2 < eta^2 * ||F_k||^2
+            nwtol = eta**2 * residual
+         else
+c           First iteration: moderate relaxation
+            eta = eta_initial
+            nwtol = eta_initial**2 * residual
          end if
+
+c        Lower bound: never go below Newton target
+         nwtol = max(nwtol, dtol)
+
+c        Optional upper bound (ew_tol_cap > 0 activates the cap)
+         if (ew_tol_cap > 0.0d0) nwtol = min(nwtol, ew_tol_cap)
+
+         if (nid == 0) write (6,
+     $      "('  [EW: eta=',1PE10.3,' tol=',1PE10.3,
+     $        ' solver=',1PE10.3,']')")
+     $      eta, nwtol, sqrt(nwtol)
 
       end function spec_tole
 
