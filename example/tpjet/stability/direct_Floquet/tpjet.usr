@@ -1,4 +1,4 @@
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
       include 'TOTAL'
@@ -7,12 +7,12 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine nekstab_usrchk
       include 'SIZE'
       include 'TOTAL'
 
-      if(istep.eq.0)then !change defaults
+      if (istep.eq.0) then !change defaults
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
         schur_tgt = 2 ; call bcast(schur_tgt,isize)
         maxmodes = 10 ; call bcast(maxmodes,isize)
@@ -24,7 +24,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -38,7 +38,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine useric (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -46,11 +46,11 @@ c-----------------------------------------------------------------------
       integer e
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(ieg)
-         ux=ubb(ix,iy,iz,e)
-         uy=0.0d0
-         uz=0.0d0
-         temp=0.0d0
+         e = gllel(ieg)
+         ux = ubb(ix,iy,iz,e)
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
       else                      ! perturbation
          ux = 0.0d0
          uy = 0.0d0
@@ -60,7 +60,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userbc (ix,iy,iz,iside,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -69,16 +69,16 @@ c-----------------------------------------------------------------------
       real ramp,pert
 
 
-      ! following Leshaft JFM 2019 
-      !ramp = 1./(1.+exp(4.-0.25*time))
+      ! following Leshaft JFM 2019
+      ! ramp = 1./(1.+exp(4.-0.25*time))
       pert = (1.+0.05*cos(time*8.*atan(1.)*uparam(05)))!*ramp
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(ieg)
+         e = gllel(ieg)
          ux = ubb(ix,iy,iz,e)*pert
          uy = 0.0d0
          uz = 0.0d0
-         temp=0.0d0
+         temp = 0.0d0
       else                      ! perturbation
          ux = 0.0d0
          uy = 0.0d0
@@ -88,27 +88,27 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
       call set_rjet(ubb)
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine set_rjet(ub)   !round jet profile for axissymetric jet
       include 'SIZE'
       include 'TOTAL'
       real ub(1),theta_0
-      theta_0=0.0250d0
-      do i=1,nx1*ny1*nz1*nelv
+      theta_0 = 0.0250d0
+      do i = 1,nx1*ny1*nz1*nelv
 !     x = xm1(i,1,1,1)
          y = ym1(i,1,1,1)
-         ub(i)=0.50d0*(1.0d0-tanh((1.0d0/(4.0d0*theta_0))*(y-(1.0d0/(4.0d0*y)))))
+         ub(i) = 0.50d0*(1.0d0-tanh((1.0d0/(4.0d0*theta_0))*(y-(1.0d0/(4.0d0*y)))))
       enddo
       return
       end subroutine set_rjet

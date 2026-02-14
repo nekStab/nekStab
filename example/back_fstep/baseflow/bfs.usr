@@ -1,41 +1,41 @@
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
       include 'TOTAL'
 
-      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
-      if(uparam(1).eq.0.and.istep.eq.0)t=0.0d0
+      ! if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
+      if (uparam(1).eq.0.and.istep.eq.0)t = 0.0d0
       call nekStab
       call hpts
 
-      !call stat_avg
-      !call stats_3d_full
+      ! call stat_avg
+      ! call stats_3d_full
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine nekStab_usrchk
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      if(istep.eq.0)then !change defaults
+      if (istep.eq.0) then !change defaults
 
         xLspg = uparam(8); call bcast(xLspg , wdsize)
         xRspg = uparam(9); call bcast(xRspg , wdsize)
 
-	k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+    k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
         schur_tgt = 4 ; call bcast(schur_tgt,isize)
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
-        !ifvor = .true. ; call bcast(ifvor,lsize)
-        !ifvox = .true. ; call bcast(ifvox,lsize)
+        ! ifvor = .true. ; call bcast(ifvor,lsize)
+        ! ifvox = .true. ; call bcast(ifvox,lsize)
 
       endif
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -49,7 +49,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine useric (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -57,11 +57,11 @@ c-----------------------------------------------------------------------
       integer e
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(ieg)
-         ux=1.0d0
-         uy=0.0d0
-         uz=0.0d0
-         temp=0.0d0
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
       else                      ! perturbation
          ux = 0.0d0
          uy = 0.0d0
@@ -71,7 +71,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userbc (ix,iy,iz,iside,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -79,11 +79,11 @@ c-----------------------------------------------------------------------
       integer e
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(ieg)
-         ux= ubb(ix,iy,iz,e)
+         e = gllel(ieg)
+         ux = ubb(ix,iy,iz,e)
          uy = 0.0d0
          uz = 0.0d0
-         temp=0.0d0
+         temp = 0.0d0
       else                      ! perturbation
          ux = 0.0d0
          uy = 0.0d0
@@ -93,7 +93,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine uservp (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -102,7 +102,7 @@ c-----------------------------------------------------------------------
       utrans = 0.0d0
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userq (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -110,30 +110,30 @@ c-----------------------------------------------------------------------
       qvol = 0.0d0
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
 
-                 !ID, FIELD, BC
+                 ! ID, FIELD, BC
       call setbc(4,1,'v  ')
       call setbc(2,1,'O  ')
       call setbc(3,1,'W  ')
 
-      !this mesh was generatd with genbox
-      !with only BCs for velicity
-      !here we chenge outflow to dirichlet if adjoint
-      !and initilize BCs for scalar field
+      ! this mesh was generatd with genbox
+      ! with only BCs for velicity
+      ! here we chenge outflow to dirichlet if adjoint
+      ! and initilize BCs for scalar field
 
-      if(uparam(1)==3.2)then !if adjoint, change BCs
-      do iel=1,nelt
+      if (uparam(1)==3.2) then !if adjoint, change BCs
+      do iel = 1,nelt
       do ifc = 1, 2*ndim
-        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+        if (cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1) = 'v  '
       enddo
       enddo
       endif
@@ -141,11 +141,11 @@ c-----------------------------------------------------------------------
       call compute_inflow(ubb) !compute inflow profile to variables
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat3
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine compute_inflow(ubb1) !compute parabolic profile for jet in crossflow
       implicit none
       include 'SIZE'
@@ -153,8 +153,8 @@ c-----------------------------------------------------------------------
       include 'NEKUSE'
       real ubb1(1)
       integer i
-      do i=1,nx1*ny1*nz1*nelv
-       ubb1(i)=4.0d0*ym1(i,1,1,1)*(1.0d0-ym1(i,1,1,1))
+      do i = 1,nx1*ny1*nz1*nelv
+       ubb1(i) = 4.0d0*ym1(i,1,1,1)*(1.0d0-ym1(i,1,1,1))
       enddo
       return
       end
