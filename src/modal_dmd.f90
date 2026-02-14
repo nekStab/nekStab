@@ -16,6 +16,7 @@
       module modal_dmd
 
          use krylov_subspace
+         use krylov_inner_products
          use nekstab_lapack
          use nekstab_vectors
 
@@ -64,12 +65,7 @@
 
          allocate(G(n, n))
 
-         do j = 1, n
-            do i = 1, j
-               call k_dot(G(i,j), snaps(i), snaps(j))
-               G(j,i) = G(i,j)
-            end do
-         end do
+         call k_gram_matrix(G, snaps, snaps, n, n, n)
 
 !        SVD of X via eigendecomposition of G
          if (nid == 0) write(6,*) '  Computing SVD via eigendecomp...'
@@ -144,9 +140,9 @@
             do k = 1, n-1
                G_shift(k,m) = G(k+1, m)
             end do
-!           k=n requires snaps(nsnap), not available in G
-            call k_dot(G_shift(n,m), snaps(nsnap), snaps(m))
          end do
+!        k=n: single batch projection for last row
+         call k_project(G_shift(n,1), snaps(1), snaps(nsnap), n)
 
 !        Form projected operator Atilde = Sinv V^T G_shift V Sinv
          if (nid == 0) write(6,*) '  Forming projected operator...'

@@ -21,13 +21,19 @@
          use nekstab_vectors
          implicit none
          private
+
+c        Cached bvec/btvec for Newton UPO (avoid recomputing per matvec)
+         type(krylov_vector), save :: bvec_cache, btvec_cache
+         logical, save :: bvec_cached = .false.
+
          public :: prepare_linearized_solver, matvec,
      $             forward_linearized_map,
      $             forward_finite_difference_map,
      $             adjoint_linearized_map,
      $             transient_growth_map,
      $             ts_force_sensitivity_map,
-     $             newton_linearized_map, compute_bvec
+     $             newton_linearized_map, compute_bvec,
+     $             cache_newton_bvec
       contains
 
       !-----------------------------------------------------------------------
@@ -190,7 +196,7 @@
          if (floor(uparam(01)) == 2) then
             evop = 'n'
             call newton_linearized_map(f, q)
-            init = .false.
+            if (.not. bvec_cached) init = .false.
          end if
 
          return
@@ -557,17 +563,23 @@
 
          if (isNewtonPO) then
 
-            call k_zero(bvec)
-            call k_zero(btvec)
+            if (bvec_cached) then
+c              Use cached bvec/btvec (saves 2 time-steps per matvec)
+               call k_add2s2(f, bvec_cache, q%time)
+               call k_dot(f%time, btvec_cache, q)
+            else
+c              Fallback: compute on the fly (first call or no caching)
+               call k_zero(bvec)
+               call k_zero(btvec)
+               call compute_bvec(bvec, fc_nwt)
+               call k_cmult(bvec, q%time)
+               call k_add2(f, bvec)
+               call compute_bvec(btvec, ic_nwt)
+               call k_dot(f%time, btvec, q)
+            end if
 
-            call compute_bvec(bvec, fc_nwt)
-            call k_cmult(bvec, q%time)
-            call k_add2(f, bvec)
-
-            call compute_bvec(btvec, ic_nwt)
-            call k_dot(f%time, btvec, q)
-
-            if (nid == 0) write (6, *) 'Newton period correction:', f%time
+            if (nid == 0) write (6, *)
+     $         'Newton period correction:', f%time
 
          else
 
@@ -622,5 +634,40 @@
 
          return
       end subroutine compute_bvec
+
+      !-----------------------------------------------------------------------
+      ! cache_newton_bvec — Precompute and cache bvec/btvec for UPO Newton
+      !
+      ! Called once per Newton iteration (after nonlinear_forward_map).
+      ! Avoids recomputing bvec/btvec at every matvec call within GMRES,
+      ! saving 2 nonlinear time-steps per Arnoldi iteration.
+      !-----------------------------------------------------------------------
+      subroutine cache_newton_bvec(ic, fc)
+
+         use krylov_subspace
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+         type(krylov_vector), intent(in) :: ic, fc
+         real :: saved_param10
+
+c        Save param(10) — compute_bvec overwrites it with qbase%time
+         saved_param10 = param(10)
+
+         call compute_bvec(bvec_cache, fc)
+         call compute_bvec(btvec_cache, ic)
+
+c        Restore param(10) and re-prepare solver state
+c        (compute_bvec overwrites param(10), sets ifpert=.false.)
+         param(10) = saved_param10
+         call prepare_linearized_solver
+         bvec_cached = .true.
+
+         if (nid == 0) write (6, *)
+     $      'Newton bvec/btvec cached for GMRES'
+
+         return
+      end subroutine cache_newton_bvec
 
       end module nekstab_matvec

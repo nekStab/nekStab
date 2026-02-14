@@ -17,6 +17,7 @@
       module modal_spod
 
          use krylov_subspace
+         use krylov_inner_products
          use nekstab_lapack
          use nekstab_vectors
          use fourier
@@ -114,16 +115,8 @@
      $              blk_re(iblk), blk_im(iblk))
             end do
 
-!           Form Hermitian CSD matrix
-            do j = 1, nblk
-               do i = 1, j
-                  call k_dot_complex(cval,
-     $                 blk_re(i), blk_im(i),
-     $                 blk_re(j), blk_im(j))
-                  CSD(i,j) = cval
-                  CSD(j,i) = conjg(cval)
-               end do
-            end do
+!           Form Hermitian CSD matrix (batch)
+            call k_gram_complex(CSD, blk_re, blk_im, nblk, nblk)
             CSD = CSD / dble(nblk)
 
             call eig_hermitian(CSD, spod_evals, spod_evecs, nblk)

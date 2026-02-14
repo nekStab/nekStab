@@ -178,6 +178,7 @@
       subroutine update_hessenberg_matrix(H, f, q, k)
 
          use krylov_subspace
+         use krylov_inner_products
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -190,61 +191,46 @@
          type(krylov_vector) :: wrk
 
          integer :: i
-         real :: alpha, beta
+         real :: alpha
+         real :: h1(k), h2(k)
 
-         call k_norm(beta, f)
-
-      ! --> Orthonormalize f w.r.t the Krylov basis.
-         do i = 1, k
-
-      ! --> Copy the i-th Krylov vector to the working arrays.
-            call k_copy(wrk, q(i))
-
-      ! --> Orthogonalize f w.r.t. to q_i.
-            call k_dot(alpha, f, wrk)
-            call k_cmult(wrk, alpha)
+         if (use_cgs) then
+c        ── CGS2: 2 gop calls total (vs 2k for MGS) ──
+c           Pass 1
+            call k_project(h1, q, f, k)
+            call k_matmul(wrk, q, h1, k)
             call k_sub2(f, wrk)
-
-      ! --> Update the corresponding entry in the Hessenberg matrix.
-            H(i, k) = alpha
-
-         end do
-
-      ! --> Perform full re-orthogonalization (see instability of MGS process).
-         do i = 1, k
-            call k_copy(wrk, q(i))
-            call k_dot(alpha, f, wrk)
-            call k_cmult(wrk, alpha)
+c           Pass 2 (reorthogonalization)
+            call k_project(h2, q, f, k)
+            call k_matmul(wrk, q, h2, k)
             call k_sub2(f, wrk)
-            H(i, k) = H(i, k) + alpha
+c           Combine
+            do i = 1, k
+               H(i, k) = h1(i) + h2(i)
+            end do
+         else
+c        ── MGS with reorthogonalization: 2k gop calls ──
+            do i = 1, k
+               call k_dot(alpha, f, q(i))
+               call k_add2s2(f, q(i), -alpha)
+               H(i, k) = alpha
+            end do
+            do i = 1, k
+               call k_dot(alpha, f, q(i))
+               call k_add2s2(f, q(i), -alpha)
+               H(i, k) = H(i, k) + alpha
+            end do
+         end if
 
-      !if (nid == 0) then
-      !   write (*, *) "ALPHA REORTH :", alpha
-      !end if
-
-         end do
-
-      ! --> Normalise the residual vector.
+c     --> Normalise the residual vector.
          call k_normalize(f, alpha)
-
-      ! --> Update the Hessenberg matrix.
          H(k + 1, k) = alpha
 
-      ! --> Check for "lucky breakdown" (invariant subspace found).
-      !     When H(k+1,k) is very small, the Krylov process has found an
-      !     invariant subspace of dimension k. This is mathematically significant:
-      !     - The eigenvalues of H(1:k,1:k) are EXACT eigenvalues of the operator
-      !     - No spurious eigenvalues from the "noise" portion of the subspace
-      !     - Continuing iteration is wasteful and numerically unstable
-      !     A small subdiagonal also causes issues in Schur decomposition.
+c     --> Lucky breakdown check.
          if (alpha < 1.0d-12) then
             if (nid == 0) then
-               write(6,*) '========================================================'
-               write(6,*) 'LUCKY BREAKDOWN detected at Arnoldi step k =', k
-               write(6,*) '   H(k+1,k) =', alpha
-               write(6,*) '   An invariant subspace of dimension', k, 'was found.'
-               write(6,*) '   Eigenvalues of H(1:k,1:k) are exact eigenvalues.'
-               write(6,*) '========================================================'
+               write(6,*) 'ARNOLDI: Lucky breakdown at step', k
+               write(6,*) '         Invariant subspace found.'
             end if
          end if
 

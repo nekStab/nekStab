@@ -126,6 +126,7 @@
       module modal_spod_streaming
 
          use krylov_subspace
+         use krylov_inner_products
          use nekstab_lapack
          use spod_streaming_state
          use modal_pod, only: hamming_window
@@ -349,6 +350,7 @@
       subroutine spod_stream_finalize(nsave)
 
          use krylov_subspace
+         use krylov_inner_products
          use nekstab_lapack
          use spod_streaming_state
          use modal_spod, only: k_dot_complex, spod_save_modes
@@ -362,8 +364,8 @@
          real, allocatable :: spod_evals(:)
          complex(kind=kind(0.0d0)), allocatable :: CSD(:,:)
          complex(kind=kind(0.0d0)), allocatable :: spod_evecs(:,:)
-         complex(kind=kind(0.0d0)) :: cval
-         integer :: i
+         type(krylov_vector), allocatable :: tmp_re(:), tmp_im(:)
+         integer :: i, idx
 
 
          if (.not. spod_s_initialized) then
@@ -405,6 +407,7 @@
          allocate(CSD(nblk_done, nblk_done))
          allocate(spod_evals(nblk_done))
          allocate(spod_evecs(nblk_done, nblk_done))
+         allocate(tmp_re(nblk_done), tmp_im(nblk_done))
 
          if (nid == 0) then
             open(unit=79, file='spod_stream_spectrum.dat',
@@ -434,20 +437,15 @@
 
          do ifreq = 1, spod_s_nfreq
 
-!           Form Hermitian CSD matrix
-            do jblk = 1, nblk_done
-               do iblk = 1, jblk
-                  idx_i = (ifreq - 1) * spod_s_nblk + iblk
-                  idx_j = (ifreq - 1) * spod_s_nblk + jblk
-
-                  call k_dot_complex(cval,
-     $                 spod_s_dft_re(idx_i), spod_s_dft_im(idx_i),
-     $                 spod_s_dft_re(idx_j), spod_s_dft_im(idx_j))
-
-                  CSD(iblk, jblk) = cval
-                  CSD(jblk, iblk) = conjg(cval)
-               end do
+!           Gather DFT slices into contiguous arrays
+            do iblk = 1, nblk_done
+               idx = (ifreq - 1) * spod_s_nblk + iblk
+               call k_copy(tmp_re(iblk), spod_s_dft_re(idx))
+               call k_copy(tmp_im(iblk), spod_s_dft_im(idx))
             end do
+!           Form Hermitian CSD matrix (batch)
+            call k_gram_complex(CSD, tmp_re, tmp_im,
+     $           nblk_done, nblk_done)
             CSD = CSD / dble(nblk_done)
 
             call eig_hermitian(CSD, spod_evals, spod_evecs, nblk_done)
@@ -474,6 +472,7 @@
          end if
 
          deallocate(CSD, spod_evals, spod_evecs)
+         deallocate(tmp_re, tmp_im)
          call spod_s_cleanup()
 
          if (nid == 0) then

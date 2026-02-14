@@ -26,6 +26,11 @@ $(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      ;$(FC) -c $(FL2_FREE) $< -
 $(O)/krylov_subspace.o:   $(NS)/krylov_subspace.f90   $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
+# Level 1.5: Batch inner products (depends on krylov_subspace only)
+# ─────────────────────────────────────────────────────────────────────
+$(O)/krylov_inner_products.o: $(NS)/krylov_inner_products.f90 $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+
+# ─────────────────────────────────────────────────────────────────────
 # Level 2: Modules that depend on krylov_subspace + Level 0
 # ─────────────────────────────────────────────────────────────────────
 $(O)/fourier.o:           $(NS)/fourier.f90           $(O)/krylov_subspace.o $(O)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
@@ -42,7 +47,7 @@ $(O)/fst.o:               $(NS)/fst.f90               $(O)/krylov_subspace.o ;$(
 # ─────────────────────────────────────────────────────────────────────
 # Level 3: krylov_decomposition (depends on matvec, lapack, IO)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace.o $(O)/matvec.o $(O)/lapack_wrapper.o $(O)/IO.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/matvec.o $(O)/lapack_wrapper.o $(O)/IO.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 4: eigensolvers (depends on krylov_decomposition + many Level 0)
@@ -60,10 +65,10 @@ $(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O
 # ─────────────────────────────────────────────────────────────────────
 # Modal analysis modules
 # ─────────────────────────────────────────────────────────────────────
-$(O)/modal_pod.o:         $(NS)/modal_pod.f90         $(O)/krylov_subspace.o $(O)/fourier.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/modal_dmd.o:         $(NS)/modal_dmd.f90         $(O)/krylov_subspace.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/modal_spod.o:        $(NS)/modal_spod.f90        $(O)/krylov_subspace.o $(O)/fourier.o $(O)/modal_pod.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/modal_spod_streaming.o: $(NS)/modal_spod_streaming.f90 $(O)/krylov_subspace.o $(O)/modal_pod.o $(O)/modal_spod.o $(O)/lapack_wrapper.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_pod.o:         $(NS)/modal_pod.f90         $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/fourier.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_dmd.o:         $(NS)/modal_dmd.f90         $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_spod.o:        $(NS)/modal_spod.f90        $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/fourier.o $(O)/modal_pod.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_spod_streaming.o: $(NS)/modal_spod_streaming.f90 $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/modal_pod.o $(O)/modal_spod.o $(O)/lapack_wrapper.o ;$(FC) -c $(FL2) $< -o $@
 $(O)/modal_analysis.o:    $(NS)/modal_analysis.f90    $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/fourier.o $(O)/modal_pod.o $(O)/modal_dmd.o $(O)/modal_spod.o $(O)/modal_spod_streaming.o ;$(FC) -c $(FL2) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
@@ -81,3 +86,9 @@ $(O)/main.o: $(NS)/main.f90 \
 
 $(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
    ;$(FC) -c $(FL2) $< -o $@
+
+# ─────────────────────────────────────────────────────────────────────
+# .usr compilation needs .mod files from nekStab modules.
+# GNU Make merges prerequisites from multiple rules for the same target.
+# ─────────────────────────────────────────────────────────────────────
+$(USRF): $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o
