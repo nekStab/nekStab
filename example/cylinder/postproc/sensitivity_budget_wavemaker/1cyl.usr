@@ -1,23 +1,23 @@
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
       include 'TOTAL'
 
-      !if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
+      ! if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
 
       call nekStab
 
-      !call stat_avg
-      !call stats_3d_full
+      ! call stat_avg
+      ! call stats_3d_full
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine nekstab_usrchk
       include 'SIZE'
       include 'TOTAL'
 
-      if(istep.eq.0)then !change defaults
+      if (istep.eq.0) then !change defaults
 
         xLspg = uparam(8); call bcast(xLspg , wdsize)
         xRspg = uparam(9); call bcast(xRspg , wdsize)
@@ -26,13 +26,13 @@ c-----------------------------------------------------------------------
         schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = k_dim ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
-        !ifvor = .false. ; call bcast(ifvor,lsize)
-        !ifvox = .false. ; call bcast(ifvox,lsize)
+        ! ifvor = .false. ; call bcast(ifvor,lsize)
+        ! ifvox = .false. ; call bcast(ifvox,lsize)
 
       endif
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -40,14 +40,14 @@ c-----------------------------------------------------------------------
 
       ffx = 0.0d0
       ffy = 0.0d0
-      !if(ifto)ffy = temp*0.15d0 !coupling the scalar field
+      ! if(ifto)ffy = temp*0.15d0 !coupling the scalar field
       ffz = 0.0d0
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine useric (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -55,11 +55,11 @@ c-----------------------------------------------------------------------
       integer e
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(ieg)
-         ux=1.0d0
-         uy=0.0d0
-         uz=0.0d0
-         temp=0.0d0
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
       else                      ! perturbation
          ux = 0.0d0
          uy = 0.0d0
@@ -69,7 +69,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userbc (ix,iy,iz,iside,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -77,13 +77,13 @@ c-----------------------------------------------------------------------
       integer e
 
       if (JP.eq.0) then         ! velocity
-         e  = gllel(ieg)
+         e = gllel(ieg)
          ux = 1.0d0
          uy = 0.0d0
          uz = 0.0d0
-         temp=0.0d0
+         temp = 0.0d0
 
-         if(x.gt.-2)temp=1.0d0 !cylinder with T
+         if (x.gt.-2)temp = 1.0d0 !cylinder with T
 
       else                      ! perturbation
          ux = 0.0d0
@@ -94,7 +94,7 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine uservp (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -103,7 +103,7 @@ c-----------------------------------------------------------------------
       utrans = 0.0d0
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userq (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -111,25 +111,25 @@ c-----------------------------------------------------------------------
       qvol = 0.0d0
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
-      cbc(:,:,2)=cbc(:,:,1)
-      do iel=1,nelt
+      cbc(:,:,2) = cbc(:,:,1)
+      do iel = 1,nelt
        do ifc = 1, 2*ndim
-        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
-        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+        if (cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2) = 't  '
+        if (cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2) = 't  '
       enddo
       enddo
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat3
       return
       end

@@ -1,2 +1,2 @@
-include /Users/rfrantz/nekStab/core/makefile_nekStab
- $(OBJDIR)/torus_utils.o :torus_utils.f  ;$(FC) -c $(FL2) $< -o $@
+NEKSTAB_SOURCE_ROOT = /home/rfrantz/nekStab
+include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab

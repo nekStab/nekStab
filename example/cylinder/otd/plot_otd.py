@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 
 # Configuration
 log_files = {
-    "otd_Le.dat": {"linestyle": "-", "linewidth": 1.5},
-    "otd_Lr.dat": {"linestyle": "--", "linewidth": 1.5},
-    "otd_Ls.dat": {"linestyle": "-.", "linewidth": 1.0},
+    "otd_ftle.dat": {"linestyle": "-", "linewidth": 1.5},
+    "otd_eigenvalues.dat": {"linestyle": "--", "linewidth": 1.5},
+    "otd_growth_rates.dat": {"linestyle": "-.", "linewidth": 1.0},
 }
 
 # Initialize data storage
@@ -42,7 +42,7 @@ plt.figure(figsize=(10, 6))
 for lf, d in data.items():
     t = d['t']
     for idx, y in enumerate(d['y']):
-        if lf == "otd_Ls.dat" and idx == 0:
+        if lf == "otd_growth_rates.dat" and idx == 0:
 
             label = rf"$\sigma_{idx+1}$ - {lf}"
             linewidth = log_files[lf]["linewidth"]
@@ -53,14 +53,14 @@ for lf, d in data.items():
                      linewidth=linewidth, 
                      color=colors[idx % len(colors)])
             
-        if lf == "otd_Lr.dat":
+        if lf == "otd_eigenvalues.dat":
             label = rf"$\Re(\lambda_{idx+1})$ - {lf}"
             plt.plot(t, y, label=label, 
                      linestyle=log_files[lf]["linestyle"], 
                      linewidth=log_files[lf]["linewidth"], 
                      color=colors[idx % len(colors)])
         
-        if lf == "otd_Le.dat":
+        if lf == "otd_ftle.dat":
             label = rf"$\lambda_{idx+1}$ - {lf}"
             plt.plot(t, y, label=label, 
                      linestyle=log_files[lf]["linestyle"], 

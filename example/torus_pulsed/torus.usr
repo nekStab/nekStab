@@ -1,8 +1,8 @@
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine nekStab_usrchk
       include 'SIZE'
       include 'TOTAL'
-         if(istep.eq.0)then !change defaults
+         if (istep.eq.0) then !change defaults
             k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
             schur_tgt = 2 ; call bcast(schur_tgt,isize)
             maxmodes = 10 ; call bcast(maxmodes,isize)
@@ -11,18 +11,18 @@ c-----------------------------------------------------------------------
             ifvor = .false. ; call bcast(ifvor,lsize)
             ifvox = .false. ; call bcast(ifvox,lsize)
          endif
-      
-      !call vol_flow_lin
+
+      ! call vol_flow_lin
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine uservp (ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      udiff =0.0d0
-      utrans=0.0d0
+      udiff = 0.0d0
+      utrans = 0.0d0
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userf(ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -30,12 +30,12 @@ c-----------------------------------------------------------------------
       ffx = 0.0d0
       ffy = 0.0d0
       ffz = 0.0d0
-      
-      if(jp==0)call makebf_str_pulse(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      if (jp==0)call makebf_str_pulse(ffx,ffy,ffz,ix,iy,iz,ieg)
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
-      
+
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userq(ix,iy,iz,ieg)
       include 'SIZE'
       include 'TOTAL'
@@ -43,22 +43,22 @@ c-----------------------------------------------------------------------
       qvol = 0.0d0
       source = 0.0d0
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userchk
       implicit none
       include 'SIZE'
       include 'TOTAL'
       include 'HELIXD'
 
-      !if (istep.eq.0) then
+      ! if (istep.eq.0) then
       !
-      !endif
-      
+      ! endif
+
       call nekstab_drive
       call hpts
       call save_ubar
       end
-c----------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------
       subroutine userbc(i,j,k,iside,eg)
       implicit none
       include 'SIZE'
@@ -70,17 +70,17 @@ c-------------------------------------------------------------------------------
             ux = 1.0d0
             uy = 0.0d0
             uz = 0.0d0
-            temp=0.0d0
+            temp = 0.0d0
          else           ! perturbation
             ux = 0.0d0
             uy = 0.0d0
             uz = 0.0d0
-            temp=0.0d0
+            temp = 0.0d0
          endif
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine useric(i,j,k,eg)
-      implicit none 
+      implicit none
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
@@ -89,22 +89,22 @@ c-----------------------------------------------------------------------
             ux = 1.0d0
             uy = 0.0d0
             uz = 0.0d0
-            temp=0.0d0
+            temp = 0.0d0
          else             ! perturbation
             ux = 0.0d0
             uy = 0.0d0
             uz = 0.0d0
-            temp=0.0d0
+            temp = 0.0d0
          endif
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat
       implicit none
       include 'SIZE'
       include 'TOTAL'
       call setbc(1,1,'W  ')
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat2
       implicit none
       include 'SIZE'
@@ -120,7 +120,7 @@ c-----------------------------------------------------------------------
       if (nid.eq.0) write(6,*) 'USERDAT2: phi = ', an_phi*180.0d0/3.140d0
       if (nid.eq.0) write(6,*) 'USERDAT2: curv_radius = ', curv_radius
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine usrdat3
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------

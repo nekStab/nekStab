@@ -1,4 +1,4 @@
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userchk
 
       ! implicit none
@@ -22,12 +22,12 @@ c-----------------------------------------------------------------------
         otd_iostep = 50
         otd_rststp = 1000
         otd_prntsp = 20
-        otd_gsstep = 2 !frequency of reorthonormalization higher frequency in the beginning, then at iostep 
+        otd_gsstep = 2 !frequency of reorthonormalization higher frequency in the beginning, then at iostep
         otd_FTLEpd = 0 !period of FTLE calculation
         call otd
-        
+
         call outpost(ubic,vbic,wbic,pr,t,'ibf')
-        do i=1,npert
+        do i = 1,npert
           write(str,'(I1)') i
           oname = 'ip'//trim(str)
           call outpost(upic(1,i),vpic(1,i),wpic(1,i),pr,t,oname)
@@ -38,12 +38,12 @@ c-----------------------------------------------------------------------
       return
       end
 
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine nekStab_usrchk
       include 'SIZE'
-      include 'TOTAL'      
+      include 'TOTAL'
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userf  (ix,iy,iz,ieg)
       implicit none
       include 'SIZE'
@@ -52,13 +52,13 @@ c-----------------------------------------------------------------------
       include 'PARALLEL'        ! GLLEL
       integer ix,iy,iz,ieg,e
       e = gllel(ieg)
-      FFX = 0.0 
-      FFY = 0.0 
-      FFZ = 0.0      
+      FFX = 0.0
+      FFY = 0.0
+      FFZ = 0.0
       call nekStab_forcing(FFX,FFY,FFZ,ix,iy,iz,ieg)
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine useric (ix,iy,iz,ieg)
 
       implicit none
@@ -80,7 +80,7 @@ c-----------------------------------------------------------------------
         vbic(ix,iy,iz,ie) = UY
         wbic(ix,iy,iz,ie) = UZ
       else
-c     perturbation
+!     perturbation
         ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(ie-1)))
         UX = vxpic(ijke,jp)
         UY = vypic(ijke,jp)
@@ -93,7 +93,7 @@ c     perturbation
 
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
       subroutine userbc (ix,iy,iz,iside,eg)
       implicit none
       include 'SIZE'
@@ -107,14 +107,14 @@ c-----------------------------------------------------------------------
           UZ = 0.0
         endif
       else
-c     perturbations
+!     perturbations
         UX = 0.0
         UY = 0.0
         UZ = 0.0
       endif
       return
       end
-c-----------------------------------------------------------------------
+! -----------------------------------------------------------------------
 
       subroutine usrdat
       implicit none
@@ -123,18 +123,18 @@ c-----------------------------------------------------------------------
       real glmin,glmax,fact,x_min,x_max,y_max,y_min,z_min,z_max
       integer n
       n = 8*nelv
-      
+
       fact = 4.0d0*atan(1.0d0)
       call cmult(xc,fact,n)
       if (if3d) call cmult(zc,fact,n)
-      x_min=glmin(xc,n)
-      y_min=glmin(yc,n)
-      x_max=glmax(xc,n)
-      y_max=glmax(yc,n)
+      x_min = glmin(xc,n)
+      y_min = glmin(yc,n)
+      x_max = glmax(xc,n)
+      y_max = glmax(yc,n)
       if (if3d) then
-        z_min=glmin(zc,n)
-        z_max=glmax(zc,n)
+        z_min = glmin(zc,n)
+        z_max = glmax(zc,n)
       endif
-      
+
       return
       end

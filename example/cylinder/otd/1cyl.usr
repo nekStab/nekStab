@@ -1,4 +1,4 @@
-      !---------------------------------------------------------------------
+      ! ---------------------------------------------------------------------
       subroutine userchk
          implicit none
          include 'SIZE'
@@ -6,7 +6,7 @@
          call nekStab
          call hpts
       end
-      !---------------------------------------------------------------------
+      ! ---------------------------------------------------------------------
       subroutine nekStab_usrchk
          implicit none
          include 'SIZE'
@@ -19,16 +19,16 @@
             ifvor = .false.; call bcast(ifvor, lsize)
             ifvox = .false.; call bcast(ifvox, lsize)
             glob_skip = 1000; call bcast(glob_skip, isize)
-      
+
             otd_printStep = 10; call bcast(otd_printStep, isize)
             otd_gsStep = 10; call bcast(otd_gsStep, isize)
-            !otd_FTLEPeriod = 5.98197034139; call bcast(otd_FTLEPeriod, wdsize)
+            ! otd_FTLEPeriod = 5.98197034139; call bcast(otd_FTLEPeriod, wdsize)
             otd_FTLEPeriod = 0.0d0; call bcast(otd_FTLEPeriod, wdsize)
             otd_computeFTLE = .true.; call bcast(otd_computeFTLE, lsize)
-      
+
          end if
       end
-      !---------------------------------------------------------------------S
+      ! ---------------------------------------------------------------------S
       subroutine userf(ix, iy, iz, ieg)
          implicit none
          include 'SIZE'
@@ -40,7 +40,7 @@
          ffz = 0.0d0
          call nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
       end
-      !---------------------------------------------------------------------
+      ! ---------------------------------------------------------------------
       subroutine useric(ix, iy, iz, ieg)
          implicit none
          include 'SIZE'
@@ -67,7 +67,7 @@
             uz = vzpic(ijke, jp)
          end if
       end
-      !---------------------------------------------------------------------
+      ! ---------------------------------------------------------------------
       subroutine userbc(ix, iy, iz, iside, ieg)
          include 'SIZE'
          include 'TOTAL'
@@ -87,17 +87,17 @@
             temp = 0.0d0
          end if
       end
-      !---------------------------------------------------------------------
+      ! ---------------------------------------------------------------------
       subroutine usrdat2
          include 'SIZE'
          include 'TOTAL'
          integer iel, ifc
-      
-      !this mesh was generatd with genbox
-      !with only BCs for velicity
-      !here we chenge outflow to dirichlet if adjoint
-      !and initilize BCs for scalar field
-      
+
+      ! this mesh was generatd with genbox
+      ! with only BCs for velicity
+      ! here we chenge outflow to dirichlet if adjoint
+      ! and initilize BCs for scalar field
+
          if (uparam(1) == 3.2) then !if adjoint, change BCs
          do iel = 1, nelt
          do ifc = 1, 2*ndim
@@ -105,7 +105,7 @@
          end do
          end do
          end if
-      
+
          if (ifheat) then
             cbc(:, :, 2) = cbc(:, :, 1)
             do iel = 1, nelt
