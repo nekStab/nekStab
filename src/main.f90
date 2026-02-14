@@ -40,7 +40,7 @@
          schur_del = 0.10d0 !
          maxmodes = 20 ! max number of converged modes to disk
          glob_skip = 10 ! global energy computation skip frequency
-         findiff_order = 1 ! finite difference order for the Frechet derivative
+         findiff_order = 2 ! finite difference order for the Frechet derivative
          epsilon_base = 1.0e-6 ! finite difference perturbation scale parameter
 
          bst_skp = 10 ! boostconv skip iterations
@@ -53,6 +53,7 @@
          ifbf2D = .false. ! force 2D base flow solution
          ifstorebase = .true. ! store base flow for Floquet analysis (dynamic allocated)
          ifdyntol = .false. ! dynamical tolerances for SFD and Newton (potential speed-up)
+         ew_tol_cap = 0.0d0 ! EW solver cap (0=uncapped, e.g. 1e-5 for conservative)
 
          ifseed_nois = .true. ! noise as initial seed
          ifseed_symm = .false. ! symmetry initial seed
@@ -60,24 +61,27 @@
       !  Note: if ifseed_* all are false, 'useric' subroutine prescribes the initial seed
 
       !  Define here the probe position for zero-crossing vertical velocity analysis !
-         xck = 2.0d0; call bcast(xck, wdsize)
-         yck = 0.0d0; call bcast(yck, wdsize)
-         zck = 0.0d0; call bcast(zck, wdsize)
+         xck = 2.0d0
+         yck = 0.0d0
+         zck = 0.0d0
 
       ! Sponge zone parameters (modified from KTH Toolbox)
-         xLspg = 0.0d0; call bcast(xLspg, wdsize) ! x left
-         xRspg = 0.0d0; call bcast(xRspg, wdsize) ! x right
-         yLspg = 0.0d0; call bcast(yLspg, wdsize)
-         yRspg = 0.0d0; call bcast(yRspg, wdsize)
-         zLspg = 0.0d0; call bcast(zLspg, wdsize)
-         zRspg = 0.0d0; call bcast(zRspg, wdsize)
-         acc_spg = 0.333d0; call bcast(acc_spg, wdsize) !percentage for the acceleration phase in the sponge (e.g. 1/3)
-         spng_st = 0.0d0; call bcast(spng_st, wdsize)
+         xLspg = 0.0d0 ! x left
+         xRspg = 0.0d0 ! x right
+         yLspg = 0.0d0
+         yRspg = 0.0d0
+         zLspg = 0.0d0
+         zRspg = 0.0d0
+         acc_spg = 0.333d0 ! acceleration phase fraction (e.g. 1/3)
+         spng_st = 0.0d0
 
-         ifotd = .false.; call bcast(ifotd, lsize)
-         otd_printStep = 100; call bcast(otd_printStep, isize)
-         otd_gsStep = 10; call bcast(otd_gsStep, isize)
-         otd_FTLEPeriod = 0.0; call bcast(otd_FTLEPeriod, wdsize)
+         ifotd = .false.
+         otd_printStep = 100
+         otd_gsStep = 10
+         otd_FTLEPeriod = 0.0
+         otd_convTol = 1.0d-6
+         otd_minSteps = 200
+         call rzero(FTLEv_prev, lpert)
 
          evop = '_' ! initialize output prefix
 
@@ -127,6 +131,7 @@
          ifdmd = .false.      ! DMD analysis
          ifspod = .false.     ! SPOD analysis
          ifwinamp = .true.    ! Amplitude normalization (PySPOD compatible)
+         use_cgs = .true.     ! CGS2 orthogonalization (batch BLAS)
          modal_nsnap = 100    ! Default snapshot count
          modal_nsave = 10     ! Default number of modes to save
          modal_dt = 0.1d0     ! Default time between snapshots
@@ -135,11 +140,31 @@
          spod_nfft = 64       ! SPOD FFT block size
          spod_noverlap = 32   ! SPOD block overlap (50%)
 
-      !     !Broadcast all defaults !
-         call bcast(eigen_tol, wdsize) ! wdsize for real
+      !  Broadcast all defaults to ensure MPI consistency
+         call bcast_nStab_defaults()
+
+      end subroutine nekStab_setDefault
+      !-----------------------------------------------------------------------
+
+      !-----------------------------------------------------------------------
+      ! bcast_nStab_defaults — Broadcast all nekStab defaults to MPI ranks
+      !
+      ! Purpose:
+      !   Groups all bcast calls by common block for maintainability.
+      !   Called once from nekStab_setDefault after all assignments.
+      !-----------------------------------------------------------------------
+      subroutine bcast_nStab_defaults()
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+
+c        nStab_real (tolerances, domain bounds)
+         call bcast(eigen_tol, wdsize)
          call bcast(schur_del, wdsize)
          call bcast(epsilon_base, wdsize)
-         ! Note: xck, yck, zck already broadcast above
+         call bcast(ew_tol_cap, wdsize)
+
+c        nStab_sponge
          call bcast(xLspg, wdsize)
          call bcast(xRspg, wdsize)
          call bcast(yLspg, wdsize)
@@ -149,15 +174,24 @@
          call bcast(acc_spg, wdsize)
          call bcast(spng_st, wdsize)
 
-         call bcast(schur_tgt, isize) ! isize for integer
+c        nStab_fd (probe position, finite difference)
+         call bcast(xck, wdsize)
+         call bcast(yck, wdsize)
+         call bcast(zck, wdsize)
+         call bcast(findiff_order, isize)
+
+c        nStab_int
+         call bcast(schur_tgt, isize)
          call bcast(maxmodes, isize)
+         call bcast(glob_skip, isize)
+
+c        nStab_boostconv
          call bcast(k_dim, isize)
          call bcast(bst_skp, isize)
          call bcast(bst_snp, isize)
-         call bcast(glob_skip, isize)
-         call bcast(findiff_order, isize)
 
-         call bcast(ifres, lsize) !lsize for boolean
+c        nStab_logical
+         call bcast(ifres, lsize)
          call bcast(ifvor, lsize)
          call bcast(ifvox, lsize)
          call bcast(ifseed_nois, lsize)
@@ -167,8 +201,9 @@
          call bcast(ifbf2D, lsize)
          call bcast(ifstorebase, lsize)
          call bcast(ifdyntol, lsize)
+         call bcast(ifotd, lsize)
 
-      !  Broadcast new mode flags
+c        nStab_mode_flags
          call bcast(ifDNS, lsize)
          call bcast(ifLinDNS, lsize)
          call bcast(ifSFD, lsize)
@@ -197,6 +232,9 @@
          call bcast(ifdmd, lsize)
          call bcast(ifspod, lsize)
          call bcast(ifwinamp, lsize)
+         call bcast(use_cgs, lsize)
+
+c        nStab_mode_int / nStab_mode_real / nStab_mode_char
          call bcast(animate_mode_num, isize)
          call bcast(modal_nsnap, isize)
          call bcast(modal_nsave, isize)
@@ -205,7 +243,14 @@
          call bcast(spod_nfft, isize)
          call bcast(spod_noverlap, isize)
 
-      end subroutine nekStab_setDefault
+c        OTD_params
+         call bcast(otd_printStep, isize)
+         call bcast(otd_gsStep, isize)
+         call bcast(otd_FTLEPeriod, wdsize)
+         call bcast(otd_convTol, wdsize)
+         call bcast(otd_minSteps, isize)
+
+      end subroutine bcast_nStab_defaults
       !-----------------------------------------------------------------------
 
       !-----------------------------------------------------------------------

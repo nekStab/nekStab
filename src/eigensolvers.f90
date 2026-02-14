@@ -40,70 +40,10 @@
       contains
 
       !-----------------------------------------------------------------------
-      ! inner_product -- Weighted L2 inner product <p, q>
-      !
-      ! Purpose:
-      !   Computes the mass-matrix-weighted inner product over velocity
-      !   (and optionally temperature/scalar) fields using bm1s (sponge-
-      !   masked mass matrix).
-      !
-      ! Arguments:
-      !   alpha              [out] -- inner product value
-      !   px, py, pz, pp, pt [in]  -- first vector fields
-      !   qx, qy, qz, qp, qt [in] -- second vector fields
+      ! NOTE: inner_product and norm are now defined in krylov_subspace.f90.
+      ! They are re-exported here via the public statement for backwards
+      ! compatibility with callers that 'use nekstab_eigensolvers'.
       !-----------------------------------------------------------------------
-      subroutine inner_product(alpha, px, py, pz, pp, pt, qx, qy, qz, qp, qt)
-         use krylov_subspace
-         implicit none
-         include "SIZE"
-         include "TOTAL"
-
-         real, dimension(lv), intent(in) :: px, py, pz
-         real, dimension(lv), intent(in) :: qx, qy, qz
-         real, dimension(lp), intent(in) :: pp, qp !not used
-         real, dimension(lt, ldimt), intent(in) :: pt, qt
-
-         real, intent(out) :: alpha
-         real :: glsc3
-         integer :: m
-
-         nv = nx1*ny1*nz1*nelv
-         nt = nx1*ny1*nz1*nelt
-
-         alpha = glsc3(px, qx, bm1s, nv) + glsc3(py, qy, bm1s, nv)
-         if (if3D) alpha = alpha + glsc3(pz, qz, bm1s, nv)
-         if (ifto) alpha = alpha + glsc3(pt(:, 1), qt(:, 1), bm1s, nt)
-         if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) alpha = alpha + glsc3(pt(:, m), qt(:, m), bm1s, nt)
-            end do
-         end if
-
-         return
-      end subroutine inner_product
-
-      !-----------------------------------------------------------------------
-      ! norm -- Compute vector norm: alpha = sqrt(<q, q>)
-      !
-      ! Arguments:
-      !   qx, qy, qz, qp, qt [in]  -- vector fields
-      !   alpha               [out] -- norm value
-      !-----------------------------------------------------------------------
-      subroutine norm(qx, qy, qz, qp, qt, alpha)
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-
-         real, intent(in), dimension(lv) :: qx, qy, qz
-         real, intent(in), dimension(lp) :: qp
-         real, intent(in), dimension(lt, ldimt) :: qt
-         real, intent(out) :: alpha
-
-         call inner_product(alpha, qx, qy, qz, qp, qt, qx, qy, qz, qp, qt)
-         alpha = sqrt(alpha)
-
-      end subroutine norm
 
       !-----------------------------------------------------------------------
       ! krylov_schur -- Main Krylov-Schur eigensolver

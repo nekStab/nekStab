@@ -47,7 +47,8 @@
          real, save, allocatable, dimension(:, :), public :: uor, vor, wor  ! Velocity orbits
          real, save, allocatable, dimension(:, :, :), public :: tor        ! Temperature orbits
 
-         public :: k_dot, k_norm, k_normalize, k_cmult,
+         public :: inner_product, norm,
+     $             k_dot, k_norm, k_normalize, k_cmult,
      $             k_add2, k_add2s2, k_axpby, k_sub2, k_sub3,
      $             k_zero, k_copy, k_matmul,
      $             allocate_orbit, orbit_store, orbit_restore
@@ -73,7 +74,61 @@
       !-----------------------------------------------------------------------
 
       !-----------------------------------------------------------------------
+      ! inner_product — Raw-array weighted L2 inner product (canonical primitive)
+      !
+      !   alpha = <p, q>_bm1s  (sponge-masked mass matrix)
+      !   Computes kinetic energy (vx,vy,[vz]) + thermal energy ([t,scalars])
+      !   Pressure dummy args exist for interface consistency but are unused.
+      !-----------------------------------------------------------------------
+      subroutine inner_product(alpha,
+     $     px, py, pz, pp, pt, qx, qy, qz, qp, qt)
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         real, dimension(lv), intent(in) :: px, py, pz, qx, qy, qz
+         real, dimension(lp), intent(in) :: pp, qp  ! not used
+         real, dimension(lt, ldimt), intent(in) :: pt, qt
+         real, intent(out) :: alpha
+         real :: glsc3
+         integer :: m
+
+         nv = nx1*ny1*nz1*nelv
+         nt = nx1*ny1*nz1*nelt
+
+         alpha = glsc3(px, qx, bm1s, nv) + glsc3(py, qy, bm1s, nv)
+         if (if3D) alpha = alpha + glsc3(pz, qz, bm1s, nv)
+         if (ifto) alpha = alpha
+     $        + glsc3(pt(:,1), qt(:,1), bm1s, nt)
+         if (ldimt > 1) then
+            do m = 2, ldimt
+               if (ifpsco(m-1)) alpha = alpha
+     $              + glsc3(pt(:,m), qt(:,m), bm1s, nt)
+            end do
+         end if
+
+      end subroutine inner_product
+
+      !-----------------------------------------------------------------------
+      ! norm — Raw-array norm: alpha = sqrt(<q, q>_bm1s)
+      !-----------------------------------------------------------------------
+      subroutine norm(qx, qy, qz, qp, qt, alpha)
+         implicit none
+         include 'SIZE'
+         include 'TOTAL'
+         real, intent(in), dimension(lv) :: qx, qy, qz
+         real, intent(in), dimension(lp) :: qp
+         real, intent(in), dimension(lt, ldimt) :: qt
+         real, intent(out) :: alpha
+
+         call inner_product(alpha,
+     $        qx, qy, qz, qp, qt, qx, qy, qz, qp, qt)
+         alpha = sqrt(alpha)
+
+      end subroutine norm
+
+      !-----------------------------------------------------------------------
       ! k_dot — Weighted inner product of two Krylov vectors
+      !   Delegates to inner_product, then adds Newton PO time component.
       !-----------------------------------------------------------------------
       subroutine k_dot(alpha, p, q)
          implicit none
@@ -81,28 +136,12 @@
          include 'TOTAL'
          type(krylov_vector), intent(in) :: p, q
          real, intent(out) :: alpha
-         real :: glsc3
-         integer m
 
-         nv = nx1*ny1*nz1*nelv
-         nt = nx1*ny1*nz1*nelt
+         call inner_product(alpha,
+     $        p%vx, p%vy, p%vz, p%pr, p%t,
+     $        q%vx, q%vy, q%vz, q%pr, q%t)
 
-      !     --> Kinetic energy. ! Note : glsc3(a,b,mult,n)
-         alpha = glsc3(p%vx, q%vx, bm1s, nv) + glsc3(p%vy, q%vy, bm1s, nv)
-         if (if3d) alpha = alpha + glsc3(p%vz, q%vz, bm1s, nv)
-
-      !     --> Potential energy.
-         if (ifto) alpha = alpha + glsc3(p%t(:, 1), q%t(:, 1), bm1s, nt)
-         if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) alpha = alpha + glsc3(p%t(:, m), q%t(:, m), bm1s, nt)
-            end do
-         end if
-
-      !     --> Time component.
-         if (isNewtonPO) then
-            alpha = alpha + p%time*q%time
-         end if
+         if (isNewtonPO) alpha = alpha + p%time*q%time
 
       end subroutine k_dot
 

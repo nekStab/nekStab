@@ -48,11 +48,11 @@ manage_compiler_flags () {
     case $action in
         "enable_debug")
             echo "Removing -w flag for debug mode"
-            sed_inplace 's/FF77="-w -std=legacy"/FF77=" -std=legacy"/' "$makenek_inc"
+            sed_inplace -E 's/FF77="[[:space:]]*-w[[:space:]]+-std=legacy"/FF77=" -std=legacy"/' "$makenek_inc"
             ;;
         "restore")
             echo "Restoring original compiler flags"
-            sed_inplace 's/FF77=" -std=legacy"/FF77="-w -std=legacy"/' "$makenek_inc"
+            sed_inplace -E 's/FF77="[[:space:]]*(-std=legacy)"/FF77="-w \1"/' "$makenek_inc"
             ;;
     esac
 }
@@ -61,7 +61,11 @@ do_clean () {
     echo "Cleaning up build files..."
     [ -f makefile ] && make clean
     echo "Removing session and log files..."
-    rm -f SESSION.NAME *log* makefile NEKSTAB.inc *.mod KRY* HES*
+    shopt -s nullglob
+    rm -f SESSION.NAME *log* makefile NEKSTAB.inc KRY* HES*
+    rm -f ./*.mod
+    rm -f obj/*.mod
+    shopt -u nullglob
     echo "Cleanup completed."
     manage_compiler_flags "restore"
 }
@@ -80,6 +84,36 @@ do_full_clean () {
     echo "Removing misc generated files..."
     rm -f fort.* ioinfo SESSION.NAME.* core.[0-9]* *.nek5000
     echo "=== FULL CLEAN COMPLETE ==="
+}
+
+validate_target () {
+    local t=$1
+    local match
+    local -a matches=()
+
+    if [ "$t" = "clean" ] || [ "$t" = "full_clean" ]; then
+        return 0
+    fi
+
+    for match in "${t}.re2" "${t}.rea" "${t}.par" "${t}.usr" "${t}.sep" "${t}.map"; do
+        if [ -f "$match" ]; then
+            return 0
+        fi
+    done
+
+    for match in *.re2 *.rea *.par *.usr *.sep *.map; do
+        [[ -e "$match" ]] && matches+=( "${match%.*}" )
+    done
+
+    if ((${#matches[@]})); then
+        printf "Error: case '%s' not recognized in %s\n" "$t" "$(pwd)"
+        printf "Available case names:\n"
+        printf "  %s\n" "${matches[@]}" | sort -u
+        return 1
+    fi
+
+    printf "Warning: no known case files found to validate against in %s\n" "$(pwd)"
+    return 0
 }
 
 # Check if gslib is compatible with current compiler; clean if not
@@ -227,11 +261,43 @@ setup_gcc_flags () {
 # Argument Parsing
 #-------------------------------------------------------------------------------
 
-# First argument is the case name if not an option
-if [[ $1 != --* && $1 != "" ]]; then
-    target="$1"
-    shift
+: ${NEKSTAB_SOURCE_ROOT:="$(cd "$(dirname "$BASH_SOURCE")/.." && pwd 2>/dev/null)"}
+: ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
+
+if [ ! -d "$NEKSTAB_SOURCE_ROOT" ]; then
+    echo "Error: NEKSTAB_SOURCE_ROOT does not exist: $NEKSTAB_SOURCE_ROOT"
+    exit 1
 fi
+
+if [ ! -d "$NEK_SOURCE_ROOT" ]; then
+    echo "Error: NEK_SOURCE_ROOT does not exist: $NEK_SOURCE_ROOT"
+    exit 1
+fi
+
+# Parse arguments (case first if present, options anywhere)
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug) debug=true; shift ;;
+        --fresh) fresh=true; shift ;;
+        --help|-h) show_usage ;;
+        --*) echo "Unknown option: $1"; show_usage ;;
+        *)
+            if [ -z "$target" ]; then
+                target="$1"
+                shift
+            else
+                echo "Unexpected argument: $1"
+                show_usage
+            fi
+            ;;
+    esac
+done
+
+if [ -z "$target" ]; then
+    show_usage
+fi
+
+validate_target "$target" || exit 1
 
 # Handle "clean" command
 if [ "$target" = "clean" ]; then
@@ -245,16 +311,6 @@ if [ "$target" = "full_clean" ]; then
     exit 0
 fi
 
-# Parse remaining options
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --debug) debug=true; shift ;;
-        --fresh) fresh=true; shift ;;
-        --help|-h) show_usage ;;
-        *) echo "Unknown option: $1"; show_usage ;;
-    esac
-done
-
 # Handle fresh (clean + rebuild)
 if [ "$fresh" = true ]; then
     do_clean
@@ -264,8 +320,8 @@ fi
 # Version Information
 #-------------------------------------------------------------------------------
 
-N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
-NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
+N_VERSION=$(git -C "$NEK_SOURCE_ROOT" describe --tag --long --always 2>/dev/null || git -C "$NEK_SOURCE_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+NS_VERSION=$(git -C "$NEKSTAB_SOURCE_ROOT" describe --tag --long --always 2>/dev/null || git -C "$NEKSTAB_SOURCE_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 FFLAGS=""
 
 if [ "$debug" = true ]; then
@@ -341,6 +397,7 @@ LD="$FC"  # Linker (Fortran compiler as main program is Fortran)
 # User-specified object files
 USR="nek_vectors.o"
 USR+=" krylov_subspace.o"
+USR+=" krylov_inner_products.o"
 USR+=" fourier_fftw.o"
 USR+=" fourier.o"
 USR+=" krylov_decomposition.o"
@@ -393,7 +450,7 @@ echo "USR_LFLAGS: $USR_LFLAGS"
 echo "-----------------------------------------------------"
 
 # Update makefile and static variables
-cp -v $NEKSTAB_SOURCE_ROOT/src/NEKSTAB NEKSTAB.inc
+cp -v "$NEKSTAB_SOURCE_ROOT/src/NEKSTAB" NEKSTAB.inc
 
 # Append 'include NEKSTAB.inc' to SIZE if not present
 FILE="SIZE"
@@ -415,10 +472,10 @@ echo 'include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab' >> "$FILE"
 check_gslib_compat
 
 set +a -e
-$NEK_SOURCE_ROOT/bin/nekconfig "$target"
-$NEK_SOURCE_ROOT/bin/nekconfig -build-dep
+"$NEK_SOURCE_ROOT/bin/nekconfig" "$target"
+"$NEK_SOURCE_ROOT/bin/nekconfig" -build-dep
 set -o pipefail
-touch ${target}.usr
+touch "${target}.usr"
 
 # Override Nek5000's auto-detected flags with our complete set
 if [ -f makefile ]; then
@@ -434,12 +491,29 @@ fi
 # Unset FFLAGS/CFLAGS to prevent make from reading them twice
 unset FFLAGS CFLAGS
 make -j4 2>&1 | tee -a build.log
+make_rc="${PIPESTATUS[0]:-0}"
+tee_rc="${PIPESTATUS[1]:-0}"
+[[ "$make_rc" =~ ^[0-9]+$ ]] || make_rc=0
+[[ "$tee_rc" =~ ^[0-9]+$ ]] || tee_rc=0
 set +o pipefail
 
-# Move .mod files to obj/ if it exists, otherwise remove them
-if ls *.mod >/dev/null 2>&1; then
-    [ -d obj ] && mv *.mod obj || rm -f *.mod
+if [ "$make_rc" -ne 0 ]; then
+    echo "Build failed with status $make_rc."
+    exit "$make_rc"
 fi
+if [ "$tee_rc" -ne 0 ]; then
+    echo "Build output tee failed with status $tee_rc."
+    exit "$tee_rc"
+fi
+
+# Move .mod files to obj/ if it exists, otherwise remove them
+shopt -s nullglob
+mod_files=( *.mod )
+if ((${#mod_files[@]})); then
+    mkdir -p obj
+    mv -f -- "${mod_files[@]}" obj/
+fi
+shopt -u nullglob
 
 # Restore original compiler flags if debug mode was enabled
 [ "$debug" = true ] && manage_compiler_flags "restore" || true

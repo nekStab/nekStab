@@ -17,6 +17,7 @@
       module modal_pod
 
          use krylov_subspace
+         use krylov_inner_products
          use nekstab_lapack
          use nekstab_vectors
          use fourier
@@ -58,12 +59,7 @@
          allocate(eigvals(nsnap))
          allocate(eigvecs(nsnap, nsnap))
 
-         do j = 1, nsnap
-            do i = 1, j
-               call k_dot(C(i,j), snaps(i), snaps(j))
-               C(j,i) = C(i,j)
-            end do
-         end do
+         call k_gram_matrix(C, snaps, snaps, nsnap, nsnap, nsnap)
          C = C / dble(nsnap)
 
 !        Eigensolve (descending order)
@@ -219,12 +215,7 @@
          allocate(C(nsnap, nsnap))
          allocate(eigvals(nsnap), eigvecs(nsnap, nsnap))
 
-         do j = 1, nsnap
-            do i = 1, j
-               call k_dot(C(i,j), snaps(i), snaps(j))
-               C(j,i) = C(i,j)
-            end do
-         end do
+         call k_gram_matrix(C, snaps, snaps, nsnap, nsnap, nsnap)
          C = C / dble(nsnap)
 
          call eig_symmetric(C, eigvals, eigvecs, nsnap)

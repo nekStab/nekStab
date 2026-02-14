@@ -334,6 +334,8 @@
       
          real, dimension(lv), intent(inout) :: rbx, rby, rbz
          real, dimension(lv) :: dumx, dumy, dumz
+         real, dimension(lv) :: fwrk
+         real, dimension(bst_snp) :: wk_gop
       
          real :: glsc3
          nv = nx1*ny1*nz1*nelv
@@ -361,10 +363,22 @@
             call opsub2(x_x(:, rot), x_y(:, rot), x_z(:, rot), y_x(:, rot), y_y(:, rot), y_z(:, rot))
             call qr_dec(dd, q_x, q_y, q_z, y_x, y_y, y_z)
       
-            do j = 1, bst_snp
-               cc(j) = glsc3(rbx, bm1, q_x(:, j), nv) + glsc3(rby, bm1, q_y(:, j), nv)
-               if (if3d) cc(j) = cc(j) + glsc3(rbz, bm1, q_z(:, j), nv)
-            end do
+c           Batch projection: cc = Q^T * (bm1 * rb) via dgemv
+            call copy(fwrk, rbx, nv)
+            call col2(fwrk, bm1, nv)
+            call dgemv('T', nv, bst_snp, 1.0d0,
+     $           q_x, lv, fwrk, 1, 0.0d0, cc, 1)
+            call copy(fwrk, rby, nv)
+            call col2(fwrk, bm1, nv)
+            call dgemv('T', nv, bst_snp, 1.0d0,
+     $           q_y, lv, fwrk, 1, 1.0d0, cc, 1)
+            if (if3d) then
+               call copy(fwrk, rbz, nv)
+               call col2(fwrk, bm1, nv)
+               call dgemv('T', nv, bst_snp, 1.0d0,
+     $              q_z, lv, fwrk, 1, 1.0d0, cc, 1)
+            end if
+            call gop(cc, wk_gop, '+  ', bst_snp)
       
             call linear_system(ccb, cc, dd, bst_snp); rot = mod(rot, bst_snp) + 1
             call opcopy(y_x(:, rot), y_y(:, rot), y_z(:, rot), rbx, rby, rbz)
@@ -398,56 +412,87 @@
          include 'SIZE'
          include 'TOTAL'
          integer i, j
-         real, dimension(lv, bst_snp) :: x_x, x_y, x_z, q_x, q_y, q_z !res subspaces
-         real, dimension(lv) :: dum_x1, dum_y1, dum_z1, dum_x, dum_y, dum_z
+         real, dimension(lv, bst_snp) :: x_x, x_y, x_z,
+     $        q_x, q_y, q_z
+         real, dimension(lv) :: dum_x, dum_y, dum_z, fwrk
          real, dimension(bst_snp, bst_snp) :: rr
-         real norma, glsc3
+         real, dimension(bst_snp) :: wk_gop
+         real norma, norma_loc, glsc3
 
          nv = nx1*ny1*nz1*nelv
          rr = 0.0d0; norma = 0.0d0
          call oprzero(Q_x(:, :), Q_y(:, :), Q_z(:, :))
-      
-         call opcopy(dum_x, dum_y, dum_z, x_x(:, 1), x_y(:, 1), x_z(:, 1))
-      
-         norma = glsc3(dum_x, bm1, dum_x, nv) + glsc3(dum_y, bm1, dum_y, nv)
-         if (if3d) norma = norma + glsc3(dum_z, bm1, dum_z, nv)
+
+         call opcopy(dum_x, dum_y, dum_z,
+     $        x_x(:,1), x_y(:,1), x_z(:,1))
+
+c        First column norm (scalar, no batch needed)
+         norma = glsc3(dum_x, bm1, dum_x, nv)
+     $        + glsc3(dum_y, bm1, dum_y, nv)
+         if (if3d) norma = norma
+     $        + glsc3(dum_z, bm1, dum_z, nv)
          norma = sqrt(norma)
          if (norma < 1e-60) then
-            if (nid == 0) write (6, *) 'WARNING: qr_dec near-zero first column norm'
+            if (nid == 0) write(6,*)
+     $           'WARNING: qr_dec near-zero first column norm'
             return
          end if
 
          call opcmult(dum_x, dum_y, dum_z, 1./norma)
-         call opcopy(q_x(:, 1), q_y(:, 1), q_z(:, 1), dum_x, dum_y, dum_z)
+         call opcopy(q_x(:,1), q_y(:,1), q_z(:,1),
+     $        dum_x, dum_y, dum_z)
          rr(1, 1) = norma
-      
+
          do j = 2, bst_snp
-            call opcopy(dum_x, dum_y, dum_z, x_x(:, j), x_y(:, j), x_z(:, j))
-            do i = 1, j - 1
-      
-               rr(i, j) = glsc3(dum_x, bm1, q_x(:, i), nv) + glsc3(dum_y, bm1, q_y(:, i), nv)
-               if (if3d) rr(i, j) = rr(i, j) + glsc3(dum_z, bm1, q_z(:, i), nv)
-      
-               call opcopy(dum_x1, dum_y1, dum_z1, q_x(:, i), q_y(:, i), q_z(:, i))
-               call opcmult(dum_x1, dum_y1, dum_z1, rr(i, j))
-               call opsub2(dum_x, dum_y, dum_z, dum_x1, dum_y1, dum_z1)
-      
-            end do
-      
-            norma = glsc3(dum_x, bm1, dum_x, nv) + glsc3(dum_y, bm1, dum_y, nv)
-            if (if3d) norma = norma + glsc3(dum_z, bm1, dum_z, nv)
-      
+            call opcopy(dum_x, dum_y, dum_z,
+     $           x_x(:,j), x_y(:,j), x_z(:,j))
+
+c           Batch projection: rr(1:j-1, j) = Q(:,1:j-1)^T * bm1 * x(:,j)
+            call copy(fwrk, dum_x, nv)
+            call col2(fwrk, bm1, nv)
+            call dgemv('T', nv, j-1, 1.0d0,
+     $           q_x, lv, fwrk, 1, 0.0d0, rr(1,j), 1)
+            call copy(fwrk, dum_y, nv)
+            call col2(fwrk, bm1, nv)
+            call dgemv('T', nv, j-1, 1.0d0,
+     $           q_y, lv, fwrk, 1, 1.0d0, rr(1,j), 1)
+            if (if3d) then
+               call copy(fwrk, dum_z, nv)
+               call col2(fwrk, bm1, nv)
+               call dgemv('T', nv, j-1, 1.0d0,
+     $              q_z, lv, fwrk, 1, 1.0d0, rr(1,j), 1)
+            end if
+            call gop(rr(1,j), wk_gop, '+  ', j-1)
+
+c           Subtract all projections: dum -= Q * rr(1:j-1,j)
+            call dgemv('N', nv, j-1, -1.0d0,
+     $           q_x, lv, rr(1,j), 1, 1.0d0, dum_x, 1)
+            call dgemv('N', nv, j-1, -1.0d0,
+     $           q_y, lv, rr(1,j), 1, 1.0d0, dum_y, 1)
+            if (if3d) then
+               call dgemv('N', nv, j-1, -1.0d0,
+     $              q_z, lv, rr(1,j), 1, 1.0d0, dum_z, 1)
+            end if
+
+c           Column norm
+            norma = glsc3(dum_x, bm1, dum_x, nv)
+     $           + glsc3(dum_y, bm1, dum_y, nv)
+            if (if3d) norma = norma
+     $           + glsc3(dum_z, bm1, dum_z, nv)
+
             if (norma < 1e-60) then
                norma = 1.0d0
                q_x(:, j) = 0.0d0; q_y(:, j) = 0.0d0
                if (if3d) q_z(:, j) = 0.0d0
             else
-               call opcmult(dum_x, dum_y, dum_z, 1.0d0/sqrt(norma))
-               call opcopy(q_x(:, j), q_y(:, j), q_z(:, j), dum_x, dum_y, dum_z)
+               call opcmult(dum_x, dum_y, dum_z,
+     $              1.0d0/sqrt(norma))
+               call opcopy(q_x(:,j), q_y(:,j), q_z(:,j),
+     $              dum_x, dum_y, dum_z)
             end if
-      
+
             rr(j, j) = sqrt(norma)
-      
+
          end do
          return
       end subroutine qr_dec

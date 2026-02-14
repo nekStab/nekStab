@@ -42,7 +42,8 @@
       logical :: iffindiff, isNekStabinit
       logical :: isDirect, isAdjoint, isTransientGrowth
       logical :: isFloquetDirect, isFloquetAdjoint
-      logical :: isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
+      logical :: isFloquetTransientGrowth, isNewtonFP,
+     $   isNewtonPO, isNewtonPO_T
 
       ! ─────────────────────────────────────────────────────────────────
       ! USER-SETTABLE MODE FLAGS (alternative to uparam encoding)
@@ -83,19 +84,24 @@
      $   ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol,
      $   iffindiff, ifotd, isNekStabinit, isDirect, isAdjoint,
      $   isTransientGrowth, isFloquetDirect, isFloquetAdjoint,
-     $   isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
+     $   isFloquetTransientGrowth, isNewtonFP,
+     $   isNewtonPO, isNewtonPO_T
+
+      logical :: use_cgs    ! CGS2 orthogonalization (vs MGS)
 
       common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv,
      $   ifTDF, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity,
-     $   ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode,
-     $   ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod,
-     $   ifwinamp
+     $   ifForceSensReal, ifForceSensImag, ifDeltaForcing,
+     $   ifAnimateMode, ifAnimateBFDeform,
+     $   ifAnimateFloquet, ifpod, ifdmd, ifspod,
+     $   ifwinamp, use_cgs
       
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
       real :: xmn, xmx, ymn, ymx, zmn, zmx, epsilon_base
+      real :: ew_tol_cap  ! EW solver tolerance cap (0 = uncapped)
       common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base,
-     $   dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx
+     $   dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap
       
       ! Integer variables for boost convergence and spatial dimensions
       integer :: bst_skp, bst_snp, k_dim
@@ -161,11 +167,13 @@
       common/OTD_modes/OTDfx, OTDfy, OTDfz,
      $   OTDmrx, OTDmry, OTDmrz, OTDmix, OTDmiy, OTDmiz
 
-      real :: otd_FTLEPeriod
-      integer :: otd_printStep, otd_gsStep
+      real :: otd_FTLEPeriod, otd_convTol
+      integer :: otd_printStep, otd_gsStep, otd_minSteps
       logical :: otd_computeFTLE, gsstep_override
-      common/OTD_params/otd_FTLEPeriod, otd_printStep,
-     $   otd_gsStep, otd_computeFTLE, gsstep_override
+      real, dimension(lpert) :: FTLEv_prev
+      common/OTD_params/otd_FTLEPeriod, otd_convTol,
+     $   otd_printStep, otd_gsStep, otd_minSteps,
+     $   otd_computeFTLE, gsstep_override, FTLEv_prev
 
       real, dimension(lx1, ly1, lz1, lelv) ::
      $   ubic, vbic, wbic
@@ -190,6 +198,7 @@
 
       real, dimension(lpert) :: FTLEv, LEintegral
       common/OTD_FTLE/FTLEv, LEintegral
+
 
       real, dimension(lpert) :: EIGR, EIGI, OSIGMA, RCL, RCR
       real, dimension(lpert, lpert) ::

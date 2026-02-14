@@ -51,6 +51,7 @@
      $             otd_normalize_vector_field,
      $             otd_mod_Gram_Schmidt,
      $             otd_compute_orthonormality_measures,
+     $             otd_gram_matrix,
      $             otd_sort_eigenvalues,
      $             otd_compute_eig_wrapper
       contains
@@ -80,14 +81,21 @@
             ifotd = .true.; call bcast(ifotd, lsize)
 
             if (nid == 0) then
-               open (unit=457, file='otd_Ls.dat', status='replace', form='formatted'); close (457)
-               open (unit=458, file='otd_Lr.dat', status='replace', form='formatted'); close (458)
+               open (unit=457, file='otd_growth_rates.dat', status='replace', form='formatted'); close (457)
+               open (unit=458, file='otd_eigenvalues.dat', status='replace', form='formatted'); close (458)
+               open (unit=460, file='otd_residuals.dat', status='replace', form='formatted'); close (460)
             end if
 
-            if (nid == 0) write (6, *) 'OTD: saving startFrom in vx to ubic'
             write (filename, '(A,A,A)') 'BF_', trim(SESSION), '0.f00001'
-            call load_fld(filename)
-            call opcopy(ubic, vbic, wbic, vx, vy, vz)
+            inquire(file=filename, exist=exist_IC)
+            if (exist_IC) then
+               if (nid == 0) write (6, *) 'OTD: loading base flow from ', trim(filename)
+               call load_fld(filename)
+               call opcopy(ubic, vbic, wbic, vx, vy, vz)
+            else
+               if (nid == 0) write (6, *) 'OTD: no BF_ file found, using useric as base flow'
+               call opcopy(ubic, vbic, wbic, vx, vy, vz)
+            end if
             call outpost(ubic, vbic, wbic, pr, t, 'bf0')
 
             call otd_white_noise ! Initialise all IC fields to white noise
@@ -143,21 +151,20 @@
             call otd_zero_FTLE ! zero Phi matrix
 
             init = .true.
-
-         else ! init
-
-            gsstep_override = .false.
-            call otd_orthonormalize_basis
-            call otd_construct_linear_operator
-            call otd_generate_forces
-            call otd_compute_OTD_modes
-            if (ifoutfld) then
-      ! call otd_outpost_OTD_modes ! M*
-               call otd_outpost_orthonormal_basis ! r*
-            end if
-            call otd_compute_FTLE
-
          end if ! init
+
+      !  Time-stepping: always runs (including istep=0 after init,
+      !  which initialises t0=0 in otd_compute_FTLE).
+         gsstep_override = .false.
+         call otd_orthonormalize_basis
+         call otd_construct_linear_operator
+         call otd_generate_forces
+         call otd_compute_OTD_modes
+         if (ifoutfld) then
+      ! call otd_outpost_OTD_modes ! M*
+            call otd_outpost_orthonormal_basis ! r*
+         end if
+         call otd_compute_FTLE
 
       end subroutine otd
 
@@ -172,7 +179,7 @@
          include 'MASS' ! BM1
          include 'SOLN' ! V[XYZ]P
          include 'TSTEP' ! istep
-         integer ipert, jpert, nv, i
+         integer ipert, jpert, nv, ldv, i
 
       !     Build the elements of the linearized NS-operator L_{NS} (u_j)
       !         L_{NS} (u_j) = 1/Re (grad^2 u)_j - (grad p)_j - (Ub.grad) u_j - (u_j.grad) Ub
@@ -188,6 +195,7 @@
       !     L_{NS} (u_j) = 1/Re grad^2 u_j - grad p - (Ub.grad) u_j - (u_j.grad) Ub
       !
          nv = lx1*ly1*lz1*nelv
+         ldv = lx1*ly1*lz1*lelv
          do jpert = 1, npert
             do i = 1, nv
                otd_Lux(i, jpert) = diffx(i, jpert) - gradpx(i, jpert) - convx(i, jpert)
@@ -196,38 +204,26 @@
             end do
          end do
 
-      !     Compute the innner product < L_{NS}(u_i),u_j > with i,j = 1,...,r
-         call rzero(otd_Lr, lpert*lpert)
-         do ipert = 1, npert
-            do jpert = 1, npert
-               otd_Lr(ipert, jpert) = otd_inner_product(ipert, jpert, 2)
-            end do
+      !     Compute Lr(i,j) = <L_NS(u_i), u_j> via batched dgemm.
+      !     Weight otd_Lu by mass matrix in-place (safe: not reused).
+         do jpert = 1, npert
+            call col2(otd_Lux(1, jpert), bm1, nv)
+            call col2(otd_Luy(1, jpert), bm1, nv)
+            if (if3d) call col2(otd_Luz(1, jpert), bm1, nv)
          end do
-      !     Here you could add internal rotations phi_rot into the method.
-      !     This does NOT change the subspace.
-      !
-      !       dU / dt = L_{NS}U - U (otd_Lr - phi_rot)
-      !
+         call otd_gram_matrix(otd_Lr,
+     $        otd_Lux, otd_Luy, otd_Luz,
+     $        vxp, vyp, vzp, nv, ldv)
+
+      !     --- Internal rotation matrix phi_rot ---
+      !     Skew-symmetric: phi_rot(i,j) = -phi_rot(j,i)
+      !     Extracted from Lr (same inner products, already computed).
          call rzero(phi_rot, lpert*lpert)
-      !
-      !     The rotation matrix Phi_ij must be skew-symmetric (but is otherwise
-      !     arbitrary
-      !
-      !       phi_rot(i,j) = -phi_rot(j,i)
-      !
-      !     e.g. to obtain an evolution that corresponds to continuously
-      !     performing Gram-Schmidt on the basis (i.e. turning otd_Lr into an upper
-      !     triangular matrix), set the rotation matrix to
-      !
-      !                  / -<Lu_j,u_i>     j < i
-      !       phi_rot = {   0              j = i
-      !                  \  <Lu_j,u_i>     j > i
-      !
          if (npert > 1) then
             do jpert = 1, npert
                do ipert = jpert + 1, npert
-                  phi_rot(ipert, jpert) = otd_inner_product(ipert, jpert, 2)
-                  phi_rot(jpert, ipert) = -phi_rot(ipert, jpert)
+                  phi_rot(ipert, jpert) =  otd_Lr(ipert, jpert)
+                  phi_rot(jpert, ipert) = -otd_Lr(ipert, jpert)
                end do
             end do
          end if
@@ -264,7 +260,7 @@
          call otd_sort_eigenvalues('otd_Ls') ! Sort lambdas
 
          if (nid == 0) then ! save to file
-            open (unit=457, file='otd_Ls.dat', position='append', status='unknown', form='formatted')
+            open (unit=457, file='otd_growth_rates.dat', position='append', status='unknown', form='formatted')
             write (fmtr, '("(",I0,"(E15.7,1X))")') npert + 1
             write (457, fmtr) time, (EIGR(i), i=1, npert)
             close (457)
@@ -282,7 +278,7 @@
          call copy(otd_Lr, tmp, lpert*lpert) ! Restore otd_Lr
 
          if (nid == 0) then ! save to file
-            open (unit=458, file='otd_Lr.dat', position='append', status='unknown', form='formatted')
+            open (unit=458, file='otd_eigenvalues.dat', position='append', status='unknown', form='formatted')
             write (fmtr, '("(",I0,"(E15.7,1X))")') npert + 1
             write (458, fmtr) time, (EIGR(i), i=1, npert)
             close (458)
@@ -505,7 +501,6 @@
       !call otd_classic_Gram_Schmidt    ! Classical Gram-Schmidt
             call otd_mod_Gram_Schmidt ! Modified Gram-Schmidt
          end if
-         call otd_compute_orthonormality_measures(N, O, 'post  ', .false.)
 
       end subroutine otd_orthonormalize_basis
 
@@ -569,7 +564,7 @@
             call copy(Lrp, otd_Lr, lpert*lpert)
             init = .true.
             if (nid == 0) then
-               open (unit=459, file='otd_Le.dat',
+               open (unit=459, file='otd_ftle.dat',
      $              status='replace', form='formatted')
                close (459)
             end if
@@ -609,9 +604,9 @@
       !  --- Shift history ---
          call copy(Lrp, otd_Lr, lpert*lpert)
 
-      !  --- Output ---
-         if (nid == 0) then
-            open (unit=459, file='otd_Le.dat',
+      !  --- Output (skip istep=0 where period=0 produces zeros) ---
+         if (nid == 0 .and. istep > 0) then
+            open (unit=459, file='otd_ftle.dat',
      $           position='append', status='unknown',
      $           form='formatted')
             write (fmte, '("(",I0,"(E15.7,1X))")') npert + 1
@@ -623,6 +618,13 @@
      $       mod(istep, otd_printStep) == 0) then
             write (6, *) '[OTD] FTLE', istep, 't=', time,
      $           pfrac, (FTLEv(i), i=1, npert)
+         end if
+
+      !  --- Convergence check (at printStep frequency) ---
+         if (istep > 0 .and.
+     $       mod(istep, otd_printStep) == 0
+     $       .and. otd_convTol > 0.0d0) then
+            call otd_check_FTLE_convergence
          end if
 
       contains
@@ -644,10 +646,86 @@
             do i = 1, npert
                LEintegral(i) = LEintegral(i)
      $              + 0.50d0*hstep*(Lrprev(i, i) + Lrcurr(i, i))
-               FTLEv(i) = LEintegral(i)/deltat
+               if (deltat > 0.0d0) then
+                  FTLEv(i) = LEintegral(i)/deltat
+               else
+                  FTLEv(i) = 0.0d0
+               end if
             end do
 
          end subroutine integrate_trap
+
+         subroutine otd_check_FTLE_convergence
+      !     Compute step-to-step FTLE residuals, write to file,
+      !     and stop early if all modes have converged.
+            implicit none
+            include 'SIZE'
+            include 'TSTEP'
+
+            real :: resid(lpert), rmax
+            integer :: i
+            character(len=20) :: fmtr
+
+      !     Compute absolute change per mode
+            rmax = 0.0d0
+            do i = 1, npert
+               resid(i) = abs(FTLEv(i) - FTLEv_prev(i))
+               if (resid(i) /= resid(i)) resid(i) = 0.0d0
+               if (resid(i) > rmax) rmax = resid(i)
+            end do
+
+      !     Write residual to file
+            if (nid == 0) then
+               open (unit=460, file='otd_residuals.dat',
+     $              position='append', status='unknown',
+     $              form='formatted')
+               write (fmtr,
+     $              '("(",I0,"(E15.7,1X))")')
+     $              npert + 1
+               write (460, fmtr)
+     $              time, (resid(i), i=1, npert)
+               close (460)
+            end if
+
+      !     Screen output
+            if (nid == 0) then
+               write (6, '(A,I7,1x,E14.7,A,E10.3)')
+     $              '  [OTD] FTLE resid ',
+     $              istep, time,
+     $              '  max|dFTLE|= ', rmax
+            end if
+
+      !     Check convergence
+            if (istep > otd_minSteps
+     $           .and. rmax < otd_convTol) then
+               if (nid == 0) then
+                  write (6, *) ' '
+                  write (6, *) '=============================='
+     $                 //'========================'
+                  write (6, '(A,E10.3,A,I7)')
+     $                 '  [OTD] FTLEs converged!'
+     $                 //' max|dFTLE|= ',
+     $                 rmax, '  at step ', istep
+                  write (6, '(A,E10.3)')
+     $                 '  [OTD] Tolerance = ',
+     $                 otd_convTol
+                  write (fmtr,
+     $                 '("(",I0,"(E15.7,1X))")')
+     $                 npert
+                  write (6, '(A)', ADVANCE='NO')
+     $                 '  [OTD] Final FTLEs: '
+                  write (6, fmtr)
+     $                 (FTLEv(i), i=1, npert)
+                  write (6, *) '=============================='
+     $                 //'========================'
+               end if
+               lastep = 1
+            end if
+
+      !     Update history
+            call copy(FTLEv_prev, FTLEv, lpert)
+
+         end subroutine otd_check_FTLE_convergence
 
       end subroutine otd_compute_FTLE
 
@@ -914,30 +992,93 @@
       end subroutine otd_mod_Gram_Schmidt
 
       !-----------------------------------------------------------------------
+      ! otd_gram_matrix — batch Gram matrix via BLAS dgemm + single gop
+      !
+      ! G(i,j) = 0.5 * sum_k( ax(k,i)*bx(k,j)
+      !                      + ay(k,i)*by(k,j)
+      !                      + az(k,i)*bz(k,j) )   (global)
+      !
+      ! ax/ay/az must be pre-weighted by the mass matrix bm1.
+      ! bx/by/bz are unweighted perturbation fields.
+      ! npts = nx1*ny1*nz1*nelv (active points), ldv = lx1*ly1*lz1*lelv
+      !-----------------------------------------------------------------------
+      subroutine otd_gram_matrix(G, ax, ay, az,
+     $     bx, by, bz, npts, ldv)
+         implicit none
+         include 'SIZE'
+         include 'INPUT' ! if3d
+
+         integer, intent(in) :: npts, ldv
+         real, intent(out) :: G(lpert, lpert)
+         real, intent(in), dimension(ldv, lpert) ::
+     $        ax, ay, az, bx, by, bz
+         real :: wk_gop(lpert*lpert)
+
+      !     X-component (beta=0 initialises G)
+         call dgemm('T', 'N', npert, npert, npts,
+     $        0.5d0, ax, ldv, bx, ldv,
+     $        0.0d0, G, lpert)
+      !     Y-component (accumulate)
+         call dgemm('T', 'N', npert, npert, npts,
+     $        0.5d0, ay, ldv, by, ldv,
+     $        1.0d0, G, lpert)
+      !     Z-component (3D only)
+         if (if3d) then
+            call dgemm('T', 'N', npert, npert, npts,
+     $           0.5d0, az, ldv, bz, ldv,
+     $           1.0d0, G, lpert)
+         end if
+
+      !     Single global reduction
+         call gop(G, wk_gop, '+  ', lpert*lpert)
+
+      end subroutine otd_gram_matrix
+
+      !-----------------------------------------------------------------------
       ! otd_compute_orthonormality_measures — normality and orthogonality
       !   diagnostics for the perturbation basis
       !-----------------------------------------------------------------------
-      subroutine otd_compute_orthonormality_measures(normality, orthogonality, info, flag)
+      subroutine otd_compute_orthonormality_measures(
+     $     normality, orthogonality, info, flag)
          implicit none
          include 'SIZE'
+         include 'INPUT'
+         include 'MASS'
+         include 'SOLN'
          include 'TSTEP'
 
          real, intent(out) :: normality, orthogonality
          logical, intent(in) :: flag
          character(len=6), intent(in) :: info
-         integer :: pert_i, pert_j
-         real :: inner_product_matrix(npert, npert)
+         integer :: pert_i, pert_j, nv, ldv, j
+         real :: G(lpert, lpert)
 
-         do pert_i = 1, npert
-            do pert_j = 1, npert
-               inner_product_matrix(pert_i, pert_j) = otd_inner_product(pert_i, pert_j, 1)
-            end do
+         nv = lx1*ly1*lz1*nelv
+         ldv = lx1*ly1*lz1*lelv
+
+      !     Weight vxp/vyp/vzp into diffx/diffy/diffz workspace
+         do j = 1, npert
+            call copy(diffx(1, j), vxp(1, j), nv)
+            call col2(diffx(1, j), bm1, nv)
+            call copy(diffy(1, j), vyp(1, j), nv)
+            call col2(diffy(1, j), bm1, nv)
          end do
+         if (if3d) then
+            do j = 1, npert
+               call copy(diffz(1, j), vzp(1, j), nv)
+               call col2(diffz(1, j), bm1, nv)
+            end do
+         end if
+
+      !     Gram matrix via shared helper
+         call otd_gram_matrix(G, diffx, diffy, diffz,
+     $        vxp, vyp, vzp, nv, ldv)
 
          if (nid == 0) then
             normality = 0.0d0
             do pert_i = 1, npert
-               normality = normality + inner_product_matrix(pert_i, pert_i)**2
+               normality = normality
+     $              + G(pert_i, pert_i)**2
             end do
             normality = sqrt(normality/npert)
 
@@ -945,14 +1086,19 @@
                orthogonality = 0.0d0
                do pert_i = 1, npert
                   do pert_j = pert_i + 1, npert
-                     orthogonality = orthogonality + inner_product_matrix(pert_i, pert_j)**2
+                     orthogonality = orthogonality
+     $                    + G(pert_i, pert_j)**2
                   end do
                end do
-               orthogonality = sqrt(2.0d0*orthogonality)/(npert*(npert - 1))
+               orthogonality =
+     $              sqrt(2.0d0*orthogonality)
+     $              /(npert*(npert - 1))
             end if
 
             if (flag) then
-               if (nid == 0) write (6, *) '  [OTD] NOout', istep, info, normality - 1.0d0, orthogonality
+               write (6, *) '  [OTD] NOout',
+     $              istep, info,
+     $              normality - 1.0d0, orthogonality
             end if
          end if
 
