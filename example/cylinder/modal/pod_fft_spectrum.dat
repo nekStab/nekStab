@@ -1,3 +1,16 @@
+# POD-FFT Spectral Analysis
+# nfft =     64, noverlap =     48, nblk =      3, nfreq =     33, dSt =   0.3125E-01
+# Peak frequencies (excluding DC):
+#   Mode  1: St =   0.1562, power =   0.7878E+01
+#   Mode  2: St =   0.1562, power =   0.7909E+01
+#   Mode  3: St =   0.3438, power =   0.1205E+00
+#   Mode  4: St =   0.3438, power =   0.1208E+00
+#   Mode  5: St =   0.5000, power =   0.6530E-01
+#   Mode  6: St =   0.5000, power =   0.6532E-01
+#   Mode  7: St =   0.6562, power =   0.3699E-02
+#   Mode  8: St =   0.6562, power =   0.3688E-02
+#   Mode  9: St =   0.8438, power =   0.5644E-03
+#   Mode 10: St =   0.8438, power =   0.5446E-03
 # St  P_mode  1  P_mode  2  P_mode  3  P_mode  4  P_mode  5  P_mode  6  P_mode  7  P_mode  8  P_mode  9  P_mode 10
   0.000000E+00  0.873929E-02  0.217608E-03  0.275932E-05  0.530676E-04  0.162198E-07  0.110760E-05  0.143903E-06  0.477067E-08  0.650783E-07  0.149457E-07
   0.312500E-01  0.686666E-02  0.573529E-03  0.783911E-05  0.461093E-04  0.326309E-07  0.247568E-05  0.125372E-06  0.411701E-07  0.531027E-07  0.274058E-07

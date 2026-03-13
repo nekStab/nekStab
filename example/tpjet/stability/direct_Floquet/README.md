@@ -21,5 +21,13 @@ nekbmpi tpjet N  # Run on N MPI ranks
 ## Expected Output
 Floquet multipliers at Re = 1900 (above Re_c ~ 1371).
 
+## Plot Notes
+- Current `plot.py` shows velocity magnitude; paper plots **vx** (axial velocity, streamwise)
+- Axisymmetric domain: axis labels should be z, r (not x, y); plot bounds: z ∈ [0, 40], r ∈ [0, 2]
+- Base flow: Blues cmap 0 → 5; Floquet mode: RdBu ±2
+- Leading Floquet multiplier μ ≈ −1 → period-doubling bifurcation at Re_c ≈ 1371
+- Full paper figure requires multi-Re sweep (Re = 1300, 1370, 1375, 2000)
+- Reference data: Shabani et al. (2017) — `shab_2000.dat`
+
 ## Reference
 Internal example.
