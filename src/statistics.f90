@@ -145,7 +145,6 @@ subroutine nekStab_avg(ifstatis)
    end if
    timel = time
 
-   return
 end subroutine nekStab_avg
 !-----------------------------------------------------------------------
 

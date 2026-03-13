@@ -20,8 +20,8 @@
       !-----------------------------------------------------------------------
 
    module nekstab_energy_budget
-         use nekstab_vectors
-         use nekstab_nek_bridge
+   use nekstab_vectors
+   use nekstab_nek_bridge
    use nekstab_io
    use nekstab_matvec
    use nekstab_eigensolvers
@@ -54,6 +54,8 @@
      use krylov_subspace
 
         !     ----- Arrays to store the instability mode real and imaginary parts.
+    !     Allocatable (heap) to avoid stack overflow on large 3D meshes;
+    !     each real(lv) array is ~(lx1^3 * nelv * 8) bytes.
     real, allocatable :: vx_dRe(:), vy_dRe(:), vz_dRe(:), t_dRe(:)
     real, allocatable :: vx_dIm(:), vy_dIm(:), vz_dIm(:), t_dIm(:)
     real, allocatable :: pr_dRe(:), pr_dIm(:)
@@ -172,7 +174,6 @@
    deallocate(pr_dRe, pr_dIm)
    deallocate(energy_budget, integrals)
 
-   return
    end subroutine stability_energy_budget
 
       !-----------------------------------------------------------------------
@@ -465,7 +466,6 @@
    if (allocated(uor)) deallocate(uor, vor, wor)
    if (allocated(tor)) deallocate(tor)
 
-   return
    end subroutine stability_energy_budget_floquet
 
       !-----------------------------------------------------------------------
@@ -521,11 +521,15 @@
     real, dimension(lv), intent(in) :: vx_dRe, vy_dRe, vz_dRe
    real, dimension(lv), intent(in) :: vx_dIm, vy_dIm, vz_dIm
 
-   real, dimension(lv) :: Laplacian_ax, Laplacian_ay, Laplacian_az
-   real, dimension(lv) :: Laplacian_bx, Laplacian_by, Laplacian_bz
+   real, allocatable, dimension(:) :: Laplacian_ax, Laplacian_ay, Laplacian_az
+   real, allocatable, dimension(:) :: Laplacian_bx, Laplacian_by, Laplacian_bz
 
    real, dimension(lv), intent(out) :: dissipation
-   real, dimension(lv) :: dummy
+   real, allocatable, dimension(:) :: dummy
+
+   allocate(Laplacian_ax(lv), Laplacian_ay(lv), Laplacian_az(lv))
+   allocate(Laplacian_bx(lv), Laplacian_by(lv), Laplacian_bz(lv))
+   allocate(dummy(lv))
 
       !     --> Compute Laplacians.
    call compute_laplacian(vx_dRe, Laplacian_ax)
@@ -550,7 +554,6 @@
 
    dissipation = 0.5*dissipation*param(2)/param(1)
 
-   return
    end subroutine compute_dissipation
 
       !-----------------------------------------------------------------------
@@ -575,8 +578,10 @@
     real, dimension(lv), intent(in) :: vx_dRe, vy_dRe, vz_dRe
    real, dimension(lv), intent(in) :: vx_dIm, vy_dIm, vz_dIm
    real, dimension(lv), intent(out) :: prod_x, prod_y, prod_z
-   real, dimension(lv) :: dcdx, dcdy, dcdz
+   real, allocatable, dimension(:) :: dcdx, dcdy, dcdz
    integer, intent(in) :: component
+
+   allocate(dcdx(lv), dcdy(lv), dcdz(lv))
 
    if (component == 1) then
    call gradm1(dcdx, dcdy, dcdz, ubase, nelv)
@@ -600,7 +605,6 @@
    prod_z = -0.5*(vz_dRe**2 + vz_dIm**2)*dcdz
    end if
 
-   return
    end subroutine compute_production
 
       !-----------------------------------------------------------------------
@@ -623,7 +627,6 @@
    call gradm1(dudx, dudy, dudz, u)
    call dsavg(dudx); call dsavg(dudy); call dsavg(dudz)
 
-   return
    end subroutine compute_gradients
 
       !-----------------------------------------------------------------------
@@ -640,11 +643,16 @@
     use krylov_subspace
 
     real, dimension(lv), intent(in) :: a
-   real, dimension(lv) :: dadx, dady, dadz
-   real, dimension(lv) :: d2adx2, d2ady2, d2adz2
+   real, allocatable, save, dimension(:) :: dadx, dady, dadz
+   real, allocatable, save, dimension(:) :: d2adx2, d2ady2, d2adz2
    real, dimension(lv), intent(out) :: Lap_a
-   real, dimension(lv) :: wrk1, wrk2
+   real, allocatable, save, dimension(:) :: wrk1, wrk2
 
+   if (.not. allocated(dadx)) then
+      allocate(dadx(lv), dady(lv), dadz(lv))
+      allocate(d2adx2(lv), d2ady2(lv), d2adz2(lv))
+      allocate(wrk1(lv), wrk2(lv))
+   end if
    call compute_gradients(a, dadx, dady, dadz)
    call compute_gradients(dadx, d2adx2, wrk1, wrk2)
    call compute_gradients(dady, wrk1, d2ady2, wrk2)
@@ -652,7 +660,6 @@
 
    Lap_a = d2adx2 + d2ady2 + d2adz2
 
-   return
    end subroutine compute_laplacian
       !-----------------------------------------------------------------------
 

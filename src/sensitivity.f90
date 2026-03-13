@@ -17,8 +17,8 @@
       !-----------------------------------------------------------------------
 
    module nekstab_sensitivity
-         use krylov_subspace
-         use nekstab_nek_bridge
+   use krylov_subspace
+   use nekstab_nek_bridge
    use nekstab_vectors
    use nekstab_io
    use nekstab_eigensolvers
@@ -64,6 +64,9 @@
 
     use krylov_subspace
 
+    !  All local arrays are allocatable (heap) to avoid stack overflow.
+    !  With fixed-size `real, dimension(lv)`, a 3D case can put several GB
+    !  on the stack per subroutine frame — exceeding OS stack limits.
     real, allocatable :: vx_dRe(:), vy_dRe(:), vz_dRe(:)
     real, allocatable :: vx_dIm(:), vy_dIm(:), vz_dIm(:)
 
@@ -122,7 +125,6 @@
    deallocate(vx_aIm, vy_aIm, vz_aIm)
    deallocate(wavemaker, work1, work2)
 
-   return
    end subroutine wave_maker
 
       !-----------------------------------------------------------------------
@@ -144,6 +146,7 @@
 
    use krylov_subspace
 
+   !  Allocatable (heap) — see wave_maker comment on stack overflow risk.
    real, allocatable :: vx_dRe(:), vy_dRe(:), vz_dRe(:)
    real, allocatable :: vx_dIm(:), vy_dIm(:), vz_dIm(:)
    real, allocatable :: vx_aRe(:), vy_aRe(:), vz_aRe(:)
@@ -337,7 +340,6 @@
    deallocate(vx_tr, vy_tr, vz_tr, vx_ti, vy_ti, vz_ti)
    deallocate(vx_pr, vy_pr, vz_pr, vx_pi, vy_pi, vz_pi)
 
-   return
    end subroutine bf_sensitivity
 
       !-----------------------------------------------------------------------
@@ -415,7 +417,6 @@
       !     --> Outpost solution.
    call outpost(sol%vx, sol%vy, sol%vz, sol%pr, sol%t, prefix)
 
-   return
    end subroutine ts_steady_force_sensitivity
 
       !-----------------------------------------------------------------------
@@ -457,7 +458,6 @@
     call opcopy(rhs%vx, rhs%vy, rhs%vz, vxp(1, 1), vyp(1, 1), vzp(1, 1))
     call zero_forcing()
 
-   return
    end subroutine initialize_rhs_ts_steady_force_sensitivity
 
       !-----------------------------------------------------------------------
@@ -472,6 +472,10 @@
    use krylov_subspace
 
       !     ----- Real part of the direct mode.
+   !     TODO(CHT): t_dRe etc. are dimension(lv) but norm/inner_product
+   !     expect (lt, ldimt). For CHT (lelt > lelv, lt > lv) this is a
+   !     stride mismatch that would corrupt inner products. Safe only
+   !     when lelt == lelv (no conjugate heat transfer).
    real, dimension(lv), intent(inout) :: vx_dRe, vy_dRe, vz_dRe
    real, dimension(lv), intent(inout) :: t_dRe
    real, dimension(lp), intent(inout) :: pr_dRe
@@ -491,14 +495,17 @@
    real, dimension(lv), intent(inout) :: t_aIm
    real, dimension(lp), intent(inout) :: pr_aIm
 
-      !     ----- Temporary arrays.
-   real, dimension(lv) :: wk1_vx, wk1_vy, wk1_vz, wk1_t
-   real, dimension(lp) :: wk1_pr
+      !     ----- Temporary arrays (allocatable to avoid stack overflow).
+   real, allocatable, dimension(:) :: wk1_vx, wk1_vy, wk1_vz, wk1_t
+   real, allocatable, dimension(:) :: wk1_pr
 
-   real, dimension(lv) :: wk2_vx, wk2_vy, wk2_vz, wk2_t
-   real, dimension(lp) :: wk2_pr
+   real, allocatable, dimension(:) :: wk2_vx, wk2_vy, wk2_vz, wk2_t
+   real, allocatable, dimension(:) :: wk2_pr
 
    real :: alpha, beta, gamma, delta
+
+   allocate(wk1_vx(lv), wk1_vy(lv), wk1_vz(lv), wk1_t(lv), wk1_pr(lp))
+   allocate(wk2_vx(lv), wk2_vy(lv), wk2_vz(lv), wk2_t(lv), wk2_pr(lp))
 
       !     --> Ensure that the direct mode is normalize to || u || = 1
    call norm(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)
@@ -548,7 +555,6 @@
    call nopcopy(vx_aRe, vy_aRe, vz_aRe, pr_aRe, t_aRe, wk1_vx, wk1_vy, wk1_vz, wk1_pr, wk1_t)
    call nopcopy(vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm, wk2_vx, wk2_vy, wk2_vz, wk2_pr, wk2_t)
 
-   return
    end subroutine biorthogonalize
 
       !-----------------------------------------------------------------------
@@ -575,15 +581,22 @@
 
    use krylov_subspace
 
-   real, dimension(lv) :: vx_bf, vy_bf, vz_bf
-   real, dimension(lv) :: fsrx, fsry, fsrz
-   real, dimension(lv) :: fsix, fsiy, fsiz
-   real, dimension(lv) :: work, workr, worki
-   real, dimension(lv) :: delta_lambda, delta_omega
+   !  Allocatable (heap) — see wave_maker comment on stack overflow risk.
+   real, allocatable, dimension(:) :: vx_bf, vy_bf, vz_bf
+   real, allocatable, dimension(:) :: fsrx, fsry, fsrz
+   real, allocatable, dimension(:) :: fsix, fsiy, fsiz
+   real, allocatable, dimension(:) :: work, workr, worki
+   real, allocatable, dimension(:) :: delta_lambda, delta_omega
 
       !     ----- Misc.
    character(len=80) :: filename
    real :: alpha
+
+   allocate(vx_bf(lv), vy_bf(lv), vz_bf(lv))
+   allocate(fsrx(lv), fsry(lv), fsrz(lv))
+   allocate(fsix(lv), fsiy(lv), fsiz(lv))
+   allocate(work(lv), workr(lv), worki(lv))
+   allocate(delta_lambda(lv), delta_omega(lv))
 
    alpha = 1.0d0
       !     load base flow
@@ -611,7 +624,6 @@
    ifvo = .true.; ifpo = .false.; ifto = .false.
    call outpost(delta_lambda, delta_omega, t, pr, t, 'dfr')
 
-   return
    end subroutine delta_forcing
 
       !-----------------------------------------------------------------------

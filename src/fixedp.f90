@@ -20,8 +20,8 @@
       !-----------------------------------------------------------------------
 
    module nekstab_fixedpoint
-         use krylov_subspace
-         use nekstab_nek_bridge
+   use krylov_subspace
+   use nekstab_nek_bridge
    use nekstab_vectors
    use nekstab_diagnostics
    use nekstab_newton
@@ -107,6 +107,10 @@
       
    else !t>T->compute forcing !f(t)= - \Lambda * 2*pi*St * ( u(t) - u(t-T) )
 
+   !  Circular buffer: ibuf cycles 1..norbit so old snapshots are overwritten
+   !  in-place.  This replaces an O(norbit) array shift that was the original
+   !  implementation.  ibuf advances BEFORE reading so that uor(:,ibuf) holds
+   !  the snapshot from exactly T seconds ago (the oldest in the ring).
    ibuf = mod(ibuf, norbit) + 1
    if (.not. allocated(do1)) allocate(do1(lv), do2(lv), do3(lv))
    call opsub3(do1, do2, do3, vx, vy, vz, uor(:, ibuf), vor(:, ibuf), wor(:, ibuf))
@@ -146,8 +150,7 @@
       
    end if ! else
    end if ! not tdf_init
-      
-   return
+
    end subroutine TDF
 
       !-----------------------------------------------------------------------
@@ -203,6 +206,9 @@
    call k_add2(oldQ, tempM)
    end if
       
+   !  SFD forcing is velocity-only: opadd2 (not nopadd2) to avoid polluting
+   !  temperature/pressure forcing.  The residual uses current vx (not oldV)
+   !  to avoid a one-timestep lag in the feedback signal.
    call opsub3(tempD%vx, tempD%vy, tempD%vz, vx, vy, vz, oldQ%vx, oldQ%vy, oldQ%vz)
    call opcmult(tempD%vx, tempD%vy, tempD%vz, gain)
    call opadd2(fcx, fcy, fcz, tempD%vx, tempD%vy, tempD%vz)
@@ -257,17 +263,18 @@
    subroutine BoostConv
     use krylov_subspace
        
-    real, dimension(lv) :: dvx, dvy, dvz
+    real, allocatable, save, dimension(:) :: dvx, dvy, dvz
    real :: residu, h1, semi, linf, rate, tol
    real, save :: residu0
    if (mod(istep, bst_skp) == 0) then
 
    if (.not. boostconv_init) then
+   allocate(dvx(lv), dvy(lv), dvz(lv))
    residu = 0.0d0; rate = 0.0d0; residu0 = 0.0d0
    open (unit=10, file='residu.dat')
    boostconv_init = .true.
    end if
-      
+
    call opsub3(dvx, dvy, dvz, vx, vy, vz, vxlag(1, 1, 1, 1, 1), vylag(1, 1, 1, 1, 1), vzlag(1, 1, 1, 1, 1)) !dv=v-vold
    call normvc(h1, semi, residu, linf, dvx, dvy, dvz); rate = (residu - residu0)/dt; residu0 = residu
    call boostconv_core(dvx, dvy, dvz)
@@ -292,8 +299,7 @@
    end if
       
    end if
-      
-   return
+
    end subroutine BoostConv
 
       !-----------------------------------------------------------------------
@@ -318,8 +324,8 @@
    real, allocatable, save, dimension(:, :) :: x_x, x_y, x_z, y_x, y_y, y_z
       
    real, dimension(lv), intent(inout) :: rbx, rby, rbz
-   real, dimension(lv) :: dumx, dumy, dumz
-   real, dimension(lv) :: fwrk
+   real, allocatable, save, dimension(:) :: dumx, dumy, dumz
+   real, allocatable, save, dimension(:) :: fwrk
    real, dimension(bst_snp) :: wk_gop
       
    real :: glsc3
@@ -331,6 +337,7 @@
    allocate (q_x(lv, bst_snp), q_y(lv, bst_snp), q_z(lv, bst_snp))
    allocate (x_x(lv, bst_snp), x_y(lv, bst_snp), x_z(lv, bst_snp))
    allocate (y_x(lv, bst_snp), y_y(lv, bst_snp), y_z(lv, bst_snp))
+   allocate (dumx(lv), dumy(lv), dumz(lv), fwrk(lv))
       
    if (nid == 0) write (6, *) 'Allocating BoostConv variables with:', bst_snp
    if (nid == 0) write (6, *) '                     skipping every:', bst_skp
@@ -348,7 +355,11 @@
    call opsub2(x_x(:, rot), x_y(:, rot), x_z(:, rot), y_x(:, rot), y_y(:, rot), y_z(:, rot))
    call qr_dec(dd, q_x, q_y, q_z, y_x, y_y, y_z)
       
-!           Batch projection: cc = Q^T * (bm1 * rb) via dgemv
+!           Batch projection: cc = Q^T * (bm1 * rb) via dgemv.
+!           LDA = lv (compile-time leading dimension of q_x/q_y/q_z),
+!           M = nv (runtime active rows). BLAS requires LDA >= M and
+!           the stride must match the array layout — using nv as LDA
+!           would be wrong since q_x is allocated as (lv, bst_snp).
    call copy(fwrk, rbx, nv)
    call col2(fwrk, bm1, nv)
    call dgemv('T', nv, bst_snp, 1.0d0, &
@@ -374,9 +385,8 @@
    call opadd2(rbx, rby, rbz, dumx, dumy, dumz)
    end do
    call opcopy(x_x(:, rot), x_y(:, rot), x_z(:, rot), rbx, rby, rbz)
-      
+
    end if
-   return
    end subroutine boostconv_core
 
       !-----------------------------------------------------------------------
@@ -476,7 +486,6 @@
    rr(j, j) = sqrt(norma)
 
    end do
-   return
    end subroutine qr_dec
 
       !-----------------------------------------------------------------------
@@ -507,7 +516,6 @@
    outp(j) = outp(j)/m(j, j)
    end if
    end do
-   return
    end subroutine linear_system
       !-----------------------------------------------------------------------
 

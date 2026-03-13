@@ -66,7 +66,6 @@ subroutine outpost_vort(ux, uy, uz, name)
       ifpo = ifpo_sav
    end if
 
-   return
 end subroutine outpost_vort
 
 !-----------------------------------------------------------------------
@@ -153,7 +152,6 @@ subroutine smooth_field(u)
    call filter_s0(u, 0.5, 1, 'field')
    ifield = ifld
 
-   return
 end subroutine smooth_field
 
 !-----------------------------------------------------------------------
@@ -211,7 +209,6 @@ subroutine nekStab_outpost
 
    end if
 
-   return
 end subroutine nekStab_outpost
 
 !-----------------------------------------------------------------------
@@ -226,7 +223,7 @@ subroutine nekStab_comment
    implicit none
    real, save :: eetime0, eetime1, eetime2, deltatime
     real telapsed, tpernondt, tmiss, ttime
-   integer ttime_stp
+   real ttime_stp
 
    !     if extrapolation is not OIFS -> ifchar = false
    !     if OIFS -> ifchar = .true. and CFL 2-5
@@ -378,7 +375,6 @@ subroutine nekStab_energy(px, py, pz, pt, fname, skip)
       end if
    end if
 
-   return
 end subroutine nekStab_energy
 
 !-----------------------------------------------------------------------
@@ -425,7 +421,6 @@ subroutine nekStab_enstrophy(px, py, pz, pt, fname, skip)
       end if
    end if
 
-   return
 end subroutine nekStab_enstrophy
 
 end module nekstab_diagnostics

@@ -74,7 +74,6 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
       end if
 
    end if
-   return
 end subroutine nekStab_forcing
 
 !-----------------------------------------------------------------------
@@ -111,7 +110,6 @@ subroutine nekStab_forcing_temp(temp, ix, iy, iz, ieg, m)
       end if
 
    end if
-   return
 end subroutine nekStab_forcing_temp
 
 !-----------------------------------------------------------------------
@@ -189,7 +187,6 @@ subroutine spng_init
    if (ifto) call copy(spng_vt(:, 1), t(1, 1, 1, 1, 1), n) !only DNS - temperature
    call spng_set ! -> compute spng_fn
 
-   return
 end subroutine spng_init
 
 !-----------------------------------------------------------------------
@@ -271,7 +268,6 @@ subroutine spng_set
    call outpost2(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, NDIM), spng_fn, spng_fn, 1, 'SPG')
    ifto = ltmp; ifpo = ltmp2
 
-   return
 end subroutine spng_set
 
 !-----------------------------------------------------------------------
