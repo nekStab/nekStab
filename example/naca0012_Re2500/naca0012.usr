@@ -1,4 +1,4 @@
-#include "experimental/meshsmoother.f"
+! #include "experimental/meshsmoother.f"
 ! -----------------------------------------------------------------------
       subroutine userchk
       include 'SIZE'
@@ -90,6 +90,6 @@
       call setbc(2,1,'O  ') ! set bcID 2 to outlet for field 1 (velocity)
       call setbc(3,1,'SYM') ! set bcID 3 to symm for field 1 (velocity)
       call setbc(4,1,'W  ') ! set bcID 4 to wall for field 1 (velocity)
-     ! call meshsmoother
+!      call meshsmoother
       end
 ! -----------------------------------------------------------------------

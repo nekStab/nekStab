@@ -395,6 +395,11 @@ FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 LD="$FC"  # Linker (Fortran compiler as main program is Fortran)
 
 # User-specified object files
+# IMPORTANT: Every new .o MUST appear in BOTH this USR list AND in
+# src/makefile_nekStab with its compilation rule + dependencies.
+#   Missing from USR  -> linker "undefined reference"
+#   Missing from makefile -> source never compiled (stale .o used)
+# After adding a new .o, delete obj/libnek5000.a to force re-archiving.
 USR="nek_vectors.o"
 USR+=" krylov_subspace.o"
 USR+=" krylov_inner_products.o"

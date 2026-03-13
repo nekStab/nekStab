@@ -122,6 +122,7 @@
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
+      include 'FST_PARAMS'
 
       integer e
       real xor,zor,dc,smooth_inflow,smooth_jet
@@ -485,6 +486,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      include 'FST_PARAMS'
 
       integer i,n
       real    dum(lx1*ly1*lz1*lelv),tot_deficit,xmin,xmax,delta_star
@@ -507,6 +509,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      include 'FST_PARAMS'
       integer itervp, i
       character*60 filename
       itervp = 0
@@ -526,6 +529,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      include 'FST_PARAMS'
       integer i,j,k,itervp
       character*60 filename
       itervp = 0
@@ -550,6 +554,7 @@
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
+      include 'FST_PARAMS'
       integer i,j,k,e,f,i0,i1,j0,j1,k0,k1
 
       npointBC = 0
@@ -583,6 +588,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      include 'FST_PARAMS'
       real y1(npointModes), y2(npointModes), y3(npointModes),
      $     y4(npointModes), y5(npointModes), y6(npointModes),
      $     uint1, uint2, uint3, uint4, uint5, uint6, yint
@@ -626,6 +632,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      include 'FST_PARAMS'
       real u_turbu(npointBC,3)
       integer i,j,k,e, ieg, index
       e = gllel (ieg)
@@ -650,6 +657,7 @@
       implicit none
       include 'SIZE'
       include 'TOTAL'
+      include 'FST_PARAMS'
       real u_turbu(npointBC,3), turbu_aux(npointBC,3)
       real kk, dkk, dkke, kk1, kk2, enspect1, enspect2, integral
       real ampli, enspect, auxcos(npointBC), auxsin(npointBC), aa, bb

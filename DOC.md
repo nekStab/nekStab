@@ -177,9 +177,25 @@ mks 1cyl
 The `mks` script:
 1. Detects available compilers
 2. Sets appropriate optimization flags
-3. Copies nekStab include files
-4. Invokes Nek5000's build system
-5. Compiles with parallel make (`-j4`)
+3. Copies `src/NEKSTAB` into the case-local `NEKSTAB.inc`
+4. Generates `makefile_usr.inc` that includes `src/makefile_nekStab`
+5. Invokes Nek5000's build system through `bin/makeneks`
+6. Compiles with parallel make (`-j4`)
+
+### Shell Completion
+
+Enable tab completion for case names and common `mks` targets/options:
+
+```bash
+source "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash"
+```
+
+For zsh, enable Bash completion first:
+
+```bash
+autoload -Uz bashcompinit && bashcompinit
+source "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash"
+```
 
 ### Compiler Selection
 
@@ -455,6 +471,7 @@ The following sections describe each mode in detail. The `userParam01` values ar
 | `2.2` | Newton for forced periodic orbits (`endTime` = 1/f) |
 
 Uses GMRES to solve the Newton system. The Jacobian-vector product is computed via finite differences of the time-stepper.
+Arnoldi orthogonalization uses CGS2 by default (`use_cgs = .true.`), with classic MGS + reorthogonalization still available for debugging or comparison.
 
 ### Mode 3: Eigenvalue Problems
 
@@ -517,7 +534,7 @@ Set these parameters in `nekStab_usrchk`:
 ```fortran
 subroutine nekStab_usrchk
    ! Required parameters
-   modal_prefix = '1cyl'      ! Snapshot file prefix (e.g., 1cyl0.f00001)
+   modal_prefix = '   '       ! Blank = use SESSION stem directly (e.g. 1cyl0.f*)
    modal_nsnap  = 100         ! Number of snapshots to load
    modal_dt     = 0.5         ! Time step between snapshots
    modal_nsave  = 10          ! Number of modes to save to disk
@@ -622,7 +639,7 @@ mks 1cyl && nekbmpi 1cyl 4
 cd ../modal
 ln -s ../dns/1cyl0.f* .     # Link snapshots
 # Edit 1cyl.usr nekStab_usrchk:
-#   modal_prefix = '1cyl'
+#   modal_prefix = '   '
 #   modal_nsnap = 100
 #   modal_dt = 0.5
 mks 1cyl && nekbmpi 1cyl 4
@@ -666,6 +683,7 @@ Set in `nekStab_usrchk` subroutine in your `.usr` file:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `k_dim` | 100 | Krylov subspace dimension (larger = more eigenvalues but more memory) |
+| `use_cgs` | .true. | Use CGS2 orthogonalization with batched BLAS/MPI reductions (`.false.` = classic MGS + reorthogonalization) |
 | `eigen_tol` | 1e-6 | Convergence tolerance for eigenvalues |
 | `schur_tgt` | 2 | Number of eigenvalues to lock per restart |
 | `schur_del` | 0.10 | Deflation threshold |
@@ -702,12 +720,19 @@ where L_x is the streamwise domain extent.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `findiff_order` | 1 | Finite difference order (1, 2, or 4) |
+| `findiff_order` | 2 | Finite difference order (1, 2, or 4) |
 | `epsilon_base` | 1e-6 | Perturbation scale ε for Jacobian approximation |
+| `ifdyntol` | .false. | Enable Eisenstat-Walker adaptive inner GMRES tolerances |
+| `ew_tol_cap` | 0.0 | Optional upper cap for EW tolerance (`0` = uncapped) |
 
-Newton iteration limits (30 Newton steps, 30 GMRES steps) are hardcoded in `newton_krylov.f90`. The GMRES tolerance adapts dynamically based on the Newton residual.
+Newton iteration limits (30 Newton steps, 30 GMRES restarts) are hardcoded in `newton_krylov.f90`.
 
-**Dynamic Tolerances**: The inner GMRES solve does not need high precision early in Newton iteration. Using dynamic tolerances (starting loose, tightening as residual decreases) reduces total computation time by 5-10×.
+**Adaptive GMRES forcing**: When `ifdyntol = .true.`, the Newton solver uses an Eisenstat-Walker type 2 forcing term with a moderate first iteration (`eta_initial = 0.5`), then tightens or relaxes the inner GMRES solve from the ratio of successive Newton residuals. The resulting squared tolerance is converted back to Nek5000's norm-based `param(21:22)` with `sqrt(tol)`, and the original `param(21:22)` values are restored after Newton exits.
+
+**Newton safeguards**:
+- Warn after 3 consecutive iterations without meaningful residual decrease
+- Abort if the residual exceeds `1e8` times the initial residual
+- Use `ew_tol_cap` in `.usr` only if a stiff case needs to limit overly loose inner solves
 
 **Performance Guidelines** (from parametric studies):
 
@@ -782,12 +807,14 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 | `otd_printStep` | 100 | Output interval for OTD modes |
 | `otd_gsStep` | 10 | Gram-Schmidt orthogonalization interval |
 | `otd_FTLEPeriod` | 0.0 | FTLE averaging window |
+| `otd_convTol` | 1e-6 | FTLE convergence tolerance |
+| `otd_minSteps` | 200 | Minimum number of steps before FTLE convergence checks |
 
 #### Modal Analysis (POD/DMD/SPOD)
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `modal_prefix` | `'dns'` | Snapshot file prefix (e.g., `'1cyl'` for `1cyl0.f00001`) |
+| `modal_prefix` | `'dns'` | 3-character snapshot file prefix; blank string uses the `SESSION` stem directly |
 | `modal_nsnap` | 100 | Number of snapshots to load |
 | `modal_dt` | 0.1 | Time step between snapshots |
 | `modal_nsave` | 10 | Number of modes to save to disk |
@@ -812,8 +839,12 @@ nekStab/
 │   │── main.f90                  # Entry point, mode dispatcher (bare subroutines)
 │   │── mode_config.f90           # Mode selection logic
 │   │── usr_wrappers.f90          # Bare subroutine wrappers for .usr compatibility
+│   │── nekstab_nek_bridge.f90    # Only module that includes Nek5000 headers
+│   │── NEKSTAB                   # Shared common blocks / runtime parameters
+│   │── makefile_nekStab          # Nek5000 build dependency rules
 │   │
 │   │── krylov_subspace.f90       # krylov_vector type, k_* operations
+│   │── krylov_inner_products.f90 # Batched Gram/projection kernels (BLAS + single gop)
 │   │── krylov_decomposition.f90  # Arnoldi factorization
 │   │── eigensolvers.f90          # Krylov-Schur algorithm
 │   │── lapack_wrapper.f90        # LAPACK wrappers (Schur, eig, etc.)
@@ -848,7 +879,9 @@ nekStab/
 │   └── IO.f90                    # File I/O routines
 │
 ├── bin/
-│   └── mks                       # Build script
+│   │── mks                       # User-facing build wrapper
+│   │── makeneks                  # Build backend invoked by mks
+│   └── mks-completion.bash       # Shell completion for mks/makeneks
 ├── example/                      # Test cases
 └── Nek5000/                      # Nek5000 solver
 ```
@@ -884,13 +917,15 @@ end type
 
 ## Module Reference
 
-All source files except `main.f90` and `usr_wrappers.f90` are wrapped in Fortran modules, providing explicit interfaces and compile-time type checking.
+Most computational source files are wrapped in Fortran modules, providing explicit interfaces and compile-time type checking. The exceptions are `main.f90` and `usr_wrappers.f90`, which remain bare entry-point wrappers for Nek5000, plus `src/NEKSTAB`, which remains the shared include/common-block definition consumed by the build.
 
 ### Module Map
 
 | Module | File | Key Public Interface |
 |--------|------|---------------------|
-| `krylov_subspace` | `krylov_subspace.f90` | `krylov_vector` type, `k_dot`, `k_norm`, `k_normalize`, `k_cmult`, `k_add2`, `k_add2s2`, `k_axpby`, `k_sub2`, `k_sub3`, `k_zero`, `k_copy`, `k_matmul`, `allocate_orbit`, `orbit_store`, `orbit_restore` |
+| `nekstab_nek_bridge` | `nekstab_nek_bridge.f90` | Nek5000 `SIZE`/`TOTAL`/`ADJOINT` bridge, `nekStab_dp` |
+| `krylov_subspace` | `krylov_subspace.f90` | `krylov_vector` type, `inner_product`, `norm`, `dnekclock`, `k_dot`, `k_norm`, `k_normalize`, `k_cmult`, `k_add2`, `k_add2s2`, `k_axpby`, `k_sub2`, `k_sub3`, `k_zero`, `k_copy`, `k_matmul`, `allocate_orbit`, `orbit_store`, `orbit_restore` |
+| `krylov_inner_products` | `krylov_inner_products.f90` | `k_gram_matrix`, `k_project`, `k_gram_complex` |
 | `nekstab_krylov_decomposition` | `krylov_decomposition.f90` | `arnoldi_factorization`, `update_hessenberg_matrix`, `arnoldi_checkpoint`, `log_transform` |
 | `nekstab_eigensolvers` | `eigensolvers.f90` | `krylov_schur`, `inner_product`, `norm`, `outpost_ks`, `schur_condensation`, `select_eigenvalues`, `ensure_conjugate_pairs` |
 | `nekstab_vectors` | `nek_vectors.f90` | `nopcopy`, `nopadd2`, `nopadd2s2`, `nopsub2`, `nopsub3`, `nopcmult`, `noprzero`, `nopaxpby`, `axpby`, `opadd3`, `opaddcol3` |
@@ -898,7 +933,7 @@ All source files except `main.f90` and `usr_wrappers.f90` are wrapped in Fortran
 | `nekstab_argsort` | `argsort.f90` | `argsort` |
 | `nekstab_matvec` | `matvec.f90` | `prepare_linearized_solver`, `matvec`, `forward_linearized_map`, `forward_finite_difference_map`, `adjoint_linearized_map` |
 | `nekstab_io` | `IO.f90` | `whereyouwant`, `read_eigenvalue`, `load_mode_pair`, `load_files`, `k_load` |
-| `nekstab_newton` | `newton_krylov.f90` | `newton_krylov`, `ts_gmres`, `initialize_gmres_vector`, `nonlinear_forward_map`, `set_nek5000_tolerances` |
+| `nekstab_newton` | `newton_krylov.f90` | `newton_krylov`, `ts_gmres`, `initialize_gmres_vector`, `nonlinear_forward_map`, `set_nek5000_tolerances`, `spec_tole` |
 | `nekstab_fixedpoint` | `fixedp.f90` | `sfd`, `BoostConv`, `tdf`, `boostconv_core`, `qr_dec`, `linear_system` |
 | `nekstab_sensitivity` | `sensitivity.f90` | `wave_maker`, `bf_sensitivity`, `ts_steady_force_sensitivity`, `biorthogonalize`, `delta_forcing`, `animate_mode_only`, `animate_mode`, `animate_mode_Floquet` |
 | `nekstab_energy_budget` | `energy_budget.f90` | `stability_energy_budget`, `stability_energy_budget_floquet`, `compute_velocity_gradient_tensor`, `compute_dissipation`, `compute_production` |
@@ -909,20 +944,23 @@ All source files except `main.f90` and `usr_wrappers.f90` are wrapped in Fortran
 | `nekstab_probes` | `probes.f90` | `pointcheck`, `zero_crossing` |
 | `nekstab_torque_mod` | `torque.f90` | `nekStab_torque`, `nekStab_define_obj` |
 | `nekstab_forcing_mod` | `forcing.f90` | `nekStab_forcing`, `nekStab_forcing_temp`, `activate_sponge`, `spng_init`, `spng_set`, `mth_stepf` |
-| `nekstab_mode_config` | `mode_config.f90` | `nekStab_resolve_mode`, `nekStab_mode_from_string`, `nekStab_mode_from_flags`, `nekStab_mode_from_uparam` |
+| `nekstab_mode_config` | `mode_config.f90` | `nekStab_resolve_mode`, `nekStab_mode_from_string`, `nekStab_mode_from_flags`, `nekStab_mode_from_uparam`, `nekStab_validate_mode`, `nekStab_sync_uparam` |
 | `nekstab_otd` | `otd.f90` | `otd`, `otd_construct_linear_operator`, `otd_compute_OTD_modes`, `otd_white_noise`, `otd_generate_forces`, `otd_orthonormalize_basis`, `otd_compute_FTLE` |
 | `nekstab_fst` | `fst.f90` | `fst`, `initWavenumbers`, `initModes`, `defineBC`, `interpolateModes`, `computeBC`, `computeTurbu` |
 | `nekstab_modal_analysis` | `modal_analysis.f90` | `modal_analysis`, `modal_compute_mean`, `modal_subtract_mean` |
 | `modal_pod` | `modal_pod.f90` | `pod_compute`, `pod_fft_spectrum`, `hamming_window` |
 | `modal_dmd` | `modal_dmd.f90` | `dmd_compute` |
 | `modal_spod` | `modal_spod.f90` | `spod_compute`, `k_dot_complex`, `spod_save_modes` |
-| `modal_spod_streaming` | `modal_spod_streaming.f90` | `spod_s_init`, `spod_s_cleanup`, `spod_streaming_batch` |
+| `spod_streaming_state` | `modal_spod_streaming.f90` | `spod_s_init`, `spod_s_cleanup`, streaming SPOD state arrays and metadata |
+| `modal_spod_streaming` | `modal_spod_streaming.f90` | `spod_streaming_batch` |
 | `fourier` | `fourier.f90` | `nek_fourier_decomposition`, `fourier_decomposition`, `fourier_reconstruction`, `fft_init`, `fft_cleanup`, `fft_r2c`, `fft_c2r`, `fft_frequencies` |
 | `fourier_fftw` | `fourier_fftw.f90` | `fft_init`, `fft_cleanup`, `fft_r2c`, `fft_c2r`, `fft_frequencies`, `fourier_decomposition`, `fourier_reconstruction` |
 
 ### Upgrading to v2.x
 
-In nekStab v2.x, all source files (except `main.f90`) are wrapped in Fortran modules. This provides **explicit interfaces** and **compile-time type checking**, catching argument mismatches that previously caused silent runtime errors.
+In nekStab v2.x, nearly all computational source files are wrapped in Fortran modules. This provides **explicit interfaces** and **compile-time type checking**, catching argument mismatches that previously caused silent runtime errors. The main exceptions are `main.f90` and `usr_wrappers.f90`, which remain bare entry points, and `src/NEKSTAB`, which remains the shared include/common-block definition.
+
+The bridge module `nekstab_nek_bridge.f90` is now the only nekStab source file that directly includes Nek5000 headers (`SIZE`, `TOTAL`, `ADJOINT`). Other modules use the bridge instead of repeating `include` statements.
 
 #### Changes for `.usr` files
 
@@ -934,7 +972,7 @@ c     BEFORE (bare subroutine, implicit interface):
      $                          qx, qy, qz, qp, qt)
 
 c     AFTER (module, explicit interface -- compiler checks types):
-      use nekstab_eigensolvers, only: inner_product
+      use krylov_subspace, only: inner_product
       call inner_product(alpha, px, py, pz, pp, pt,
      $                          qx, qy, qz, qp, qt)
 ```
@@ -943,7 +981,7 @@ c     AFTER (module, explicit interface -- compiler checks types):
 
 | Module | Provides |
 |--------|----------|
-| `use nekstab_eigensolvers` | `inner_product`, `norm` |
+| `use krylov_subspace` | `inner_product`, `norm`, `krylov_vector` |
 | `use nekstab_vectors` | `nopcopy`, `noprzero`, `nopadd2`, `nopcmult`, `nopaxpby` |
 | `use nekstab_io` | `whereyouwant`, `load_files`, `k_load` |
 | `use nekstab_diagnostics` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort` |
@@ -1027,6 +1065,11 @@ if (if3d) alpha = alpha + glsc3(p%vz, q%vz, bm1s, nv)
 if (ifto) alpha = alpha + glsc3(p%t(:,1), q%t(:,1), bm1s, nt)
 ! ... loop over passive scalars
 ```
+
+For dense Krylov algebra, `krylov_inner_products.f90` provides batched kernels:
+- `k_gram_matrix` builds Gram matrices with BLAS `dgemm` plus one global reduction
+- `k_project` computes Arnoldi/GMRES projections with BLAS `dgemv`
+- `k_gram_complex` assembles SPOD cross-spectral density blocks with a single packed reduction
 
 ---
 
@@ -1165,17 +1208,25 @@ genmap
 
 | Directory | Flow | Features Demonstrated |
 |-----------|------|----------------------|
-| `cylinder/` | Circular cylinder wake | DNS, Newton, stability, Floquet, wavemaker, OTD, POD/DMD/SPOD |
-| `back_fstep/` | Backward-facing step | Transient growth |
+| `cylinder/` | Circular cylinder wake | DNS, Newton, stability, Floquet, wavemaker, OTD, POD/DMD/SPOD, RANS |
+| `back_fstep/` | Backward-facing step | Newton base flow, transient growth |
 | `blasius/` | Flat plate boundary layer | TS waves |
 | `cubic_cavity/` | 3D cubic cavity | 3D stability |
+| `cubic_cavity_upo/` | 3D cubic cavity | Newton-GMRES periodic orbit |
 | `flip_flop/` | Side-by-side cylinders | Neimark-Sacker, Floquet |
 | `lid_driven/` | Lid-driven cavity | Confined flow bifurcations |
-| `naca0012/` | Airfoil at incidence | Bluff body stability |
-| `poiseuille/` | Channel flow | Canonical stability |
+| `naca0012/` | Airfoil at incidence | Newton base flow |
+| `naca0012_Re2500/` | Airfoil at incidence | Direct stability |
+| `parque/` | Wind farm / actuator disks | RANS wake simulation |
+| `poiseuille/` | Channel flow | Canonical stability / parity reference |
+| `poiseuille_OTD/` | Plane Poiseuille flow | OTD and FTLE tracking |
+| `poiseuille_RANS/` | Turbulent channel flow | RANS base flow and finite-difference stability |
 | `slot_FST/` | Flat plate + FST | Free-stream turbulence inflow |
 | `thersyphon/` | Buoyancy-driven convection | Pitchfork + Hopf bifurcations |
-| `torus/` | Toroidal pipe | Dean instability |
+| `torus/` | Toroidal pipe | Direct stability on baseline torus mesh |
+| `torus2/` | Toroidal pipe | Direct stability on variant mesh |
+| `torus_full/` | Toroidal pipe | Direct stability on full torus geometry |
+| `torus_pulsed/` | Toroidal pipe | Newton-GMRES forced periodic orbit |
 | `tpjet/` | Forced jet | Floquet period-doubling |
 
 ### Cylinder Workflow
@@ -1189,7 +1240,9 @@ example/cylinder/
 ├── stability/
 │   ├── direct/    # 3. Direct eigenmodes
 │   └── adjoint/   # 4. Adjoint eigenmodes
-└── postproc/      # 5. Wavemaker, sensitivity
+└── postproc/
+    ├── sensitivity_budget_wavemaker/
+    └── steady_force_sensitivity/
 ```
 
 ### Running a Complete Analysis
@@ -1221,16 +1274,56 @@ ln -s ../../baseflow/newton/BF_1cyl0.f00001 .
 mks 1cyl && nekbmpi 1cyl 4
 
 # 5. Wavemaker
-cd ../postproc
-ln -s ../direct/dRe* ../direct/dIm* .
-ln -s ../adjoint/aRe* ../adjoint/aIm* .
+cd ../../postproc/sensitivity_budget_wavemaker
+ln -s ../../stability/direct/dRe* ../../stability/direct/dIm* .
+ln -s ../../stability/adjoint/aRe* ../../stability/adjoint/aIm* .
 # Edit 1cyl.par: userParam01 = 4.2
 mks 1cyl && nekbmpi 1cyl 4
 ```
 
+### Plot Utilities
+
+Shared plotting helpers now live in `example/nekplot.py`. It provides reusable field I/O, interpolation, residual-history plots, spectra plots, and OTD diagnostics for the example scripts.
+
+To gather per-case `plot.png` outputs into one validation folder:
+
+```bash
+python example/collect_plots.py
+python example/collect_plots.py --generate
+python example/collect_plots.py --list
+```
+
+The collector writes consolidated figures to `validation/figures/`.
+
 ---
 
 ## Validation
+
+### Automated Validation Suite
+
+The repository now ships with `validate.py`, which combines literature-facing validation checks with broad example coverage.
+
+```bash
+./validate.py
+./validate.py --short
+./validate.py --check-only
+./validate.py --dry-run
+./validate.py --list
+./validate.py --nprocs 8 cylinder
+./validate.py --compile-all
+```
+
+Validation is split into two tiers:
+- **Short tier**: AMR-oriented literature checks for `cylinder`, `thermosyphon`, `flipflop_bf`, `flipflop_floquet`, `backstep`, `tpjet_bf`, and `tpjet_floquet`
+- **Full tier**: compile/run coverage across the cases currently listed in `validate.py`, spanning cylinder variants plus `back_fstep`, `thersyphon`, `flip_flop`, `tpjet`, `lid_driven`, `cubic_cavity`, `naca0012`, `poiseuille_OTD`, and `slot_FST`
+
+Operational behavior of `validate.py`:
+- Auto-detects CPU topology and prefers physical cores
+- Reads `SIZE` (`lelg`, `lpmin`) to choose a mesh-aware MPI rank count
+- Materializes missing prerequisites from `NEKSTAB_DATA_ROOT` when set, otherwise from the default `$HOME/.data_baptiste.nosync`, before deciding whether to skip a case
+- Skips a case only when required restart/base-flow files are missing both locally and in the configured external data roots
+- Treats missing post-run `copies_to` artifacts as a validation failure so downstream dependent cases are not left with silent gaps
+- `--compile-all` scans `example/`, ignores hidden placeholder `.usr` files and non-case directories, runs clean builds, writes `build.log`, and surfaces the first compiler error when a build fails
 
 The following validation cases are documented in [Frantz et al. (2023)](https://doi.org/10.1115/1.4056808). Each demonstrates a specific bifurcation type and has been verified against published literature.
 
@@ -1420,6 +1513,7 @@ where **A** is the linearized operator. nekStab never forms **A** explicitly. In
    ```
    AV_m = V_m H_m + h_{m+1,m} v_{m+1} e_m^T
    ```
+   Current default: CGS2 with reorthogonalization (`use_cgs = .true.`), which reduces MPI reductions relative to the older MGS path while keeping the fallback available.
 
 2. **Ritz extraction**: Eigenvalues of H_m approximate eigenvalues of A
 
@@ -1457,10 +1551,9 @@ nekStab uses GitHub Actions to automatically test compilation and execution acro
 
 | OS | Arch | Compiler | MPI | Status |
 |:---|:----:|:---------|:----|:------:|
-| Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI 4.1 | [![CI](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| Ubuntu 24.04 | x86_64 | gfortran 14 | MPICH 4.2 | — |
-| macOS 26 | ARM64 | gfortran 14 | OpenMPI 5.0 | — |
-| Ubuntu 24.04 | x86_64 | ifort 2024.2 | Intel MPI | — |
+| Ubuntu | x86_64 | gfortran 14 | OpenMPI | [![CI](https://github.com/nekStab/nekStab/actions/workflows/ci.yml/badge.svg)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu | x86_64 | gfortran 14 | MPICH | — |
+| macOS 26 | ARM64 | gfortran 14 | OpenMPI | — |
 | Ubuntu 24.04 | x86_64 | ifx 2025.2 | Intel MPI | — |
 
 > **Note:** All configurations share the same CI badge. Individual job status can be viewed on the [Actions page](https://github.com/nekStab/nekStab/actions/workflows/ci.yml).
@@ -1480,8 +1573,8 @@ cd example/cylinder/ci_test
 mks 1cyl                           # Compile
 echo "1cyl" > SESSION.NAME
 pwd >> SESSION.NAME                # Create session file
-mpirun -np 2 ./nek5000             # Run smoke test
-grep "FINISHED RUN\|End of time-step loop" logfile  # Verify completion
+mpirun -np 2 ./nek5000 > logfile 2>&1
+grep "run successful" logfile      # Verify completion
 ```
 
 ### Triggering CI
@@ -1532,6 +1625,8 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - Verify initial guess is reasonable (close to solution)
 - Try SFD first to get closer to steady state
 - Reduce `epsilon_base` for better Jacobian approximation
+- If `ifdyntol = .true.`, add `ew_tol_cap` for stiff cases that need a tighter inner-solve cap
+- Check whether the new stagnation warning or divergence guard is firing in the Newton log
 
 **Floquet modes incorrect**
 - Ensure `ifstorebase = .true.`

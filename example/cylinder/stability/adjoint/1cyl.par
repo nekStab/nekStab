@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3.2  # Adjoint
-userParam07 = 200 # k_dim
+userParam07 = 48 # k_dim (Arnoldi subspace)
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
 userParam10 = 1.7 # Sponge streght

@@ -4,7 +4,7 @@ stopAt = endTime
 endTime = 1
 
 userParam01 = 2   # Newton-GMRES for fixed points
-userParam07 = 128 #
+userParam07 = 30 # k_dim (GMRES subspace for Newton linear solve)
 
 dt = 0
 variableDt = yes

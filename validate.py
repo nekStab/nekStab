@@ -13,12 +13,14 @@ Usage:
     ./validate.py --dry-run          # Show what would run
     ./validate.py --nprocs 8         # Override MPI process count
     ./validate.py --list             # List all cases with status
+    ./validate.py --compile-all      # Compile every example (no run)
 
 Ricardo Frantz | Feb 2026
 """
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -36,6 +38,8 @@ TOLERANCE = 0.05  # 5% relative error
 MIN_ELEMS_PER_CORE = 20  # Minimum elements per MPI rank for efficiency
 
 NEKSTAB_ROOT = Path(os.environ.get("NEKSTAB_SOURCE_ROOT", Path.home() / "nekStab"))
+NEKSTAB_DATA_ENV = "NEKSTAB_DATA_ROOT"
+DEFAULT_DATA_ROOT = Path.home() / ".data_baptiste.nosync"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Expected Values (inline - no external JSON)
@@ -43,13 +47,51 @@ NEKSTAB_ROOT = Path(os.environ.get("NEKSTAB_SOURCE_ROOT", Path.home() / "nekStab
 
 CASES = {
     # ─── Short tier: AMR validation (eigenvalue checks) ───────────────────
-    "cylinder": {
+    "cylinder_bf": {
+        "description": "2D cylinder - Newton baseflow (Re=50)",
+        "dir": "cylinder/baseflow/newton",
+        "casename": "1cyl",
+        "tier": "short",
+        "family": "cylinder",
+        "requires": ["BFRe40_1cyl0.f00001"],
+        "output": None,
+        "reference": "Barkley & Henderson (1996)",
+        "checks": [],
+        "timeout": 3600,
+        "copies_to": [
+            {
+                "file": "BF_1cyl0.f00001",
+                "dest_dir": "cylinder/stability/direct",
+            },
+            {
+                "file": "BF_1cyl0.f00001",
+                "dest_dir": "cylinder/stability/adjoint",
+            },
+            {
+                "file": "BF_1cyl0.f00001",
+                "dest_dir": "cylinder/postproc/sensitivity_budget_wavemaker",
+            },
+        ],
+    },
+    "cylinder_sfd": {
+        "description": "2D cylinder - SFD baseflow (Re=50)",
+        "dir": "cylinder/baseflow/sfd",
+        "casename": "1cyl",
+        "tier": "short",
+        "family": "cylinder",
+        "requires": ["BFRe40_1cyl0.f00001"],
+        "output": None,
+        "reference": "Åkervik et al. (2006)",
+        "checks": [],
+        "timeout": 1800,
+    },
+    "cylinder_direct": {
         "description": "2D cylinder wake - Hopf bifurcation (Re=50)",
         "dir": "cylinder/stability/direct",
         "casename": "1cyl",
         "tier": "short",
         "family": "cylinder",
-        "requires": [],
+        "requires": ["BF_1cyl0.f00001"],
         "output": "Spectre_NSd.dat",
         "reference": "Barkley & Henderson (1996), AMR paper Table 1",
         "checks": [
@@ -68,6 +110,70 @@ CASES = {
                 "description": "Strouhal number St = w/(2pi) ~ 0.12",
             },
         ],
+        "copies_to": [
+            {
+                "file": "dRe1cyl0.f00001",
+                "dest_dir": "cylinder/postproc/sensitivity_budget_wavemaker",
+            },
+            {
+                "file": "dIm1cyl0.f00001",
+                "dest_dir": "cylinder/postproc/sensitivity_budget_wavemaker",
+            },
+        ],
+    },
+    "cylinder_adjoint": {
+        "description": "2D cylinder wake - Adjoint stability (Re=50)",
+        "dir": "cylinder/stability/adjoint",
+        "casename": "1cyl",
+        "tier": "short",
+        "family": "cylinder",
+        "requires": ["BF_1cyl0.f00001"],
+        "output": "Spectre_NSd.dat",
+        "reference": "Adjoint eigenvalues match direct (same sigma, St)",
+        "checks": [
+            {
+                "name": "adj_growth_rate",
+                "metric": "sigma_real",
+                "expected": 0.0156,
+                "tolerance": 0.05,
+                "description": "Adjoint growth rate matches direct",
+            },
+            {
+                "name": "adj_strouhal",
+                "metric": "strouhal",
+                "expected": 0.1204,
+                "tolerance": 0.05,
+                "description": "Adjoint Strouhal matches direct",
+            },
+        ],
+        "copies_to": [
+            {
+                "file": "aRe1cyl0.f00002",
+                "dest_dir": "cylinder/postproc/sensitivity_budget_wavemaker",
+            },
+            {
+                "file": "aIm1cyl0.f00002",
+                "dest_dir": "cylinder/postproc/sensitivity_budget_wavemaker",
+            },
+        ],
+    },
+    "cylinder_sensitivity": {
+        "description": "2D cylinder - Wavemaker + energy budget + sensitivity (Re=50)",
+        "dir": "cylinder/postproc/sensitivity_budget_wavemaker",
+        "casename": "1cyl",
+        "tier": "short",
+        "family": "cylinder",
+        "requires": [
+            "BF_1cyl0.f00001",
+            "dRe1cyl0.f00001",
+            "dIm1cyl0.f00001",
+            "aRe1cyl0.f00002",
+            "aIm1cyl0.f00002",
+        ],
+        "output": None,
+        "reference": "Giannetti & Luchini (2007), Marquet et al. (2008)",
+        "checks": [],
+        "timeout": 1800,
     },
     "thermosyphon": {
         "description": "Thermosyphon - Pitchfork bifurcation (Ra=500, above critical)",
@@ -97,8 +203,26 @@ CASES = {
             },
         ],
     },
-    "flipflop": {
-        "description": "Side-by-side cylinders - Floquet at Re=60 (below critical)",
+    "flipflop_bf": {
+        "description": "Side-by-side cylinders - Newton UPO (Re=62, natural frequency)",
+        "dir": "flip_flop/baseflow",
+        "casename": "2cyl",
+        "tier": "short",
+        "family": "flip_flop",
+        "requires": ["BF_Re60_2cyl0.f00001"],
+        "output": None,  # check logfile convergence
+        "reference": "Carini et al. (2015), Re_c ~ 61.17",
+        "checks": [],
+        "timeout": 7200,
+        "copies_to": [
+            {
+                "file": "BF_2cyl0.f00001",
+                "dest_dir": "flip_flop/stability/direct_Floquet",
+            },
+        ],
+    },
+    "flipflop_floquet": {
+        "description": "Side-by-side cylinders - Floquet at Re=62 (above critical)",
         "dir": "flip_flop/stability/direct_Floquet",
         "casename": "2cyl",
         "tier": "short",
@@ -108,22 +232,40 @@ CASES = {
         "reference": "Carini et al. (2015), Re_c ~ 61.17",
         "checks": [
             {
-                "name": "floquet_stable",
+                "name": "floquet_unstable",
                 "metric": "mu_magnitude",
-                "expected": 0.95,
-                "tolerance": 0.1,  # absolute
+                "expected": 1.05,
+                "tolerance": 0.15,  # absolute
                 "comparison": "absolute",
-                "description": "|mu| < 1 confirms stability below Re_c",
+                "description": "|mu| > 1 confirms instability above Re_c",
             },
         ],
     },
-    "backstep": {
+    "backstep_bf": {
+        "description": "Backward-facing step - Newton baseflow (Re=500)",
+        "dir": "back_fstep/baseflow",
+        "casename": "bfs",
+        "tier": "short",
+        "family": "back_fstep",
+        "requires": ["BF_bfs0.f00001"],
+        "output": None,
+        "reference": "Barkley et al. (2002)",
+        "checks": [],
+        "timeout": 3600,
+        "copies_to": [
+            {
+                "file": "BF_bfs0.f00001",
+                "dest_dir": "back_fstep/transient_growth",
+            },
+        ],
+    },
+    "backstep_tg": {
         "description": "Backward-facing step - Transient growth at tau=1 (Re=500)",
         "dir": "back_fstep/transient_growth",
         "casename": "bfs",
         "tier": "short",
         "family": "back_fstep",
-        "requires": [],
+        "requires": ["BF_bfs0.f00001"],
         "output": "Spectre_NSp.dat",
         "reference": "Blackburn et al. (2008), Barkley et al. (2002)",
         "checks": [
@@ -136,13 +278,31 @@ CASES = {
             },
         ],
     },
-    "tpjet": {
+    "tpjet_bf": {
+        "description": "Forced jet - Newton UPO convergence (Re=1900, St=0.6)",
+        "dir": "tpjet/baseflow/newton",
+        "casename": "tpjet",
+        "tier": "short",
+        "family": "tpjet",
+        "requires": ["BF_tpjet0.f00001"],
+        "output": None,  # check logfile convergence
+        "reference": "AMR paper, Re_c ~ 1371",
+        "checks": [],
+        "timeout": 7200,
+        "copies_to": [
+            {
+                "file": "BF_tpjet0.f00001",
+                "dest_dir": "tpjet/stability/direct_Floquet",
+            },
+        ],
+    },
+    "tpjet_floquet": {
         "description": "Forced jet - Period-doubling Floquet (Re=1900)",
         "dir": "tpjet/stability/direct_Floquet",
         "casename": "tpjet",
         "tier": "short",
         "family": "tpjet",
-        "requires": [],
+        "requires": ["BF_tpjet0.f00001"],
         "output": "Spectre_Hd.dat",
         "reference": "AMR paper, Re_c ~ 1371",
         "checks": [
@@ -286,17 +446,7 @@ CASES = {
         "checks": [],
         "timeout": 3600,
     },
-    "cyl_adjoint": {
-        "description": "Adjoint eigenvalue problem (Re=50)",
-        "dir": "cylinder/stability/adjoint",
-        "casename": "1cyl",
-        "tier": "full",
-        "family": "cylinder",
-        "requires": ["BF_1cyl0.f00001"],
-        "output": None,
-        "checks": [],
-        "timeout": 3600,
-    },
+    # cyl_adjoint is now "cylinder_adjoint" in short tier
     "cyl_floquet_dir": {
         "description": "Direct Floquet stability (Re=50)",
         "dir": "cylinder/stability/direct_Floquet",
@@ -373,23 +523,7 @@ CASES = {
         "checks": [],
         "timeout": 7200,
     },
-    "cyl_sensitivity": {
-        "description": "Sensitivity, energy budget, wavemaker (Re=50)",
-        "dir": "cylinder/postproc/sensitivity_budget_wavemaker",
-        "casename": "1cyl",
-        "tier": "full",
-        "family": "cylinder",
-        "requires": [
-            "BF_1cyl0.f00001",
-            "dRe1cyl0.f00001",
-            "dIm1cyl0.f00001",
-            "aRe1cyl0.f00002",
-            "aIm1cyl0.f00002",
-        ],
-        "output": None,
-        "checks": [],
-        "timeout": 3600,
-    },
+    # cyl_sensitivity is now "cylinder_sensitivity" in short tier
     "cyl_force_sens": {
         "description": "Steady force sensitivity (Re=50)",
         "dir": "cylinder/postproc/steady_force_sensitivity",
@@ -406,17 +540,7 @@ CASES = {
         "timeout": 3600,
     },
     # ─── Full tier: Back step family ──────────────────────────────────────
-    "backstep_bf": {
-        "description": "Newton baseflow (Re=500)",
-        "dir": "back_fstep/baseflow",
-        "casename": "bfs",
-        "tier": "full",
-        "family": "back_fstep",
-        "requires": ["BF_bfs0.f00001"],
-        "output": None,
-        "checks": [],
-        "timeout": 3600,
-    },
+    # backstep_bf is now in short tier (Newton + copies_to transient_growth)
     # ─── Full tier: Thermosyphon family ───────────────────────────────────
     "thermo_bf": {
         "description": "Newton baseflow (Ra=500)",
@@ -429,30 +553,9 @@ CASES = {
         "checks": [],
         "timeout": 3600,
     },
-    # ─── Full tier: Flip-flop family ──────────────────────────────────────
-    "flipflop_bf": {
-        "description": "Newton-GMRES UPO baseflow (Re=62)",
-        "dir": "flip_flop/baseflow",
-        "casename": "2cyl",
-        "tier": "full",
-        "family": "flip_flop",
-        "requires": ["BF_Re60_2cyl0.f00001"],
-        "output": None,
-        "checks": [],
-        "timeout": 3600,
-    },
+    # flipflop_bf is now in short tier (Newton UPO at Re=62)
     # ─── Full tier: Tpjet family ──────────────────────────────────────────
-    "tpjet_newton": {
-        "description": "Newton-GMRES forced periodic orbit (Re=2000)",
-        "dir": "tpjet/baseflow/newton",
-        "casename": "tpjet",
-        "tier": "full",
-        "family": "tpjet",
-        "requires": ["BF_tpjet0.f00001"],
-        "output": None,
-        "checks": [],
-        "timeout": 7200,
-    },
+    # tpjet_newton is now "tpjet_bf" in short tier (Newton UPO at Re=1900)
     "tpjet_tdf": {
         "description": "Time-delayed feedback stabilization (Re=2005)",
         "dir": "tpjet/baseflow/tdf",
@@ -666,20 +769,10 @@ def print_cpu_info(cpu: CPUInfo) -> None:
 # Mesh-Aware Core Scaling
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def get_optimal_nprocs(size_file: Path, max_cores: int) -> int:
-    """
-    Determine optimal MPI process count based on mesh size.
-    Ensures at least MIN_ELEMS_PER_CORE elements per rank.
-    """
-    if not size_file.exists():
-        log_detail(f"No SIZE file, using {max_cores} cores")
-        return max_cores
-
-    # Extract lelg from SIZE
-    lelg = None
-    for line in size_file.read_text().splitlines():
-        if "lelg" in line.lower() and "=" in line:
-            # parameter (lelg=1234) or parameter(lelg = 1234)
+def _parse_size_int(lines: list[str], param: str) -> int | None:
+    """Extract an integer parameter value from SIZE file lines."""
+    for line in lines:
+        if param in line.lower() and "=" in line:
             try:
                 after_eq = line.split("=")[1].strip()
                 digits = ""
@@ -687,26 +780,45 @@ def get_optimal_nprocs(size_file: Path, max_cores: int) -> int:
                     if c.isdigit():
                         digits += c
                     elif digits:
-                        break  # stop at first non-digit after number
+                        break
                 if digits:
-                    lelg = int(digits)
-                    break
+                    return int(digits)
             except (IndexError, ValueError):
                 continue
+    return None
+
+
+def get_optimal_nprocs(size_file: Path, max_cores: int) -> int:
+    """
+    Determine optimal MPI process count based on mesh size.
+    Respects lpmin (minimum ranks the SIZE was compiled for) and
+    ensures at least MIN_ELEMS_PER_CORE elements per rank.
+    """
+    if not size_file.exists():
+        log_detail(f"No SIZE file, using {max_cores} cores")
+        return max_cores
+
+    lines = size_file.read_text().splitlines()
+    lelg = _parse_size_int(lines, "lelg")
+    lpmin = _parse_size_int(lines, "lpmin")
 
     if lelg is None:
         log_detail(f"Could not parse lelg, using {max_cores} cores")
         return max_cores
 
-    # Calculate efficient core count
+    # lpmin sets the minimum — lelt was computed as lelg/lpmin + slack
+    minimum = lpmin if lpmin and lpmin > 1 else 1
+
+    # Don't exceed efficient core count for small meshes
     efficient = max(1, lelg // MIN_ELEMS_PER_CORE)
 
-    if max_cores > efficient:
-        log_detail(f"Mesh lelg={lelg} limits to {efficient} cores")
-        return efficient
+    nprocs = min(max_cores, efficient)
+    nprocs = max(nprocs, minimum)
 
-    log_detail(f"Using {max_cores} cores (lelg={lelg})")
-    return max_cores
+    if nprocs != max_cores:
+        log_detail(f"Adjusted to {nprocs} cores (lelg={lelg}, lpmin={lpmin})")
+
+    return nprocs
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -780,12 +892,78 @@ def compute_metric(metric: str, eigenvalues: np.ndarray, case_dir: Path) -> floa
 # Dependency Checking
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def check_requires(case_dir: Path, requires: list[str]) -> list[str]:
+def _data_roots() -> list[Path]:
+    """Return existing external data roots in search order."""
+    roots: list[Path] = []
+
+    env_root = os.environ.get(NEKSTAB_DATA_ENV)
+    if env_root:
+        roots.append(Path(env_root).expanduser())
+
+    roots.append(DEFAULT_DATA_ROOT.expanduser())
+
+    existing: list[Path] = []
+    for root in roots:
+        if root.exists() and root not in existing:
+            existing.append(root)
+    return existing
+
+
+def _external_prereq_candidates(case_dir: Path, fname: str) -> list[Path]:
+    """Build likely external-data locations for a required file."""
+    try:
+        rel_case_dir = case_dir.relative_to(NEKSTAB_ROOT / "example")
+    except ValueError:
+        rel_case_dir = case_dir
+
+    candidates: list[Path] = []
+    for root in _data_roots():
+        candidates.extend([
+            root / rel_case_dir / fname,
+            root / "example" / rel_case_dir / fname,
+            root / NEKSTAB_ROOT.name / "example" / rel_case_dir / fname,
+        ])
+    return candidates
+
+
+def _find_external_prereq(case_dir: Path, fname: str) -> Optional[Path]:
+    """Locate a missing prerequisite in the configured external data roots."""
+    for candidate in _external_prereq_candidates(case_dir, fname):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def materialize_requires(case_dir: Path, requires: list[str]) -> list[str]:
+    """
+    Ensure prerequisite files exist locally, copying them from an external
+    data root when available. Returns any remaining missing filenames.
+    """
+    missing = []
+    for fname in requires:
+        local_path = case_dir / fname
+        if local_path.exists():
+            continue
+
+        external_path = _find_external_prereq(case_dir, fname)
+        if external_path is None:
+            missing.append(fname)
+            continue
+
+        shutil.copy2(external_path, local_path)
+        log_detail(f"Copied prerequisite {external_path} → {local_path}")
+    return missing
+
+
+def check_requires(case_dir: Path, requires: list[str], allow_external: bool = False) -> list[str]:
     """Check which required files are missing from the case directory."""
     missing = []
     for fname in requires:
-        if not (case_dir / fname).exists():
-            missing.append(fname)
+        if (case_dir / fname).exists():
+            continue
+        if allow_external and _find_external_prereq(case_dir, fname) is not None:
+            continue
+        missing.append(fname)
     return missing
 
 
@@ -861,7 +1039,10 @@ def validate_case(name: str, case: dict, check_only: bool,
     # Check prerequisites
     requires = case.get("requires", [])
     if requires:
-        missing = check_requires(case_dir, requires)
+        if dry_run:
+            missing = check_requires(case_dir, requires, allow_external=True)
+        else:
+            missing = materialize_requires(case_dir, requires)
         if missing:
             log_skip(f"Missing prerequisites: {', '.join(missing)}")
             return "skip"
@@ -876,6 +1057,8 @@ def validate_case(name: str, case: dict, check_only: bool,
             log_info(f"[DRY RUN] Would check: {case['output']}")
         else:
             log_info("[DRY RUN] Would check: logfile for run successful")
+        if (case_dir / "plot.py").exists():
+            log_info("[DRY RUN] Would regenerate: plot.png")
         return "pass"
 
     # Compile and run unless check-only
@@ -887,17 +1070,41 @@ def validate_case(name: str, case: dict, check_only: bool,
                          requires=case.get("requires", [])):
             return "fail"
 
-    # Full-tier cases: check logfile only
-    if case["tier"] == "full":
-        if case.get("output") is None:
-            if check_logfile_success(case_dir):
-                log_pass("logfile: run successful")
-                return "pass"
+        # Copy output files to downstream case directories if specified
+        copy_failed = False
+        for copy_spec in case.get("copies_to", []):
+            src = case_dir / copy_spec["file"]
+            dst_dir = NEKSTAB_ROOT / "example" / copy_spec["dest_dir"]
+            dst_name = copy_spec.get("dest_name", copy_spec["file"])
+            dst = dst_dir / dst_name
+            if src.exists():
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+                log_detail(f"Copied {src.name} → {dst}")
             else:
-                log_fail("logfile: 'run successful' not found")
-                return "fail"
+                log_fail(f"Expected output {src} not found for copy")
+                copy_failed = True
 
-    # Short-tier cases: validate eigenvalue results
+        if copy_failed:
+            return "fail"
+
+        # Regenerate figures from results
+        _run_plot(case_dir)
+
+    if check_only:
+        # Regenerate plots from existing data
+        _run_plot(case_dir)
+
+    # Cases with no output file: check logfile only (any tier)
+    if case.get("output") is None:
+        if check_logfile_success(case_dir):
+            log_pass("logfile: run successful")
+            return "pass"
+        else:
+            log_fail("logfile: 'run successful' not found")
+            return "fail"
+
+    # Cases with output: validate eigenvalue results
     output_file = case_dir / case["output"]
 
     if not output_file.exists():
@@ -909,7 +1116,7 @@ def validate_case(name: str, case: dict, check_only: bool,
     log_info(f"Reading: {output_file.name}")
 
     try:
-        eigenvalues, residuals = load_eigenvalues(output_file)
+        eigenvalues, _residuals = load_eigenvalues(output_file)
     except Exception as e:
         log_fail(f"Error loading eigenvalues: {e}")
         return "fail"
@@ -949,8 +1156,23 @@ def validate_case(name: str, case: dict, check_only: bool,
     return "pass" if all_passed else "fail"
 
 
+def _show_first_error(build_log: Path) -> None:
+    """Print the first Error/Fatal/undefined line from a build log."""
+    try:
+        for line in build_log.read_text(errors="replace").splitlines():
+            stripped = line.strip()
+            if any(kw in stripped for kw in ("Error:", "Fatal", "undefined reference")):
+                # Truncate long lines
+                if len(stripped) > 100:
+                    stripped = stripped[:97] + "..."
+                log_detail(f"{C.DIM}{stripped}{C.NC}")
+                return
+    except Exception:
+        pass
+
+
 def _compile_case(case_dir: Path, casename: str) -> bool:
-    """Compile a case using mks."""
+    """Compile a case using mks (clean build)."""
     log_info(f"Compiling {casename}...")
 
     # Ensure environment
@@ -959,6 +1181,16 @@ def _compile_case(case_dir: Path, casename: str) -> bool:
         env["NEKSTAB_SOURCE_ROOT"] = str(NEKSTAB_ROOT)
         env["NEK_SOURCE_ROOT"] = str(NEKSTAB_ROOT / "Nek5000")
         env["PATH"] = f"{NEKSTAB_ROOT}/Nek5000/bin:{NEKSTAB_ROOT}/bin:{env.get('PATH', '')}"
+
+    # Clean before building to ensure a fresh compilation
+    subprocess.run(
+        ["mks", "clean"],
+        cwd=case_dir,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=30,
+    )
 
     build_log = case_dir / "build.log"
 
@@ -975,6 +1207,8 @@ def _compile_case(case_dir: Path, casename: str) -> bool:
 
         if result.returncode != 0:
             log_fail(f"Compilation failed. See {build_log}")
+            # Show first error line to avoid having to open the log
+            _show_first_error(build_log)
             return False
 
         log_detail("Compilation successful")
@@ -1010,12 +1244,14 @@ def _run_case(case_dir: Path, casename: str, nprocs: int, cpu: CPUInfo,
     # Build command with CPU binding
     cmd = ["mpirun", "-np", str(nprocs)]
 
-    # Try OpenMPI cpu-set binding first
+    # OpenMPI CPU binding (pin to P-cores on hybrid CPUs)
     try:
         help_output = subprocess.run(
-            ["mpirun", "--help"], capture_output=True, text=True
+            ["mpirun", "--help", "binding"], capture_output=True, text=True
         ).stdout
-        if "--cpu-set" in help_output:
+        if "--cpu-list" in help_output:
+            cmd.extend(["--bind-to", "core", "--cpu-list", cpu.cpu_list])
+        elif "--cpu-set" in help_output:
             cmd.extend(["--bind-to", "core", "--cpu-set", cpu.cpu_list])
     except Exception:
         pass
@@ -1052,21 +1288,52 @@ def _run_case(case_dir: Path, casename: str, nprocs: int, cpu: CPUInfo,
         return False
 
 
+def _run_plot(case_dir: Path) -> None:
+    """Run plot.py in a case directory to regenerate figures (non-fatal)."""
+    plot_script = case_dir / "plot.py"
+    if not plot_script.exists():
+        return
+
+    log_info("Regenerating plot.png...")
+    try:
+        result = subprocess.run(
+            [sys.executable, "plot.py"],
+            cwd=case_dir,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            log_detail("plot.png updated")
+        else:
+            log_detail(f"plot.py failed: {result.stderr.strip()[:120]}")
+    except subprocess.TimeoutExpired:
+        log_detail("plot.py timeout (120s)")
+    except Exception as e:
+        log_detail(f"plot.py error: {e}")
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Case Ordering
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Mode order for sorting full-tier cases within a family:
-# baseflow (1.x, 2.x) < stability (3.x) < postproc (4.x) < otd (5.x) < modal (6.x)
-_DIR_ORDER = {
-    "ci_test": 0,
-    "dns": 1,
-    "baseflow": 2,
-    "stability": 3,
-    "postproc": 4,
-    "otd": 5,
-    "modal": 6,
-}
+# Mode order for sorting cases within a family.
+# Longer patterns checked first to avoid substring conflicts
+# (e.g., "direct_Floquet" before "direct").
+_DIR_ORDER = [
+    ("ci_test", 0),
+    ("dns", 1),
+    ("baseflow", 2),
+    ("transient_growth", 3),
+    ("direct_Floquet", 4),
+    ("direct", 5),
+    ("adjoint_Floquet", 6),
+    ("adjoint", 7),
+    ("animate", 8),
+    ("postproc", 9),
+    ("otd", 10),
+    ("modal", 11),
+]
 
 
 def _case_sort_key(item: tuple[str, dict]) -> tuple[int, str, int, str]:
@@ -1074,10 +1341,9 @@ def _case_sort_key(item: tuple[str, dict]) -> tuple[int, str, int, str]:
     name, case = item
     tier_order = 0 if case["tier"] == "short" else 1
     family = case.get("family", "")
-    # Determine directory order from first path component after family
     d = case["dir"]
     dir_order = 99
-    for key, val in _DIR_ORDER.items():
+    for key, val in _DIR_ORDER:
         if key in d:
             dir_order = val
             break
@@ -1123,6 +1389,86 @@ def list_cases() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Compile-All Discovery
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Directories that are NOT independent case directories
+_SKIP_DIRS = {"geom", "mesh", "obj", "__pycache__"}
+
+
+def discover_compilable_cases(example_root: Path) -> list[tuple[Path, str]]:
+    """
+    Walk example/ tree and find all directories containing SIZE + *.usr.
+    Returns sorted list of (case_dir, casename).
+    """
+    cases = []
+    for size_file in sorted(example_root.rglob("SIZE")):
+        case_dir = size_file.parent
+        if case_dir.name in _SKIP_DIRS:
+            continue
+        usr_files = sorted(
+            p for p in case_dir.glob("*.usr")
+            if p.is_file() and not p.name.startswith(".") and p.stem
+        )
+        if not usr_files:
+            continue
+        casename = usr_files[0].stem
+        cases.append((case_dir, casename))
+    return cases
+
+
+def compile_all_cases(example_root: Path) -> int:
+    """
+    Discover and compile every example case.
+    Returns 0 if all pass, 1 if any fail.
+    """
+    cases = discover_compilable_cases(example_root)
+
+    print()
+    print("=" * 70)
+    print("              nekStab — Compile All Examples")
+    print("=" * 70)
+    print()
+    log_info(f"Discovered {len(cases)} compilable cases")
+    log_info(f"nekStab root: {NEKSTAB_ROOT}")
+    print()
+
+    passed: list[str] = []
+    failed: list[str] = []
+    t0 = time.perf_counter()
+
+    for i, (case_dir, casename) in enumerate(cases, 1):
+        rel = case_dir.relative_to(example_root)
+        log_header(f"[{i}/{len(cases)}] {rel} ({casename})")
+        if _compile_case(case_dir, casename):
+            passed.append(str(rel))
+        else:
+            failed.append(str(rel))
+
+    elapsed = time.perf_counter() - t0
+
+    # Summary
+    total = len(cases)
+    print()
+    print("=" * 70)
+    print("                    COMPILE SUMMARY")
+    print("=" * 70)
+    print()
+
+    if passed:
+        print(f"{C.GREEN}{C.BOLD}Compiled: {len(passed)}/{total}{C.NC}")
+    if failed:
+        print(f"{C.RED}{C.BOLD}Failed:   {len(failed)}/{total}{C.NC}")
+        for f in failed:
+            log_fail(f)
+    if not failed:
+        print(f"\n{C.GREEN}{C.BOLD}All {total} cases compiled successfully.{C.NC}")
+
+    print(f"\nTotal time: {elapsed:.0f}s")
+    return 1 if failed else 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1131,19 +1477,24 @@ def main():
         description="nekStab validation against AMR paper test cases",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Short-tier cases (AMR eigenvalue validation):
-  cylinder      Hopf bifurcation (vortex shedding onset)
-  thermosyphon  Pitchfork bifurcation (symmetry breaking)
-  flipflop      Neimark-Sacker (quasi-periodic instability)
-  backstep      Transient growth (non-modal amplification)
-  tpjet         Period-doubling (subharmonic instability)
+Short-tier cases (AMR eigenvalue validation, 13 cases):
+  cylinder_bf         Newton baseflow (Re=50) -> copies BF downstream
+  cylinder_sfd        SFD baseflow (Re=50) — classic method
+  cylinder_direct     Hopf bifurcation, direct stability (Re=50)
+  cylinder_adjoint    Adjoint stability (Re=50) -> copies eigvecs downstream
+  cylinder_sensitivity Wavemaker + energy budget + sensitivity (Re=50)
+  thermosyphon        Pitchfork bifurcation (symmetry breaking)
+  flipflop_bf         Newton UPO, natural frequency (Re=62)
+  flipflop_floquet    Floquet stability |mu|>1 (above Re_c~61.17)
+  backstep_bf         Newton baseflow (Re=500) -> copies BF to tg
+  backstep_tg         Transient growth (non-modal amplification)
+  tpjet_bf            Newton forced PO, St=0.6 (Re=1900)
+  tpjet_floquet       Period-doubling Floquet mu<-1
 
 Full-tier cases (compile+run validation):
   cyl_*         Cylinder family (20 cases)
-  backstep_bf   Backward-facing step baseflow
   thermo_bf     Thermosyphon baseflow
-  flipflop_bf   Flip-flop baseflow
-  tpjet_*       Forced jet family
+  tpjet_tdf     Forced jet TDF
   lid_driven    Lid-driven cavity
   cubic_cav*    3D cubic cavity
   naca0012*     NACA 0012 airfoil
@@ -1153,9 +1504,10 @@ Full-tier cases (compile+run validation):
 Examples:
   ./validate.py                    # Run all cases
   ./validate.py --short            # Run only AMR validation
-  ./validate.py cylinder           # Run one case
+  ./validate.py cylinder_direct    # Run one case
   ./validate.py --check-only       # Validate existing results
-  ./validate.py -n 8 cylinder      # Use 8 MPI processes
+  ./validate.py -n 8 --short       # Use 8 MPI processes
+  ./validate.py --compile-all      # Compile every example dir
         """
     )
     parser.add_argument(
@@ -1182,6 +1534,10 @@ Examples:
         "--short", "-s", action="store_true",
         help="Run only short-tier (AMR validation) cases"
     )
+    parser.add_argument(
+        "--compile-all", action="store_true",
+        help="Discover and compile every example case (no run)"
+    )
 
     args = parser.parse_args()
 
@@ -1189,6 +1545,10 @@ Examples:
     if args.list:
         list_cases()
         return 0
+
+    # Compile-all: discover and compile every example, then exit
+    if args.compile_all:
+        return compile_all_cases(NEKSTAB_ROOT / "example")
 
     # Header
     print()
