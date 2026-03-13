@@ -1,0 +1,64 @@
+\markdownRendererDocumentBegin
+\markdownRendererSectionBegin
+\markdownRendererHeadingOne{Preparing the computational environment}\markdownRendererInterblockSeparator
+{}\markdownRendererSectionBegin
+\markdownRendererHeadingTwo{macOS}\markdownRendererInterblockSeparator
+{}To install \markdownRendererLink{brew}{https://brew.sh/}{https://brew.sh/}{}, just paste the installation command in a new terminal shell. For changes to take effect, close and re-open your current shell. Then ensure you have the latest version of XCode Command Line Tools. \textbf{Do not download} the full 20 GB XCode from the App Store!\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/35a726582b5a5855136abd7fba620a83.verbatim}{bash}\markdownRendererInterblockSeparator
+{}If you have problems with XCode follow \markdownRendererLink{this steps}{https://gist.github.com/Justintime50/2349ff5e62555aa097acbf519bbc27af}{https://gist.github.com/Justintime50/2349ff5e62555aa097acbf519bbc27af}{} update and install packages:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/ad519427d7e2a4b40b5a5b30547c6aaa.verbatim}{bash}\markdownRendererInterblockSeparator
+{}if you have problems try:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/a795f7f2be8c0ebdb2194ce7c73165df.verbatim}{bash}\markdownRendererInterblockSeparator
+{}or eventually replace the package \texttt{mpich} by \texttt{open-mpi}. To have python3 do:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/1816af350195e667d9736d1a26f72c40.verbatim}{bash}\markdownRendererInterblockSeparator
+{}
+\markdownRendererSectionEnd \markdownRendererSectionBegin
+\markdownRendererHeadingTwo{Ubuntu (including Windows Subsystem for Linux)}\markdownRendererInterblockSeparator
+{}In Ubuntu, instead of using brew, update and install packages using apt:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/98f198adfa324970a772172fff11a44e.verbatim}{bash}\markdownRendererInterblockSeparator
+{}Note that using \textit{mpich} in WSL does not seem to work.\markdownRendererInterblockSeparator
+{}Also, to be able to use python to plot the scripts you need:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/b941ac9f2e2b86622cfbf80916a87243.verbatim}{bash}\markdownRendererInterblockSeparator
+{}you also should add to your \textit{.bashrc}:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/5759f83e9830f3e6e5f1c4d1d2980d6f.verbatim}{bash}\markdownRendererInterblockSeparator
+{}
+\markdownRendererSectionEnd \markdownRendererSectionBegin
+\markdownRendererHeadingTwo{Conda (experimental)}\markdownRendererInterblockSeparator
+{}Install Anaconda from \url{https://www.anaconda.com/}, then create and activate a new environment:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/5c2fd0de21b8bbbaa437bc722fab74fb.verbatim}{bash}\markdownRendererInterblockSeparator
+{}Install packages using \textit{conda}:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/55dd0830590b486155903323c5b20386.verbatim}{bash}\markdownRendererInterblockSeparator
+{}or eventually replace the package \texttt{openmpi} by \texttt{mpich}.\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/d2644b9a26d7c037fb2cc371c631ed1f.verbatim}{bash}\markdownRendererInterblockSeparator
+{}You can later remove the environment:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/50ca2b8c0183d70beae2be8a460bfd85.verbatim}{bash}\markdownRendererInterblockSeparator
+{}\newpage\markdownRendererInterblockSeparator
+{}
+\markdownRendererSectionEnd 
+\markdownRendererSectionEnd \markdownRendererSectionBegin
+\markdownRendererHeadingOne{Cloning the repositories from GitHub}\markdownRendererInterblockSeparator
+{}It is recommended you clone the repositories directly to your HOME folder. To make it faster we can copy only the latest revision. From a terminal window:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/7a61412b552e4d4db16fbdafcfd27702.verbatim}{bash}\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/b9b99aef14534c071fc1517e089d2a8a.verbatim}{bash}\markdownRendererInterblockSeparator
+{}If you are not able to clone and have to manually download the compressed repositories, you might encounter permission issues that can be fixed with:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/c36803497ba0887bad1a009c047d73cd.verbatim}{bash}\markdownRendererInterblockSeparator
+{}\markdownRendererSectionBegin
+\markdownRendererHeadingTwo{Adding the sources}\markdownRendererInterblockSeparator
+{}To automatically add the sources to your \textit{.bashrc} (or equivalent), just run it (one time, une fois, uma vez!):\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/b0e799c181ba1b0b420707c9cf5f7f9e.verbatim}{bash}\markdownRendererInterblockSeparator
+{}Close the terminal and re-open! \newpage\markdownRendererInterblockSeparator
+{}
+\markdownRendererSectionEnd 
+\markdownRendererSectionEnd \markdownRendererSectionBegin
+\markdownRendererHeadingOne{Compiling the case}\markdownRendererInterblockSeparator
+{}Navigate to to the tutorial folder and compile the code:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/e0aabc3dfc22400743f96773f02eb891.verbatim}{bash}\markdownRendererInterblockSeparator
+{}the code might ask: \textit{do you want to rebuild all 3rd party dependencies too?} press \textit{Y} or \textit{Enter}. The compiler works in parallel and should take a few seconds to complete:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/8b7abe6956f19c6917aabb1942f5abaf.verbatim}{bash}\markdownRendererInterblockSeparator
+{}You are good to proceed to the next steps!\markdownRendererInterblockSeparator
+{}\markdownRendererSectionBegin
+\markdownRendererHeadingTwo{Troubleshooting}\markdownRendererInterblockSeparator
+{}If you receive the error \textbf{command not found: nekbmpi}, just do:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/7a8580e5b0386d25c1f9229918ba54a4.verbatim}{bash}
+\markdownRendererSectionEnd 
+\markdownRendererSectionEnd \markdownRendererDocumentEnd

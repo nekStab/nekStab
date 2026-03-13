@@ -1,0 +1,3 @@
+cd ~/nekStab/tutorials/cylinder
+source path.sh
+mks 1cyl

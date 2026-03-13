@@ -1,0 +1,19 @@
+\markdownRendererDocumentBegin
+Start by editing \texttt{1cyl.par}, and setting an initial condition (\textit{startFrom}), integration time (\textit{endTime}) and \textit{userParam} to Newton-Krylov mode:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/65310b47201a6803340896131456fa63.verbatim}{bash}\markdownRendererInterblockSeparator
+{}You can change (absolute) solver tolerances, to obtain more precise solutions:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/86523290e0665b4cd7fe9015f10df695.verbatim}{bash}\markdownRendererInterblockSeparator
+{}Here we consider the minimum value to reduce the computational cost, but you can choose between $10^{-6}$ and $10^{-11}$. nekStab will automatically set as target for the base flow computation the larger value between the two solvers.\markdownRendererInterblockSeparator
+{}The Reynolds number is specified in the end of \texttt{1cyl.par}, note that it should be entered as a \textbf{negative value} for Nek5000 to consider the problem as non-dimensional:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/af2b0be687db0a7ffc8f2badb6e3f904.verbatim}{bash}\markdownRendererInterblockSeparator
+{}\hline \bigskip You can now execute the code with:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/be436a55e82dbfde012ae4427ee71a63.verbatim}{bash}\markdownRendererInterblockSeparator
+{}and follow the evolution of the output with:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/1c16059fb9c9da4cacf53874807afcd6.verbatim}{bash}\markdownRendererInterblockSeparator
+{}Use ``Ctrl+c'' to exit.\markdownRendererInterblockSeparator
+{}To discover how many core your computer have just use:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/adda3d27279bcbb1ba4bae5d5769e92c.verbatim}{bash}\markdownRendererInterblockSeparator
+{}If you need to stop the code:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/5a26c09cb37e8d37a4345b40e5203eef.verbatim}{bash}\markdownRendererInterblockSeparator
+{}Otherwise, as the code completes you can plot the residual evolution that is written to \textit{residu.dat}:\markdownRendererInterblockSeparator
+{}\markdownRendererInputFencedCode{./_markdown_main/b6ad4955e64d137406f366af4448e81c.verbatim}{bash}\markdownRendererDocumentEnd

@@ -1,0 +1,2 @@
+cd
+git clone --depth=1 https://github.com/nekStab/nekStab.git
