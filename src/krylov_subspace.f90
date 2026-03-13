@@ -35,6 +35,11 @@ module krylov_subspace
    integer, save, public :: n2    ! Active pressure points (renamed from np for MPI)
 
    ! Core data structure for Krylov operations
+   !  Temperature uses lt (=lx1*ly1*lz1*lelt), NOT lv (=lx1*ly1*lz1*lelv).
+   !  In CHT cases lelt > lelv so lt > lv; using lv would silently truncate
+   !  the solid-domain temperature and corrupt inner products.  All code that
+   !  passes temperature arrays to nopcopy/dgemm must use lt as the leading
+   !  dimension (not lv) to match this stride.
    type, public :: krylov_vector
       real, dimension(lv) :: vx, vy, vz     ! Velocity components
       real, dimension(lp) :: pr             ! Pressure field
@@ -329,6 +334,9 @@ subroutine allocate_orbit(nsteps_in)
 
    if (nid == 0) write (6, *) &
         'ALLOCATING ORBIT WITH NSTEPS:', nsteps_in
+
+   if (allocated(uor)) deallocate(uor, vor, wor)
+   if (allocated(tor)) deallocate(tor)
 
    allocate(uor(lv, nsteps_in), vor(lv, nsteps_in))
    if (if3d) then

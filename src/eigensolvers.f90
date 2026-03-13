@@ -23,8 +23,8 @@
       !-----------------------------------------------------------------------
 
    module nekstab_eigensolvers
-         use krylov_subspace
-         use nekstab_nek_bridge
+   use krylov_subspace
+   use nekstab_nek_bridge
    use nekstab_krylov_decomposition
    use nekstab_lapack
    use nekstab_argsort
@@ -1067,6 +1067,7 @@
    do i = 1, n
    idx(i) = i
    end do
+   !  argsort modifies arr in-place (insertion sort); always pass a COPY.
    work_arr = abs(vals)
    call argsort(n, work_arr, idx)
    do i = n, 1, -1
@@ -1085,6 +1086,7 @@
    do i = 1, n
    idx(i) = i
    end do
+   !  argsort modifies arr in-place; must copy to preserve residuals.
    work_arr = residuals
    call argsort(n, work_arr, idx)
       !        Rebuild selection: keep max_keep with smallest residuals.
@@ -1107,7 +1109,6 @@
       ', floor: ', min_keep
    end if
 
-   return
    end subroutine select_eigenvalues
 
       !-----------------------------------------------------------------------
@@ -1150,7 +1151,6 @@
    i = i + 1
    end do
 
-   return
    end subroutine ensure_conjugate_pairs
 
    end module nekstab_eigensolvers

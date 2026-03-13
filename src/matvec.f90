@@ -107,7 +107,6 @@ subroutine prepare_linearized_solver
 
    if (nid == 0) write (6, *) 'Linearized solver preparation complete.'
 
-   return
 end subroutine prepare_linearized_solver
 
 !-----------------------------------------------------------------------
@@ -152,6 +151,11 @@ subroutine matvec(f, q)
     end if
 
     !     --> Standard setup for the linearized solver.
+    !     NOTE: matvec_init is reset together with forward_linearized_map_init
+    !     at the end of newton_linearized_map when bvec is not cached, so that
+    !     prepare_linearized_solver re-runs each Newton iteration (dt/nsteps
+    !     may change). Resetting only forward_linearized_map_init would freeze
+    !     the operator parameters from the first iteration.
     if (.not. matvec_init) then
        call prepare_linearized_solver
        matvec_init = .true.
@@ -192,10 +196,16 @@ subroutine matvec(f, q)
    if (floor(uparam(01)) == 2) then
       evop = 'n'
       call newton_linearized_map(f, q)
-      if (.not. bvec_cached) forward_linearized_map_init = .false.
+      !  When bvec is not cached (fixed-point Newton, or before the UPO
+      !  cache is populated), reset BOTH guards so that the next Newton
+      !  iteration re-runs prepare_linearized_solver (fresh dt/nsteps)
+      !  and forward_linearized_map recomputes the orbit.
+      if (.not. bvec_cached) then
+         matvec_init = .false.
+         forward_linearized_map_init = .false.
+      end if
    end if
 
-   return
 end subroutine matvec
 
 !-----------------------------------------------------------------------
@@ -224,22 +234,30 @@ subroutine forward_linearized_map(f, q)
     ifpert = .true.; ifadj = .false.
     call bcast(ifpert, lsize); call bcast(ifadj, lsize)
 
-    !     --> Turning-off the base flow side-by-side computation.
+    !     --> Base flow computation control.
+    !     Two-phase logic when ifstorebase is enabled:
+    !       1st call  (forward_linearized_map_init=F): keep ifbase=T so
+    !                 nek_advance computes the base flow; orbit_store saves it.
+    !       Later calls (forward_linearized_map_init=T): set ifbase=F so
+    !                 nek_advance skips it; orbit_restore replays the stored data.
+    !     CAUTION: do NOT clear ifbase unconditionally before the conditional
+    !     below — that would make the allocate_orbit / first-store path dead.
     ifbase = .false.
     if (uparam(01) == 3.11) ifbase = .true. ! activate Floquet
     if (uparam(01) == 3.31) ifbase = .true. ! activate Floquet for intracycle transient growth
+    !  uparam==2.1/2.2 selects the UPO baseflow-evolution path specifically.
+    !  Do NOT replace with isNewtonPO: that flag only signals the period-
+    !  augmented inner product, while 2.1/2.2 identifies orbit storage needs.
     if (uparam(01) == 2.1 .or. uparam(01) == 2.2) then
        ifbase = .true. ! activate baseflow evolution for UPO
     end if
-    if (ifstorebase) ifbase = .false. ! deactivte ifbase if baseflow stored
-    if (ifstorebase .and. ifbase) then
-       call allocate_orbit(nsteps)
+    if (ifstorebase) then
+       if (forward_linearized_map_init) then
+          ifbase = .false. ! subsequent calls: use stored orbit
+       elseif (ifbase) then
+          call allocate_orbit(nsteps) ! first call: allocate storage
+       end if
     end if
-   if (ifstorebase .and. forward_linearized_map_init) ifbase = .false. ! deactivte ifbase if baseflow stored
-
-   if (ifstorebase .and. ifbase .and. .not. forward_linearized_map_init) then
-      call allocate_orbit(nsteps)
-   end if
 
 !     --> Pass the initial condition for the perturbation.
    call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1), &
@@ -270,7 +288,6 @@ subroutine forward_linearized_map(f, q)
    call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, &
    vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1))
 
-   return
 end subroutine forward_linearized_map
 
 !-----------------------------------------------------------------------
@@ -317,6 +334,8 @@ subroutine forward_finite_difference_map(f, q)
    ampls = ampls*epsilon0
 
 !  Turning-off the base flow side-by-side computation.
+!  uparam==2.1/2.2 identifies the UPO orbit-storage path (not isNewtonPO,
+!  which only controls the period-augmented inner product).
    ifbase = .false.
    if (uparam(01) == 3.11) ifbase = .true. ! activate Floquet
    if (uparam(01) == 3.31) ifbase = .true. ! activate Floquet for intracycle transient growth
@@ -382,7 +401,6 @@ subroutine forward_finite_difference_map(f, q)
 !  Rescale the approximate Frechet derivative with the step size.
    call k_cmult(f, 1.0d+00/epsilon0)
 
-   return
 end subroutine forward_finite_difference_map
 
 !-----------------------------------------------------------------------
@@ -455,7 +473,6 @@ subroutine adjoint_linearized_map(f, q)
    call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, &
    vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1))
 
-   return
 end subroutine adjoint_linearized_map
 
 !-----------------------------------------------------------------------
@@ -475,7 +492,6 @@ subroutine transient_growth_map(f, q)
 !     --> Evaluate the adjoint map.
    call adjoint_linearized_map(f, wrk)
 
-   return
 end subroutine transient_growth_map
 
 !-----------------------------------------------------------------------
@@ -495,7 +511,6 @@ subroutine ts_force_sensitivity_map(f, q)
    call k_sub2(f, q)
    call k_cmult(f, -1.0d+00)
 
-   return
 end subroutine ts_force_sensitivity_map
 
 !-----------------------------------------------------------------------
@@ -554,7 +569,6 @@ subroutine newton_linearized_map(f, q)
 
    end if
 
-   return
 end subroutine newton_linearized_map
 
 !-----------------------------------------------------------------------
@@ -595,7 +609,6 @@ subroutine compute_bvec(bvec, qbase)
    call k_cmult(bvec, 1.0/dt)
    bvec%time = 0.0d+00
 
-   return
 end subroutine compute_bvec
 
 !-----------------------------------------------------------------------
@@ -627,7 +640,6 @@ subroutine cache_newton_bvec(ic, fc)
    if (nid == 0) write (6, *) &
       'Newton bvec/btvec cached for GMRES'
 
-   return
 end subroutine cache_newton_bvec
 
 end module nekstab_matvec

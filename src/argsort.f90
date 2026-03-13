@@ -20,7 +20,7 @@ module nekstab_argsort
 contains
 
 ! argsort -- Sort array ascending with index tracking
-subroutine argsort(n, arr, idx)
+pure subroutine argsort(n, arr, idx)
    integer, intent(in) :: n
    real, intent(inout) :: arr(n)
    integer, intent(inout) :: idx(n)
