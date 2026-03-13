@@ -1,4 +1,0 @@
-[PRESSURE]
-residualTol = 1.0E-06
-[VELOCITY]
-residualTol = 1.0E-06

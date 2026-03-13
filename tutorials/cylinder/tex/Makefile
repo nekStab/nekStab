@@ -12,6 +12,7 @@ $(SRC).pdf: $(SRC).tex bib.bib
 
 clean:
 	rm -f *.aux *.bbl *.blg *.log *.out *.toc *.pyg *.fls *.fdb_latexmk
-	rm -rf _minted-main
+	rm -f *.markdown.in *.markdown.lua
+	rm -rf _minted-main _markdown_main
 
 .PHONY: all clean

@@ -1,3 +1,0 @@
-conda deactivate
-conda remove --name nek --all
-conda env list
