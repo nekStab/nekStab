@@ -10,7 +10,7 @@
 |:---|:----:|:---------|:----|:------:|
 | Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI / MPICH | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 | Ubuntu 24.04 | x86_64 | ifort 2024 / ifx 2025 | Intel MPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| macOS 26 | ARM64 | gfortran 14 | OpenMPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 15 | ARM64 | gfortran 14 | OpenMPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 
 **nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
@@ -22,7 +22,7 @@
 | **SFD** | Selective Frequency Damping for unstable steady states |
 | **BoostConv** | Residual acceleration for slow convergence |
 | **TDF** | Time-Delayed Feedback for periodic orbits |
-| **Newton-Krylov** | Quadratic convergence for fixed points and UPOs |
+| **Newton-Krylov** | Quadratic convergence for fixed points, UPOs (natural frequency), and forced periodic orbits |
 
 ### Global Stability Analysis
 | Analysis | Steady Flows | Time-Periodic (Floquet) |
@@ -33,8 +33,10 @@
 
 ### Sensitivity & Receptivity
 - **Wavemaker** — structural sensitivity to feedback
+- **Energy budget** — production, dissipation, transport decomposition (steady + Floquet)
 - **Base flow sensitivity** — response to mean flow modifications
-- **Forcing response** — optimal and localized forcing analysis
+- **Steady force sensitivity** — optimal placement for passive control
+- **Mode animation** — reconstruct eigenmode dynamics over one period
 
 ### Modal Decomposition
 | Method | Description |
@@ -53,39 +55,46 @@
 
 ### Why nekStab?
 - **Matrix-free**: No Jacobian storage — scales to millions of DoFs
-- **Krylov-based**: Time-stepper as linear operator — eigenvalues from snapshots, no math required
+- **Krylov-based**: Time-stepper as linear operator — eigenvalues from snapshots
 - **Spectral accuracy**: Leverages Nek5000's high-order elements
 - **MPI parallel**: Efficient on laptops to supercomputers
-- **Validated**: Benchmarked against canonical flows (cylinder, cavity, jets)
+- **Validated**: Automated test suite covering 9 solver modes across 4 geometries (cylinder, backstep, flip-flop, jet)
 - **FFT included**: Smart linking to FFTW3 (GCC) or MKL (Intel) — no manual setup
 
 ## Quick Reference
 
-| Mode | String | Description |
-|:----:|--------|-------------|
-| 0 | `'dns'` | Direct Numerical Simulation |
-| 0.1 | `'linear_dns'` | Linearized DNS (perturbation) |
-| 1.1 | `'sfd'` | Selective Frequency Damping |
-| 1.2 | `'boostconv'` | BoostConv acceleration |
-| 1.4 | `'tdf'` | Time-Delayed Feedback |
-| 2.0 | `'newton_fp'` | Newton for fixed points |
-| 2.1 | `'newton_po'` | Newton for periodic orbits |
-| 3.1 | `'direct'` | Direct stability eigenmodes |
-| 3.11 | `'floquet_direct'` | Floquet direct analysis |
-| 3.2 | `'adjoint'` | Adjoint stability eigenmodes |
-| 3.21 | `'floquet_adjoint'` | Floquet adjoint analysis |
-| 3.3 | `'transient_growth'` | Optimal perturbations |
-| 3.31 | `'floquet_tg'` | Floquet transient growth |
-| 4.1 | `'energy_budget'` | Kinetic energy budget |
-| 4.11 | `'energy_budget_floquet'` | Floquet energy budget |
-| 4.2 | `'wavemaker'` | Structural sensitivity |
-| 4.3 | `'bf_sensitivity'` | Base flow sensitivity |
-| 5 | `'otd'` | Optimally Time-Dependent modes |
-| 6.1 | `'pod'` | Proper Orthogonal Decomposition |
-| 6.2 | `'dmd'` | Dynamic Mode Decomposition |
-| 6.3 | `'spod'` | Spectral POD |
+| Mode | String | Aliases | Description |
+|:----:|--------|---------|-------------|
+| 0 | `'dns'` | | Direct Numerical Simulation |
+| 0.1 | `'linear_dns'` | `'lindns'` | Linearized DNS (perturbation) |
+| 1.1 | `'sfd'` | | Selective Frequency Damping |
+| 1.2 | `'boostconv'` | `'boost'` | BoostConv acceleration |
+| 1.4 | `'tdf'` | | Time-Delayed Feedback |
+| 2 | `'newton_fp'` | `'newton'` | Newton for fixed points |
+| 2.1 | `'newton_po'` | `'upo'` | Newton for periodic orbits (unknown period) |
+| 2.2 | `'newton_po_t'` | `'forced_upo'` | Newton for periodic orbits (forced period) |
+| 3.1 | `'direct'` | | Direct stability eigenmodes |
+| 3.11 | `'floquet_direct'` | | Floquet direct analysis |
+| 3.2 | `'adjoint'` | | Adjoint stability eigenmodes |
+| 3.21 | `'floquet_adjoint'` | | Floquet adjoint analysis |
+| 3.3 | `'transient_growth'` | `'tg'` | Optimal perturbations |
+| 3.31 | `'floquet_tg'` | | Floquet transient growth |
+| 4.1 | `'energy_budget'` | | Kinetic energy budget |
+| 4.11 | `'energy_budget_floquet'` | | Floquet energy budget |
+| 4.2 | `'wavemaker'` | | Structural sensitivity |
+| 4.3 | `'bf_sensitivity'` | | Base flow sensitivity |
+| 4.41 | `'force_sensitivity_real'` | | Steady force sensitivity (real) |
+| 4.42 | `'force_sensitivity_imag'` | | Steady force sensitivity (imag) |
+| 4.43 | `'delta_forcing'` | | Delta forcing response |
+| 4.5 | `'animate_mode'` | `'animate'` | Mode animation |
+| 4.51 | `'animate_bf_deform'` | | Base flow deformation animation |
+| 4.52 | `'animate_floquet'` | | Floquet mode animation |
+| 5 | `'otd'` | | Optimally Time-Dependent modes |
+| 6.1 | `'pod'` | | Proper Orthogonal Decomposition |
+| 6.2 | `'dmd'` | | Dynamic Mode Decomposition |
+| 6.3 | `'spod'` | | Spectral POD |
 
-See [DOC.md](DOC.md) for full parameter reference (includes animation and forcing modes).
+See [DOC.md](DOC.md) for full parameter reference.
 
 ## Examples
 
@@ -93,15 +102,18 @@ Ready-to-run cases in `example/`:
 
 | Case | Physics | Demonstrated Features |
 |------|---------|----------------------|
-| `cylinder/` | 2D/3D wake | DNS, Newton, stability, Floquet, wavemaker, OTD, POD/DMD/SPOD |
-| `back_fstep/` | Separation | Convective instability, transient growth |
-| `lid_driven/` | Confined | Steady bifurcations |
-| `blasius/` | Boundary layer | Tollmien-Schlichting waves |
-| `flip_flop/` | Side-by-side cylinders | Neimark-Sacker, Floquet |
-| `thersyphon/` | Buoyancy-driven | Pitchfork + Hopf bifurcations |
+| `cylinder/` | 2D wake (Re=50–180) | DNS, SFD, BoostConv, Newton, direct/adjoint stability, Floquet, wavemaker, sensitivity, OTD, POD/DMD/SPOD |
+| `back_fstep/` | Separated flow (Re=500) | Newton baseflow, transient growth |
+| `flip_flop/` | Side-by-side cylinders (Re=62) | Newton UPO (natural frequency), Floquet |
+| `tpjet/` | Forced jet (Re=1900) | Newton UPO (forced frequency), TDF, Floquet period-doubling |
+| `thersyphon/` | Buoyancy-driven (Ra=500) | Newton baseflow, pitchfork + Hopf bifurcations |
+| `lid_driven/` | Confined flow (Re=3600) | Newton, steady bifurcations |
+| `cubic_cavity/` | 3D cavity (Re=1950–2500) | Newton, 3D steady bifurcations, UPO |
+| `naca0012/` | Airfoil (Re=2000–2500) | Newton, direct stability |
+| `blasius/` | Flat-plate boundary layer | Tollmien-Schlichting waves |
 | `torus/` | Curved pipe | Dean instability, 3D modes |
-| `tpjet/` | Forced jet | Floquet period-doubling |
-| `slot_FST/` | Free-stream turbulence | Synthetic inflow generation |
+| `poiseuille_OTD/` | Channel flow (Re=5000) | OTD modes |
+| `slot_FST/` | Slot jet | Free-stream turbulence synthesis |
 
 ## First Steps
 
