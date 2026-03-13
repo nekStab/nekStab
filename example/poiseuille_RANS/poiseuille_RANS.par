@@ -6,7 +6,7 @@ endTime = 1.0
 # nekStab user parameters
 # userParam01 = mode selector (0=dns, 1.1=sfd, 2.0=newton_fp, 3.1=direct, etc.)
 # userParam07 = Krylov subspace dimension for Arnoldi
-userParam01 = 3.1     # SFD (base flow computation)
+userParam01 = 3.1     # Direct stability analysis
 #userParam04 = 0.1     # freq SFD
 #userParam05 = 0.1     # Gain
 userParam07 = 90      # Krylov subspace dimension
