@@ -15,17 +15,18 @@
       !   nekstab_io (whereyouwant), SIZE, TOTAL
       !-----------------------------------------------------------------------
 
-      module nekstab_krylov_decomposition
-         use krylov_subspace
-         use nekstab_matvec
-         use nekstab_lapack
-         use nekstab_io
-         implicit none
-         private
-         public :: arnoldi_factorization,
-     $             update_hessenberg_matrix,
-     $             arnoldi_checkpoint, log_transform
-      contains
+   module nekstab_krylov_decomposition
+   use krylov_subspace
+   use nekstab_nek_bridge
+   use nekstab_matvec
+   use nekstab_lapack
+   use nekstab_io
+   implicit none
+   private
+   public :: arnoldi_factorization, &
+      update_hessenberg_matrix, &
+      arnoldi_checkpoint, log_transform
+   contains
 
       !-----------------------------------------------------------------------
       ! arnoldi_factorization — k-step Arnoldi factorization
@@ -62,87 +63,83 @@
       !     Upper Hessenberg matrix resulting from the Arnoldi factorization of the linearized
       !     Navier-Stokes operator.
       !-----------------------------------------------------------------------
-      subroutine arnoldi_factorization(Q, H, mstart, mend, ksize)
+   subroutine arnoldi_factorization(Q, H, mstart, mend, ksize)
 
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
+   use krylov_subspace
 
       !     ----- Miscellaneous -----
-         real :: alpha
-         integer, intent(in) :: mstart, mend, ksize
+   real :: alpha
+   integer, intent(in) :: mstart, mend, ksize
 
       !     ----- Timer -----
-         real :: eetime0, eetime1, telapsed, tmiss, avg_time
-         real, external :: dnekclock
+   real :: eetime0, eetime1, telapsed, tmiss, avg_time
 
       !     ----- Orthogonal residual f = w - (Q,w)*Q -----
-         type(krylov_vector) :: f
+   type(krylov_vector) :: f
       !     ----- Krylov basis V for the projection MQ = QH -----
-         type(krylov_vector), dimension(ksize + 1), intent(inout) :: Q
+   type(krylov_vector), dimension(ksize + 1), intent(inout) :: Q
 
       !     ----- Upper Hessenberg matrix -----
-         real, dimension(ksize + 1, ksize), intent(out) :: H
+   real, dimension(ksize + 1, ksize), intent(out) :: H
 
       !     ----- Check k_dim -----
-         if (ksize == 0) then
-            if (nid == 0) write (6, *) 'Krylov base dimension == 0! Increase it.. STOP'
-            call nek_end
-         end if
+   if (ksize == 0) then
+   if (nid == 0) write (6, *) 'Krylov base dimension == 0! Increase it.. STOP'
+   call nek_end
+   end if
 
       !     --> Initialize arrays.
-         call k_zero(f); alpha = 0.0d0
+   call k_zero(f); alpha = 0.0d0
 
       !     --> Arnoldi factorization.
-         eetime0 = dnekclock() ! Start time for entire process
-         do mstep = mstart, mend
+   eetime0 = dnekclock() ! Start time for entire process
+   do mstep = mstart, mend
 
-            if (mstart < mend) then
-               if (nid == 0) write (6, "('        ARNOLDI - Starting iteration ',I3,'/',I3)") mstep, mend
-            end if
+   if (mstart < mend) then
+   if (nid == 0) write (6, "('        ARNOLDI - Starting iteration ',I3,'/',I3)") mstep, mend
+   end if
 
       !     --> Matrix-vector product f = M * v (e.g. calling the linearized Navier-Stokes solver).
-            call matvec(f, Q(mstep))
+   call matvec(f, Q(mstep))
 
       !     --> Update Hessenberg matrix and compute the orthogonal residual f.
-            call update_hessenberg_matrix(H(1:mstep + 1, 1:mstep), f, Q(1:mstep), mstep)
+   call update_hessenberg_matrix(H(1:mstep + 1, 1:mstep), f, Q(1:mstep), mstep)
 
       !     --> Check for lucky breakdown: if H(k+1,k) is near-zero, we've found an
       !         invariant subspace. The eigenvalues of H(1:k,1:k) are exact.
       !         Continuing would amplify round-off noise into spurious Krylov vectors.
-            if (H(mstep + 1, mstep) < 1.0d-12) then
-               if (nid == 0) then
-                  write(6,*) 'ARNOLDI: Early termination at step', mstep
-                  write(6,*) '         Lucky breakdown - invariant subspace found.'
-               end if
-               call k_copy(Q(mstep + 1), f)  ! Still copy the (near-zero) residual
-               return  ! Exit early - don't pollute basis with noise
-            end if
+   if (H(mstep + 1, mstep) < 1.0d-12) then
+   if (nid == 0) then
+   write(6,*) 'ARNOLDI: Early termination at step', mstep
+   write(6,*) '         Lucky breakdown - invariant subspace found.'
+   end if
+   call k_copy(Q(mstep + 1), f)  ! Still copy the (near-zero) residual
+   return  ! Exit early - don't pollute basis with noise
+   end if
 
       !     --> Add the residual vector as the new Krylov vector.
-            call k_copy(Q(mstep + 1), f)
+   call k_copy(Q(mstep + 1), f)
 
       !     --> Save checkpoint for restarting/run-time analysis. #  --> not in newton !
-            if (ifres .and. (mstart < mend)) call arnoldi_checkpoint(f%vx, f%vy, f%vz, f%pr, f%t, H(1:mstep + 1, 1:mstep), mstep)
+   if (ifres .and. (mstart < mend)) call arnoldi_checkpoint(f%vx, f%vy, f%vz, f%pr, f%t, H(1:mstep + 1, 1:mstep), mstep)
 
-            if (nid == 0) then
-               if (mstart == mend) then
-                  write (6, "('        ARNOLDI - Finished iteration ',I3,'/',I3)") mstep, mend
-               else
-                  eetime1 = dnekclock()
-                  telapsed = (eetime1 - eetime0)/3600.0d0
-                  avg_time = telapsed/mstep ! Average time per iteration
-                  tmiss = avg_time*(mend - mstep) ! More accurate ETA based on average
-                  write (6, "('        ARNOLDI - Finished iteration:',I3,'/',I3,' elapsed:',I3,'h',I2,'m / ETA:',I3,'h',I2,'m')")
-     $   mstep, mend, int(telapsed), ceiling((telapsed - int(telapsed))*60.0d0),
-     $   int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
-               end if
-            end if
-         end do
+   if (nid == 0) then
+   if (mstart == mend) then
+   write (6, "('        ARNOLDI - Finished iteration ',I3,'/',I3)") mstep, mend
+   else
+   eetime1 = dnekclock()
+   telapsed = (eetime1 - eetime0)/3600.0d0
+   avg_time = telapsed/mstep ! Average time per iteration
+   tmiss = avg_time*(mend - mstep) ! More accurate ETA based on average
+   write (6, "('        ARNOLDI - Finished iteration:',I3,'/',I3,' elapsed:',I3,'h',I2,'m / ETA:',I3,'h',I2,'m')") &
+      mstep, mend, int(telapsed), ceiling((telapsed - int(telapsed))*60.0d0), &
+      int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
+   end if
+   end if
+   end do
 
-         return
-      end subroutine arnoldi_factorization
+   return
+   end subroutine arnoldi_factorization
 
       !-----------------------------------------------------------------------
       ! update_hessenberg_matrix — Orthonormalize and update Hessenberg entries
@@ -175,67 +172,64 @@
       !
       !     Last edit : April 3rd 2020 by JC Loiseau.
       !-----------------------------------------------------------------------
-      subroutine update_hessenberg_matrix(H, f, q, k)
+   subroutine update_hessenberg_matrix(H, f, q, k)
 
-         use krylov_subspace
-         use krylov_inner_products
-         implicit none
-         include "SIZE"
-         include "TOTAL"
+   use krylov_subspace
+   use krylov_inner_products
 
-         integer, intent(in) :: k
-         real, dimension(k + 1, k), intent(inout) :: H
+   integer, intent(in) :: k
+   real, dimension(k + 1, k), intent(inout) :: H
 
-         type(krylov_vector), dimension(k), intent(in) :: q
-         type(krylov_vector), intent(inout) :: f
-         type(krylov_vector) :: wrk
+   type(krylov_vector), dimension(k), intent(in) :: q
+   type(krylov_vector), intent(inout) :: f
+   type(krylov_vector) :: wrk
 
-         integer :: i
-         real :: alpha
-         real :: h1(k), h2(k)
+   integer :: i
+   real :: alpha
+   real :: h1(k), h2(k)
 
-         if (use_cgs) then
-c        ── CGS2: 2 gop calls total (vs 2k for MGS) ──
-c           Pass 1
-            call k_project(h1, q, f, k)
-            call k_matmul(wrk, q, h1, k)
-            call k_sub2(f, wrk)
-c           Pass 2 (reorthogonalization)
-            call k_project(h2, q, f, k)
-            call k_matmul(wrk, q, h2, k)
-            call k_sub2(f, wrk)
-c           Combine
-            do i = 1, k
-               H(i, k) = h1(i) + h2(i)
-            end do
-         else
-c        ── MGS with reorthogonalization: 2k gop calls ──
-            do i = 1, k
-               call k_dot(alpha, f, q(i))
-               call k_add2s2(f, q(i), -alpha)
-               H(i, k) = alpha
-            end do
-            do i = 1, k
-               call k_dot(alpha, f, q(i))
-               call k_add2s2(f, q(i), -alpha)
-               H(i, k) = H(i, k) + alpha
-            end do
-         end if
+   if (use_cgs) then
+!        ── CGS2: 2 gop calls total (vs 2k for MGS) ──
+!           Pass 1
+   call k_project(h1, q, f, k)
+   call k_matmul(wrk, q, h1, k)
+   call k_sub2(f, wrk)
+!           Pass 2 (reorthogonalization)
+   call k_project(h2, q, f, k)
+   call k_matmul(wrk, q, h2, k)
+   call k_sub2(f, wrk)
+!           Combine
+   do i = 1, k
+   H(i, k) = h1(i) + h2(i)
+   end do
+   else
+!        ── MGS with reorthogonalization: 2k gop calls ──
+   do i = 1, k
+   call k_dot(alpha, f, q(i))
+   call k_add2s2(f, q(i), -alpha)
+   H(i, k) = alpha
+   end do
+   do i = 1, k
+   call k_dot(alpha, f, q(i))
+   call k_add2s2(f, q(i), -alpha)
+   H(i, k) = H(i, k) + alpha
+   end do
+   end if
 
-c     --> Normalise the residual vector.
-         call k_normalize(f, alpha)
-         H(k + 1, k) = alpha
+!     --> Normalise the residual vector.
+   call k_normalize(f, alpha)
+   H(k + 1, k) = alpha
 
-c     --> Lucky breakdown check.
-         if (alpha < 1.0d-12) then
-            if (nid == 0) then
-               write(6,*) 'ARNOLDI: Lucky breakdown at step', k
-               write(6,*) '         Invariant subspace found.'
-            end if
-         end if
+!     --> Lucky breakdown check.
+   if (alpha < 1.0d-12) then
+   if (nid == 0) then
+   write(6,*) 'ARNOLDI: Lucky breakdown at step', k
+   write(6,*) '         Invariant subspace found.'
+   end if
+   end if
 
-         return
-      end subroutine update_hessenberg_matrix
+   return
+   end subroutine update_hessenberg_matrix
 
       !-----------------------------------------------------------------------
       ! arnoldi_checkpoint — Save Krylov vector and eigenspectrum checkpoint
@@ -252,87 +246,84 @@ c     --> Lucky breakdown check.
       !   H                 [in] — upper Hessenberg matrix (k+1 x k)
       !   k                 [in] — current Arnoldi iteration
       !-----------------------------------------------------------------------
-      subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
+   subroutine arnoldi_checkpoint(f_xr, f_yr, f_zr, f_pr, f_tr, H, k)
 
-         use krylov_subspace
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
+   use krylov_subspace
 
-         real, dimension(lv), intent(in) :: f_xr, f_yr, f_zr
-         real, dimension(lp), intent(in) :: f_pr
-         real, dimension(lt, ldimt), intent(in) :: f_tr
+   real, dimension(lv), intent(in) :: f_xr, f_yr, f_zr
+   real, dimension(lp), intent(in) :: f_pr
+   real, dimension(lt, ldimt), intent(in) :: f_tr
 
-         integer, intent(in) :: k
-         real, dimension(k + 1, k), intent(in) :: H
+   integer, intent(in) :: k
+   real, dimension(k + 1, k), intent(in) :: H
 
-         integer :: i, j, converged_eigenvalues
-         complex(kind=kind(0.0d0)), dimension(k) :: vals
-         complex(kind=kind(0.0d0)), dimension(k, k) :: vecs
-         real, dimension(k) :: residual
-         character(len=80) filename
+   integer :: i, j, converged_eigenvalues
+   complex(nekStab_dp), dimension(k) :: vals
+   complex(nekStab_dp), dimension(k, k) :: vecs
+   real, dimension(k) :: residual
+   character(len=80) filename
 
-         if (nid == 0) write (6, *) 'Outposting Krylov vector to'
+   if (nid == 0) write (6, *) 'Outposting Krylov vector to'
 
       !     --> Outpost the latest Krylov vector.
-         call whereyouwant("KRY", k + 1)
+   call whereyouwant("KRY", k + 1)
 
-         time = time*k !order in ParaView
-         call outpost2(f_xr, f_yr, f_zr, f_pr, f_tr, nof, "KRY")
+   time = time*k !order in ParaView
+   call outpost2(f_xr, f_yr, f_zr, f_pr, f_tr, nof, "KRY")
 
       !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.
-         call eig(H(1:k, 1:k), vecs, vals, k)
+   call eig(H(1:k, 1:k), vecs, vals, k)
 
       !     --> Compute the residual (assume H results from classical Arnoldi factorization).
-         residual = abs(H(k + 1, k)*vecs(k, :))
+   residual = abs(H(k + 1, k)*vecs(k, :))
 
       ! ------> Enforce minimum value of machine epsilon
-         where (residual < epsilon(1.0d0)) residual = epsilon(1.0d0)
+   where (residual < epsilon(1.0d0)) residual = epsilon(1.0d0)
 
-         converged_eigenvalues = count(residual < eigen_tol)
+   converged_eigenvalues = count(residual < eigen_tol)
 
-         if (nid == 0) then
+   if (nid == 0) then
 
       !     --> Outpost the eigenspectrum and residuals of the current Hessenberg matrix.
-            write (filename, '(A,A,i4.4,A)') 'Spectre_H', evop, k, '.dat'
-            write (6, *) 'Writing Hessenberg matrix eigenspectrum to', filename
+   write (filename, '(A,A,i4.4,A)') 'Spectre_H', evop, k, '.dat'
+   write (6, *) 'Writing Hessenberg matrix eigenspectrum to', filename
 
-            open (67, file=trim(filename), status='unknown', form='formatted')
-            write (67, '(3E15.7)') (real(vals(i)), aimag(vals(i)),
-     $         residual(i), i=1, k)
-            close (67)
+   open (67, file=trim(filename), status='unknown', form='formatted')
+   write (67, '(3E15.7)') (real(vals(i)), aimag(vals(i)), &
+      residual(i), i=1, k)
+   close (67)
 
       !     --> Outpost the log-transform spectrum.
-            write (filename, '(A,A,i4.4,A)') 'Spectre_NS', evop, k,
-     $         '.dat'
-            write (6, *) 'Writing log-transformed eigenspectrum to',
-     $         filename
+   write (filename, '(A,A,i4.4,A)') 'Spectre_NS', evop, k, &
+      '.dat'
+   write (6, *) 'Writing log-transformed eigenspectrum to', &
+      filename
 
-            open (67, file=trim(filename), status='unknown',
-     $         form='formatted')
-            write (67, '(3E15.7)')
-     $         (real(log_transform(vals(i)))/(dt*nsteps),
-     $         aimag(log_transform(vals(i)))/(dt*nsteps),
-     $         residual(i), i = 1, k)
-            close (67)
+   open (67, file=trim(filename), status='unknown', &
+      form='formatted')
+   write (67, '(3E15.7)') &
+      (real(log_transform(vals(i)))/(dt*nsteps), &
+      aimag(log_transform(vals(i)))/(dt*nsteps), &
+      residual(i), i = 1, k)
+   close (67)
 
       !     --> Outpost the Hessenberg matrix for restarting purposes.
-            write (filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
-            write (6, *) 'Writing Hessenberg matrix to', filename
+   write (filename, '(a, a, i4.4)') 'HES', trim(SESSION), k
+   write (6, *) 'Writing Hessenberg matrix to', filename
 
-            open (67, file=trim(filename), status='unknown',
-     $         form='formatted')
-            write (67, *) ((H(i, j), j=1, k), i=1, k + 1)
-            close (67)
+   open (67, file=trim(filename), status='unknown', &
+      form='formatted')
+   write (67, *) ((H(i, j), j=1, k), i=1, k + 1)
+   close (67)
 
       !     --> Write to logfile the current number of converged eigenvalues.
-            write (6, *) 'converged eigenvalues:',
-     $         converged_eigenvalues, 'target:', schur_tgt
+   write (6, *) 'converged eigenvalues:', &
+      converged_eigenvalues, 'target:', schur_tgt
 
-         end if
+   end if
 
-         return
-      end subroutine arnoldi_checkpoint
+   return
+   end subroutine arnoldi_checkpoint
 
       !-----------------------------------------------------------------------
       ! log_transform — Complex logarithm for eigenvalue conversion
@@ -342,12 +333,11 @@ c     --> Lucky breakdown check.
       !   is zero, returns a purely real result (avoids spurious imaginary
       !   component from floating-point noise).
       !-----------------------------------------------------------------------
-      function log_transform(x)
-         implicit none
-         complex, intent(in) :: x
-         complex :: log_transform
-         log_transform = log(x)
-         if (aimag(x) == 0) log_transform = real(log_transform)
-      end function log_transform
+    function log_transform(x)
+    complex(nekStab_dp), intent(in) :: x
+    complex(nekStab_dp) :: log_transform
+   log_transform = log(x)
+   if (aimag(x) == 0) log_transform = real(log_transform)
+   end function log_transform
 
-      end module nekstab_krylov_decomposition
+   end module nekstab_krylov_decomposition

@@ -14,17 +14,18 @@
       ! Dependencies:
       !   krylov_subspace, fourier, modal_pod, SIZE, TOTAL
       !-----------------------------------------------------------------------
-      module modal_spod
+module modal_spod
 
-         use krylov_subspace
-         use krylov_inner_products
-         use nekstab_lapack
-         use nekstab_vectors
-         use fourier
-         use modal_pod, only: hamming_window
+    use krylov_subspace
+    use krylov_inner_products
+    use nekstab_lapack
+    use nekstab_vectors
+    use fourier
+    use modal_pod, only: hamming_window
+    use nekstab_nek_bridge
 
-         implicit none
-         private
+    implicit none
+   private
 
          public :: spod_compute
          public :: k_dot_complex
@@ -35,14 +36,9 @@
       !-----------------------------------------------------------------------
       ! spod_compute — Spectral POD via batch processing
       !-----------------------------------------------------------------------
-      subroutine spod_compute(snaps, nsnap, delta_t, nfft, noverlap,
-     $                        nsave)
+subroutine spod_compute(snaps, nsnap, delta_t, nfft, noverlap, nsave)
 
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-
-         integer, intent(in) :: nsnap, nfft, noverlap, nsave
+      integer, intent(in) :: nsnap, nfft, noverlap, nsave
          real, intent(in) :: delta_t
          type(krylov_vector), intent(in) :: snaps(nsnap)
 
@@ -50,10 +46,10 @@
          real, allocatable :: window(:), freq(:)
          real :: win_weight, df
          type(krylov_vector), allocatable :: blk_re(:), blk_im(:)
-         complex(kind=kind(0.0d0)), allocatable :: CSD(:,:)
+         complex(nekStab_dp), allocatable :: CSD(:,:)
          real, allocatable :: spod_evals(:)
-         complex(kind=kind(0.0d0)), allocatable :: spod_evecs(:,:)
-         complex(kind=kind(0.0d0)) :: cval
+         complex(nekStab_dp), allocatable :: spod_evecs(:,:)
+         complex(nekStab_dp) :: cval
 
 
          if (nid == 0) then
@@ -89,17 +85,14 @@
          call hamming_window(nfft, window, win_weight)
          call fft_frequencies(nfft, delta_t, freq)
 
-!        Open spectrum file
+      !        Open spectrum file
          if (nid == 0) then
-            open(unit=79, file='spod_spectrum.dat',
-     $           status='replace')
-            write(79, '(A)')
-     $         '# SPOD Spectrum: St, eigenvalues (nblk columns)'
+            open(unit=79, file='spod_spectrum.dat', status='replace')
+            write(79, '(A)') '# SPOD Spectrum: St, eigenvalues (nblk columns)'
          end if
 
 !        Loop over frequencies
-         if (nid == 0) write(6,'(A,I4,A)')
-     $      '   Processing ', nfreq, ' frequencies...'
+         if (nid == 0) write(6,'(A,I4,A)') '   Processing ', nfreq, ' frequencies...'
 
          do ifreq = 1, nfreq
 
@@ -110,9 +103,9 @@
 !           FFT each block at this frequency
             do iblk = 1, nblk
                blk_start = (iblk - 1) * (nfft - noverlap) + 1
-               call fft_block_at_freq(snaps, blk_start, nfft,
-     $              window, win_weight, delta_t, ifreq,
-     $              blk_re(iblk), blk_im(iblk))
+               call fft_block_at_freq(snaps, blk_start, nfft, &
+                 window, win_weight, delta_t, ifreq, &
+                 blk_re(iblk), blk_im(iblk))
             end do
 
 !           Form Hermitian CSD matrix (batch)
@@ -129,8 +122,8 @@
                write(79, *)
             end if
 
-            call spod_save_modes(blk_re, blk_im, spod_evecs,
-     $           spod_evals, nblk, ifreq, nfreq, freq, nsave)
+            call spod_save_modes(blk_re, blk_im, spod_evecs, &
+                 spod_evals, nblk, ifreq, nfreq, freq, nsave)
 
          end do
 
@@ -149,21 +142,17 @@
       !-----------------------------------------------------------------------
       ! fft_block_at_freq — FFT a block of snapshots, extract one frequency
       !-----------------------------------------------------------------------
-      subroutine fft_block_at_freq(snaps, blk_start, nfft,
-     $     window, win_weight, delta_t, ifreq, out_re, out_im)
+subroutine fft_block_at_freq(snaps, blk_start, nfft, &
+       window, win_weight, delta_t, ifreq, out_re, out_im)
 
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-
-         integer, intent(in) :: blk_start, nfft, ifreq
+      integer, intent(in) :: blk_start, nfft, ifreq
          real, intent(in) :: delta_t, win_weight
          real, intent(in) :: window(nfft)
          type(krylov_vector), intent(in) :: snaps(*)
          type(krylov_vector), intent(out) :: out_re, out_im
 
          real :: time_series(nfft)
-         complex(kind=kind(0.0d0)) :: spectrum(nfft/2+1)
+         complex(nekStab_dp) :: spectrum(nfft/2+1)
          real :: norm_factor
          integer :: ipt, j, nfreq
 
@@ -183,8 +172,8 @@
 !        Velocity x
          do ipt = 1, nv
             do j = 1, nfft
-               time_series(j) = window(j) *
-     $              snaps(blk_start + j - 1)%vx(ipt)
+                time_series(j) = window(j) * &
+     &              snaps(blk_start + j - 1)%vx(ipt)
             end do
             call fft_r2c(nfft, time_series, spectrum)
             out_re%vx(ipt) = real(spectrum(ifreq)) * norm_factor
@@ -194,8 +183,8 @@
 !        Velocity y
          do ipt = 1, nv
             do j = 1, nfft
-               time_series(j) = window(j) *
-     $              snaps(blk_start + j - 1)%vy(ipt)
+                time_series(j) = window(j) * &
+     &              snaps(blk_start + j - 1)%vy(ipt)
             end do
             call fft_r2c(nfft, time_series, spectrum)
             out_re%vy(ipt) = real(spectrum(ifreq)) * norm_factor
@@ -206,8 +195,8 @@
          if (if3d) then
             do ipt = 1, nv
                do j = 1, nfft
-                  time_series(j) = window(j) *
-     $                 snaps(blk_start + j - 1)%vz(ipt)
+                   time_series(j) = window(j) * &
+     &                 snaps(blk_start + j - 1)%vz(ipt)
                end do
                call fft_r2c(nfft, time_series, spectrum)
                out_re%vz(ipt) = real(spectrum(ifreq)) * norm_factor
@@ -219,8 +208,8 @@
          if (ifto) then
             do ipt = 1, nt
                do j = 1, nfft
-                  time_series(j) = window(j) *
-     $                 snaps(blk_start + j - 1)%t(ipt, 1)
+                   time_series(j) = window(j) * &
+     &                 snaps(blk_start + j - 1)%t(ipt, 1)
                end do
                call fft_r2c(nfft, time_series, spectrum)
                out_re%t(ipt, 1) = real(spectrum(ifreq)) * norm_factor
@@ -236,14 +225,10 @@
       !   <p,q> = <p_re,q_re> + <p_im,q_im>
       !         + i(<p_re,q_im> - <p_im,q_re>)
       !-----------------------------------------------------------------------
-      subroutine k_dot_complex(alpha, p_re, p_im, q_re, q_im)
+       subroutine k_dot_complex(alpha, p_re, p_im, q_re, q_im)
 
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-
-         type(krylov_vector), intent(in) :: p_re, p_im, q_re, q_im
-         complex(kind=kind(0.0d0)), intent(out) :: alpha
+          type(krylov_vector), intent(in) :: p_re, p_im, q_re, q_im
+         complex(nekStab_dp), intent(out) :: alpha
 
          real :: rr, ii, ri, ir
 
@@ -261,16 +246,12 @@
       !
       !   Saves at DC, Nyquist, and every 8th frequency.
       !-----------------------------------------------------------------------
-      subroutine spod_save_modes(blk_re, blk_im, evecs, evals,
-     $     nblk, ifreq, nfreq, freq, nsave)
+        subroutine spod_save_modes(blk_re, blk_im, evecs, evals, &
+     &   nblk, ifreq, nfreq, freq, nsave)
 
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-
-         integer, intent(in) :: nblk, ifreq, nfreq, nsave
+          integer, intent(in) :: nblk, ifreq, nfreq, nsave
          type(krylov_vector), intent(in) :: blk_re(nblk), blk_im(nblk)
-         complex(kind=kind(0.0d0)), intent(in) :: evecs(nblk, nblk)
+         complex(nekStab_dp), intent(in) :: evecs(nblk, nblk)
          real, intent(in) :: evals(nblk), freq(nfreq)
 
          type(krylov_vector) :: mode_re, mode_im
@@ -312,24 +293,24 @@
             end if
 
 !           Output real part
-            call nopcopy(vx, vy, vz, pr, t,
-     $           mode_re%vx, mode_re%vy, mode_re%vz,
-     $           mode_re%pr, mode_re%t)
+             call nopcopy(vx, vy, vz, pr, t, &
+     &   mode_re%vx, mode_re%vy, mode_re%vz, &
+     &   mode_re%pr, mode_re%t)
             call outpost2(vx, vy, vz, pr, t, 0, 'sRe')
 
 !           Output imaginary part
-            call nopcopy(vx, vy, vz, pr, t,
-     $           mode_im%vx, mode_im%vy, mode_im%vz,
-     $           mode_im%pr, mode_im%t)
+             call nopcopy(vx, vy, vz, pr, t, &
+     &   mode_im%vx, mode_im%vy, mode_im%vz, &
+     &   mode_im%pr, mode_im%t)
             call outpost2(vx, vy, vz, pr, t, 0, 'sIm')
 
 !           Print info for leading mode only
             if (m == 1) then
                call k_norm(mode_norm, mode_re)
                if (nid == 0) then
-                  write(6,'(A,F10.4,A,E12.4,A,E12.4)')
-     $                 '    St =', freq(ifreq), ': lambda_1 =',
-     $                 evals(1), ', ||Phi|| =', mode_norm
+                   write(6,'(A,F10.4,A,E12.4,A,E12.4)') &
+     &   '    St =', freq(ifreq), ': lambda_1 =', &
+     &   evals(1), ', ||Phi|| =', mode_norm
                end if
             end if
          end do

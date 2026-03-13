@@ -28,8 +28,8 @@
       ! See DOC.md for complete mode string table and examples.
       ! ═══════════════════════════════════════════════════════════════════
 
-      ! Parameters
-      integer, parameter :: ncoef = 4 ! Number of coefficients for finite difference
+        ! Parameters
+        integer, parameter :: ncoef = 4 ! Number of coefficients for finite difference
 
       ! Character variables
       character(len=1) :: evop

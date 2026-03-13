@@ -13,14 +13,15 @@
       ! Dependencies:
       !   krylov_subspace, SIZE, TOTAL
       !-----------------------------------------------------------------------
-      module modal_dmd
+module modal_dmd
 
-         use krylov_subspace
-         use krylov_inner_products
-         use nekstab_lapack
-         use nekstab_vectors
+    use krylov_subspace
+    use krylov_inner_products
+    use nekstab_lapack
+    use nekstab_vectors
+    use nekstab_nek_bridge
 
-         implicit none
+    implicit none
          private
 
          public :: dmd_compute
@@ -36,13 +37,9 @@
       !   4. Project operator: Atilde = Sinv V^T G_shift V Sinv
       !   5. Eigendecomp of Atilde -> DMD eigenvalues and modes
       !-----------------------------------------------------------------------
-      subroutine dmd_compute(snaps, nsnap, delta_t, rank, nsave)
+       subroutine dmd_compute(snaps, nsnap, delta_t, rank, nsave)
 
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
-
-         integer, intent(in) :: nsnap, rank, nsave
+          integer, intent(in) :: nsnap, rank, nsave
          real, intent(in) :: delta_t
          type(krylov_vector), intent(in) :: snaps(nsnap)
 
@@ -51,8 +48,8 @@
          real, allocatable :: G_shift(:,:)
          real, allocatable :: Atilde(:,:), Atilde_work(:,:)
          real, allocatable :: dmd_norms(:)
-         complex(kind=kind(0.0d0)), allocatable :: dmd_evals(:)
-         complex(kind=kind(0.0d0)), allocatable :: dmd_evecs(:,:)
+         complex(nekStab_dp), allocatable :: dmd_evals(:)
+         complex(nekStab_dp), allocatable :: dmd_evecs(:,:)
          real :: total_energy, cumsum, tol
 
 !        Number of snapshot pairs: X = [x_1..x_{n-1}], Y = [x_2..x_n]
@@ -90,28 +87,28 @@
             end do
          end if
 
-         if (nid == 0) write(6,'(A,I4,A,F6.2,A)')
-     $        '  Using rank r =', r, ' (',
-     $        100.0d0 * sum(S(1:r)) / total_energy, '% energy)'
+         if (nid == 0) write(6,'(A,I4,A,F6.2,A)') &
+            '  Using rank r =', r, ' (', &
+            100.0d0 * sum(S(1:r)) / total_energy, '% energy)'
 
 !        Write SVD diagnostics (before sqrt overwrites S)
          if (nid == 0) then
             open(unit=77, file='dmd_svd.dat', status='replace')
             write(77, '(A)') '# DMD SVD Singular Values'
-            write(77, '(A,I6,A,F6.2,A)')
-     $         '# rank_used = ', r, '  (',
-     $         100.0d0 * sum(S(1:r)) / total_energy, '% energy)'
-            write(77, '(A,I6)')
-     $         '# total_snapshots = ', n
-            write(77, '(A)')
-     $    '# i       sigma_i         energy_%    cumulative_%'
+            write(77, '(A,I6,A,F6.2,A)') &
+               '# rank_used = ', r, '  (', &
+               100.0d0 * sum(S(1:r)) / total_energy, '% energy)'
+            write(77, '(A,I6)') &
+               '# total_snapshots = ', n
+            write(77, '(A)') &
+               '# i       sigma_i         energy_%    cumulative_%'
 
             cumsum = 0.0d0
             do i = 1, n
                cumsum = cumsum + S(i)
-               write(77, '(I6, 3E16.8)') i, sqrt(S(i)),
-     $              100.0d0 * S(i) / total_energy,
-     $              100.0d0 * cumsum / total_energy
+               write(77, '(I6, 3E16.8)') i, sqrt(S(i)), &
+                  100.0d0 * S(i) / total_energy, &
+                  100.0d0 * cumsum / total_energy
             end do
 
             close(77)
@@ -142,7 +139,15 @@
             end do
          end do
 !        k=n: single batch projection for last row
-         call k_project(G_shift(n,1), snaps(1), snaps(nsnap), n)
+         block
+            real, allocatable :: last_row(:)
+            allocate(last_row(n))
+            call k_project(last_row, snaps(1), snaps(nsnap), n)
+            do m = 1, n
+               G_shift(n, m) = last_row(m)
+            end do
+            deallocate(last_row)
+         end block
 
 !        Form projected operator Atilde = Sinv V^T G_shift V Sinv
          if (nid == 0) write(6,*) '  Forming projected operator...'
@@ -154,8 +159,8 @@
             do i = 1, r
                do k = 1, n
                   do m = 1, n
-                     Atilde(i,j) = Atilde(i,j) + G_shift(k,m) *
-     $                    Vt(m,i) * Vt(k,j) * Sinv(i) * Sinv(j)
+                     Atilde(i,j) = Atilde(i,j) + G_shift(k,m) * &
+                        Vt(m,i) * Vt(k,j) * Sinv(i) * Sinv(j)
                   end do
                end do
             end do
@@ -172,10 +177,10 @@
 
 !        Reconstruct modes and write spectrum
          allocate(dmd_norms(min(nsave, r)))
-         call dmd_reconstruct_modes(snaps, Vt, S, Sinv,
-     $        dmd_evecs, dmd_evals, n, r, nsave, dmd_norms)
-         call dmd_write_spectrum(dmd_evals, r, delta_t,
-     $        dmd_norms, min(nsave, r))
+          call dmd_reconstruct_modes(snaps, Vt, S, Sinv, &
+     &   dmd_evecs, dmd_evals, n, r, nsave, dmd_norms)
+          call dmd_write_spectrum(dmd_evals, r, delta_t, &
+     &   dmd_norms, min(nsave, r))
 
          deallocate(G, G_shift, S, Vt, Sinv, Atilde, Atilde_work)
          deallocate(dmd_evals, dmd_evecs, dmd_norms)
@@ -187,15 +192,11 @@
       !-----------------------------------------------------------------------
       ! dmd_write_spectrum — Write DMD eigenvalue spectrum to file
       !-----------------------------------------------------------------------
-      subroutine dmd_write_spectrum(evals, r, delta_t,
-     $                              norms, nnorms)
+       subroutine dmd_write_spectrum(evals, r, delta_t, norms, nnorms)
 
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
 
-         integer, intent(in) :: r, nnorms
-         complex(kind=kind(0.0d0)), intent(in) :: evals(r)
+          integer, intent(in) :: r, nnorms
+         complex(nekStab_dp), intent(in) :: evals(r)
          real, intent(in) :: delta_t, norms(nnorms)
 
          real :: sigma, omega, mu_mag, freq
@@ -205,8 +206,8 @@
 
          open(unit=78, file='dmd_spectrum.dat', status='replace')
          write(78, '(A)') '# DMD Eigenvalue Spectrum'
-         write(78, '(A)') '# mode   |mu|      sigma       omega       '
-     $      // 'St          mu_real     mu_imag     ||Phi_re||'
+         write(78, '(A)') '# mode   |mu|      sigma       omega       ' &
+            // 'St          mu_real     mu_imag     ||Phi_re||'
 
          do m = 1, r
             mu_mag = abs(evals(m))
@@ -214,12 +215,12 @@
             omega = atan2(aimag(evals(m)), real(evals(m))) / delta_t
             freq = omega / (2.0d0 * NEKSTAB_PI)
 
-            if (m <= nnorms) then
-               write(78, '(I6, 7E14.6)') m, mu_mag, sigma, omega,
-     $              freq, real(evals(m)), aimag(evals(m)), norms(m)
+             if (m <= nnorms) then
+                write(78, '(I6, 7E14.6)') m, mu_mag, sigma, omega, &
+     &              freq, real(evals(m)), aimag(evals(m)), norms(m)
             else
-               write(78, '(I6, 6E14.6)') m, mu_mag, sigma, omega,
-     $              freq, real(evals(m)), aimag(evals(m))
+                write(78, '(I6, 6E14.6)') m, mu_mag, sigma, omega, &
+     &              freq, real(evals(m)), aimag(evals(m))
             end if
          end do
 
@@ -233,17 +234,13 @@
       !
       !   DMD modes: Phi = X V Sinv W (projected DMD modes)
       !-----------------------------------------------------------------------
-      subroutine dmd_reconstruct_modes(snaps, V, S, Sinv,
-     $     evecs, evals, n, r, nsave, norms)
+       subroutine dmd_reconstruct_modes(snaps, V, S, Sinv, evecs, evals, n, r, nsave, norms)
 
-         implicit none
-         include 'SIZE'
-         include 'TOTAL'
 
-         integer, intent(in) :: n, r, nsave
+          integer, intent(in) :: n, r, nsave
          type(krylov_vector), intent(in) :: snaps(n)
          real, intent(in) :: V(n, n), S(r), Sinv(r)
-         complex(kind=kind(0.0d0)), intent(in) :: evecs(r, r), evals(r)
+         complex(nekStab_dp), intent(in) :: evecs(r, r), evals(r)
          real, intent(out) :: norms(min(nsave, r))
 
          type(krylov_vector) :: mode_re, mode_im
@@ -255,8 +252,8 @@
          prefix_im = 'dm2'
          nmodes = min(nsave, r)
 
-         if (nid == 0) write(6,'(A,I4,A)')
-     $      '   Reconstructing ', nmodes, ' DMD modes...'
+         if (nid == 0) write(6,'(A,I4,A)') '   Reconstructing ', nmodes, ' DMD modes...'
+
 
          do m = 1, nmodes
             call k_zero(mode_re)
@@ -267,10 +264,10 @@
                coef_re = 0.0d0
                coef_im = 0.0d0
                do j = 1, r
-                  coef_re = coef_re + V(i,j) * Sinv(j) *
-     $                 real(evecs(j,m))
-                  coef_im = coef_im + V(i,j) * Sinv(j) *
-     $                 aimag(evecs(j,m))
+                  coef_re = coef_re + V(i,j) * Sinv(j) * real(evecs(j,m))
+
+                  coef_im = coef_im + V(i,j) * Sinv(j) * aimag(evecs(j,m))
+
                end do
                call k_add2s2(mode_re, snaps(i), coef_re)
                call k_add2s2(mode_im, snaps(i), coef_im)
@@ -281,29 +278,27 @@
 
 !           Skip output if mode is invalid (NaN or very large)
             if (mode_norm /= mode_norm .or. mode_norm > 1.0d30) then
-               if (nid == 0) write(6,*) '  WARNING: DMD mode', m,
-     $              'has invalid values, skipping'
+               if (nid == 0) write(6,*) '  WARNING: DMD mode', m, 'has invalid values, skipping'
+
                norms(m) = 0.0d0
                cycle
             end if
 
-            call nopcopy(vx, vy, vz, pr, t,
-     $           mode_re%vx, mode_re%vy, mode_re%vz,
-     $           mode_re%pr, mode_re%t)
+            call nopcopy(vx, vy, vz, pr, t, mode_re%vx, mode_re%vy, mode_re%vz, mode_re%pr, mode_re%t)
+
             call outpost2(vx, vy, vz, pr, t, 0, prefix_re)
 
-            call nopcopy(vx, vy, vz, pr, t,
-     $           mode_im%vx, mode_im%vy, mode_im%vz,
-     $           mode_im%pr, mode_im%t)
+            call nopcopy(vx, vy, vz, pr, t, mode_im%vx, mode_im%vy, mode_im%vz, mode_im%pr, mode_im%t)
+
             call outpost2(vx, vy, vz, pr, t, 0, prefix_im)
 
             if (nid == 0) then
                mu_mag = abs(evals(m))
-               freq = atan2(aimag(evals(m)), real(evals(m))) /
-     $              (2.0d0 * NEKSTAB_PI * modal_dt)
-               write(6,'(A,I4,A,F8.4,A,F10.4,A,E12.4)')
-     $              '    Mode', m, ': |mu| =', mu_mag,
-     $              ', St =', freq, ', ||Phi_re|| =', mode_norm
+               freq = atan2(aimag(evals(m)), real(evals(m))) / (2.0d0 * NEKSTAB_PI * modal_dt)
+
+               write(6,'(A,I4,A,F8.4,A,F10.4,A,E12.4)') '    Mode', m, &
+                  ': |mu| =', mu_mag, ', St =', freq, ', ||Phi_re|| =', mode_norm
+
             end if
          end do
 

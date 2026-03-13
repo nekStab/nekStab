@@ -1,6 +1,9 @@
 
 # nekStab build rules — module dependency chain
-# All .f90 files compiled with fixed-format flags (FL2) except fourier*.f90
+#
+# Bridge module (nekstab_nek_bridge): compiled FIXED-format (wraps Nek5000 includes)
+# All other .f90 files: compiled FREE-format (use the bridge instead of includes)
+# main.f90 and usr_wrappers.f90: stay FIXED-format (bare subroutines called by Nek5000)
 
 # Free-form flags: replace -fixed/-ffixed-form with -free/-ffree-form
 # Intel: -fixed -> -free; GCC: -ffixed-form -> -ffree-form
@@ -10,69 +13,77 @@ NS = $(NEKSTAB_SOURCE_ROOT)/src
 O  = $(OBJDIR)
 
 # ─────────────────────────────────────────────────────────────────────
-# Level 0: Leaf modules (no nekStab module dependencies)
+# Bridge module — compiled FIXED-format (wraps all Nek5000 includes)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/nek_vectors.o:       $(NS)/nek_vectors.f90       ;$(FC) -c $(FL2) $< -o $@
-$(O)/argsort.o:           $(NS)/argsort.f90           ;$(FC) -c $(FL2) $< -o $@
-$(O)/lapack_wrapper.o:    $(NS)/lapack_wrapper.f90    ;$(FC) -c $(FL2) $< -o $@
-$(O)/vortex.o:            $(NS)/vortex.f90            ;$(FC) -c $(FL2) $< -o $@
-$(O)/torque.o:            $(NS)/torque.f90            ;$(FC) -c $(FL2) $< -o $@
-$(O)/mode_config.o:       $(NS)/mode_config.f90       ;$(FC) -c $(FL2) $< -o $@
-$(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/nekstab_nek_bridge.o: $(NS)/nekstab_nek_bridge.f90
+	$(FC) -c $(FL2) -I$(NEKSTAB_SOURCE_ROOT) -I$(NEKSTAB_SOURCE_ROOT)/Nek5000/core $< -o $@
+
+# ─────────────────────────────────────────────────────────────────────
+# Level 0: Leaf modules (no nekStab module dependencies)
+# All compiled FREE-format, depend on bridge module
+# ─────────────────────────────────────────────────────────────────────
+$(O)/nek_vectors.o:       $(NS)/nek_vectors.f90       $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/argsort.o:           $(NS)/argsort.f90           $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/lapack_wrapper.o:    $(NS)/lapack_wrapper.f90    $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/vortex.o:            $(NS)/vortex.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/mode_config.o:       $(NS)/mode_config.f90       $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 1: krylov_subspace (depends on nekstab_vectors)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/krylov_subspace.o:   $(NS)/krylov_subspace.f90   $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/krylov_subspace.o:   $(NS)/krylov_subspace.f90   $(O)/nek_vectors.o $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 1.5: Batch inner products (depends on krylov_subspace only)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/krylov_inner_products.o: $(NS)/krylov_inner_products.f90 $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/krylov_inner_products.o: $(NS)/krylov_inner_products.f90 $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 2: Modules that depend on krylov_subspace + Level 0
 # ─────────────────────────────────────────────────────────────────────
 $(O)/fourier.o:           $(NS)/fourier.f90           $(O)/krylov_subspace.o $(O)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/IO.o:                $(NS)/IO.f90                $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/noise.o:             $(NS)/noise.f90             $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/statistics.o:        $(NS)/statistics.f90        $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o $(O)/otd.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/diagnostics.o:       $(NS)/diagnostics.f90       $(O)/krylov_subspace.o $(O)/vortex.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o $(O)/noise.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/fst.o:               $(NS)/fst.f90               $(O)/krylov_subspace.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/IO.o:                $(NS)/IO.f90                $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/noise.o:             $(NS)/noise.f90             $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/statistics.o:        $(NS)/statistics.f90        $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o $(O)/otd.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/diagnostics.o:       $(NS)/diagnostics.f90       $(O)/krylov_subspace.o $(O)/vortex.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o $(O)/noise.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/fst.o:               $(NS)/fst.f90               $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 3: krylov_decomposition (depends on matvec, lapack, IO)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/matvec.o $(O)/lapack_wrapper.o $(O)/IO.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/matvec.o $(O)/lapack_wrapper.o $(O)/IO.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 4: eigensolvers (depends on krylov_decomposition + many Level 0)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/argsort.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o $(O)/noise.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/argsort.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o $(O)/noise.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 5: Modules that depend on eigensolvers
 # ─────────────────────────────────────────────────────────────────────
-$(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o $(O)/newton_krylov.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o $(O)/newton_krylov.o $(O)/energy_budget.o $(O)/torque.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o $(O)/newton_krylov.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o $(O)/newton_krylov.o $(O)/energy_budget.o $(O)/torque.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Modal analysis modules
 # ─────────────────────────────────────────────────────────────────────
-$(O)/modal_pod.o:         $(NS)/modal_pod.f90         $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/fourier.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/modal_dmd.o:         $(NS)/modal_dmd.f90         $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/modal_spod.o:        $(NS)/modal_spod.f90        $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/fourier.o $(O)/modal_pod.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/modal_spod_streaming.o: $(NS)/modal_spod_streaming.f90 $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/modal_pod.o $(O)/modal_spod.o $(O)/lapack_wrapper.o ;$(FC) -c $(FL2) $< -o $@
-$(O)/modal_analysis.o:    $(NS)/modal_analysis.f90    $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/fourier.o $(O)/modal_pod.o $(O)/modal_dmd.o $(O)/modal_spod.o $(O)/modal_spod_streaming.o ;$(FC) -c $(FL2) $< -o $@
+$(O)/modal_pod.o:         $(NS)/modal_pod.f90         $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/fourier.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/modal_dmd.o:         $(NS)/modal_dmd.f90         $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/modal_spod.o:        $(NS)/modal_spod.f90        $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/fourier.o $(O)/modal_pod.o $(O)/lapack_wrapper.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/modal_spod_streaming.o: $(NS)/modal_spod_streaming.f90 $(O)/krylov_subspace.o $(O)/krylov_inner_products.o $(O)/modal_pod.o $(O)/modal_spod.o $(O)/lapack_wrapper.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/modal_analysis.o:    $(NS)/modal_analysis.f90    $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/fourier.o $(O)/modal_pod.o $(O)/modal_dmd.o $(O)/modal_spod.o $(O)/modal_spod_streaming.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
-# Main entry points (bare subroutines, uses all modules)
+# Main entry points — FIXED-format (bare subroutines called by Nek5000)
+# These still use include 'SIZE'/'TOTAL' directly (no use statement)
 # ─────────────────────────────────────────────────────────────────────
 $(O)/main.o: $(NS)/main.f90 \
    $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/mode_config.o \
@@ -92,3 +103,11 @@ $(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
 # GNU Make merges prerequisites from multiple rules for the same target.
 # ─────────────────────────────────────────────────────────────────────
 $(USRF): $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o
+
+# ─────────────────────────────────────────────────────────────────────
+# Catch-all for case-local .f90 files (e.g., torus_utils.f90)
+# Explicit rules above take precedence for nekStab source files.
+# Uses FL2 (fixed-form) since Nek5000 .usr context uses fixed-form.
+# ─────────────────────────────────────────────────────────────────────
+$(O)/%.o: %.f90
+	$(FC) -c $(FL2) $< -o $@
