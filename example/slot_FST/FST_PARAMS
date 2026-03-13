@@ -1,0 +1,17 @@
+c     FST (Freestream Turbulence) parameters and common block
+c     Local to slot_FST case — used by .usr subroutines
+c
+      integer fst_numk,fst_nmodes,npointModes,npointBC
+      real    fst_okini,fst_okfin,fst_length,fst_tu
+      parameter (fst_numk = 20)
+      parameter (fst_nmodes = 10)
+      parameter (fst_okini = 0.230d0)
+      parameter (fst_okfin = 1.09d0)
+      parameter (fst_length = 1.80d0/fst_okfin)
+      parameter (fst_tu = 0.010d0)
+      real fst_uin(lx1,ly1,lz1,lelv),fst_vin(lx1,ly1,lz1,lelv),fst_win(lx1,ly1,lz1,lelv)
+     $    ,frec(2,fst_numk*fst_nmodes)
+     $    ,pointBC (9999,7)
+     $    ,umodes  (9999,7,fst_numk*fst_nmodes)
+     $    ,umodesBC(9999,6,fst_numk*fst_nmodes)
+      common /fst_fields/ npointModes,npointBC,fst_uin,fst_vin,fst_win,frec,pointBC,umodes,umodesBC

@@ -54,7 +54,7 @@
       !
       ! endif
 
-      call nekstab_drive
+      call nekStab
       call hpts
       call save_ubar
       end
