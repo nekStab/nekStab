@@ -20,5 +20,12 @@ nekbmpi bfs N  # Run on N MPI ranks
 ## Expected Output
 Optimal gain G(t) and the associated initial/response perturbation fields.
 
+## Plot Notes
+- Current `plot.py` shows **vy**; paper plots **vx** (shows Kelvin-Helmholtz structure along shear layer)
+- Paper uses 3 panels: (a) base flow vx (cividis), (b) optimal perturbation vx (RdBu), (c) optimal response vx (seismic)
+- Plot bounds: x ∈ [−5, 25], y ∈ [−1, 1]; step body: rectangle at (−5, −1) size 5 × 1
+- G(τ) envelope from `Spectre_Hp.dat` files; reference data: Barkley et al. (2008) Fig. 5
+- Full paper figure requires multi-τ sweep (τ = 8, 18, 38, 58, 88); peak at τ = 58
+
 ## Reference
 Blackburn et al. (2008), JFM 603.

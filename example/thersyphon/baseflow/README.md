@@ -20,5 +20,9 @@ nekbmpi tsyphon N  # Run on N MPI ranks
 ## Expected Output
 Converged steady base flow at Ra = 500 (slightly above Ra_c ~ 494).
 
+## Plot Notes
+- Current `plot.py` shows velocity magnitude; paper shows base flow **temperature** field
+- Add temperature panel alongside velocity magnitude to match paper figure
+
 ## Reference
 Soucasse et al. (2019), PRF 4.

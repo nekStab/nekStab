@@ -21,5 +21,9 @@ nekbmpi 1cyl N  # Run on N MPI ranks
 - Perturbation kinetic energy budget terms (production, dissipation, transport)
 - Sensitivity to base flow modifications
 
+## Plot Notes
+- Paper plots **streamwise component** of ∇_U σ (growth rate sensitivity) and ∇_U ω (frequency sensitivity)
+- Current `plot.py` should show these components separately, not just the modulus
+
 ## Reference
 Giannetti & Luchini (2007), JFM 581.

@@ -21,5 +21,9 @@ nekbmpi tpjet N  # Run on N MPI ranks
 ## Expected Output
 Converged forced periodic orbit at Re = 1900 (above Re_c ~ 1371).
 
+## Plot Notes
+- Current `plot.py` shows velocity magnitude; paper plots **vx** (axial velocity, Blues cmap 0 → 5)
+- Axisymmetric domain: axis labels should be z, r (not x, y); plot bounds: z ∈ [0, 40], r ∈ [0, 2]
+
 ## Reference
 Internal example.

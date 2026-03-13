@@ -20,5 +20,9 @@ nekbmpi 1cyl N  # Run on N MPI ranks
 ## Expected Output
 Sensitivity field showing optimal placement for steady forcing to control the instability.
 
+## Plot Notes
+- Paper plots |∇_F λ| modulus (force sensitivity magnitude)
+- Current `plot.py` should show the modulus field matching paper figure
+
 ## Reference
 Marquet et al. (2008), JFM 615.
