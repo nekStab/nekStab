@@ -267,6 +267,7 @@ c        OTD_params
          use nekstab_mode_config
          use nekstab_diagnostics
          use nekstab_forcing_mod
+         use nekstab_vectors, only: zero_forcing
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -317,15 +318,14 @@ c        OTD_params
                if (nid == 0) write (6, *) 'Scalars found:'
                if (nid == 0) write (6, *) ' ifto=', ifto
                if (nid == 0) write (6, *) ' ifpsco=', ifpsco
-               if (ifto) nof = nof + 1
-               if (nid == 0) write (6, *) 'number of possible scalars (ldimt)=', ldimt
-               if (nid == 0) write (6, *) 'number of scalars (nof)=', nof, npscal
-            end if
+                if (ifto) nof = nof + 1
+                if (nid == 0) write (6, *) 'number of possible scalars (ldimt)=', ldimt
+                if (nid == 0) write (6, *) 'number of scalars (nof)=', nof, npscal
+             end if
 
-            call oprzero(fcx, fcy, fcz) ! never comment this!
-            call rzero(fct, nx1*ny1*nz1*nelt*ldimt) ! zero all scalar forcing
+             call zero_forcing
 
-            isNekStabinit = .true.
+             isNekStabinit = .true.
          elseif (nid == 0) then
             print *, 'NekStab already initialized'
          end if
@@ -351,6 +351,7 @@ c        OTD_params
          use nekstab_sensitivity
          use nekstab_otd, only: otd
          use nekstab_modal_analysis
+         use nekstab_vectors, only: zero_forcing
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -377,21 +378,31 @@ c        OTD_params
      &              tp(:, :, 1), 'total_ens_p1.dat', glob_skip)
             end if
 
-            call nekStab_outpost
-            call nekStab_comment
+             call nekStab_outpost
+             call nekStab_comment
+             call zero_forcing
+
+            if (ifbfcv) call nek_end
             return
          end if
 
       !  ═══════════════════════════════════════════════════════════════════
-      !  MODE 1: Fixed Point Methods (SFD, BoostConv, TDF)
+      !  MODE 1: Fixed-point methods (SFD, BoostConv, TDF)
+      !
+      !  WARNING: This block must be separate from Mode 0 (DNS).
+      !  nekstab_mode='sfd' sets ifSFD=.true. but NOT ifDNS, so nesting
+      !  inside if(ifDNS) would make the fixed-point path unreachable.
+      !  Nek5000 handles time-stepping; these routines apply damping/feedback.
       !  ═══════════════════════════════════════════════════════════════════
          if (ifSFD .or. ifBoostConv .or. ifTDF) then
 
             call nekStab_outpost
             call nekStab_comment
-
-            call oprzero(fcx, fcy, fcz)
-            call rzero(fct, nx1*ny1*nz1*nelt*ldimt)
+            !  Must zero fcx/fcy/fcz/fct before SFD/TDF/BoostConv each timestep.
+            !  Without zeroing, old forcing values accumulate and corrupt the flow.
+            !  Sponge forcing is computed on-the-fly in nekStab_forcing, not stored
+            !  in fcx, so no sponge contribution is lost by zeroing here.
+            call zero_forcing
 
             if (ifSFD) then
                call SFD
