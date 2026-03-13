@@ -1,0 +1,2 @@
+brew update && brew upgrade
+brew install mpich gfortran wget git cmake htop vim

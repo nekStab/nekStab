@@ -1,0 +1,3 @@
+sudo apt update && apt upgrade
+sudo apt -y install open-mpi libopenblas-dev cmake m4 htop vim build-essential
+sudo apt autoremove
