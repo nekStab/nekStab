@@ -28,7 +28,93 @@
       initialize_gmres_vector, &
       nonlinear_forward_map, &
       set_nek5000_tolerances, spec_tole
+   ! ── Log file management ──────────────────────────────────────────
+   !
+   ! The old code did open/write/close on every Newton, GMRES, and
+   ! Arnoldi iteration — 3 open+close cycles per inner Arnoldi step.
+   ! On networked HPC filesystems the metadata round-trips add up.
+   !
+   ! Now each log file is opened once at the start of newton_krylov
+   ! and closed once at the end.  ts_gmres uses ensure_*_open so it
+   ! also works when called standalone (without newton_krylov).
+   integer, parameter :: newton_log_unit = 887
+   integer, parameter :: gmres_log_unit = 888
+   integer, parameter :: arnoldi_log_unit = 889
    contains
+
+   !  Open (or reopen) a log file.  reset_file=.true. truncates;
+   !  .false. appends (restart).
+   subroutine open_log_file(unit_no, filename, reset_file)
+   integer, intent(in) :: unit_no
+   character(len=*), intent(in) :: filename
+   logical, intent(in) :: reset_file
+   logical :: opened
+
+   inquire(unit=unit_no, opened=opened)
+   if (opened) close(unit_no)
+
+   if (reset_file) then
+   open(unit=unit_no, file=filename, status='replace', action='write')
+   else
+   open(unit=unit_no, file=filename, action='write', position='append')
+   end if
+
+   end subroutine open_log_file
+
+   subroutine open_newton_log_units(reset_files)
+   logical, intent(in) :: reset_files
+
+   if (nid /= 0) return
+
+   call open_log_file(newton_log_unit, 'residu_newton.dat', reset_files)
+   call open_log_file(gmres_log_unit, 'residu_gmres.dat', reset_files)
+   call open_log_file(arnoldi_log_unit, 'residu_arnoldi.dat', reset_files)
+
+   end subroutine open_newton_log_units
+
+   subroutine close_newton_log_units()
+
+   if (nid /= 0) return
+
+   close(newton_log_unit)
+   close(gmres_log_unit)
+   close(arnoldi_log_unit)
+
+   end subroutine close_newton_log_units
+
+   !  ts_gmres may be called from newton_krylov (units already open)
+   !  or standalone.  opened_here is an ownership flag: .true. means
+   !  this call opened the log files and the caller must close them
+   !  on exit (standalone case); .false. means newton_krylov owns them.
+   subroutine ensure_gmres_log_units_open(opened_here)
+   logical, intent(out) :: opened_here
+   logical :: opened
+
+   opened_here = .false.
+   if (nid /= 0) return
+
+   inquire(unit=gmres_log_unit, opened=opened)
+   if (.not. opened) then
+   call open_log_file(gmres_log_unit, 'residu_gmres.dat', .false.)
+   opened_here = .true.
+   end if
+
+   inquire(unit=arnoldi_log_unit, opened=opened)
+   if (.not. opened) then
+   call open_log_file(arnoldi_log_unit, 'residu_arnoldi.dat', .false.)
+   opened_here = .true.
+   end if
+
+   end subroutine ensure_gmres_log_units_open
+
+   subroutine close_gmres_log_units()
+
+   if (nid /= 0) return
+
+   close(gmres_log_unit)
+   close(arnoldi_log_unit)
+
+   end subroutine close_gmres_log_units
 
       !-----------------------------------------------------------------------
       ! newton_krylov — Main Newton iteration loop
@@ -91,11 +177,11 @@
 
    maxiter_newton = 30; maxiter_gmres = 30
 
-   if (istep == 0 .and. nid == 0) then
+   ! Open all 3 log files once.  istep==0 truncates (fresh run);
+   ! istep>0 appends (restart).  They stay open until close_newton_log_units().
+   if (nid == 0) then
    write (6, *) 'Opening output files for residuals'
-   open (unit=887, file='residu_newton.dat', status='replace'); close (887)
-   open (unit=888, file='residu_gmres.dat', status='replace'); close (888)
-   open (unit=889, file='residu_arnoldi.dat', status='replace'); close (889)
+   call open_newton_log_units(istep == 0)
    end if
 
    if (nid == 0) write (6, *) 'Initializing Krylov vectors'
@@ -192,10 +278,8 @@
       ' (3 iterations without progress)'
    end if
    write (6, "('          Time: ',1PE15.6,'s  GMRES calls: ', I4) ") newton_iter_time, total_gmres_calls
-   open (887, file='residu_newton.dat', action='write', position='append')
-   write (887, "(4I9,4(1PE15.6))") i, total_calls, total_calls - prev_total_calls, k_sum, tottime, &
+   write (newton_log_unit, "(4I9,4(1PE15.6))") i, total_calls, total_calls - prev_total_calls, k_sum, tottime, &
       max(param(21), param(22)), residual, dtol
-   close (887)
    prev_total_calls = total_calls ! Save for next iteration
    write (6, *) '------------------------------------------------'
    end if
@@ -278,6 +362,8 @@
    call outpost_vort(vx, vy, vz, 'BFV')
    end if
 
+   call close_newton_log_units()
+
    end subroutine
 
       !-----------------------------------------------------------------------
@@ -328,8 +414,15 @@
    real :: arnoldi_start_time, arnoldi_iter_time
    real :: dot_val ! For weighted inner product calculation
    integer, save :: gmres_k_sum = 0  ! Accumulator for total k values in GMRES
+   logical :: opened_local_logs  ! true if WE opened the logs (standalone call)
 
    calls = 0
+   opened_local_logs = .false.
+
+   ! If called from newton_krylov, logs are already open (opened_local_logs stays false).
+   ! If called standalone, this opens them and sets opened_local_logs=true
+   ! so we close them at the end of this subroutine.
+   call ensure_gmres_log_units_open(opened_local_logs)
 
       !     ----- Allocate arrays for GMRES -----
    allocate (Q(ksize + 1), H(ksize + 1, ksize), yvec(ksize), evec(ksize + 1))
@@ -411,9 +504,7 @@
    write (6, "('              Time:',1PE15.6,'s') ") arnoldi_iter_time
    end if
 
-   open (889, file='residu_arnoldi.dat', action='write', position='append')
-   write (889, "(I9,4(1PE15.6))") k, arnoldi_iter_time, tol, beta2, dtol
-   close (889)
+   write (arnoldi_log_unit, "(I9,4(1PE15.6))") k, arnoldi_iter_time, tol, beta2, dtol
    write (6, *) '    ...........................'
    end if
 
@@ -450,9 +541,7 @@
       gmres_iter_time, k
    end if
    gmres_k_sum = gmres_k_sum + k  ! Update accumulator after writing
-   open (888, file='residu_gmres.dat', action='write', position='append')
-   write (888, "(4I9,3(1PE15.6))") newton_iter, i, k, gmres_k_sum, tol, beta2, dtol
-   close (888)
+   write (gmres_log_unit, "(4I9,3(1PE15.6))") newton_iter, i, k, gmres_k_sum, tol, beta2, dtol
 
    prev_beta2 = beta2
    write (6, *) '  ------------------------------------'
@@ -470,6 +559,8 @@
    deallocate (Q, H, yvec, evec)
 
    k_out = k  ! Save final k value
+
+   if (opened_local_logs) call close_gmres_log_units()
 
    end subroutine ts_gmres
 
