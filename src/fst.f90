@@ -222,7 +222,8 @@ end subroutine computeBC
 !   u_turbu [out] -- turbulent velocity at inlet points (npointBC,3)
 !-----------------------------------------------------------------------
 subroutine computeTurbu(u_turbu)
-   real u_turbu(npointBC, 3), turbu_aux(npointBC, 3)
+   real, intent(out) :: u_turbu(npointBC, 3)
+   real turbu_aux(npointBC, 3)
    real kk, dkk, dkke, kk1, kk2, enspect1, enspect2, integral
    real ampli, enspect, auxcos(npointBC), auxsin(npointBC), aa, bb
    integer i, j, k, itervp, kvalue
@@ -243,7 +244,7 @@ subroutine computeTurbu(u_turbu)
       integral = integral + (enspect1 + enspect2)*dkke/2
    end do
    integral = 1.0d0/integral
-   itervp = 0.0d0
+   itervp = 0
 
    call rzero(u_turbu(1, 1), npointBC)
    call rzero(u_turbu(1, 2), npointBC)

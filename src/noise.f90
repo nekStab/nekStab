@@ -70,7 +70,6 @@ subroutine add_noise_scal(qin, fc1, fc2, fc3)
    nmin = glmin(qin(:), nt); nmax = glmax(qin(:), nt)
    if (nid == 0) write (6, *) 'noise scal min,max', nmin, nmax
 
-   return
 end subroutine add_noise_scal
 !-----------------------------------------------------------------------
 
@@ -143,7 +142,6 @@ subroutine op_add_noise(qx, qy, qz)
       if (nid == 0) write (6, *) 'noise vz min,max', nmin, nmax
    end if
 
-   return
 end subroutine op_add_noise
 !-----------------------------------------------------------------------
 
@@ -208,7 +206,6 @@ subroutine add_symmetric_seed(qx, qy, qz, qp)
    call opcmult(qx, qy, qz, amp)
    call cmult(qp, amp, nv)
 
-   return
 end subroutine add_symmetric_seed
 !-----------------------------------------------------------------------
 
@@ -222,7 +219,6 @@ real function mth_rand(ix, iy, iz, ieg, xl, fc)
    if (if3D) mth_rand = fc(1)*(ieg + xl(NDIM)*sin(mth_rand)) + fc(2)*iz*ix + fc(3)*iz
    mth_rand = cos(1.e3*sin(1.e3*sin(mth_rand)))
 
-   return
 end function mth_rand
 !-----------------------------------------------------------------------
 

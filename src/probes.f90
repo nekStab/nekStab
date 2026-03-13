@@ -53,7 +53,6 @@ subroutine pointcheck(posiz, procmin)
       end if
    end do
 
-   return
 end subroutine pointcheck
 !-----------------------------------------------------------------------
 
@@ -133,7 +132,6 @@ subroutine zero_crossing(v_mean_init)
       velp(i) = velp(i + 1)
    end do
 
-   return
 end subroutine zero_crossing
 !-----------------------------------------------------------------------
 

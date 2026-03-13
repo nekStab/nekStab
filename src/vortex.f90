@@ -65,7 +65,6 @@ contains
        call exitt
     end if
 
-    return
 end subroutine vortex_core
 
 !-----------------------------------------------------------------------
@@ -120,7 +119,6 @@ subroutine compute_omega_jc(omega)
    end do
    call filter_s0(omega, 0.5, 1, 'vortx') !filtering is necessary here!
 
-   return
 end subroutine compute_omega_jc
 
 !-----------------------------------------------------------------------
@@ -148,7 +146,6 @@ subroutine compute_omega(l2)
     end do
     call filter_s0(l2, 0.5, 1, 'vortx')
 
-    return
 end subroutine compute_omega
 
 !-----------------------------------------------------------------------
@@ -173,7 +170,6 @@ subroutine compute_symmetricVec(l2)
     end do
     call filter_s0(l2, 0.5, 1, 'vortx')
 
-    return
 end subroutine compute_symmetricVec
 
 !-----------------------------------------------------------------------
@@ -198,7 +194,6 @@ subroutine compute_assymetricVec(l2)
     end do
     call filter_s0(l2, 0.5, 1, 'vortx')
 
-    return
 end subroutine compute_assymetricVec
 
 !-----------------------------------------------------------------------
@@ -231,7 +226,6 @@ subroutine compute_q(l2)
     end do
     call filter_s0(l2, 0.5, 1, 'vortx')
 
-    return
 end subroutine compute_q
 
 !-----------------------------------------------------------------------
@@ -271,7 +265,6 @@ subroutine compute_delta(l2)
     end do
     call filter_s0(l2, 0.5, 1, 'vortx')
 
-    return
 end subroutine compute_delta
 
 !-----------------------------------------------------------------------
@@ -339,7 +332,6 @@ subroutine compute_swirling(l2)
        end do
     end do
 
-    return
 end subroutine compute_swirling
 
 !-----------------------------------------------------------------------
@@ -363,7 +355,6 @@ subroutine compute_antisymmetric(mygi, B, l)
        B = ((mygi(l, 1, 2) - mygi(l, 2, 1))**2)/4
     end if
 
-    return
 end subroutine compute_antisymmetric
 
 !-----------------------------------------------------------------------
@@ -389,7 +380,6 @@ subroutine compute_symmetric(mygi, A, l)
        A = B + (mygi(l, 1, 1)**2 + mygi(l, 2, 2)**2)/2
     end if
 
-    return
 end subroutine compute_symmetric
 
 !-----------------------------------------------------------------------
@@ -415,7 +405,6 @@ subroutine compute_firstInv(mygi, a, l)
        a = (mygi(l, 1, 1) + mygi(l, 2, 2))
     end if
 
-    return
 end subroutine compute_firstInv
 
 !-----------------------------------------------------------------------
@@ -444,7 +433,6 @@ subroutine compute_secondInv(mygi, a, l)
        -2*mygi(l, 1, 2)*mygi(l, 2, 1) - mygi(l, 1, 1)*mygi(l, 1, 1) - mygi(l, 2, 2)*mygi(l, 2, 2)) * 0.5d0
     end if
 
-    return
 end subroutine compute_secondInv
 
 !-----------------------------------------------------------------------
@@ -476,7 +464,6 @@ subroutine compute_thirdInv(mygi, a, l)
 
     end if
 
-    return
 end subroutine compute_thirdInv
 
 !-----------------------------------------------------------------------
@@ -487,8 +474,13 @@ end subroutine compute_thirdInv
 !   c   [in]  -- second invariant coefficient
 !   d   [in]  -- third invariant coefficient
 !   lci [out] -- imaginary part of complex eigenvalue
+!  pure is valid despite the host module's `use nekstab_nek_bridge` (common
+!  blocks): Fortran only prohibits *referencing* common-block variables in
+!  pure procedures.  These routines use only args, locals, and the nekStab_dp
+!  kind parameter (a named constant, not a variable).  Skip elemental to
+!  avoid compiler warnings from host-associated common blocks.
 !-----------------------------------------------------------------------
-subroutine cubicLambdaCi(b, c, d, lci)
+pure subroutine cubicLambdaCi(b, c, d, lci)
      real a, b, c, d
      real f, g, h, r, s, t2, u
      real lci
@@ -500,7 +492,7 @@ subroutine cubicLambdaCi(b, c, d, lci)
    ci = sqrt(cmplx(-1.))
 
    a = 1
-   f = c/a - 1/3.*(b/a)**2.
+   f = c/a - (1.0/3.0)*(b/a)**2.
    g = ((2.*(b**3.)/(a**3.)) - (9.*b*c/(a**2.)) + (27.*d/a))/27.
    h = (g/2.)**2.+(f/3.)**3.
 
@@ -511,13 +503,13 @@ subroutine cubicLambdaCi(b, c, d, lci)
       if (r <= 0.) then
          s = sign(abs(r)**(1.0/3.0), r)
       else
-         s = (r)**(1./3.)
+         s = (r)**(1.0/3.0)
       end if
       t2 = -(g/2.) - sqrt(h)
       if (t2 <= 0.) then
          u = sign(abs(t2)**(1.0/3.0), t2)
       else
-         u = ((t2)**(1/3.))
+         u = (t2)**(1.0/3.0)
       end if
       x1 = -(s + u)/2.+(b/3./a) + ci*(s - u)*sqrt(3.)/2.
       lci = aimag(x1)
@@ -532,8 +524,9 @@ end subroutine cubicLambdaCi
 !   b   [in]  -- trace coefficient
 !   c   [in]  -- determinant coefficient
 !   lci [out] -- imaginary part of complex eigenvalue
+!  Same pure rationale as cubicLambdaCi above.
 !-----------------------------------------------------------------------
-subroutine quadLambdaCi(b, c, lci)
+pure subroutine quadLambdaCi(b, c, lci)
      real a, b, c, d
      real f
      real lci

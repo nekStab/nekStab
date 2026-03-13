@@ -30,6 +30,10 @@ module nekstab_otd
    private
 
    ! ── Module-level persistent variables (replacing DATA statements) ──
+   !  NOTE: OTDfx, OTDfy, OTDfz, otd_Lr, etc. are NOT declared here.
+   !  They live in the OTD_modes / OTD_params common blocks in NEKSTAB.inc,
+   !  accessible via `use nekstab_nek_bridge`.  Declaring them here as
+   !  module variables would create a duplicate-declaration compiler error.
    logical :: OTD_init = .false.
    integer :: OTD_ftle_icalld = 0
    real :: OTD_ftle_t0 = 0.0d0
@@ -854,6 +858,8 @@ subroutine otd_normalize_vector_field(uxp, uyp, uzp)
    nv = lx1*ly1*lz1*nelv
    n2 = 0.50d0*op_glsc2_wt(uxp, uyp, uzp, uxp, uyp, uzp, bm1)
    if (n2 <= 0.0d0) then
+      !  Semicolon: write is guarded by nid==0, but nek_end runs on ALL
+      !  MPI ranks (intentional — guarding it would hang other ranks).
       if (nid == 0) write (6, *) 'Error in otd_normalize_vector_field!'; call nek_end
    end if
    invnorm = 1.0d0/sqrt(n2)
@@ -886,7 +892,12 @@ subroutine otd_mod_Gram_Schmidt
 
    nv = lx1*ly1*lz1*nelv
    do i = 1, npert ! orthonormalize
-      invnorm = 1/sqrt(otd_inner_product(i, i, 1))
+      invnorm = otd_inner_product(i, i, 1)
+      if (invnorm > 0.0) then
+         invnorm = 1.0/sqrt(invnorm)
+      else
+         invnorm = 0.0
+      end if
       call cmult(vxp(1, i), invnorm, nv)
       call cmult(vyp(1, i), invnorm, nv)
       if (if3d) call cmult(vzp(1, i), invnorm, nv)
