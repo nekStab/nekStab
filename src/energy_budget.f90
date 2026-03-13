@@ -32,9 +32,36 @@
       compute_velocity_gradient_tensor, &
       compute_dissipation, compute_production, &
       compute_gradients, compute_laplacian
-    logical, save :: energy_init = .false.
+   logical, save :: energy_init = .false.
+   real, allocatable, save :: diss_lap_ax_s(:), diss_lap_ay_s(:), diss_lap_az_s(:)
+   real, allocatable, save :: diss_lap_bx_s(:), diss_lap_by_s(:), diss_lap_bz_s(:)
+   real, allocatable, save :: prod_dcdx_s(:), prod_dcdy_s(:), prod_dcdz_s(:)
 
    contains
+
+   !  Allocate-once workspace for compute_dissipation.
+   !  Fixed-size (lv), never resized — these store intermediate
+   !  Laplacians that would otherwise be allocated on every call.
+   subroutine ensure_dissipation_workspace()
+   use krylov_subspace
+
+   if (.not. allocated(diss_lap_ax_s)) then
+      allocate(diss_lap_ax_s(lv), diss_lap_ay_s(lv), diss_lap_az_s(lv))
+      allocate(diss_lap_bx_s(lv), diss_lap_by_s(lv), diss_lap_bz_s(lv))
+   end if
+
+   end subroutine ensure_dissipation_workspace
+
+   !  Allocate-once workspace for compute_production.
+   !  Fixed-size (lv), never resized — stores base flow gradients.
+   subroutine ensure_production_workspace()
+   use krylov_subspace
+
+   if (.not. allocated(prod_dcdx_s)) then
+      allocate(prod_dcdx_s(lv), prod_dcdy_s(lv), prod_dcdz_s(lv))
+   end if
+
+   end subroutine ensure_production_workspace
 
       !-----------------------------------------------------------------------
       ! stability_energy_budget — PKE budget for steady base flows
@@ -518,39 +545,35 @@
    subroutine compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, dissipation)
     use krylov_subspace
 
-    real, dimension(lv), intent(in) :: vx_dRe, vy_dRe, vz_dRe
+   real, dimension(lv), intent(in) :: vx_dRe, vy_dRe, vz_dRe
    real, dimension(lv), intent(in) :: vx_dIm, vy_dIm, vz_dIm
 
-   real, allocatable, dimension(:) :: Laplacian_ax, Laplacian_ay, Laplacian_az
-   real, allocatable, dimension(:) :: Laplacian_bx, Laplacian_by, Laplacian_bz
-
    real, dimension(lv), intent(out) :: dissipation
-   real, allocatable, dimension(:) :: dummy
-
-   allocate(Laplacian_ax(lv), Laplacian_ay(lv), Laplacian_az(lv))
-   allocate(Laplacian_bx(lv), Laplacian_by(lv), Laplacian_bz(lv))
-   allocate(dummy(lv))
+   call ensure_dissipation_workspace()
 
       !     --> Compute Laplacians.
-   call compute_laplacian(vx_dRe, Laplacian_ax)
-   call compute_laplacian(vy_dRe, Laplacian_ay)
-   call compute_laplacian(vz_dRe, Laplacian_az)
+      !     NOTE: the if3d guards are correctness fixes, not just
+      !     performance.  In 2D runs vz fields are NOT guaranteed to be
+      !     zero — they may contain uninitialized data from previous
+      !     field loads.  Without the guard, compute_laplacian would
+      !     produce nonzero Laplacians and add a spurious z-contribution.
+   call compute_laplacian(vx_dRe, diss_lap_ax_s)
+   call compute_laplacian(vy_dRe, diss_lap_ay_s)
 
-   call compute_laplacian(vx_dIm, Laplacian_bx)
-   call compute_laplacian(vy_dIm, Laplacian_by)
-   call compute_laplacian(vz_dIm, Laplacian_bz)
+   call compute_laplacian(vx_dIm, diss_lap_bx_s)
+   call compute_laplacian(vy_dIm, diss_lap_by_s)
+   if (if3d) then
+      call compute_laplacian(vz_dRe, diss_lap_az_s)
+      call compute_laplacian(vz_dIm, diss_lap_bz_s)
+   end if
 
       !     --> Compute dissipation term.
-   dissipation = 0.0d+00
+   dissipation = vx_dRe*diss_lap_ax_s + vx_dIm*diss_lap_bx_s
+   dissipation = dissipation + vy_dRe*diss_lap_ay_s + vy_dIm*diss_lap_by_s
 
-   dummy = vx_dRe*Laplacian_ax + vx_dIm*Laplacian_bx
-   dissipation = dissipation + dummy
-
-   dummy = vy_dRe*Laplacian_ay + vy_dIm*Laplacian_by
-   dissipation = dissipation + dummy
-
-   dummy = vz_dRe*Laplacian_az + vz_dIm*Laplacian_bz
-   dissipation = dissipation + dummy
+   if (if3d) then
+      dissipation = dissipation + vz_dRe*diss_lap_az_s + vz_dIm*diss_lap_bz_s
+   end if
 
    dissipation = 0.5*dissipation*param(2)/param(1)
 
@@ -575,34 +598,38 @@
    subroutine compute_production(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, component, prod_x, prod_y, prod_z)
     use krylov_subspace
 
-    real, dimension(lv), intent(in) :: vx_dRe, vy_dRe, vz_dRe
+   real, dimension(lv), intent(in) :: vx_dRe, vy_dRe, vz_dRe
    real, dimension(lv), intent(in) :: vx_dIm, vy_dIm, vz_dIm
    real, dimension(lv), intent(out) :: prod_x, prod_y, prod_z
-   real, allocatable, dimension(:) :: dcdx, dcdy, dcdz
    integer, intent(in) :: component
 
-   allocate(dcdx(lv), dcdy(lv), dcdz(lv))
+   call ensure_production_workspace()
+   prod_x = 0.0d0
+   prod_y = 0.0d0
+   prod_z = 0.0d0
 
    if (component == 1) then
-   call gradm1(dcdx, dcdy, dcdz, ubase, nelv)
+   call gradm1(prod_dcdx_s, prod_dcdy_s, prod_dcdz_s, ubase, nelv)
 
-   prod_x = -0.5*(vx_dRe**2 + vx_dIm**2)*dcdx
-   prod_y = -0.5*(vx_dRe*vy_dRe + vy_dIm*vx_dIm)*dcdy
-   prod_z = -0.5*(vx_dRe*vz_dRe + vz_dIm*vx_dIm)*dcdz
+   prod_x = -0.5*(vx_dRe**2 + vx_dIm**2)*prod_dcdx_s
+   prod_y = -0.5*(vx_dRe*vy_dRe + vy_dIm*vx_dIm)*prod_dcdy_s
+   if (if3d) prod_z = -0.5*(vx_dRe*vz_dRe + vz_dIm*vx_dIm)*prod_dcdz_s
 
    else if (component == 2) then
-   call gradm1(dcdx, dcdy, dcdz, vbase, nelv)
+   call gradm1(prod_dcdx_s, prod_dcdy_s, prod_dcdz_s, vbase, nelv)
 
-   prod_x = -0.5*(vx_dRe*vy_dRe + vy_dIm*vx_dIm)*dcdx
-   prod_y = -0.5*(vy_dRe**2 + vy_dIm**2)*dcdy
-   prod_z = -0.5*(vy_dRe*vz_dRe + vz_dIm*vy_dIm)*dcdz
+   prod_x = -0.5*(vx_dRe*vy_dRe + vy_dIm*vx_dIm)*prod_dcdx_s
+   prod_y = -0.5*(vy_dRe**2 + vy_dIm**2)*prod_dcdy_s
+   if (if3d) prod_z = -0.5*(vy_dRe*vz_dRe + vz_dIm*vy_dIm)*prod_dcdz_s
 
    else if (component == 3) then
-   call gradm1(dcdx, dcdy, dcdz, wbase, nelv)
+   if (if3d) then
+      call gradm1(prod_dcdx_s, prod_dcdy_s, prod_dcdz_s, wbase, nelv)
 
-   prod_x = -0.5*(vx_dRe*vz_dRe + vz_dIm*vx_dIm)*dcdx
-   prod_y = -0.5*(vy_dRe*vz_dRe + vz_dIm*vy_dIm)*dcdy
-   prod_z = -0.5*(vz_dRe**2 + vz_dIm**2)*dcdz
+      prod_x = -0.5*(vx_dRe*vz_dRe + vz_dIm*vx_dIm)*prod_dcdx_s
+      prod_y = -0.5*(vy_dRe*vz_dRe + vz_dIm*vy_dIm)*prod_dcdy_s
+      prod_z = -0.5*(vz_dRe**2 + vz_dIm**2)*prod_dcdz_s
+   end if
    end if
 
    end subroutine compute_production

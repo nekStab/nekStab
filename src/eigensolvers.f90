@@ -38,7 +38,42 @@
    public :: inner_product, norm, krylov_schur,&
       outpost_ks, schur_condensation,&
       select_eigenvalues, ensure_conjugate_pairs
+
+   ! outpost_ks scratch (saved across calls to avoid allocator churn).
+   ! Two groups: (1) kcols-dependent arrays (Krylov basis copies,
+   ! eigenvector coefficients) — grow when k_dim increases;
+   ! (2) fixed-size arrays (complex eigenmodes, dgemv work) —
+   ! allocated once at compile-time lv/lp/lt, never resized.
+   real, allocatable, save :: oks_qx_s(:,:), oks_qy_s(:,:), oks_qz_s(:,:)
+   real, allocatable, save :: oks_qp_s(:,:), oks_qt_s(:,:,:)
+   complex(nekStab_dp), allocatable, save :: oks_fp_cx_s(:), oks_fp_cy_s(:), oks_fp_cz_s(:)
+   complex(nekStab_dp), allocatable, save :: oks_fp_cp_s(:), oks_fp_ct_s(:,:)
+   real, allocatable, save :: oks_vecs_re_s(:), oks_vecs_im_s(:)
+   real, allocatable, save :: oks_work_re_s(:), oks_work_im_s(:)
+   integer, save :: oks_k_cap = 0
    contains
+
+   subroutine ensure_outpost_ks_workspace(kcols)
+   integer, intent(in) :: kcols
+
+   if (.not. allocated(oks_qx_s) .or. oks_k_cap < kcols) then
+      if (allocated(oks_qx_s)) then
+         deallocate(oks_qx_s, oks_qy_s, oks_qz_s, oks_qp_s, oks_qt_s)
+         deallocate(oks_vecs_re_s, oks_vecs_im_s)
+      end if
+      allocate(oks_qx_s(lv, kcols), oks_qy_s(lv, kcols), oks_qz_s(lv, kcols))
+      allocate(oks_qp_s(lp, kcols), oks_qt_s(lt, ldimt, kcols))
+      allocate(oks_vecs_re_s(kcols), oks_vecs_im_s(kcols))
+      oks_k_cap = kcols
+   end if
+
+   if (.not. allocated(oks_fp_cx_s)) then
+      allocate(oks_fp_cx_s(lv), oks_fp_cy_s(lv), oks_fp_cz_s(lv))
+      allocate(oks_fp_cp_s(lp), oks_fp_ct_s(lt, ldimt))
+      allocate(oks_work_re_s(lv), oks_work_im_s(lv))
+   end if
+
+   end subroutine ensure_outpost_ks_workspace
 
       !-----------------------------------------------------------------------
       ! NOTE: inner_product and norm are now defined in krylov_subspace.f90.
@@ -369,22 +404,8 @@
       ! Krylov vectors
    type(krylov_vector) :: qq
    type(krylov_vector) :: ff
-      ! Arrays for Krylov basis (heap-allocated to avoid stack overflow)
-   real, allocatable :: qx(:,:), qy(:,:), qz(:,:)
-   real, allocatable :: qp(:,:)
-   real, allocatable :: qt(:,:,:)
-
-      ! Arrays for the storage/output of a given eigenmode of the NS operator
-   complex(nekStab_dp), allocatable :: fp_cx(:), fp_cy(:), fp_cz(:)
-   complex(nekStab_dp), allocatable :: fp_cp(:)
-   complex(nekStab_dp), allocatable :: fp_ct(:,:)
-
-      ! Work arrays for dgemv (real/imag split)
-   real, allocatable :: vecs_re(:), vecs_im(:)
-   real, allocatable :: work_re(:), work_im(:)
-
       ! Miscellaneous variables
-   integer :: i, m
+   integer :: i, m, n_press, n_temp, n_scalar
    real :: speriod, trim, spurious_tol
    real :: alpha, alpha_r, alpha_i, beta, old_uparam1, omega
       ! File handling variables
@@ -395,16 +416,10 @@
    integer :: outp
 
    nv = nx1*ny1*nz1*nelv
+   n_press = lx2*ly2*lz2*nelv
+   n_temp = nx1*ny1*nz1*nelt
 
-      ! Allocate on heap (avoids stack overflow for large 3D cases)
-   allocate(qx(lv, k_dim), qy(lv, k_dim))
-   allocate(qz(lv, k_dim))
-   allocate(qp(lp, k_dim))
-   allocate(qt(lt, ldimt, k_dim))
-   allocate(fp_cx(lv), fp_cy(lv), fp_cz(lv))
-   allocate(fp_cp(lp), fp_ct(lt, ldimt))
-   allocate(vecs_re(k_dim), vecs_im(k_dim))
-   allocate(work_re(lv), work_im(lv))
+   call ensure_outpost_ks_workspace(k_dim)
    speriod = dt*nsteps ! sampling period
 
       !  evop (evolution operator) defined in matvec.f90
@@ -426,14 +441,20 @@
 
       ! Copy Krylov basis into contiguous arrays for BLAS
    do i = 1, k_dim
-   qx(:, i) = Q(i)%vx(:)
-   qy(:, i) = Q(i)%vy(:)
-   if (if3D) qz(:, i) = Q(i)%vz(:)
-   if (ifpo) qp(:, i) = Q(i)%pr(:)
-   if (ifto) qt(:, 1, i) = Q(i)%t(:, 1)
+   call copy(oks_qx_s(1, i), Q(i)%vx, nv)
+   call copy(oks_qy_s(1, i), Q(i)%vy, nv)
+   if (if3D) call copy(oks_qz_s(1, i), Q(i)%vz, nv)
+   if (ifpo) call copy(oks_qp_s(1, i), Q(i)%pr, n_press)
+   !  Scalar fields can have different local lengths in CHT / passive-scalar
+   !  cases (`nelfld`), so field 1 (temperature) and fields 2..ldimt must use
+   !  their own active extents rather than one shared `n_temp` length.
+   if (ifto) call copy(oks_qt_s(1, 1, i), Q(i)%t(1, 1), n_temp)
    if (ldimt > 1) then
    do m = 2, ldimt
-   if (ifpsco(m - 1)) qt(:, m, i) = Q(i)%t(:, m)
+   if (ifpsco(m - 1)) then
+   n_scalar = nx1*ny1*nz1*nelfld(m + 1)
+   call copy(oks_qt_s(1, m, i), Q(i)%t(1, m), n_scalar)
+   end if
    end do
    end if
    end do
@@ -472,35 +493,38 @@
    else ! converged modes
 
       !     ----- Computation of eigenmode via dgemv (real/imag split) -----
-   vecs_re(:) = real(vecs(:, i))
-   vecs_im(:) = aimag(vecs(:, i))
+   oks_vecs_re_s(1:k_dim) = real(vecs(1:k_dim, i))
+   oks_vecs_im_s(1:k_dim) = aimag(vecs(1:k_dim, i))
 
-   call dgemv('N', nv, k_dim, 1.0d0, qx, lv, vecs_re, 1, 0.0d0, work_re, 1)
-   call dgemv('N', nv, k_dim, 1.0d0, qx, lv, vecs_im, 1, 0.0d0, work_im, 1)
-   fp_cx(:) = dcmplx(work_re, work_im)
+   call dgemv('N', nv, k_dim, 1.0d0, oks_qx_s, lv, oks_vecs_re_s, 1, 0.0d0, oks_work_re_s, 1)
+   call dgemv('N', nv, k_dim, 1.0d0, oks_qx_s, lv, oks_vecs_im_s, 1, 0.0d0, oks_work_im_s, 1)
+   oks_fp_cx_s(1:nv) = dcmplx(oks_work_re_s(1:nv), oks_work_im_s(1:nv))
 
-   call dgemv('N', nv, k_dim, 1.0d0, qy, lv, vecs_re, 1, 0.0d0, work_re, 1)
-   call dgemv('N', nv, k_dim, 1.0d0, qy, lv, vecs_im, 1, 0.0d0, work_im, 1)
-   fp_cy(:) = dcmplx(work_re, work_im)
+   call dgemv('N', nv, k_dim, 1.0d0, oks_qy_s, lv, oks_vecs_re_s, 1, 0.0d0, oks_work_re_s, 1)
+   call dgemv('N', nv, k_dim, 1.0d0, oks_qy_s, lv, oks_vecs_im_s, 1, 0.0d0, oks_work_im_s, 1)
+   oks_fp_cy_s(1:nv) = dcmplx(oks_work_re_s(1:nv), oks_work_im_s(1:nv))
 
    if (if3D) then
-   call dgemv('N', nv, k_dim, 1.0d0, qz, lv, vecs_re, 1, 0.0d0, work_re, 1)
-   call dgemv('N', nv, k_dim, 1.0d0, qz, lv, vecs_im, 1, 0.0d0, work_im, 1)
-   fp_cz(:) = dcmplx(work_re, work_im)
+   call dgemv('N', nv, k_dim, 1.0d0, oks_qz_s, lv, oks_vecs_re_s, 1, 0.0d0, oks_work_re_s, 1)
+   call dgemv('N', nv, k_dim, 1.0d0, oks_qz_s, lv, oks_vecs_im_s, 1, 0.0d0, oks_work_im_s, 1)
+   oks_fp_cz_s(1:nv) = dcmplx(oks_work_re_s(1:nv), oks_work_im_s(1:nv))
    end if
 
-   if (ifpo) fp_cp(:) = matmul(qp(:, 1:k_dim), vecs(:, i))
+   if (ifpo) oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:k_dim), vecs(:, i))
 
-   if (ifto) fp_ct(:, 1) = matmul(qt(:, 1, 1:k_dim), vecs(:, i))
+   if (ifto) oks_fp_ct_s(1:n_temp, 1) = matmul(oks_qt_s(1:n_temp, 1, 1:k_dim), vecs(:, i))
    if (ldimt > 1) then
    do m = 2, ldimt
-   if (ifpsco(m - 1)) fp_ct(:, m) = matmul(qt(:, m, 1:k_dim), vecs(:, i))
+   if (ifpsco(m - 1)) then
+   n_scalar = nx1*ny1*nz1*nelfld(m + 1)
+   oks_fp_ct_s(1:n_scalar, m) = matmul(oks_qt_s(1:n_scalar, m, 1:k_dim), vecs(:, i))
+   end if
    end do
    end if
 
       !        normalization to unit-norm (volume integral of FP*conj(FP) = 1.)
-   call norm(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), alpha_r)
-   call norm(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), alpha_i)
+   call norm(real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), real(oks_fp_cp_s), real(oks_fp_ct_s), alpha_r)
+   call norm(aimag(oks_fp_cx_s), aimag(oks_fp_cy_s), aimag(oks_fp_cz_s), aimag(oks_fp_cp_s), aimag(oks_fp_ct_s), alpha_i)
 
    if (nid == 0) write (6, *) 'Checking eigenvector', i
    if (nid == 0) write (6, *)
@@ -540,13 +564,17 @@
    time = real(outp) !outp files are numbered from 1 to k_dim
 
       !     ----- Output the real part -----
-   call nopcopy(vx, vy, vz, pr, t, real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct))
+   call nopcopy(vx, vy, vz, pr, t, &
+      real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), &
+      real(oks_fp_cp_s), real(oks_fp_ct_s))
    call nopcmult(vx, vy, vz, pr, t, beta)
    call outpost2(vx, vy, vz, pr, t, nof, nRe)
    call outpost_vort(vx, vy, vz, nRv)
 
       !     ----- Output the imaginary part -----
-   call nopcopy(vx, vy, vz, pr, t, aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct))
+   call nopcopy(vx, vy, vz, pr, t, &
+      aimag(oks_fp_cx_s), aimag(oks_fp_cy_s), aimag(oks_fp_cz_s), &
+      aimag(oks_fp_cp_s), aimag(oks_fp_ct_s))
    call nopcmult(vx, vy, vz, pr, t, beta)
    call outpost2(vx, vy, vz, pr, t, nof, nIm)
 
@@ -556,7 +584,9 @@
    if (uparam(1) == 3.3) uparam(1) = 3.1 ! changing to linearized solver !
    if (uparam(1) == 3.31) uparam(1) = 3.11 ! changing to linearized solver in Floquet
    call bcast(uparam(1), wdsize)
-   call nopcopy(ff%vx, ff%vy, ff%vz, ff%pr, ff%t, real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct))
+   call nopcopy(ff%vx, ff%vy, ff%vz, ff%pr, ff%t, &
+      real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), &
+      real(oks_fp_cp_s), real(oks_fp_ct_s))
    call matvec(qq, ff) ! baseflow already in ubase
    call outpost2(qq%vx, qq%vy, qq%vz, qq%pr, qq%t, nof, 'ore')
    call outpost_vort(qq%vx, qq%vy, qq%vz, 'orv')
@@ -618,9 +648,6 @@
    close (844)
    end if
 
-   deallocate(qx, qy, qz, qp, qt)
-   deallocate(fp_cx, fp_cy, fp_cz, fp_cp, fp_ct)
-   deallocate(vecs_re, vecs_im, work_re, work_im)
    end subroutine outpost_ks
 
       !-----------------------------------------------------------------------

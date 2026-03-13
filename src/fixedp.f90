@@ -28,6 +28,7 @@
    implicit none
    private
    logical, save :: tdf_init = .false.
+   logical, save :: sfd_init = .false.   ! prevents double-open of unit 10 in SFD
    logical, save :: boostconv_init = .false.
    logical, save :: boostconv_core_init = .false.
    real, save :: SFD_oldRes, SFD_dtol
@@ -35,6 +36,19 @@
    public :: tdf, SFD, BoostConv, boostconv_core, &
       qr_dec, linear_system
    contains
+
+   !  Safely close residu.dat (unit 10) if it is open.
+   !  Called at convergence AND at istep==nsteps — the inquire guard
+   !  ensures the double-call case is harmless.
+   subroutine close_residu_unit()
+   logical :: opened
+
+   if (nid /= 0) return
+
+   inquire(unit=10, opened=opened)
+   if (opened) close(10)
+
+   end subroutine close_residu_unit
 
       !-----------------------------------------------------------------------
       ! tdf -- Time-Delayed Feedback stabilization
@@ -47,7 +61,7 @@
     subroutine tdf
      use krylov_subspace
         
-    real, allocatable :: do1(:), do2(:), do3(:)
+    real, allocatable, save :: do1(:), do2(:), do3(:)
     real :: h1, semi, l2, linf, rate, tol
    real, save :: residu0, gain, porbit
    integer, save :: i, norbit, m, ibuf
@@ -138,6 +152,7 @@
    tol = max(param(21), param(22))
    if (l2 > 0.0d0 .and. l2 < tol) then
    if (nid == 0) write (6, *) ' Converged base flow to:', tol
+   call close_residu_unit()
    ifbfcv = .true.
    call bcast(ifbfcv, lsize)
    param(63) = 1.0d0 ! Enforce 64-bit output
@@ -147,8 +162,9 @@
    call bcast(param(63), wdsize)
    call outpost_vort(vx, vy, vz, 'BFV')
    end if
-      
+
    end if ! else
+   if (istep == nsteps) call close_residu_unit()
    end if ! not tdf_init
 
    end subroutine TDF
@@ -178,9 +194,12 @@
    cutoff = 0.5*(sqrt(frq**2 + sig**2) - sig)
    gain = -0.5*(sqrt(frq**2 + sig**2) + sig)
    end if
-   if (nid == 0) open (unit=10, file='residu.dat')
-      
+
    if (istep == 0) then
+   if (.not. sfd_init) then
+   if (nid == 0) open (unit=10, file='residu.dat')
+   sfd_init = .true.
+   end if
    SFD_dtol = max(param(21), param(22)); SFD_oldRes = 0.0d0
    call k_zero(tempM)
    call k_zero(qa)
@@ -213,11 +232,14 @@
    call opcmult(tempD%vx, tempD%vy, tempD%vz, gain)
    call opadd2(fcx, fcy, fcz, tempD%vx, tempD%vy, tempD%vz)
       
-   elseif (nid == 0) then
-      
+   elseif (.not. sfd_init) then
+
+   if (nid == 0) then
    open (unit=10, file='residu.dat')
    write (6, *) ' SFD in continuation mode'
-      
+   end if
+   sfd_init = .true.
+
    end if
       
    if (istep >= 1) then
@@ -238,6 +260,7 @@
       
    if (istep > 100 .and. res < SFD_dtol) then
    if (nid == 0) write (6, *) ' Converged base flow to:', res
+   call close_residu_unit()
    ifbfcv = .true.
    call bcast(ifbfcv, lsize)
    param(63) = 1.0d0 ! Enforce 64-bit output
@@ -248,7 +271,7 @@
    call outpost_vort(vx, vy, vz, 'BFV')
    end if
       
-   if (istep == nsteps) close (10)
+   if (istep == nsteps) call close_residu_unit()
       
    end if
    end subroutine SFD
@@ -289,6 +312,7 @@
    tol = max(param(21), param(22))
    if (residu < tol) then
    if (nid == 0) write (6, *) ' Converged base flow to:', tol
+   call close_residu_unit()
    ifbfcv = .true.
    call bcast(ifbfcv, lsize)
    param(63) = 1.0d0 ! Enforce 64-bit output
@@ -297,8 +321,9 @@
    param(63) = 0.0d0 ! Reset to 32-bit output
    call bcast(param(63), wdsize)
    end if
-      
+
    end if
+   if (istep == nsteps) call close_residu_unit()
 
    end subroutine BoostConv
 

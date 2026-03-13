@@ -47,6 +47,7 @@ module modal_dmd
          real, allocatable :: G(:,:), S(:), Vt(:,:), Sinv(:)
          real, allocatable :: G_shift(:,:)
          real, allocatable :: Atilde(:,:), Atilde_work(:,:)
+         real, allocatable :: Atilde_tmp(:,:), Atilde_proj(:,:)
          real, allocatable :: dmd_norms(:)
          complex(nekStab_dp), allocatable :: dmd_evals(:)
          complex(nekStab_dp), allocatable :: dmd_evecs(:,:)
@@ -149,20 +150,35 @@ module modal_dmd
             deallocate(last_row)
          end block
 
-!        Form projected operator Atilde = Sinv V^T G_shift V Sinv
+!        Form projected operator via BLAS (replaces O(r^2 n^2) scalar loops).
+!
+!        NOTE: despite its name, Vt stores eigenvector COLUMNS (i.e. V,
+!        not V^T).  eig_symmetric returns columns = eigenvectors.
+!
+!        Derivation: tracing the original loop indices gives
+!          Atilde(i,j) = Sinv(i) * sum_{k,m} G_shift(k,m) Vt(m,i) Vt(k,j) * Sinv(j)
+!                      = Sinv(i) * [V^T G_shift V](j,i) * Sinv(j)
+!        i.e.  Atilde = diag(Sinv) * (V^T G_shift V)^T * diag(Sinv)
+!        Note the transpose: G_shift is NOT symmetric, so the (j,i) index
+!        order matters.  The two dgemm calls compute M = V^T G_shift V,
+!        then the double loop reads M(j,i) (transposed) with Sinv scaling.
+!
+!        Cost: 2 dgemm of size (n x r) instead of 4-nested scalar loop.
          if (nid == 0) write(6,*) '  Forming projected operator...'
 
          allocate(Atilde(r, r))
-         Atilde = 0.0d0
+         allocate(Atilde_tmp(n, r), Atilde_proj(r, r))
 
+!        Step 1: Atilde_tmp(n,r) = G_shift(n,n) * V_r(n,r)
+         call dgemm('N', 'N', n, r, n, 1.0d0, &
+            G_shift, n, Vt, n, 0.0d0, Atilde_tmp, n)
+!        Step 2: Atilde_proj(r,r) = V_r^T(r,n) * Atilde_tmp(n,r)
+         call dgemm('T', 'N', r, r, n, 1.0d0, &
+            Vt, n, Atilde_tmp, n, 0.0d0, Atilde_proj, r)
+!        Step 3: transpose + diagonal scaling
          do j = 1, r
             do i = 1, r
-               do k = 1, n
-                  do m = 1, n
-                     Atilde(i,j) = Atilde(i,j) + G_shift(k,m) * &
-                        Vt(m,i) * Vt(k,j) * Sinv(i) * Sinv(j)
-                  end do
-               end do
+               Atilde(i,j) = Sinv(i) * Atilde_proj(j,i) * Sinv(j)
             end do
          end do
 
@@ -183,6 +199,7 @@ module modal_dmd
      &   dmd_norms, min(nsave, r))
 
          deallocate(G, G_shift, S, Vt, Sinv, Atilde, Atilde_work)
+         deallocate(Atilde_tmp, Atilde_proj)
          deallocate(dmd_evals, dmd_evecs, dmd_norms)
 
          if (nid == 0) write(6,*) '  DMD complete'
