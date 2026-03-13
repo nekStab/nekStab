@@ -138,7 +138,6 @@
    end if
    end do
 
-   return
    end subroutine arnoldi_factorization
 
       !-----------------------------------------------------------------------
@@ -228,7 +227,6 @@
    end if
    end if
 
-   return
    end subroutine update_hessenberg_matrix
 
       !-----------------------------------------------------------------------
@@ -322,7 +320,6 @@
 
    end if
 
-   return
    end subroutine arnoldi_checkpoint
 
       !-----------------------------------------------------------------------

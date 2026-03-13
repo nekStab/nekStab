@@ -15,8 +15,8 @@
       !-----------------------------------------------------------------------
 
    module nekstab_newton
-         use krylov_subspace
-         use nekstab_nek_bridge
+   use krylov_subspace
+   use nekstab_nek_bridge
    use nekstab_vectors
    use nekstab_matvec
    use nekstab_krylov_decomposition
@@ -278,7 +278,6 @@
    call outpost_vort(vx, vy, vz, 'BFV')
    end if
 
-   return
    end subroutine
 
       !-----------------------------------------------------------------------
@@ -503,7 +502,6 @@
    call k_normalize(f, beta) ! Normalizes f
    call k_copy(q, f)         ! Sets q as normalized residual
 
-   return
    end subroutine initialize_gmres_vector
 
       !-----------------------------------------------------------------------
@@ -574,7 +572,6 @@
       !     --> Pass current guess as base flow for the linearized calculation.
    call nopcopy(ubase, vbase, wbase, pbase, tbase, q%vx, q%vy, q%vz, q%pr, q%t)
 
-   return
    end subroutine nonlinear_forward_map
 
       !-----------------------------------------------------------------------

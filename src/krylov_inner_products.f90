@@ -380,7 +380,9 @@ subroutine gram4_field_vel(G_rr, G_ii, G_ri, G_ir, &
    real, intent(inout) :: G_rr(nblk,nblk), G_ii(nblk,nblk)
    real, intent(inout) :: G_ri(nblk,nblk), G_ir(nblk,nblk)
    type(krylov_vector), intent(in) :: blk_re(nblk), blk_im(nblk)
-   real :: Aw(lv, nblk), B(lv, nblk)
+   !  Caller-provided workspace.  Only rows 1:nv of lv are written (copy+col2)
+   !  before dgemm reads them with M=nv, LDA=lv — rows nv+1:lv stay untouched.
+   real, intent(out) :: Aw(lv, nblk), B(lv, nblk)
    character(len=1), intent(in) :: field
    real :: dbeta
    integer :: i
@@ -493,7 +495,8 @@ subroutine gram4_field_temp(G_rr, G_ii, G_ri, G_ir, &
    real, intent(inout) :: G_rr(nblk,nblk), G_ii(nblk,nblk)
    real, intent(inout) :: G_ri(nblk,nblk), G_ir(nblk,nblk)
    type(krylov_vector), intent(in) :: blk_re(nblk), blk_im(nblk)
-   real :: Aw(lt, nblk), B(lt, nblk)
+   !  Workspace — same partial-row pattern as gram4_field_vel (rows 1:nt of lt).
+   real, intent(out) :: Aw(lt, nblk), B(lt, nblk)
    integer :: i
 
    nt = nx1*ny1*nz1*nelt

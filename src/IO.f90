@@ -122,7 +122,11 @@ subroutine load_files(Q, mstart, kd, fname)
    use krylov_subspace
 
    integer, intent(in) :: mstart, kd
-   type(krylov_vector), dimension(kd) :: Q
+   !  intent(out) is safe here: krylov_vector has fixed-size (non-allocatable)
+   !  components, so no deallocation on entry.  Only Q(1:mstart) is filled;
+   !  slots mstart+1:kd remain undefined, which is correct — callers either
+   !  pass kd==mstart (modal_analysis) or fill the rest via Arnoldi (eigensolvers).
+   type(krylov_vector), dimension(kd), intent(out) :: Q
    character(len=3), intent(in) :: fname
 
    integer :: i

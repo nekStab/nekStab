@@ -72,7 +72,6 @@ subroutine schur(A, vecs, vals, n)
    ! --> Eigenvalues.
    vals = wr*(1.0d0, 0.0d0) + wi*(0.0d0, 1.0d0)
 
-   return
 end subroutine schur
 
 !-----------------------------------------------------------------------
@@ -128,7 +127,6 @@ subroutine ordschur(T, Q, selected, n)
 
    call dtrsen(job, compq, selected, n, T, ldt, Q, ldq, wr, wi, m, s, sep, work, lwork, iwork, liwork, info)
 
-   return
 end subroutine ordschur
 
 !-----------------------------------------------------------------------
@@ -193,7 +191,6 @@ subroutine eig(A, vecs, vals, n)
    ! --> Sort the eigenvalues and eigenvectors by decreasing magnitudes.
    call sort_eigendecomp(vals, vecs, n)
 
-   return
 end subroutine eig
 
 !-----------------------------------------------------------------------
@@ -244,13 +241,16 @@ subroutine sort_eigendecomp(vals, vecs, n)
       end do
    end do
 
-   return
 end subroutine sort_eigendecomp
 
 !-----------------------------------------------------------------------
 ! select_eigvals -- Eigenvalue selection function for dgees
 !-----------------------------------------------------------------------
-function select_eigvals(wr, wi)
+!  pure is valid as a LAPACK dgees callback: dgees declares SELECT as
+!  EXTERNAL (no explicit interface), and a pure function satisfies a
+!  non-pure contract.  Do NOT mark elemental — unusual for callbacks.
+!-----------------------------------------------------------------------
+pure function select_eigvals(wr, wi)
 
    ! ----- Miscellaneous declarations -----
    logical :: select_eigvals
@@ -261,7 +261,6 @@ function select_eigvals(wr, wi)
 
    select_eigvals = (sqrt(wr**2 + wi**2) > EIGVAL_MAG_THRESHOLD)
 
-   return
 end function select_eigvals
 
 !-----------------------------------------------------------------------
@@ -313,7 +312,6 @@ subroutine lstsq(A, b, x, m, n)
    ! --> Return solution.
    x = b_tilde(1:n)
 
-   return
 end subroutine lstsq
 
 !-----------------------------------------------------------------------
