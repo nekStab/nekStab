@@ -1,2 +1,0 @@
-conda remove openmpi
-conda install -c conda-forge mpich

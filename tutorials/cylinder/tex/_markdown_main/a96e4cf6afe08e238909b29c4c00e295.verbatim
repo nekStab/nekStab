@@ -1,7 +1,0 @@
-python3 plot_spectra.py
-...
-Reading Spectre_NSd.dat
-Mode:  1
- sigma= 0.1275481
- omega= 0.7447225
-     f= 0.1185263

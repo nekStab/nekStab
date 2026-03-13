@@ -1,2 +1,0 @@
-cd nekStab
-git clone --depth=1 https://github.com/nekStab/Nek5000.git
