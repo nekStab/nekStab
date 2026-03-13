@@ -19,11 +19,14 @@ Ricardo Frantz | Feb 2026
 """
 
 import argparse
+import io
 import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -36,6 +39,7 @@ import numpy as np
 
 TOLERANCE = 0.05  # 5% relative error
 MIN_ELEMS_PER_CORE = 20  # Minimum elements per MPI rank for efficiency
+MIN_CORES_PER_SLOT = 4   # Minimum physical cores per parallel execution slot
 
 NEKSTAB_ROOT = Path(os.environ.get("NEKSTAB_SOURCE_ROOT", Path.home() / "nekStab"))
 NEKSTAB_DATA_ENV = "NEKSTAB_DATA_ROOT"
@@ -174,6 +178,41 @@ CASES = {
         "reference": "Giannetti & Luchini (2007), Marquet et al. (2008)",
         "checks": [],
         "timeout": 1800,
+    },
+    "cylinder_modal": {
+        "description": "2D cylinder - POD/DMD/SPOD modal analysis (Re=100)",
+        "dir": "cylinder/modal",
+        "casename": "1cyl",
+        "tier": "short",
+        "family": "cylinder",
+        "requires": ["rst_1cyl0.f00001"],
+        "output": "pod_spectrum.dat",
+        "reference": "Barkley & Henderson (1996), St ~ 0.164-0.167",
+        "checks": [
+            {
+                "name": "pod_energy",
+                "metric": "pod_energy_12",
+                "expected": 97.6,
+                "tolerance": 2.0,
+                "comparison": "absolute",
+                "description": "First 2 POD modes capture ~97.6% energy (vortex shedding pair)",
+            },
+            {
+                "name": "dmd_strouhal",
+                "metric": "dmd_strouhal",
+                "expected": 0.166,
+                "tolerance": 0.05,
+                "description": "Dominant DMD frequency matches vortex shedding St",
+            },
+            {
+                "name": "spod_peak",
+                "metric": "spod_peak_st",
+                "expected": 0.156,
+                "tolerance": 0.05,
+                "description": "SPOD peak frequency near vortex shedding St",
+            },
+        ],
+        "timeout": 7200,
     },
     "thermosyphon": {
         "description": "Thermosyphon - Pitchfork bifurcation (Ra=500, above critical)",
@@ -424,17 +463,7 @@ CASES = {
         "checks": [],
         "timeout": 7200,
     },
-    "cyl_newton_smooth": {
-        "description": "Newton with smoother preconditioner",
-        "dir": "cylinder/baseflow/newton_smoother",
-        "casename": "1cyl",
-        "tier": "full",
-        "family": "cylinder",
-        "requires": ["BF_1cyl0.f00001"],
-        "output": None,
-        "checks": [],
-        "timeout": 3600,
-    },
+    # cyl_newton_smooth removed (newton_smoother directory deleted — was obsolete mesh smoother test)
     "cyl_newton_upo": {
         "description": "Newton-GMRES for UPO (Re=50)",
         "dir": "cylinder/baseflow/newton_upo",
@@ -512,17 +541,7 @@ CASES = {
         "checks": [],
         "timeout": 3600,
     },
-    "cyl_modal": {
-        "description": "Modal analysis POD/DMD/SPOD (Re=100)",
-        "dir": "cylinder/modal",
-        "casename": "1cyl",
-        "tier": "full",
-        "family": "cylinder",
-        "requires": ["rst_1cyl0.f00001"],
-        "output": None,
-        "checks": [],
-        "timeout": 7200,
-    },
+    # cyl_modal is now "cylinder_modal" in short tier (POD/DMD/SPOD with eigenvalue checks)
     # cyl_sensitivity is now "cylinder_sensitivity" in short tier
     "cyl_force_sens": {
         "description": "Steady force sensitivity (Re=50)",
@@ -666,28 +685,42 @@ class C:
     NC = "\033[0m"
 
 
+_print_lock = threading.Lock()
+_thread_local = threading.local()
+
+
+def _write_output(msg: str) -> None:
+    """Write to per-thread buffer (worker) or directly to stdout (main thread)."""
+    buf = getattr(_thread_local, 'buf', None)
+    if buf is not None:
+        buf.write(msg + "\n")
+    else:
+        with _print_lock:
+            print(msg)
+
+
 def log_pass(msg: str) -> None:
-    print(f"{C.GREEN}[PASS]{C.NC} {msg}")
+    _write_output(f"{C.GREEN}[PASS]{C.NC} {msg}")
 
 
 def log_fail(msg: str) -> None:
-    print(f"{C.RED}[FAIL]{C.NC} {msg}")
+    _write_output(f"{C.RED}[FAIL]{C.NC} {msg}")
 
 
 def log_skip(msg: str) -> None:
-    print(f"{C.YELLOW}[SKIP]{C.NC} {msg}")
+    _write_output(f"{C.YELLOW}[SKIP]{C.NC} {msg}")
 
 
 def log_info(msg: str) -> None:
-    print(f"{C.YELLOW}[INFO]{C.NC} {msg}")
+    _write_output(f"{C.YELLOW}[INFO]{C.NC} {msg}")
 
 
 def log_detail(msg: str) -> None:
-    print(f"{C.CYAN}      {C.NC} {msg}")
+    _write_output(f"{C.CYAN}      {C.NC} {msg}")
 
 
 def log_header(msg: str) -> None:
-    print(f"\n{C.BOLD}=== {msg} ==={C.NC}")
+    _write_output(f"\n{C.BOLD}=== {msg} ==={C.NC}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -765,6 +798,74 @@ def print_cpu_info(cpu: CPUInfo) -> None:
         log_info(f"Standard CPU: {cpu.count} cores available")
 
 
+def _parse_cpu_list(cpu_range: str) -> list[int]:
+    """Parse '0-3,8-11' into [0, 1, 2, 3, 8, 9, 10, 11]."""
+    cpus = []
+    for part in cpu_range.strip().split(","):
+        if "-" in part:
+            start, end = map(int, part.split("-"))
+            cpus.extend(range(start, end + 1))
+        else:
+            cpus.append(int(part))
+    return cpus
+
+
+def detect_all_cores() -> list[int]:
+    """
+    Detect all physical cores (P-cores + E-cores on hybrid, one per HT pair).
+    Returns sorted list of CPU IDs — one per physical core.
+    """
+    pcore_file = Path("/sys/devices/cpu_core/cpus")
+    ecore_file = Path("/sys/devices/cpu_atom/cpus")
+
+    if pcore_file.exists():
+        # Hybrid Intel CPU: deduplicate HT siblings among P-cores
+        pcore_logical = _parse_cpu_list(pcore_file.read_text().strip())
+        seen_cores: set[int] = set()
+        physical_pcores = []
+        for cpu_id in pcore_logical:
+            sibling_path = Path(
+                f"/sys/devices/system/cpu/cpu{cpu_id}/topology/thread_siblings_list"
+            )
+            try:
+                siblings = _parse_cpu_list(sibling_path.read_text().strip())
+                core_key = min(siblings)
+                if core_key not in seen_cores:
+                    seen_cores.add(core_key)
+                    physical_pcores.append(core_key)
+            except (OSError, ValueError):
+                if cpu_id not in seen_cores:
+                    seen_cores.add(cpu_id)
+                    physical_pcores.append(cpu_id)
+
+        # E-cores: each is a physical core (no HT)
+        ecores = []
+        if ecore_file.exists():
+            ecores = _parse_cpu_list(ecore_file.read_text().strip())
+
+        return sorted(physical_pcores + ecores)
+
+    # Non-hybrid: stride by threads_per_core
+    logical = os.cpu_count() or 4
+    threads_per_core = _get_threads_per_core()
+    return list(range(0, logical, threads_per_core))
+
+
+def make_slots(cores: list[int], cores_per_slot: int) -> list[CPUInfo]:
+    """Partition physical cores into equal-sized execution slots."""
+    n = len(cores)
+    num_slots = max(1, n // cores_per_slot)
+    slot_size = n // num_slots
+    slots = []
+    for i in range(num_slots):
+        start = i * slot_size
+        end = start + slot_size if i < num_slots - 1 else n
+        chunk = cores[start:end]
+        cpu_list = ",".join(str(c) for c in chunk)
+        slots.append(CPUInfo(cpu_list, len(chunk)))
+    return slots
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Mesh-Aware Core Scaling
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -825,6 +926,43 @@ def get_optimal_nprocs(size_file: Path, max_cores: int) -> int:
 # Eigenvalue Parsing
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
+def load_pod_spectrum(dat_file: Path) -> np.ndarray:
+    """
+    Load POD spectrum from pod_spectrum.dat.
+
+    Format: mode  eigenvalue  energy_%  cumulative_%  [||Phi||]
+    First row may have 5 columns (norm), rest have 4.
+    Returns array with columns: mode, eigenvalue, energy_%, cumulative_%.
+    """
+    data = np.loadtxt(dat_file, usecols=(0, 1, 2, 3))
+    return data
+
+
+def load_dmd_spectrum(dat_file: Path) -> np.ndarray:
+    """
+    Load DMD spectrum from dmd_spectrum.dat.
+
+    Format: mode  |mu|  sigma  omega  St  mu_real  mu_imag  [||Phi_re||]
+    The norm column (col 7) is only present for the first nsave rows,
+    so we read only the 7 guaranteed columns to avoid loadtxt failures.
+    Returns array with columns: mode, |mu|, sigma, omega, St, mu_real, mu_imag.
+    """
+    data = np.loadtxt(dat_file, usecols = (0, 1, 2, 3, 4, 5, 6))
+    return data
+
+
+def load_spod_spectrum(dat_file: Path) -> np.ndarray:
+    """
+    Load SPOD spectrum from spod_stream_spectrum.dat.
+
+    Format: St  lambda_1  lambda_2  ...
+    Returns raw array.
+    """
+    data = np.loadtxt(dat_file)
+    return data
+
+
 def load_eigenvalues(dat_file: Path) -> tuple[np.ndarray, np.ndarray]:
     """
     Load eigenvalues from Spectre_*.dat file.
@@ -847,9 +985,84 @@ def load_eigenvalues(dat_file: Path) -> tuple[np.ndarray, np.ndarray]:
     return eigenvalues[idx], residuals[idx]
 
 
-def compute_metric(metric: str, eigenvalues: np.ndarray, case_dir: Path) -> float:
-    """Compute validation metric from eigenvalue data."""
-    ev = eigenvalues[0]  # leading eigenvalue
+def _leading_nontrivial_multiplier(eigenvalues: np.ndarray) -> complex:
+    """
+    Find the leading non-trivial Floquet multiplier.
+
+    nekStab includes the trivial multiplier (mu ≈ 1) corresponding to
+    time-translation symmetry.  For validation we need the physical
+    leading multiplier — the one with the largest |mu| that is NOT
+    the trivial one near +1.
+    """
+    # Sort by magnitude descending
+    idx = np.argsort(-np.abs(eigenvalues))
+    for i in idx:
+        mu = complex(eigenvalues[i])
+        # Skip the trivial multiplier (real, near +1).
+        # Threshold 0.02 is safe for the current validation suite where
+        # physical multipliers are well separated from +1 (e.g. mu ≈ -1
+        # for period-doubling).  Near a saddle-node or pitchfork onset
+        # (Re ≈ Re_c) the physical multiplier crosses through +1 and
+        # could be incorrectly skipped — tighten or remove this filter
+        # if validating cases very close to onset.
+        if abs(mu - 1.0) < 0.02 and abs(mu.imag) < 0.01:
+            continue
+        return mu
+    # Fallback: return largest magnitude if all are near 1
+    return complex(eigenvalues[idx[0]])
+
+
+def compute_metric(metric: str, eigenvalues: Optional[np.ndarray], case_dir: Path) -> float:
+    """Compute validation metric from eigenvalue or modal data."""
+    # Modal metrics don't use eigenvalues — handle first
+    # ── Modal decomposition metrics ──────────────────────────────────────
+    if metric == "pod_energy_12":
+        # Cumulative energy captured by first 2 POD modes
+        pod_file = case_dir / "pod_spectrum.dat"
+        if not pod_file.exists():
+            raise FileNotFoundError(f"Not found: {pod_file}")
+        data = load_pod_spectrum(pod_file)
+        return float(data[1, 3])  # row 1 (mode 2), col 3 = cumulative_%
+
+    if metric == "pod_eigenvalue_1":
+        # Leading POD eigenvalue
+        pod_file = case_dir / "pod_spectrum.dat"
+        if not pod_file.exists():
+            raise FileNotFoundError(f"Not found: {pod_file}")
+        data = load_pod_spectrum(pod_file)
+        return float(data[0, 1])  # row 0 (mode 1), col 1 = eigenvalue
+
+    if metric == "dmd_strouhal":
+        # Fundamental DMD Strouhal (lowest positive St among persistent modes)
+        dmd_file = case_dir / "dmd_spectrum.dat"
+        if not dmd_file.exists():
+            raise FileNotFoundError(f"Not found: {dmd_file}")
+        data = load_dmd_spectrum(dmd_file)
+        # col 1 = |mu|, col 4 = St; find fundamental among persistent modes
+        mu_mag = data[:, 1]
+        st_vals = np.abs(data[:, 4])
+        # Persistent modes: |mu| > 0.99, positive St
+        mask = (mu_mag > 0.99) & (st_vals > 0.01)
+        if not np.any(mask):
+            return 0.0
+        # Fundamental = lowest St among persistent modes
+        return float(np.min(st_vals[mask]))
+
+    if metric == "spod_peak_st":
+        # SPOD peak frequency (St at maximum lambda_1)
+        spod_file = case_dir / "spod_stream_spectrum.dat"
+        if not spod_file.exists():
+            raise FileNotFoundError(f"Not found: {spod_file}")
+        data = load_spod_spectrum(spod_file)
+        # col 0 = St, col 1 = lambda_1
+        idx_peak = np.argmax(data[:, 1])
+        return float(data[idx_peak, 0])
+
+    # Eigenvalue-based metrics require eigenvalues
+    if eigenvalues is None:
+        raise ValueError(f"Metric '{metric}' requires eigenvalues but none loaded")
+
+    ev = eigenvalues[0]  # leading eigenvalue (sorted by real part desc)
 
     if metric == "sigma_real":
         return float(ev.real)
@@ -860,14 +1073,18 @@ def compute_metric(metric: str, eigenvalues: np.ndarray, case_dir: Path) -> floa
     if metric == "strouhal":
         return float(abs(ev.imag) / (2 * np.pi))
 
+    # Floquet metrics: use leading NON-TRIVIAL multiplier
     if metric == "mu_magnitude":
-        return float(abs(ev))
+        mu = _leading_nontrivial_multiplier(eigenvalues)
+        return float(abs(mu))
 
     if metric == "mu_real":
-        return float(ev.real)
+        mu = _leading_nontrivial_multiplier(eigenvalues)
+        return float(mu.real)
 
     if metric == "mu_imag":
-        return float(ev.imag)
+        mu = _leading_nontrivial_multiplier(eigenvalues)
+        return float(mu.imag)
 
     if metric == "tau_opt":
         # Transient growth: read from dedicated output file
@@ -1018,19 +1235,38 @@ def check_value(computed: float, expected: float, tolerance: float,
     return error < tolerance, error
 
 
+def _fmt_time(seconds: float) -> str:
+    """Format elapsed seconds as human-readable string."""
+    if seconds < 60:
+        return f"{seconds:.0f}s"
+    m, s = divmod(int(seconds), 60)
+    if m < 60:
+        return f"{m}m {s:02d}s"
+    h, m = divmod(m, 60)
+    return f"{h}h {m:02d}m {s:02d}s"
+
+
 def validate_case(name: str, case: dict, check_only: bool,
-                  nprocs: int, cpu: CPUInfo, dry_run: bool) -> str:
+                  nprocs: int, cpu: CPUInfo, dry_run: bool) -> tuple[str, float]:
     """
     Validate a single case.
-    Returns: "pass", "fail", or "skip".
+    Returns: ("pass"|"fail"|"skip", elapsed_seconds).
     """
+    case_t0 = time.perf_counter()
+
+    def _result(status: str) -> tuple[str, float]:
+        elapsed = time.perf_counter() - case_t0
+        if elapsed > 1.0:
+            log_detail(f"Case time: {_fmt_time(elapsed)}")
+        return (status, elapsed)
+
     log_header(f"{name}: {case['description']}")
 
     case_dir = NEKSTAB_ROOT / "example" / case["dir"]
 
     if not case_dir.exists():
         log_fail(f"Directory not found: {case_dir}")
-        return "fail"
+        return _result("fail")
 
     log_detail(f"Directory: {case_dir}")
     if "reference" in case:
@@ -1045,7 +1281,7 @@ def validate_case(name: str, case: dict, check_only: bool,
             missing = materialize_requires(case_dir, requires)
         if missing:
             log_skip(f"Missing prerequisites: {', '.join(missing)}")
-            return "skip"
+            return _result("skip")
 
     # Determine actual nprocs based on mesh
     actual_nprocs = get_optimal_nprocs(case_dir / "SIZE", nprocs)
@@ -1059,16 +1295,16 @@ def validate_case(name: str, case: dict, check_only: bool,
             log_info("[DRY RUN] Would check: logfile for run successful")
         if (case_dir / "plot.py").exists():
             log_info("[DRY RUN] Would regenerate: plot.png")
-        return "pass"
+        return _result("pass")
 
     # Compile and run unless check-only
     if not check_only:
         timeout = case.get("timeout", 7200)
         if not _compile_case(case_dir, case["casename"]):
-            return "fail"
+            return _result("fail")
         if not _run_case(case_dir, case["casename"], actual_nprocs, cpu, timeout,
                          requires=case.get("requires", [])):
-            return "fail"
+            return _result("fail")
 
         # Copy output files to downstream case directories if specified
         copy_failed = False
@@ -1086,7 +1322,7 @@ def validate_case(name: str, case: dict, check_only: bool,
                 copy_failed = True
 
         if copy_failed:
-            return "fail"
+            return _result("fail")
 
         # Regenerate figures from results
         _run_plot(case_dir)
@@ -1099,30 +1335,36 @@ def validate_case(name: str, case: dict, check_only: bool,
     if case.get("output") is None:
         if check_logfile_success(case_dir):
             log_pass("logfile: run successful")
-            return "pass"
+            return _result("pass")
         else:
             log_fail("logfile: 'run successful' not found")
-            return "fail"
+            return _result("fail")
 
-    # Cases with output: validate eigenvalue results
+    # Cases with output: validate results
     output_file = case_dir / case["output"]
 
     if not output_file.exists():
         log_fail(f"Output not found: {output_file}")
         if check_only:
             log_detail("Run without --check-only to generate results")
-        return "fail"
+        return _result("fail")
 
     log_info(f"Reading: {output_file.name}")
 
-    try:
-        eigenvalues, _residuals = load_eigenvalues(output_file)
-    except Exception as e:
-        log_fail(f"Error loading eigenvalues: {e}")
-        return "fail"
+    # Modal outputs (pod/dmd/spod) are handled directly by compute_metric;
+    # eigenvalue-based outputs need parsing here.
+    _MODAL_OUTPUTS = {"pod_spectrum.dat", "dmd_spectrum.dat", "spod_stream_spectrum.dat"}
+    eigenvalues = None
 
-    log_detail(f"Loaded {len(eigenvalues)} eigenvalues")
-    log_detail(f"Leading: {eigenvalues[0]:.6f}")
+    if output_file.name not in _MODAL_OUTPUTS:
+        try:
+            eigenvalues, _residuals = load_eigenvalues(output_file)
+        except Exception as e:
+            log_fail(f"Error loading eigenvalues: {e}")
+            return _result("fail")
+
+        log_detail(f"Loaded {len(eigenvalues)} eigenvalues")
+        log_detail(f"Leading: {eigenvalues[0]:.6f}")
 
     # Run checks
     all_passed = True
@@ -1153,7 +1395,7 @@ def validate_case(name: str, case: dict, check_only: bool,
                 log_fail(f"{name_check}: {computed:.6f} (expected {check['expected']:.6f}, diff={error:.4f} > {check['tolerance']:.2f})")
             all_passed = False
 
-    return "pass" if all_passed else "fail"
+    return _result("pass") if all_passed else _result("fail")
 
 
 def _show_first_error(build_log: Path) -> None:
@@ -1249,10 +1491,16 @@ def _run_case(case_dir: Path, casename: str, nprocs: int, cpu: CPUInfo,
         help_output = subprocess.run(
             ["mpirun", "--help", "binding"], capture_output=True, text=True
         ).stdout
-        if "--cpu-list" in help_output:
-            cmd.extend(["--bind-to", "core", "--cpu-list", cpu.cpu_list])
-        elif "--cpu-set" in help_output:
-            cmd.extend(["--bind-to", "core", "--cpu-set", cpu.cpu_list])
+        if nprocs <= cpu.count:
+            # Exact fit: bind each process to a core in the slot
+            if "--cpu-list" in help_output:
+                cmd.extend(["--bind-to", "core", "--cpu-list", cpu.cpu_list])
+            elif "--cpu-set" in help_output:
+                cmd.extend(["--bind-to", "core", "--cpu-set", cpu.cpu_list])
+        else:
+            # Oversubscription: more MPI procs than slot cores (lpmin > slot size)
+            cmd.extend(["--oversubscribe", "--bind-to", "none"])
+            log_detail(f"Oversubscribed: {nprocs} procs on {cpu.count} cores")
     except Exception:
         pass
 
@@ -1469,6 +1717,118 @@ def compile_all_cases(example_root: Path) -> int:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Parallel Execution (DAG-based scheduling with core slots)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def build_dag(sorted_cases: dict) -> dict[str, set[str]]:
+    """Build dependency graph from copies_to/requires and same-directory conflicts."""
+    preds: dict[str, set[str]] = {name: set() for name in sorted_cases}
+
+    # Map (dest_dir, filename) -> producer case name
+    producers: dict[tuple[str, str], str] = {}
+    for name, case in sorted_cases.items():
+        for cp in case.get("copies_to", []):
+            key = (cp["dest_dir"], cp.get("dest_name", cp["file"]))
+            producers[key] = name
+
+    # Match each case's requires against producers
+    for name, case in sorted_cases.items():
+        for req in case.get("requires", []):
+            key = (case["dir"], req)
+            if key in producers:
+                preds[name].add(producers[key])
+
+    # Same-directory conflict: chain cases in sort order
+    dir_seen: dict[str, str] = {}
+    for name, case in sorted_cases.items():
+        d = case["dir"]
+        if d in dir_seen:
+            preds[name].add(dir_seen[d])
+        dir_seen[d] = name
+
+    return preds
+
+
+def _run_one(name: str, case: dict, check_only: bool,
+             slot_cpu: CPUInfo, dry_run: bool) -> tuple[str, float]:
+    """Run a single case in a worker thread with buffered output."""
+    _thread_local.buf = io.StringIO()
+    try:
+        # Pass slot core count as max; validate_case calls get_optimal_nprocs internally
+        status, elapsed = validate_case(
+            name, case, check_only, slot_cpu.count, slot_cpu, dry_run)
+    except Exception as e:
+        log_fail(f"{name}: unhandled error: {e}")
+        status, elapsed = "fail", 0.0
+    finally:
+        output = _thread_local.buf.getvalue()
+        _thread_local.buf = None
+        with _print_lock:
+            sys.stdout.write(output)
+            sys.stdout.flush()
+    return (status, elapsed)
+
+
+def run_parallel(sorted_cases: dict, predecessors: dict[str, set[str]],
+                 slots: list[CPUInfo], check_only: bool,
+                 dry_run: bool) -> dict[str, tuple[str, float]]:
+    """Execute cases in parallel respecting dependency DAG and core slots."""
+    num_slots = len(slots)
+    results: dict[str, tuple[str, float]] = {}
+    pending = set(sorted_cases)
+    running: dict = {}          # future -> (name, slot_idx)
+    slot_free = list(range(num_slots))
+    case_order = list(sorted_cases)  # preserve sort order for priority
+
+    def _log_progress():
+        done = len(results)
+        total = len(sorted_cases)
+        active = [n for _, (n, _) in running.items()]
+        with _print_lock:
+            print(f"{C.YELLOW}[INFO]{C.NC} [{done}/{total}] "
+                  f"Active: {', '.join(active)}")
+
+    def _submit_ready(pool):
+        for name in case_order:
+            if name not in pending:
+                continue
+            if not slot_free:
+                break
+            preds = predecessors.get(name, set())
+            if not preds <= results.keys():
+                continue
+            # Skip if any predecessor failed
+            if any(results[p][0] == "fail" for p in preds):
+                results[name] = ("skip", 0.0)
+                pending.discard(name)
+                with _print_lock:
+                    print(f"{C.YELLOW}[SKIP]{C.NC} {name}: predecessor failed")
+                continue
+            slot_idx = slot_free.pop(0)
+            pending.discard(name)
+            case = sorted_cases[name]
+            cpu = slots[slot_idx]
+            fut = pool.submit(_run_one, name, case, check_only, cpu, dry_run)
+            running[fut] = (name, slot_idx)
+
+    with ThreadPoolExecutor(max_workers=num_slots) as pool:
+        _submit_ready(pool)
+        _log_progress()
+        while running:
+            done_futs, _ = wait(running, return_when=FIRST_COMPLETED)
+            for fut in done_futs:
+                name, slot_idx = running.pop(fut)
+                results[name] = fut.result()
+                slot_free.append(slot_idx)
+            _submit_ready(pool)
+            if running:
+                _log_progress()
+
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1538,6 +1898,10 @@ Examples:
         "--compile-all", action="store_true",
         help="Discover and compile every example case (no run)"
     )
+    parser.add_argument(
+        "--sequential", action="store_true",
+        help="Disable parallel execution (run cases one by one)"
+    )
 
     args = parser.parse_args()
 
@@ -1561,8 +1925,6 @@ Examples:
     cpu = detect_pcores()
     print_cpu_info(cpu)
 
-    nprocs = args.nprocs or cpu.count
-    log_info(f"MPI processes: {nprocs}")
     log_info(f"Tolerance: {TOLERANCE*100:.0f}%")
     log_info(f"nekStab root: {NEKSTAB_ROOT}")
 
@@ -1591,13 +1953,30 @@ Examples:
     sorted_cases = dict(sorted(cases_to_run.items(), key=_case_sort_key))
 
     # Run validation
-    results = {}
+    results: dict[str, tuple[str, float]] = {}
+    suite_t0 = time.perf_counter()
 
-    for name, case in sorted_cases.items():
-        result = validate_case(
-            name, case, args.check_only, nprocs, cpu, args.dry_run
-        )
-        results[name] = result
+    if args.sequential or len(sorted_cases) <= 1:
+        # Sequential path (original behavior)
+        nprocs = args.nprocs or cpu.count
+        log_info(f"MPI processes: {nprocs}")
+        for name, case in sorted_cases.items():
+            status, elapsed = validate_case(
+                name, case, args.check_only, nprocs, cpu, args.dry_run
+            )
+            results[name] = (status, elapsed)
+    else:
+        # Parallel path: detect all cores, build DAG, run with slots
+        all_cores = detect_all_cores()
+        cores_per_slot = args.nprocs or MIN_CORES_PER_SLOT
+        slots = make_slots(all_cores, cores_per_slot)
+        predecessors = build_dag(sorted_cases)
+        log_info(f"Parallel mode: {len(slots)} slots × {slots[0].count} cores "
+                 f"({len(all_cores)} physical cores)")
+        results = run_parallel(sorted_cases, predecessors, slots,
+                               args.check_only, args.dry_run)
+
+    suite_elapsed = time.perf_counter() - suite_t0
 
     # Summary grouped by tier
     print()
@@ -1605,36 +1984,37 @@ Examples:
     print("                         SUMMARY")
     print("=" * 70)
 
-    short_results = {k: v for k, v in results.items() if CASES[k]["tier"] == "short"}
-    full_results = {k: v for k, v in results.items() if CASES[k]["tier"] == "full"}
+    # Re-order results by original sorted_cases order (parallel mode returns completion order)
+    ordered_results = {k: results[k] for k in sorted_cases if k in results}
+    short_results = {k: v for k, v in ordered_results.items() if CASES[k]["tier"] == "short"}
+    full_results = {k: v for k, v in ordered_results.items() if CASES[k]["tier"] == "full"}
+
+    def _print_result_line(name: str, status: str, elapsed: float) -> None:
+        desc = CASES[name]["description"]
+        time_str = f"({_fmt_time(elapsed):>10})" if elapsed > 1.0 else f"{'':>12}"
+        line = f"{name:20} {time_str}  {desc}"
+        if status == "pass":
+            log_pass(line)
+        elif status == "skip":
+            log_skip(line)
+        else:
+            log_fail(line)
 
     if short_results:
         print(f"\n{C.BOLD}AMR Validation (short tier):{C.NC}")
-        for name, result in short_results.items():
-            desc = CASES[name]["description"]
-            if result == "pass":
-                log_pass(f"{name:20} {desc}")
-            elif result == "skip":
-                log_skip(f"{name:20} {desc}")
-            else:
-                log_fail(f"{name:20} {desc}")
+        for name, (status, elapsed) in short_results.items():
+            _print_result_line(name, status, elapsed)
 
     if full_results:
         print(f"\n{C.BOLD}Compile+Run (full tier):{C.NC}")
-        for name, result in full_results.items():
-            desc = CASES[name]["description"]
-            if result == "pass":
-                log_pass(f"{name:20} {desc}")
-            elif result == "skip":
-                log_skip(f"{name:20} {desc}")
-            else:
-                log_fail(f"{name:20} {desc}")
+        for name, (status, elapsed) in full_results.items():
+            _print_result_line(name, status, elapsed)
 
     print()
 
-    passed_count = sum(1 for v in results.values() if v == "pass")
-    skipped_count = sum(1 for v in results.values() if v == "skip")
-    failed_count = sum(1 for v in results.values() if v == "fail")
+    passed_count = sum(1 for s, _ in results.values() if s == "pass")
+    skipped_count = sum(1 for s, _ in results.values() if s == "skip")
+    failed_count = sum(1 for s, _ in results.values() if s == "fail")
     total_count = len(results)
 
     if args.dry_run:
@@ -1646,6 +2026,7 @@ Examples:
         summary += f"  SKIPPED: {skipped_count}"
     if failed_count:
         summary += f"  FAILED: {failed_count}"
+    summary += f"  Total: {_fmt_time(suite_elapsed)}"
 
     if failed_count == 0:
         print(f"{C.GREEN}{C.BOLD}{summary}{C.NC}")
