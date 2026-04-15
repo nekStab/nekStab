@@ -54,6 +54,12 @@
          ifstorebase = .true. ! store base flow for Floquet analysis (dynamic allocated)
          ifdyntol = .false. ! dynamical tolerances for SFD and Newton (potential speed-up)
          ew_tol_cap = 0.0d0 ! EW solver cap (0=uncapped, e.g. 1e-5 for conservative)
+         thermal_norm_weight = 1.0d0
+      !  thermal_norm_weight:
+      !  = 1.0 keeps the historical norm unchanged
+      !  > 1.0 makes temperature count more in Newton/Krylov residuals
+      !  < 1.0 makes temperature count less
+      !  Pressure remains outside the norm by design for incompressible flow
 
          ifseed_nois = .true. ! noise as initial seed
          ifseed_symm = .false. ! symmetry initial seed
@@ -131,7 +137,7 @@
          ifdmd = .false.      ! DMD analysis
          ifspod = .false.     ! SPOD analysis
          ifwinamp = .true.    ! Amplitude normalization (PySPOD compatible)
-         use_cgs = .true.     ! CGS2 orthogonalization (batch BLAS)
+         use_cgs = .true.     ! CGS2 orthogonalization (2 gop calls vs 2k for MGS)
          modal_nsnap = 100    ! Default snapshot count
          modal_nsave = 10     ! Default number of modes to save
          modal_dt = 0.1d0     ! Default time between snapshots
@@ -163,6 +169,7 @@ c        nStab_real (tolerances, domain bounds)
          call bcast(schur_del, wdsize)
          call bcast(epsilon_base, wdsize)
          call bcast(ew_tol_cap, wdsize)
+         call bcast(thermal_norm_weight, wdsize)
 
 c        nStab_sponge
          call bcast(xLspg, wdsize)

@@ -100,8 +100,15 @@
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
       real :: xmn, xmx, ymn, ymx, zmn, zmx, epsilon_base
       real :: ew_tol_cap  ! EW solver tolerance cap (0 = uncapped)
+      real :: thermal_norm_weight
+      ! Weight applied only to the temperature contribution in the
+      ! Krylov/Newton inner product.  Default = 1 preserves legacy
+      ! behavior.  This exists so thermal continuation can rebalance
+      ! velocity-vs-temperature residuals without changing pressure
+      ! handling or the generic multi-field vector algebra.
       common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base,
-     $   dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap
+     $   dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap,
+     $   thermal_norm_weight
       
       ! Integer variables for boost convergence and spatial dimensions
       integer :: bst_skp, bst_snp, k_dim
