@@ -30,6 +30,7 @@
       !   to ensure MPI consistency.
       !-----------------------------------------------------------------------
       subroutine nekStab_setDefault
+         use krylov_subspace, only: TN_MANUAL
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -55,11 +56,13 @@
          ifdyntol = .false. ! dynamical tolerances for SFD and Newton (potential speed-up)
          ew_tol_cap = 0.0d0 ! EW solver cap (0=uncapped, e.g. 1e-5 for conservative)
          thermal_norm_weight = 1.0d0
-      !  thermal_norm_weight:
-      !  = 1.0 keeps the historical norm unchanged
-      !  > 1.0 makes temperature count more in Newton/Krylov residuals
-      !  < 1.0 makes temperature count less
-      !  Pressure remains outside the norm by design for incompressible flow
+         thermal_buoyancy_coeff = 0.0d0
+         thermal_norm_min = 1.0d0
+         thermal_norm_max = 50.0d0
+         thermal_norm_mode = TN_MANUAL
+      !  For TN_AUTO/TN_CLIP, set thermal_buoyancy_coeff in nekStab_usrchk
+      !  using the case scaling (e.g. Ri for buoyant cylinder, Pr*Ra for
+      !  thermosyphon). Default TN_MANUAL preserves the historical norm.
 
          ifseed_nois = .true. ! noise as initial seed
          ifseed_symm = .false. ! symmetry initial seed
@@ -170,6 +173,9 @@ c        nStab_real (tolerances, domain bounds)
          call bcast(epsilon_base, wdsize)
          call bcast(ew_tol_cap, wdsize)
          call bcast(thermal_norm_weight, wdsize)
+         call bcast(thermal_buoyancy_coeff, wdsize)
+         call bcast(thermal_norm_min, wdsize)
+         call bcast(thermal_norm_max, wdsize)
 
 c        nStab_sponge
          call bcast(xLspg, wdsize)
@@ -191,6 +197,7 @@ c        nStab_int
          call bcast(schur_tgt, isize)
          call bcast(maxmodes, isize)
          call bcast(glob_skip, isize)
+         call bcast(thermal_norm_mode, isize)
 
 c        nStab_boostconv
          call bcast(k_dim, isize)
@@ -329,6 +336,8 @@ c        OTD_params
                 if (nid == 0) write (6, *) 'number of possible scalars (ldimt)=', ldimt
                 if (nid == 0) write (6, *) 'number of scalars (nof)=', nof, npscal
              end if
+
+             if (ifheat) call configure_thermal_norm_weight()
 
              call zero_forcing
 

@@ -56,7 +56,12 @@ module krylov_subspace
       k_dot, k_norm, k_normalize, k_cmult, &
       k_add2, k_add2s2, k_axpby, k_sub2, k_sub3, &
       k_zero, k_copy, k_matmul, &
+      configure_thermal_norm_weight, &
+      TN_MANUAL, TN_AUTO, TN_CLIP, &
       allocate_orbit, orbit_store, orbit_restore
+
+   ! thermal_norm_mode selector values
+   integer, parameter :: TN_MANUAL = 0, TN_AUTO = 1, TN_CLIP = 2
 
    ! Interface for Nek5000 wall-clock timer
     interface
@@ -147,6 +152,79 @@ subroutine norm(qx, qy, qz, qp, qt, alpha)
    alpha = sqrt(alpha)
 
 end subroutine norm
+
+!-----------------------------------------------------------------------
+! configure_thermal_norm_weight — Set the temperature weight in the norm
+!
+! Modes (thermal_norm_mode):
+!   TN_MANUAL : leave thermal_norm_weight as set by the user
+!   TN_AUTO   : weight = thermal_buoyancy_coeff * (E_u / E_T)
+!   TN_CLIP   : TN_AUTO clipped to [thermal_norm_min, thermal_norm_max]
+!
+! Rationale (TN_AUTO):
+!   In Boussinesq flow the momentum equation carries beta*T as forcing,
+!   so scaling the temperature term by beta*(E_u/E_T) equalizes the
+!   dynamical contribution of the two fields to the residual rather
+!   than their raw L2 magnitude.
+!
+! glsc3 uses MPI_Allreduce, so every rank already holds identical
+! results — no explicit bcast is needed on the outputs.
+!-----------------------------------------------------------------------
+subroutine configure_thermal_norm_weight()
+   real :: glsc3
+   real :: kinetic_energy, thermal_energy
+
+   if (.not. ifheat) return
+
+   if (thermal_norm_mode == TN_MANUAL) then
+      if (nid == 0) write(6,'(A,1PE12.4)') &
+         'thermal_norm_weight (manual) = ', thermal_norm_weight
+      return
+   end if
+
+   if (thermal_buoyancy_coeff <= 0.0d0) then
+      call thermal_norm_fallback( &
+         'thermal_norm_mode > 0 but thermal_buoyancy_coeff <= 0')
+      return
+   end if
+
+   nv = nx1*ny1*nz1*nelv
+   nt = nx1*ny1*nz1*nelt
+
+   kinetic_energy = glsc3(vx, vx, bm1s, nv) + glsc3(vy, vy, bm1s, nv)
+   if (if3D) kinetic_energy = kinetic_energy + glsc3(vz, vz, bm1s, nv)
+   thermal_energy = glsc3(t(1,1,1,1,1), t(1,1,1,1,1), bm1s, nt)
+
+   if (thermal_energy <= 1.0d-30) then
+      call thermal_norm_fallback( &
+         'thermal_energy is ~0 during automatic thermal norm setup')
+      return
+   end if
+
+   thermal_norm_weight = thermal_buoyancy_coeff*(kinetic_energy/thermal_energy)
+   if (thermal_norm_mode == TN_CLIP) &
+      thermal_norm_weight = max(thermal_norm_min, &
+                                min(thermal_norm_max, thermal_norm_weight))
+
+   if (nid == 0) then
+      write(6,'(A,1PE12.4)') 'thermal_buoyancy_coeff = ', thermal_buoyancy_coeff
+      write(6,'(A,1PE12.4)') 'thermal kinetic_energy = ', kinetic_energy
+      write(6,'(A,1PE12.4)') 'thermal scalar_energy  = ', thermal_energy
+      write(6,'(A,1PE12.4)') 'thermal_norm_weight    = ', thermal_norm_weight
+   end if
+end subroutine configure_thermal_norm_weight
+
+!-----------------------------------------------------------------------
+! thermal_norm_fallback — Warn and reset to unit weight on bad input
+!-----------------------------------------------------------------------
+subroutine thermal_norm_fallback(msg)
+   character(len=*), intent(in) :: msg
+   if (nid == 0) then
+      write(6,'(A,A)') 'WARNING: ', trim(msg)
+      write(6,'(A)')   '         Falling back to thermal_norm_weight = 1.0.'
+   end if
+   thermal_norm_weight = 1.0d0
+end subroutine thermal_norm_fallback
 
 !-----------------------------------------------------------------------
 ! k_dot — Weighted inner product of two Krylov vectors

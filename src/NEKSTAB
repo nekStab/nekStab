@@ -100,23 +100,26 @@
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
       real :: xmn, xmx, ymn, ymx, zmn, zmx, epsilon_base
       real :: ew_tol_cap  ! EW solver tolerance cap (0 = uncapped)
+      ! Thermal weighting of the Krylov/Newton inner product.
+      ! Pressure is excluded from the norm by design (incompressible
+      ! Lagrange multiplier). See configure_thermal_norm_weight and the
+      ! TN_* selectors in krylov_subspace for mode semantics.
       real :: thermal_norm_weight
-      ! Weight applied only to the temperature contribution in the
-      ! Krylov/Newton inner product.  Default = 1 preserves legacy
-      ! behavior.  This exists so thermal continuation can rebalance
-      ! velocity-vs-temperature residuals without changing pressure
-      ! handling or the generic multi-field vector algebra.
+      real :: thermal_buoyancy_coeff
+      real :: thermal_norm_min, thermal_norm_max
       common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base,
      $   dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap,
-     $   thermal_norm_weight
+     $   thermal_norm_weight, thermal_buoyancy_coeff,
+     $   thermal_norm_min, thermal_norm_max
       
       ! Integer variables for boost convergence and spatial dimensions
       integer :: bst_skp, bst_snp, k_dim
       common/nStab_boostconv/bst_skp, bst_snp, k_dim
       
       integer :: mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof
+      integer :: thermal_norm_mode
       common/nStab_int/mstep, schur_tgt, maxmodes, schur_cnt,
-     $   glob_skip, nof
+     $   glob_skip, nof, thermal_norm_mode
 
       ! Mode configuration integers
       integer :: animate_mode_num   ! Mode number for animation (default=1)
