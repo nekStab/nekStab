@@ -67,12 +67,18 @@ subroutine prepare_linearized_solver
          write (6, *) 'Recomputing dt and nsteps to match end time...'
       end if
 
-!     Compute maximum allowable time step based on CFL condition
-      call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
-      if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
-
-!     Calculate time step based on CFL target
-      dt = param(26)/ctarg
+!     Use par-file dt if set; otherwise compute from CFL
+!     param(12) < 0 means constant dt was set in the par file
+      if (abs(param(12)) > 0) then
+         dt = abs(param(12))
+         if (nid == 0) write (6, *) 'Using dt from par file:', dt
+      else
+!        Compute maximum allowable time step based on CFL condition
+         call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
+         if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
+!        Calculate time step based on CFL target
+         dt = param(26)/ctarg
+      end if
 
 !     Calculate number of steps needed to reach end time
       nsteps = ceiling(param(10)/dt)
