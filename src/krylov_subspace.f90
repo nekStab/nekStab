@@ -98,7 +98,7 @@ subroutine inner_product(alpha, &
    real, dimension(lp), intent(in) :: pp, qp  ! not used
    real, dimension(lt, ldimt), intent(in) :: pt, qt
    real, intent(out) :: alpha
-   real :: glsc3
+   real :: glsc3, temp_inner
    integer :: m
 
    nv = nx1*ny1*nz1*nelv
@@ -106,10 +106,26 @@ subroutine inner_product(alpha, &
 
    alpha = glsc3(px, qx, bm1s, nv) + glsc3(py, qy, bm1s, nv)
    if (if3D) alpha = alpha + glsc3(pz, qz, bm1s, nv)
-   if (ifto) alpha = alpha &
-        + glsc3(pt(:,1), qt(:,1), bm1s, nt)
+   if (ifto) then
+      ! Temperature is scalar slot 1.
+      !
+      ! Keep the implementation local to the inner product so that:
+      ! 1. All Newton/Krylov norms inherit the same weighting automatically.
+      ! 2. Vector update routines remain pure algebra on the stored fields.
+      ! 3. Pressure stays excluded from the norm, which is appropriate for
+      !    incompressible flow where pressure acts as a Lagrange multiplier.
+      !
+      ! Default thermal_norm_weight = 1.0 reproduces the historical behavior.
+      ! The explicit multiplier exists so thermal continuation can rebalance
+      ! velocity and temperature contributions without changing the state itself.
+      temp_inner = glsc3(pt(:,1), qt(:,1), bm1s, nt)
+      alpha = alpha + thermal_norm_weight*temp_inner
+   end if
    if (ldimt > 1) then
       do m = 2, ldimt
+         ! Additional passive scalars currently keep unit weight.
+         ! This preserves existing behavior while leaving a clean extension
+         ! path for future RANS-specific per-scalar weights.
          if (ifpsco(m-1)) alpha = alpha &
               + glsc3(pt(:,m), qt(:,m), bm1s, nt)
       end do
