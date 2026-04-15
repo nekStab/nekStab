@@ -492,25 +492,11 @@
 
    else ! converged modes
 
-      !     ----- Computation of eigenmode via dgemv (real/imag split) -----
-   oks_vecs_re_s(1:k_dim) = real(vecs(1:k_dim, i))
-   oks_vecs_im_s(1:k_dim) = aimag(vecs(1:k_dim, i))
-
-   call dgemv('N', nv, k_dim, 1.0d0, oks_qx_s, lv, oks_vecs_re_s, 1, 0.0d0, oks_work_re_s, 1)
-   call dgemv('N', nv, k_dim, 1.0d0, oks_qx_s, lv, oks_vecs_im_s, 1, 0.0d0, oks_work_im_s, 1)
-   oks_fp_cx_s(1:nv) = dcmplx(oks_work_re_s(1:nv), oks_work_im_s(1:nv))
-
-   call dgemv('N', nv, k_dim, 1.0d0, oks_qy_s, lv, oks_vecs_re_s, 1, 0.0d0, oks_work_re_s, 1)
-   call dgemv('N', nv, k_dim, 1.0d0, oks_qy_s, lv, oks_vecs_im_s, 1, 0.0d0, oks_work_im_s, 1)
-   oks_fp_cy_s(1:nv) = dcmplx(oks_work_re_s(1:nv), oks_work_im_s(1:nv))
-
-   if (if3D) then
-   call dgemv('N', nv, k_dim, 1.0d0, oks_qz_s, lv, oks_vecs_re_s, 1, 0.0d0, oks_work_re_s, 1)
-   call dgemv('N', nv, k_dim, 1.0d0, oks_qz_s, lv, oks_vecs_im_s, 1, 0.0d0, oks_work_im_s, 1)
-   oks_fp_cz_s(1:nv) = dcmplx(oks_work_re_s(1:nv), oks_work_im_s(1:nv))
-   end if
-
-   if (ifpo) oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:k_dim), vecs(:, i))
+      !     ----- Computation of eigenmode via matmul (complex) -----
+   oks_fp_cx_s(1:nv) = matmul(oks_qx_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
+   oks_fp_cy_s(1:nv) = matmul(oks_qy_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
+   if (if3D) oks_fp_cz_s(1:nv) = matmul(oks_qz_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
+   if (ifpo) oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:k_dim), vecs(1:k_dim, i))
 
    if (ifto) oks_fp_ct_s(1:n_temp, 1) = matmul(oks_qt_s(1:n_temp, 1, 1:k_dim), vecs(:, i))
    if (ldimt > 1) then
@@ -895,7 +881,7 @@
       1.0d0, basis, lv, vecs, ksize,&
       0.0d0, rotated, lv)
    do i = 1, nsel
-   Q(i)%vx(:) = rotated(:, i)
+   call copy(Q(i)%vx, rotated(1, i), nv)
    end do
 
       !     vy: same pattern, reusing basis and rotated arrays.
@@ -907,7 +893,7 @@
       1.0d0, basis, lv, vecs, ksize,&
       0.0d0, rotated, lv)
    do i = 1, nsel
-   Q(i)%vy(:) = rotated(:, i)
+   call copy(Q(i)%vy, rotated(1, i), nv)
    end do
 
       !     vz: only for 3D problems.
@@ -919,7 +905,7 @@
       1.0d0, basis, lv, vecs, ksize,&
       0.0d0, rotated, lv)
    do i = 1, nsel
-   Q(i)%vz(:) = rotated(:, i)
+   call copy(Q(i)%vz, rotated(1, i), nv)
    end do
    end if
 
@@ -938,7 +924,7 @@
       1.0d0, basis, lp, vecs, ksize,&
       0.0d0, rotated, lp)
    do i = 1, nsel
-   Q(i)%pr(:) = rotated(:, i)
+   call copy(Q(i)%pr, rotated(1, i), n2)
    end do
    deallocate(basis, rotated)
    end if
@@ -961,7 +947,7 @@
       1.0d0, basis, lt, vecs, ksize,&
       0.0d0, rotated, lt)
    do i = 1, nsel
-   Q(i)%t(:, 1) = rotated(:, i)
+   call copy(Q(i)%t(1, 1), rotated(1, i), nt)
    end do
    end if
 
@@ -977,7 +963,7 @@
       1.0d0, basis, lt, vecs, ksize,&
       0.0d0, rotated, lt)
    do i = 1, nsel
-   Q(i)%t(:, m) = rotated(:, i)
+   call copy(Q(i)%t(1, m), rotated(1, i), nt)
    end do
    end if
    end do
