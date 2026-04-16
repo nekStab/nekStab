@@ -1,0 +1,3 @@
+filetemplate: BFre20t_1cyl%01d.f%05d
+firsttimestep: 1
+numtimesteps: 1
