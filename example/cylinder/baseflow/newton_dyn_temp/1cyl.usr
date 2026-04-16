@@ -18,7 +18,28 @@
         schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
+c       This testcase is specifically for Newton with dynamic inner tolerances.
+c       Keep `ifdyntol = .true.` here so the folder behavior matches its name:
+c       `newton_dyn_temp` = Newton + dynamic tolerances + active temperature.
         ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+c       Thermal norm weighting for Newton/Krylov.
+c       Cylinder scaling: buoyancy force is Ri * T, so the coupling
+c       coefficient is just Ri = uparam(6).
+c       Mode 2 uses the automatic energy-based weight with clipping.
+c       For the heated-cylinder continuation path, clipping at 10 keeps the
+c       scalar contribution visible without over-tightening the first Newton
+c       linear solve.  A looser cap of 50 was enough to stall even the
+c       previously converged Re=20, Ri=0.2 restart in the first Arnoldi solve.
+        thermal_norm_mode = 2
+        thermal_buoyancy_coeff = abs(uparam(6))
+        thermal_norm_min = 1.0d0
+        thermal_norm_max = 10.0d0
+        thermal_norm_weight = 1.0d0
+        call bcast(thermal_norm_mode,isize)
+        call bcast(thermal_buoyancy_coeff,wdsize)
+        call bcast(thermal_norm_min,wdsize)
+        call bcast(thermal_norm_max,wdsize)
+        call bcast(thermal_norm_weight,wdsize)
 
       endif
 
@@ -37,30 +58,14 @@
       ffy = 0.0d0
       ffz = 0.0d0
 
-      if ( uparam(06).gt.0 ) then
-      iel = gllel(ieg)
-      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
-
-       if (jp .eq. 0) then ! uparam(6) is the Ri or Fr
-
-         if (ldimt .eq. 1) ffy = ffy + t(ix, iy, iz, iel, 1)*uparam(06) ! temp
-         if (ldimt .eq. 2) ffy = ffy + t(ix, iy, iz, iel, 2)*uparam(06) ! ps 1
-         if (ldimt .eq. 3) ffy = ffy + t(ix, iy, iz, iel, 3)*uparam(06) ! ps 2
-         if (ldimt .eq. 4) ffy = ffy + t(ix, iy, iz, iel, 4)*uparam(06) ! ps 3
-
-       elseif (jp .eq. 1) then
-
-         if (ldimt .eq. 1) ffy = ffy + tp(ip, 1, 1)*uparam(06) ! temp
-         if (ldmit .eq. 2) ffy = ffy + tp(ip, 2, 1)*uparam(06) ! ps 1
-         if (ldmit .eq. 3) ffy = ffy + tp(ip, 3, 1)*uparam(06) ! ps 2
-         if (ldmit .eq. 4) ffy = ffy + tp(ip, 4, 1)*uparam(06) ! ps 3
-
-       elseif (jp .gt. 1) then
-
-         write(6,*)' jp>1 not implemented!'
-
-       endif
-
+c     Buoyancy forcing: temperature (field 1) couples to y-momentum
+c     via Boussinesq approximation.  uparam(6) is the Richardson number.
+      if (ifheat .and. uparam(06).gt.0) then
+        iel = gllel(ieg)
+        ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+        if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
+        if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+        ffy = rtmp*uparam(06)
       endif
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
@@ -104,14 +109,7 @@
          uz = 0.0d0
          temp = 0.0d0
 
-         if (x.gt.-1.and.x.lt.1) then
-
-          if (ifield.eq.2) temp = 1.0  ! temperature
-          if (ifield.eq.3) temp = 1.0  ! ps1
-          if (ifield.eq.4) temp = 1.0  ! ps2
-          if (ifield.eq.5) temp = 1.0  ! ps3
-
-         endif
+         if (x.gt.-1.and.x.lt.1) temp = 1.0d0
 
       else                      ! perturbation
 
@@ -132,16 +130,16 @@
       subroutine usrdat2
       include 'SIZE'
       include 'TOTAL'
-      integer iel,ifc,m
+      integer iel,ifc
 
-       if (ldimt.gt.0) then
-        do m = 1,ldimt
-         cbc(:,:,m) = cbc(:,:,1)
-         do iel = 1,nelt
-          do ifc = 1, 2*ndim
-           if (cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,m) = 't  '
-           if (cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,m) = 't  '
-          enddo
+       if (ifheat) then
+c       Temperature BCs live in field slot 2 when IFHEAT is enabled.
+c       `ldimt` counts active scalar slots, but does not shift this BC index.
+        cbc(:,:,2) = cbc(:,:,1)
+        do iel = 1,nelt
+         do ifc = 1, 2*ndim
+          if (cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2) = 't  '
+          if (cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2) = 't  '
          enddo
         enddo
        endif
