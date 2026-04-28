@@ -12,6 +12,18 @@
       include 'SIZE'
       include 'TOTAL'
 
+      if (istep.eq.0) then
+c        This folder tests the OIFS acceleration on top of the dynamic SFD
+c        setup.  Keep the restart clock aligned with the other SFD cases so the
+c        comparison plots share the same time origin.
+        time = 0.0d0
+        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+c
+c        Leave the cap disabled so the OIFS case can use its measured
+c        velocity-only scheduler without forcing fixed-tolerance behavior.
+        ew_tol_cap = 0.0d0 ; call bcast(ew_tol_cap,wdsize)
+      endif
+
       return
       end
 ! -----------------------------------------------------------------------

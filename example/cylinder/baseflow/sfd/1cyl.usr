@@ -12,6 +12,13 @@
       include 'SIZE'
       include 'TOTAL'
 
+      if (istep.eq.0) then
+c        The seed file is a converged state at Re=40, but for this testcase we
+c        want the SFD residual history to start from t=0 after the restart is
+c        loaded so the decay plot reads like a standalone run.
+        time = 0.0d0
+      endif
+
       return
       end
 ! -----------------------------------------------------------------------

@@ -13,7 +13,10 @@ params = {'text.usetex': False,
           'legend.fontsize': 8,
           'legend.handlelength': 2.5,}
 plt.rcParams.update(params)
-plt.style.use('seaborn-white')
+try:
+    plt.style.use('seaborn-v0_8-white')
+except OSError:
+    plt.style.use('default')
 
 formt = 'png'
 ajust = 'tight'

@@ -8,7 +8,8 @@
       !
       ! Public interface:
       !   newton_krylov, ts_gmres, initialize_gmres_vector,
-      !   nonlinear_forward_map, set_nek5000_tolerances, spec_tole
+      !   nonlinear_forward_map, set_nek5000_tolerances,
+      !   set_nek5000_velocity_tolerance, spec_tole
       !
       ! Dependencies:
       !   krylov_subspace, SIZE, TOTAL
@@ -27,7 +28,7 @@
    public :: newton_krylov, ts_gmres, &
       initialize_gmres_vector, &
       nonlinear_forward_map, &
-      set_nek5000_tolerances, spec_tole
+      set_nek5000_tolerances, set_nek5000_velocity_tolerance, spec_tole
    ! ── Log file management ──────────────────────────────────────────
    !
    ! The old code did open/write/close on every Newton, GMRES, and
@@ -148,7 +149,7 @@
       !     ----- Iteration parameters
    integer :: i, j, maxiter_newton, maxiter_gmres, calls
    real :: residual, tol, tottime = 0.0d0
-   real :: prev_residual = 0.0d0 ! Previous iteration residual (EW + stagnation)
+   real :: prev_residual = 0.0d0 ! Previous iteration residual for scheduling + stagnation
    real :: initial_residual = 0.0d0 ! For divergence guard
    integer :: stagnation_count = 0 ! Stagnation detection counter
    real :: newton_start_time, newton_iter_time ! Timing for Newton iterations
@@ -172,8 +173,10 @@
 
    dtol = max(param(21), param(22))
    if (nid == 0) write (6, '(A,1PE15.6)') 'dtol saved as:', dtol
-   tol = dtol ! Initialize time stepper tolerance: no need to call set_nek5000_tolerances as they are already set
    end if
+   ! Initialize from the current Nek tolerances. Dynamic scheduling below will
+   ! overwrite this with a residual-proportional target when ifdyntol is active.
+   tol = max(param(21), param(22))
 
    maxiter_newton = 30; maxiter_gmres = 30
 
@@ -191,7 +194,7 @@
    call nopcopy(q%vx, q%vy, q%vz, q%pr, q%t, vx, vy, vz, pr, t)
 
 !        Save original tolerances (restored after Newton exits).
-!        Without this, EW leaves param(21:22) at whatever the last
+!        Without this, dynamic scheduling leaves param(21:22) at whatever the last
 !        Newton iteration set — corrupting any subsequent DNS or
 !        stability run that reads param(21:22) for its own tolerances.
    saved_tol21 = param(21)
@@ -296,12 +299,14 @@
    exit newton
    end if
 
-!           EW adaptive tolerance; sqrt converts ||r||^2 -> ||r|| for param(21:22)
+!           Dynamic tolerance scheduler.  residual is ||F(q)-q||^2 and
+!           ts_gmres also checks squared residuals, so keep the same units for
+!           both the GMRES target and the Nek solver tolerance.
    if (ifdyntol) then
    tol = spec_tole(residual, prev_residual, dtol)
-   call set_nek5000_tolerances(sqrt(tol))
+   call set_nek5000_tolerances(tol)
    end if
-   prev_residual = residual ! after stagnation check + EW use the old value
+   prev_residual = residual ! after stagnation check + scheduler use the old value
 
    if (nid == 0) write (6, *) '  Solving linear system with GMRES for rhs = f = F(q) - q'
    call ts_gmres(f, dq, maxiter_gmres, k_dim, tol, calls, k_out, i, dtol)
@@ -329,7 +334,7 @@
    end do newton
 
 !        Restore original tolerances from .par so subsequent DNS or
-!        stability runs are not corrupted by EW's last setting.
+!        stability runs are not corrupted by the scheduler's last setting.
    param(21) = saved_tol21
    param(22) = saved_tol22
    call bcast(param(21:22), 2*wdsize)
@@ -688,42 +693,54 @@
    end subroutine set_nek5000_tolerances
 
       !-----------------------------------------------------------------------
-      ! spec_tole — Eisenstat-Walker type 2 adaptive GMRES tolerance
+      ! set_nek5000_velocity_tolerance — Update velocity Helmholtz tolerance
       !
-      ! Ref: Eisenstat & Walker, SIAM J. Sci. Comput. 17(1), 1996.
+      ! SFD only needs to relax the velocity Helmholtz solves. Keeping the
+      ! pressure tolerance fixed avoids perturbing the pressure/projection path.
+      !-----------------------------------------------------------------------
+   subroutine set_nek5000_velocity_tolerance(solver_tol)
+
+   real, intent(in) :: solver_tol
+
+   if (nid == 0) write (6, &
+      "('  VELOCITY TOLERANCE set from:',1PE15.6,' to:',1PE15.6)") &
+      param(22), abs(solver_tol)
+
+   param(22) = abs(solver_tol)
+   restol(1) = abs(solver_tol)
+
+   call bcast(param(22), wdsize)
+   call bcast(restol(1), wdsize)
+
+   end subroutine set_nek5000_velocity_tolerance
+
+      !-----------------------------------------------------------------------
+      ! spec_tole — residual-proportional adaptive GMRES tolerance
       !
-      ! eta = (||F_k||/||F_{k-1}||)^alpha, alpha = 1.618 (golden ratio).
-      ! Solve GMRES loosely when far from convergence, tighten as Newton
-      ! converges. eta_max = 0.9 caps forcing (tol <= 0.81*||f||^2).
+      ! Keep the inner linear/flow solves below the current nonlinear
+      ! residual without forcing them a full decade tighter:
       !
-      ! All residuals are squared norms (||f||^2). Caller must pass
-      ! sqrt(tol) to set_nek5000_tolerances for norm-based param(21:22).
+      !     nwtol = 0.2 * ||F(q)-q||^2
+      !
+      ! The Newton and GMRES convergence checks in this module use squared
+      ! norms, so nwtol intentionally remains in squared-residual units.
       !
       ! Bounds: tol >= dtol (lower); ew_tol_cap > 0 adds upper bound
-      ! (set in .usr for stiff/high-Re problems, default 0 = uncapped).
+      ! (legacy variable name, set in .usr for stiff/high-Re problems,
+      ! default 0 = uncapped).
       !-----------------------------------------------------------------------
    function spec_tole(residual, prev_res, dtol) result(nwtol)
 
    real, intent(in) :: residual ! Current ||f||^2
-   real, intent(in) :: prev_res ! Previous ||f||^2
+   real, intent(in) :: prev_res ! Retained for interface stability; unused
    real, intent(in) :: dtol ! Target tolerance
    real :: nwtol ! Returned new tolerance
-   real :: eta ! Forcing term
-   real, parameter :: eta_max = 0.9d0 ! Cap on forcing term
-   real, parameter :: eta_initial = 0.5d0 ! First-iteration forcing
-   real, parameter :: alpha_ew = 1.618d0 ! Golden ratio exponent
+   real, parameter :: residual_fraction = 0.2d0
 
-   if (prev_res > 1.0d-100 .and. residual > 0.0d0) then
-!           Eisenstat-Walker type 2 forcing
-!           eta = (||F_k||/||F_{k-1}||)^alpha = (res/prev_res)^(alpha/2)
-   eta = (residual / prev_res) ** (alpha_ew / 2.0d0)
-   eta = min(eta, eta_max)
-!           GMRES tolerance: ||r||^2 < eta^2 * ||F_k||^2
-   nwtol = eta**2 * residual
+   if (residual > 0.0d0 .and. residual == residual) then
+   nwtol = residual_fraction*residual
    else
-!           First iteration: moderate relaxation
-   eta = eta_initial
-   nwtol = eta_initial**2 * residual
+   nwtol = dtol
    end if
 
 !        Lower bound: never go below Newton target
@@ -733,9 +750,9 @@
    if (ew_tol_cap > 0.0d0) nwtol = min(nwtol, ew_tol_cap)
 
    if (nid == 0) write (6, &
-      "('  [EW: eta=',1PE10.3,' tol=',1PE10.3, &
-      ' solver=',1PE10.3,']')") &
-      eta, nwtol, sqrt(nwtol)
+      "('  [DYN: residual=',1PE10.3,' tol=',1PE10.3, &
+      ' cap=',1PE10.3,']')") &
+      residual, nwtol, ew_tol_cap
 
    end function spec_tole
 

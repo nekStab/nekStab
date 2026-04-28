@@ -32,11 +32,30 @@
    logical, save :: boostconv_init = .false.
    logical, save :: boostconv_core_init = .false.
    real, save :: SFD_oldRes, SFD_dtol
+   real, parameter :: sfd_tol_residual_factor_default = 0.9d0
+   real, parameter :: sfd_tol_update_rtol = 1.0d-12
+   integer, parameter :: sfd_tol_update_stride_default = 100
+   real, save :: sfd_tol_residual_factor = sfd_tol_residual_factor_default
+   integer, save :: sfd_tol_update_stride = sfd_tol_update_stride_default
    real :: sfd_solver_tol
 
    public :: tdf, SFD, BoostConv, boostconv_core, &
       qr_dec, linear_system
    contains
+
+   subroutine configure_sfd_dynamic_tolerance()
+
+   sfd_tol_residual_factor = sfd_tol_residual_factor_default
+   if (uparam(8) > 0.0d0) sfd_tol_residual_factor = uparam(8)
+
+   sfd_tol_update_stride = sfd_tol_update_stride_default
+   if (uparam(9) > 0.0d0) sfd_tol_update_stride = max(1, nint(uparam(9)))
+
+   if (nid == 0 .and. ifdyntol) write (6, &
+      "('  SFD dynamic tolerance: factor=',1PE10.3,' stride=',I0)") &
+      sfd_tol_residual_factor, sfd_tol_update_stride
+
+   end subroutine configure_sfd_dynamic_tolerance
 
    !  Safely close a Fortran unit if it is open.
    !  Called from residual/scheduler cleanup paths so repeated close
@@ -193,6 +212,7 @@
     type(krylov_vector), save :: oldQ, oldV, qa, qb, qc
    type(krylov_vector) :: tempD, tempM
    real adt, bdt, cdt, cutoff, gain, res, h1, l2, semi, linf, frq, sig, rate
+   real :: current_solver_tol, tol_delta, tol_scale
       
    frq = abs(uparam(04))*2.0d0*NEKSTAB_PI ! St to omega
    sig = abs(uparam(05))
@@ -209,6 +229,7 @@
 
    if (istep == 0) then
    if (.not. sfd_init) then
+   call configure_sfd_dynamic_tolerance()
    if (nid == 0) open (unit=10, file='residu.dat')
    if (nid == 0 .and. ifdyntol) then
    open (unit=11, file='dyn_tol.dat')
@@ -250,6 +271,7 @@
       
    elseif (.not. sfd_init) then
 
+   call configure_sfd_dynamic_tolerance()
    if (nid == 0) then
    open (unit=10, file='residu.dat')
    write (6, *) ' SFD in continuation mode'
@@ -276,22 +298,27 @@
    write (6, *) ' Casacub. cutoff, gain:', cutoff, gain
    end if
    end if
-   if (ifdyntol .and. mod(istep, 20) == 0 .and. res > 0.0d0) then
+   if (ifdyntol .and. mod(istep, sfd_tol_update_stride) == 0 &
+      .and. res > 0.0d0) then
       ! Dynamic SFD scheduling uses the current fixed-point residual as a
       ! cheap proxy for how tightly the inner Nek5000 solves need to be
-      ! converged.  In practice, some SFD cases can decay cleanly at first
-      ! and then drift away from the steady branch once the inner tolerance
-      ! becomes too loose again at late times.  Reuse the existing
-      ! ew_tol_cap guard from the Newton path so cases can cap the
-      ! fixed-point scheduler locally from their .usr file without changing
-      ! the global default behavior.
-      sfd_solver_tol = res/20.0d0
+      ! converged.  Keep the target just below the current residual, while
+      ! never tightening below the requested fixed-point convergence gate.
+      ! The legacy ew_tol_cap variable remains an optional upper bound for
+      ! stiff cases.
+      sfd_solver_tol = max(sfd_tol_residual_factor*res, SFD_dtol)
       if (ew_tol_cap > 0.0d0) sfd_solver_tol = min(sfd_solver_tol, ew_tol_cap)
       if (nid == 0) then
-      write (11, '(6E15.7)') time, res, param(21), res/20.0d0, &
+      write (11, '(6E15.7)') time, res, param(22), &
+           sfd_tol_residual_factor*res, &
            sfd_solver_tol, ew_tol_cap
       end if
-      call set_nek5000_tolerances(sfd_solver_tol)
+      current_solver_tol = param(22)
+      tol_delta = abs(sfd_solver_tol - current_solver_tol)
+      tol_scale = max(abs(current_solver_tol), abs(sfd_solver_tol), 1.0d0)
+      if (tol_delta > sfd_tol_update_rtol*tol_scale) then
+         call set_nek5000_velocity_tolerance(sfd_solver_tol)
+      end if
    end if
       
    if (istep > 100 .and. res < SFD_dtol) then

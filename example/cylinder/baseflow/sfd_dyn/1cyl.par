@@ -4,15 +4,16 @@ startFrom = BFRe40_1cyl0.f00001
 stopAt = endTime
 endTime = 400.0
 
-userParam01 = 1.1  #
+userParam01 = 1.1  # SFD
 userParam04 = 0.12 # freq (Strouhal leading mode)
-userParam05 = 0.05  # gain (twice growth rate leading mode)
+userParam05 = 0.05 # gain (twice growth rate leading mode)
+userParam08 = 0.9  # dynamic velocity tolerance factor
+userParam09 = 100  # dynamic tolerance update stride
 
 dt = 0
 variableDt = yes
 timeStepper = bdf3
-targetCFL = 5
-extrapolation = OIFS
+targetCFL = 0.5
 
 writeControl = runTime
 writeInterval = 1000.

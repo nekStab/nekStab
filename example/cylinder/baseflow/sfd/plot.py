@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """plot.py: Visualize SFD base flow results.
 
-Matches paper style: tricontourf, inset colorbar, cylinder patch.
+Convergence panel overlays SFD vs SFD_dyn to show that dynamic
+parameters reach the same residual in fewer iterations (larger dt).
 
 OUTPUTS: plot.png
 USAGE:   python plot.py
@@ -14,6 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 CASE_DIR = Path(__file__).resolve().parent
+SFD_DYN_DIR = CASE_DIR.parent / 'sfd_dyn'
 OUTPUT = CASE_DIR / 'plot.png'
 
 
@@ -21,10 +23,16 @@ def main():
     nk.configure_style()
 
     residu = CASE_DIR / 'residu.dat'
+    residu_dyn = SFD_DYN_DIR / 'residu.dat'
     has_conv = residu.exists()
-    bf_files = nk.find_fields('BF*1cyl0.f*', CASE_DIR)
+    has_dyn = residu_dyn.exists()
+    bf_files = nk.find_fields('1cyl0.f*', CASE_DIR)
+    if not bf_files:
+        bf_files = nk.find_fields('BF_1cyl0.f*', CASE_DIR)
+    if not bf_files:
+        bf_files = nk.find_fields('BF*1cyl0.f*', CASE_DIR)
 
-    if has_conv and bf_files:
+    if (has_conv or has_dyn) and bf_files:
         fig = plt.figure(figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.45))
         gs = fig.add_gridspec(1, 2, width_ratios=[0.8, 1], wspace=0.35)
         ax_conv = fig.add_subplot(gs[0])
@@ -38,11 +46,53 @@ def main():
 
     labels = iter('abcdefgh')
 
-    if ax_conv is not None and has_conv:
-        nk.plot_residuals(ax_conv, residu)
-        ax_conv.set_title('Convergence', fontsize=8)
+    # ── Convergence: SFD vs SFD_dyn ──────────────────────────────────
+    if ax_conv is not None and (has_conv or has_dyn):
+        # Plot both residual histories against time (bottom axis)
+        if has_conv:
+            data_sfd = np.genfromtxt(str(residu))
+            if data_sfd.ndim == 1:
+                data_sfd = data_sfd.reshape(1, -1)
+            t_sfd = data_sfd[:, 0]
+            r_sfd = data_sfd[:, 1]
+            ax_conv.semilogy(t_sfd, r_sfd, color='C0', lw=0.8,
+                             label=f'SFD ({len(t_sfd)} iter.)')
+
+        if has_dyn:
+            data_dyn = np.genfromtxt(str(residu_dyn))
+            if data_dyn.ndim == 1:
+                data_dyn = data_dyn.reshape(1, -1)
+            t_dyn = data_dyn[:, 0]
+            r_dyn = data_dyn[:, 1]
+            ax_conv.semilogy(t_dyn, r_dyn, color='C1', lw=0.8,
+                             label=f'SFD dyn. ({len(t_dyn)} iter.)')
+
+        ax_conv.set_xlabel(r'$t$')
+        ax_conv.set_ylabel(r'$\|r\|$')
+        ax_conv.legend(fontsize=5.5, loc='upper right')
+
+        # ── Top axis: iteration count ────────────────────────────────
+        ax_iter = ax_conv.twiny()
+        t_min, t_max = ax_conv.get_xlim()
+
+        # Tick marks based on SFD iteration spacing (finer grid = more iters)
+        if has_conv and len(t_sfd) > 1:
+            dt_sfd = (t_sfd[-1] - t_sfd[0]) / (len(t_sfd) - 1)
+        else:
+            dt_sfd = 1.0
+        if has_dyn and len(t_dyn) > 1:
+            dt_dyn = (t_dyn[-1] - t_dyn[0]) / (len(t_dyn) - 1)
+        else:
+            dt_dyn = dt_sfd
+
+        # Show iteration ticks for the SFD case (finer steps)
+        ax_iter.set_xlim(t_min / dt_sfd, t_max / dt_sfd)
+        ax_iter.set_xlabel('iterations (SFD)', fontsize=6, labelpad=2)
+        ax_iter.tick_params(labelsize=5)
+
         nk.panel_label(ax_conv, rf'$\bf{{({next(labels)})}}$')
 
+    # ── Base flow field ──────────────────────────────────────────────
     if ax_bf is not None and bf_files:
         x, y, fields, time = nk.read_field(bf_files[0])
         triang = nk.make_triangulation(x, y)

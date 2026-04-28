@@ -12,10 +12,18 @@
       include 'SIZE'
       include 'TOTAL'
 
-      if (istep.eq.0) then !change defaults
-
-        ifdyntol = .true. ; call bcast(ifdyntol,lsize) ! activating dynamic tolerances
-
+      if (istep.eq.0) then
+c        This folder is the dynamic-tolerance SFD baseline.
+c        Keep OIFS out of this case. The accelerated variant lives in
+c        `../sfd_dyn_oifs`, while this folder isolates tolerance scheduling.
+c        Reset the restart clock so residual and scheduler plots start at t=0
+c        even though the initial condition comes from a saved Re=40 base flow.
+        time = 0.0d0
+        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+c
+c        Leave the cap disabled so the velocity tolerance can follow
+c        userParam08*residual down to the final convergence gate.
+        ew_tol_cap = 0.0d0 ; call bcast(ew_tol_cap,wdsize)
       endif
 
       return
