@@ -673,8 +673,17 @@
    real, intent(in) :: solver_tol ! New tolerance value to be set
 
    if (nid == 0) write (6, "('  TOLERANCE set from:',1PE15.6,' to:', 1PE15.6) ") param(21), abs(solver_tol)
-   param(21:22) = abs(solver_tol)  ! Set both tolerances at once
-   call bcast(param(21:22), 2*wdsize)  ! Broadcast both values in one call
+   param(21:22) = abs(solver_tol)  ! Set pressure and velocity tolerances
+
+   ! Nek5000's velocity Helmholtz path does not read param(22) directly in all
+   ! cases.  It first consults restol(ifield), which is initialized from the
+   ! input file and otherwise stays stale unless we refresh it here.  Without
+   ! this update, the scheduler appears to change the tolerance on paper while
+   ! the actual velocity solves keep running with the old fixed value.
+   restol = abs(solver_tol)
+
+   call bcast(param(21:22), 2*wdsize)
+   call bcast(restol, (ldimt1 + 1)*wdsize)
 
    end subroutine set_nek5000_tolerances
 

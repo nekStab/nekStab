@@ -32,23 +32,35 @@
    logical, save :: boostconv_init = .false.
    logical, save :: boostconv_core_init = .false.
    real, save :: SFD_oldRes, SFD_dtol
+   real :: sfd_solver_tol
 
    public :: tdf, SFD, BoostConv, boostconv_core, &
       qr_dec, linear_system
    contains
 
-   !  Safely close residu.dat (unit 10) if it is open.
-   !  Called at convergence AND at istep==nsteps — the inquire guard
-   !  ensures the double-call case is harmless.
-   subroutine close_residu_unit()
+   !  Safely close a Fortran unit if it is open.
+   !  Called from residual/scheduler cleanup paths so repeated close
+   !  attempts remain harmless.
+   subroutine close_if_open(unit_id)
+   integer, intent(in) :: unit_id
    logical :: opened
 
    if (nid /= 0) return
 
-   inquire(unit=10, opened=opened)
-   if (opened) close(10)
+   inquire(unit=unit_id, opened=opened)
+   if (opened) close(unit_id)
 
+   end subroutine close_if_open
+
+   !  Safely close residu.dat (unit 10) if it is open.
+   subroutine close_residu_unit()
+   call close_if_open(10)
    end subroutine close_residu_unit
+
+   !  Safely close the dynamic-tolerance scheduler log (unit 11) if open.
+   subroutine close_dyn_tol_unit()
+   call close_if_open(11)
+   end subroutine close_dyn_tol_unit
 
       !-----------------------------------------------------------------------
       ! tdf -- Time-Delayed Feedback stabilization
@@ -198,6 +210,10 @@
    if (istep == 0) then
    if (.not. sfd_init) then
    if (nid == 0) open (unit=10, file='residu.dat')
+   if (nid == 0 .and. ifdyntol) then
+   open (unit=11, file='dyn_tol.dat')
+   write (11, '(A)') '# time residual current_tol requested_tol used_tol cap'
+   end if
    sfd_init = .true.
    end if
    SFD_dtol = max(param(21), param(22)); SFD_oldRes = 0.0d0
@@ -237,6 +253,10 @@
    if (nid == 0) then
    open (unit=10, file='residu.dat')
    write (6, *) ' SFD in continuation mode'
+   if (ifdyntol) then
+   open (unit=11, file='dyn_tol.dat')
+   write (11, '(A)') '# time residual current_tol requested_tol used_tol cap'
+   end if
    end if
    sfd_init = .true.
 
@@ -256,11 +276,28 @@
    write (6, *) ' Casacub. cutoff, gain:', cutoff, gain
    end if
    end if
-   if (ifdyntol .and. mod(istep, 20) == 0 .and. res > 0) call set_nek5000_tolerances(res/20.0)
+   if (ifdyntol .and. mod(istep, 20) == 0 .and. res > 0.0d0) then
+      ! Dynamic SFD scheduling uses the current fixed-point residual as a
+      ! cheap proxy for how tightly the inner Nek5000 solves need to be
+      ! converged.  In practice, some SFD cases can decay cleanly at first
+      ! and then drift away from the steady branch once the inner tolerance
+      ! becomes too loose again at late times.  Reuse the existing
+      ! ew_tol_cap guard from the Newton path so cases can cap the
+      ! fixed-point scheduler locally from their .usr file without changing
+      ! the global default behavior.
+      sfd_solver_tol = res/20.0d0
+      if (ew_tol_cap > 0.0d0) sfd_solver_tol = min(sfd_solver_tol, ew_tol_cap)
+      if (nid == 0) then
+      write (11, '(6E15.7)') time, res, param(21), res/20.0d0, &
+           sfd_solver_tol, ew_tol_cap
+      end if
+      call set_nek5000_tolerances(sfd_solver_tol)
+   end if
       
    if (istep > 100 .and. res < SFD_dtol) then
    if (nid == 0) write (6, *) ' Converged base flow to:', res
    call close_residu_unit()
+   call close_dyn_tol_unit()
    ifbfcv = .true.
    call bcast(ifbfcv, lsize)
    param(63) = 1.0d0 ! Enforce 64-bit output
@@ -271,7 +308,10 @@
    call outpost_vort(vx, vy, vz, 'BFV')
    end if
       
-   if (istep == nsteps) call close_residu_unit()
+   if (istep == nsteps) then
+   call close_residu_unit()
+   call close_dyn_tol_unit()
+   end if
       
    end if
    end subroutine SFD
