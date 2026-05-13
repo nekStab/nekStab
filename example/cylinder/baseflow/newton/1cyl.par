@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 2
-userParam07 = 30 # k_dim (GMRES subspace for Newton linear solve)
+userParam07 = 100 # k_dim (GMRES subspace — same as newton_dyn for fair comparison)
 
 dt = 0
 variableDt = no
@@ -17,9 +17,9 @@ writeInterval = 10.
 writeDoublePrecision = no
 
 dealiasing = yes
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
@@ -29,6 +29,6 @@ writeToFieldFile = yes
 
 [VELOCITY]
 residualTol = 1.0E-9
-residualProj = yes
+residualProj = no
 density = 1.0
-viscosity = -50.0
+viscosity = -100.0

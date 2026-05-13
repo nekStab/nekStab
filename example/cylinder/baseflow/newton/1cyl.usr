@@ -18,7 +18,7 @@
         schur_tgt = 0 ; call bcast(schur_tgt,isize)
         maxmodes = 2 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
-        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+        ifdyntol = .false. ; call bcast(ifdyntol,lsize)
 
       endif
 

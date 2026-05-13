@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """plot.py: Visualize Newton base flow results.
 
+Convergence panel overlays Newton vs Newton_dyn to show that dynamic
+solver tolerances reach the same residual in fewer linear solver calls.
+
 OUTPUTS: plot.png
 USAGE:   python plot.py
 """
@@ -12,14 +15,34 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 CASE_DIR = Path(__file__).resolve().parent
+NEWTON_DYN_DIR = CASE_DIR.parent / 'newton_dyn'
 OUTPUT = CASE_DIR / 'plot.png'
+
+
+def _read_newton(d):
+    """Read Newton + Arnoldi residuals from a directory."""
+    arn, nwt = None, None
+    f = d / 'residu_arnoldi.dat'
+    if f.exists():
+        data = np.genfromtxt(str(f))
+        if data.ndim == 1:
+            data = data.reshape(1, -1)
+        arn = data
+    f = d / 'residu_newton.dat'
+    if f.exists():
+        data = np.genfromtxt(str(f))
+        if data.ndim == 1:
+            data = data.reshape(1, -1)
+        nwt = data
+    return arn, nwt
 
 
 def main():
     nk.configure_style()
 
-    has_conv = ((CASE_DIR / 'residu_newton.dat').exists() or
-                (CASE_DIR / 'residu_arnoldi.dat').exists())
+    arn_nwt, nwt_nwt = _read_newton(CASE_DIR)
+    arn_dyn, nwt_dyn = _read_newton(NEWTON_DYN_DIR)
+    has_conv = any(x is not None for x in [arn_nwt, nwt_nwt, arn_dyn, nwt_dyn])
     bf_files = nk.find_fields('BF*1cyl0.f*', CASE_DIR)
 
     if has_conv and bf_files:
@@ -36,11 +59,38 @@ def main():
 
     labels = iter('abcdefgh')
 
+    # ── Convergence: Newton vs Newton_dyn ──────────────────────────────
     if ax_conv is not None and has_conv:
-        nk.plot_newton_convergence(ax_conv, CASE_DIR)
-        ax_conv.set_title('Convergence', fontsize=8)
+        for arn, nwt, color, tag in [
+            (arn_nwt, nwt_nwt, 'C0', 'Newton'),
+            (arn_dyn, nwt_dyn, 'C1', 'Newton dyn.'),
+        ]:
+            # Arnoldi residual (faint background curve)
+            if arn is not None:
+                k = np.arange(len(arn))
+                ax_conv.semilogy(k, arn[:, 3], color=color, lw=0.4, alpha=0.3)
+
+            # Newton residual markers at cumulative iteration positions
+            if nwt is not None:
+                k_sum = nwt[:, 3]
+                res = nwt[:, 6]
+                n_calls = int(k_sum[-1]) if len(k_sum) > 0 else 0
+                ax_conv.semilogy(k_sum, res, 's', ms=4, mfc='none',
+                                 color=color, lw=0.8,
+                                 label=f'{tag} ({n_calls} calls)')
+                # Convergence threshold
+                if len(nwt) > 0:
+                    dtol = nwt[0, 7]
+                    ax_conv.axhline(dtol, color='r', ls='--', lw=0.3,
+                                    zorder=1)
+
+        ax_conv.set_xlabel('linear solver calls')
+        ax_conv.set_ylabel(r'$\|r\|^2$')
+        ax_conv.legend(fontsize=5.5, loc='upper right')
+        ax_conv.grid(True, which='both', ls=':', lw=0.3, alpha=0.5)
         nk.panel_label(ax_conv, rf'$\bf{{({next(labels)})}}$')
 
+    # ── Base flow field ────────────────────────────────────────────────
     if ax_bf is not None and bf_files:
         x, y, fields, time = nk.read_field(bf_files[0])
         triang = nk.make_triangulation(x, y)
