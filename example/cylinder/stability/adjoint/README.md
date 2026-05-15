@@ -32,12 +32,16 @@ spectrum (the operator and its adjoint share spectrum). The spatial mode
 differs: concentrated upstream of and around the cylinder rather than
 downstream in the wake.
 
-## Latest Result
-Verified 2026-05-15 on 8 ranks (Slurm):
+## Mesh
+2128 elements (`lelg=2128` in `SIZE`).  Same mesh as the rest of the cylinder
+isothermal suite.
 
-- 2 eigenvalues converged with residual ≤ 2.7e-10
-- Leading mode: σ = 0.1275075, ω = 0.7447188 (matches direct to 5 digits)
-- Wall time: 263 s
+## Latest Result
+Verified 2026-05-15 on 8 ranks (Slurm), 2128 mesh, BF from `../../baseflow/newton/`:
+
+- 2 eigenvalues converged with residual ≤ 3.0e-7
+- Leading mode: σ = 0.1247587, ω = 0.7337421 (matches direct to 6 digits)
+- Wall time: 812 s
 - Outputs: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}`,
   `Spectre_NSa*.dat`, `Spectre_Ha*.dat`
 
