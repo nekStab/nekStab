@@ -15,18 +15,18 @@ writeInterval = 10.
 writeDoublePrecision = no
 
 dealiasing = yes
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-8
+residualTol = 1.0E-9
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-10
+residualTol = 1.0E-9
 residualProj = no
 density = 1.0
-viscosity = -50.0
+viscosity = -100.0
