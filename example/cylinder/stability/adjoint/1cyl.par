@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3.2  # Adjoint
-userParam07 = 48 # k_dim (Arnoldi subspace)
+userParam07 = 50 # k_dim (Arnoldi subspace)
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
 userParam10 = 1.7 # Sponge streght
@@ -20,13 +20,13 @@ writeInterval = 100.
 writeDoublePrecision = no
 
 dealiasing = yes
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-7
+residualTol = 1.0E-9
 residualProj = yes
 writeToFieldFile = yes
 
@@ -34,4 +34,4 @@ writeToFieldFile = yes
 residualTol = 1.0E-9
 residualProj = no
 density = 1.0
-viscosity = -50.0
+viscosity = -100.0
