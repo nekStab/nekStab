@@ -21,9 +21,9 @@ SFD parameters at Re = 100 do not give the documented monotone convergence.
 
 ## Active Case Definition
 
-- `startFrom = BFRe40_1cyl0.f00001`
+- `startFrom = BF_seed_1cyl0.f00001`
 - shared seed hash:
-  `77de81b1fa85b639a318546e36a2ef6049501c78fed284addc4a60259f48806f`
+  `596d45112a8abaadde4c62120bf981fa0761f5ff8f0acb1e5beece48c829befa`
 - `endTime = 400.0`
 - `userParam01 = 1.1` for SFD
 - `userParam04 = 0.12`
@@ -50,27 +50,32 @@ velocity tolerance follows `0.9 * residual` down to the final `1e-9`
 convergence gate.  The scheduler updates every 100 timesteps and leaves the
 pressure tolerance fixed.
 
+## Mesh
+2128 elements (`lelg=2128` in `SIZE`).  Same mesh as the rest of the cylinder
+isothermal suite.
+
 ## Latest Result
 
-Latest local verification (Slurm, 8 ranks):
+Latest local verification on the 2128 mesh (Slurm, 8 ranks):
 
 - date: 2026-05-15
-- convergence time: `t = 168.83`
-- final residual: `9.998e-10`
-- total timesteps: 30278
-- elapsed wall time: ~420 s (concurrent with sfd; ~200 s when run alone)
+- convergence time: `t = 288.28`
+- final residual: `9.999e-10`
+- total timesteps: 52531
+- elapsed wall time: ~811 s (≈ 13.5 min)
 - scheduler: velocity-only, `0.9 * residual`, update stride 100
-- output: converged `BF_1cyl0.f00001` (5.1 MB)
+- output: converged `BF_1cyl0.f00001` (5.3 MB)
 
 Reaches the same `1e-9` gate as the fixed-tolerance `../sfd` baseline with
-matching step count.  Dynamic scheduler is active and logged (see
-`dyn_tol.dat`); it relaxes only the velocity Helmholtz tolerance and keeps
-the pressure tolerance fixed.
+near-identical step count (52531 vs 52515).  Dynamic scheduler is active and
+logged (see `dyn_tol.dat`); it relaxes only the velocity Helmholtz tolerance
+and keeps the pressure tolerance fixed.  The wall-time win over `../sfd`
+(811 vs 982 s) comes from the cheaper early-iteration velocity solves.
 
 ## Saved Artifacts
 
-- `BFRe40_1cyl0.f00001` — Initial condition.
-- `BFRe40_1cyl.nek5000` — Collection file for the IC.
+- `BF_seed_1cyl0.f00001` — Initial condition.
+- `BF_seed_1cyl.nek5000` — Collection file for the IC.
 - `BF_1cyl0.f00001` — Converged dynamic-tolerance SFD base flow (committed as proof).
 - `BF_1cyl.nek5000` — Collection file for the converged BF.
 - `residu.dat` / `dyn_tol.dat` — Residual + scheduler history (not committed; regenerated per run).
