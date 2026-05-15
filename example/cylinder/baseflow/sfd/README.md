@@ -17,9 +17,9 @@ baseline.
 
 ## Active Case Definition
 
-- `startFrom = BFRe40_1cyl0.f00001`
+- `startFrom = BF_seed_1cyl0.f00001`
 - shared seed hash:
-  `77de81b1fa85b639a318546e36a2ef6049501c78fed284addc4a60259f48806f`
+  `596d45112a8abaadde4c62120bf981fa0761f5ff8f0acb1e5beece48c829befa`
 - `endTime = 400.0`
 - `userParam01 = 1.1` for SFD
 - `userParam04 = 0.12`
@@ -27,7 +27,7 @@ baseline.
 - `variableDt = yes`
 - `timeStepper = bdf3`
 - `targetCFL = 0.5`
-- `lx1 = 8`, `lxd = 12`
+- `lx1 = 8`, `lxd = 12`, mesh `lelg = 2128`
 - pressure `residualTol = 1e-9`
 - velocity `residualTol = 1e-9`
 
@@ -36,24 +36,22 @@ from the testcase origin, not from the seed-file time.
 
 ## Latest Result
 
-Latest local verification (Slurm, 8 ranks):
+Latest local verification on the 2128 mesh (Slurm, 8 ranks):
 
 - date: 2026-05-15
-- convergence time: `t = 168.77`
+- convergence time: `t = 288.19`
 - final residual: `9.997e-10`
-- total timesteps: 30268
-- elapsed wall time: ~460 s (concurrent with sfd_dyn; ~230 s when run alone)
-- output: converged `BF_1cyl0.f00001` (5.1 MB)
+- total timesteps: 52515
+- elapsed wall time: ~982 s (≈ 16 min)
+- output: converged `BF_1cyl0.f00001` (5.3 MB)
 
 The fixed-tolerance Re=50 baseline converges monotonically to the `1e-9`
-residual gate and writes the canonical `BF_` checkpoint.  Step count
-and final residual are identical to the previous 2026-04-28 reference
-within numerical noise.
+residual gate and writes the canonical `BF_` checkpoint.
 
 ## Saved Artifacts
 
-- `BFRe40_1cyl0.f00001` — Initial condition shared by the SFD comparison campaign.
-- `BFRe40_1cyl.nek5000` — Collection file for visualizing the initial condition.
+- `BF_seed_1cyl0.f00001` — Initial condition shared by the SFD comparison campaign.
+- `BF_seed_1cyl.nek5000` — Collection file for visualizing the initial condition.
 - `BF_1cyl0.f00001` — Converged fixed-tolerance SFD base flow (committed as proof).
 - `BF_1cyl.nek5000` — Collection file for visualizing the converged base flow.
 - `residu.dat` — SFD residual history (not committed; regenerated per run).
@@ -64,7 +62,7 @@ within numerical noise.
 ```bash
 mks 1cyl
 mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
-visnek BFRe40_1cyl
+visnek BF_seed_1cyl
 visnek BF_1cyl
 python3 plot.py
 ```
