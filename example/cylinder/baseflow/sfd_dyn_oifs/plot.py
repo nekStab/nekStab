@@ -28,7 +28,7 @@ CASES = [
         'label': 'SFD fixed',
         'color': '0.35',
         'linestyle': '--',
-        'elapsed': 231.736,
+        'elapsed': 982.240,
         'zorder': 1,
     },
     {
@@ -36,7 +36,7 @@ CASES = [
         'label': 'SFD dyn',
         'color': 'C1',
         'linestyle': '-',
-        'elapsed': 199.891,
+        'elapsed': 810.623,
         'zorder': 2,
     },
     {
@@ -44,7 +44,7 @@ CASES = [
         'label': 'SFD dyn OIFS',
         'color': 'C3',
         'linestyle': '-',
-        'elapsed': 110.790,
+        'elapsed': 617.122,
         'zorder': 3,
     },
 ]
@@ -157,7 +157,7 @@ def main():
     ax_cost.set_xlabel('wall time on 8 ranks (s)')
     ax_cost.tick_params(labelleft=False)
     add_core_min_axis(ax_cost)
-    ax_cost.text(0.98, 0.94, r'OIFS wall cost: $0.55\times$ dyn',
+    ax_cost.text(0.98, 0.94, r'OIFS wall cost: $0.76\times$ dyn',
                  transform=ax_cost.transAxes, ha='right', va='top',
                  fontsize=5.2)
     panel_label(ax_cost, 'b')

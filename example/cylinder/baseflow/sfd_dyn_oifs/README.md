@@ -21,9 +21,9 @@ default.
 
 ## Active Case Definition
 
-- `startFrom = BFRe40_1cyl0.f00001`
+- `startFrom = BF_seed_1cyl0.f00001`
 - shared seed hash:
-  `77de81b1fa85b639a318546e36a2ef6049501c78fed284addc4a60259f48806f`
+  `596d45112a8abaadde4c62120bf981fa0761f5ff8f0acb1e5beece48c829befa`
 - `endTime = 400.0`
 - `userParam01 = 1.1` for SFD
 - `userParam04 = 0.12`
@@ -50,39 +50,44 @@ tolerance follows `0.95 * residual` down to the final `1e-9` convergence gate.
 The scheduler updates every 100 timesteps and leaves the pressure tolerance
 fixed.
 
+## Mesh
+2128 elements (`lelg=2128` in `SIZE`).  Same mesh as the rest of the cylinder
+isothermal suite.
+
 ## Latest Result
 
-Verified twice (8 ranks):
+Latest local verification on the 2128 mesh (Slurm, 8 ranks):
 
-- Reference run (2026-04-28, dedicated): 3688 timesteps, |F| = 9.983e-10
-  at `t = 205.64`, wall time 110.79 s.  These are the fair-comparison numbers
-  encoded in `plot.py` and reproduced below.
-- Re-verification (2026-05-15, Slurm queue): 3688 timesteps, |F| = 9.983e-10
-  at `t = 205.64`.  Wall time was contaminated by concurrent scheduling and is
-  not reported here.
+- date: 2026-05-15
+- convergence time: `t = 332.78`
+- final residual: `9.996e-10`
+- total timesteps: 6064
+- elapsed wall time: 617 s (≈ 10 min)
+- output: converged `BF_1cyl0.f00001` (5.3 MB)
 
-Comparison against the non-OIFS baselines from the same seed (fair, dedicated):
+Comparison against the non-OIFS baselines from the same seed (Slurm, 8 ranks):
 
-- `../sfd`: 30268 timesteps, |F| = 9.997e-10, 231.74 s
-- `../sfd_dyn`: 30278 timesteps, |F| = 9.998e-10, 199.89 s
-- `../sfd_dyn_oifs`: 3688 timesteps, |F| = 9.983e-10, 110.79 s
+| Case | Timesteps | Final |F| | Wall time |
+|---|---:|---:|---:|
+| `../sfd`         | 52515 | 9.997e-10 | 982 s |
+| `../sfd_dyn`     | 52531 | 9.999e-10 | 811 s |
+| `../sfd_dyn_oifs`|  6064 | 9.996e-10 | 617 s |
 
 Conclusion: OIFS reaches the same strict `1e-9` convergence gate with about
-8.2 times fewer timesteps and about 1.8 times less wall time than `../sfd_dyn`
-for this Re = 50 testcase.
+**8.7 times fewer timesteps** and about **0.76 times the wall time** of
+`../sfd_dyn` for this Re = 50 testcase.
 
 The step-count speedup and the wall-clock speedup are intentionally reported
 separately.  OIFS advances much farther per timestep, but each OIFS timestep is
 more expensive than the standard BDF timestep.  The plotting scripts therefore
-include a measured-cost panel using the verified 8-rank wall times above:
-`../sfd_dyn_oifs` costs about `0.55` times the wall time of `../sfd_dyn`, not
-`1 / 8.2` times.  If the cases are rerun, update the elapsed-time constants in
-`plot.py` together with this section.
+include a measured-cost panel using the verified 8-rank wall times above.  If
+the cases are rerun, update the elapsed-time constants in `plot.py` together
+with this section.
 
 ## Saved Artifacts
 
-- `BFRe40_1cyl0.f00001` — Initial condition.
-- `BFRe40_1cyl.nek5000` — Collection file for the IC.
+- `BF_seed_1cyl0.f00001` — Initial condition.
+- `BF_seed_1cyl.nek5000` — Collection file for the IC.
 - `BF_1cyl0.f00001` — Converged OIFS dynamic-tolerance SFD base flow (committed as proof).
 - `BF_1cyl.nek5000` — Collection file for the converged BF.
 - `residu.dat` / `dyn_tol.dat` — Residual + scheduler history (not committed; regenerated per run).
