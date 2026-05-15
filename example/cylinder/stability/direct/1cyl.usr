@@ -11,6 +11,13 @@
 
       if (istep.eq.0) then !change defaults
 
+c       Keep userParam01 = 3.0 in the input file as requested, but force the
+c       human-readable mode string so this checkout resolves the case to the
+c       direct eigensolver path.  The string mode has higher priority than the
+c       legacy floating-point decoder.
+        nekstab_mode = 'direct'
+        call bcast(nekstab_mode,32*csize)
+
         ! xLspg = uparam(8); call bcast(xLspg , wdsize)
         ! xRspg = uparam(9); call bcast(xRspg , wdsize)
         ! spng_st = uparam(10);  call bcast(spng_st, wdsize)
@@ -25,6 +32,20 @@
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
+c       Cylinder thermal eigen-analysis uses the same Ri*T buoyancy model
+c       as the thermal base-flow solve, so reuse the same automatic norm rule.
+c       Keep the same tighter clip used in the base-flow case so the scalar
+c       block stays comparable across the full cylinder thermal pipeline.
+        thermal_norm_mode = 2
+        thermal_buoyancy_coeff = abs(uparam(6))
+        thermal_norm_min = 1.0d0
+        thermal_norm_max = 10.0d0
+        thermal_norm_weight = 1.0d0
+        call bcast(thermal_norm_mode,isize)
+        call bcast(thermal_buoyancy_coeff,wdsize)
+        call bcast(thermal_norm_min,wdsize)
+        call bcast(thermal_norm_max,wdsize)
+        call bcast(thermal_norm_weight,wdsize)
 
       endif
       end
@@ -34,10 +55,22 @@
       include 'TOTAL'
       include 'NEKUSE'
 
+      integer ip, iel
+      real rtmp
+
       ffx = 0.0d0
       ffy = 0.0d0
-      ! if(ifto)ffy = temp*0.15d0 !coupling the scalar field
       ffz = 0.0d0
+
+c     Buoyancy forcing: temperature (field 1) couples to y-momentum
+c     via Boussinesq approximation.  uparam(6) is the Richardson number.
+      if (ifheat .and. uparam(06).gt.0) then
+         iel = gllel(ieg)
+         ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+         if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
+         if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+         ffy = rtmp*uparam(06)
+      endif
 
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
 
