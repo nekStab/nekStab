@@ -20,7 +20,7 @@ targetCFL = 0.5
 
 writeControl = runTime
 writeInterval = 100.
-writeDoublePrecision = yes
+writeDoublePrecision = no
 
 dealiasing = yes
 filtering = explicit

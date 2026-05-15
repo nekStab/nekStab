@@ -33,14 +33,22 @@ giving Strouhal St = ω/(2π) ≈ 0.118 for the linear instability mode around t
 Re=100 unstable steady base flow.  This is the textbook 2D cylinder shedding
 mode (Barkley & Henderson 1996).
 
-## Latest Result
-Verified 2026-05-15 on 8 ranks (Slurm):
+## Mesh
+2128 elements (`lelg=2128` in `SIZE`).  Same mesh as the rest of the cylinder
+isothermal suite.
 
-- 2 eigenvalues converged with residual ≤ 1.1e-8
-- Leading mode: σ = 0.1275, ω = 0.7447  (St = 0.1185)
-- Wall time: 214 s
+## Latest Result
+Verified 2026-05-15 on 8 ranks (Slurm), 2128 mesh, BF from `../../baseflow/newton/`:
+
+- 2 eigenvalues converged with residual ≤ 7.1e-7
+- Leading mode: σ = 0.1247590, ω = 0.7337421  (St = 0.1168)
+- Wall time: 773 s
 - Outputs: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}`, `Spectre_NSd*.dat`,
   `Spectre_Hd*.dat`
+
+The eigenvalue is slightly different from earlier 1996-mesh runs
+(σ ≈ 0.1275 + 0.7447i) — the refined 2128 mesh gives a more accurate
+linear-stability result.
 
 ## Plot
 
