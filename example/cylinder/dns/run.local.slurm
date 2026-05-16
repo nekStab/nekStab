@@ -2,7 +2,7 @@
 #SBATCH --job-name=cyl-dns
 #SBATCH --partition=local
 #SBATCH --nodes=1
-#SBATCH --ntasks=4
+#SBATCH --ntasks=8
 #SBATCH --mem-per-cpu=2000
 #SBATCH --time=04:00:00
 #SBATCH --output=logfile
