@@ -455,8 +455,14 @@ echo "FFLAGS: $FFLAGS"
 echo "USR_LFLAGS: $USR_LFLAGS"
 echo "-----------------------------------------------------"
 
-# Update makefile and static variables
-cp -v "$NEKSTAB_SOURCE_ROOT/src/NEKSTAB" NEKSTAB.inc
+# Update makefile and static variables. Avoid touching NEKSTAB.inc when the
+# content is unchanged; Nek5000's config step treats the timestamp churn as a
+# configuration change and can abort before the actual build starts.
+if [ ! -f NEKSTAB.inc ] || ! cmp -s "$NEKSTAB_SOURCE_ROOT/src/NEKSTAB" NEKSTAB.inc; then
+    cp -v "$NEKSTAB_SOURCE_ROOT/src/NEKSTAB" NEKSTAB.inc
+else
+    echo "'$NEKSTAB_SOURCE_ROOT/src/NEKSTAB' -> 'NEKSTAB.inc' (unchanged)"
+fi
 
 # Append 'include NEKSTAB.inc' to SIZE if not present
 FILE="SIZE"
