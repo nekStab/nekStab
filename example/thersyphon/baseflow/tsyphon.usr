@@ -23,6 +23,19 @@
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
         ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+c       Thermosyphon scaling differs from the cylinder case.
+c       The buoyancy forcing here is Pr * Ra * T, so use that combined
+c       coefficient when constructing the automatic thermal norm weight.
+        thermal_norm_mode = 2
+        thermal_buoyancy_coeff = abs(param(2))*abs(uparam(6))
+        thermal_norm_min = 1.0d0
+        thermal_norm_max = 5.0d3
+        thermal_norm_weight = 1.0d0
+        call bcast(thermal_norm_mode,isize)
+        call bcast(thermal_buoyancy_coeff,wdsize)
+        call bcast(thermal_norm_min,wdsize)
+        call bcast(thermal_norm_max,wdsize)
+        call bcast(thermal_norm_weight,wdsize)
       endif
       return
       end

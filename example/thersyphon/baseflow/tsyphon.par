@@ -17,9 +17,9 @@ writeinterval = 10.
 writedoubleprecision = no
 
 dealiasing = yes
-#filtering = explicit
-#filterweight = 0.01
-#filtercutoffratio = 0.84
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [VELOCITY]
 viscosity = 5.0 # Prandtl number directily # param(2)
