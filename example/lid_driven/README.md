@@ -11,14 +11,22 @@
 ## Prerequisites
 - Initial guess: `BF_cav0.f00001`
 
+## Mesh
+100 elements (`lelg=100` in `SIZE`). Compact cavity mesh — runs fast.
+
 ## Run
 ```bash
-mks cav        # Compile
-nekbmpi cav N  # Run on N MPI ranks
+mks cav
+mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
+python3 plot.py
 ```
 
-## Expected Output
-Converged 2D steady base flow at Re = 3600, aspect ratio 1.5.
+## Latest Result
+Verified 2026-05-17 on 8 ranks (Slurm):
+
+- 1 Newton outer iteration (already near converged BF), |F| = 2.5e-10
+- Wall time 0.58 s
+- Output: `BF_cav0.f00001` (144 KB)
 
 ## Reference
 Standard lid-driven cavity benchmark.
