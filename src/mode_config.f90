@@ -57,6 +57,7 @@ subroutine nekStab_resolve_mode
 
    !  Priority 1: String mode (nekstab_mode) - highest priority
    if (len_trim(nekstab_mode) > 0) then
+      call nekStab_clear_mode_flags
       call nekStab_mode_from_string(nekstab_mode)
       if (nid == 0) write (6, *) 'Mode set via nekstab_mode = ', &
          trim(nekstab_mode)
@@ -80,6 +81,51 @@ subroutine nekStab_resolve_mode
    call nekStab_sync_uparam
 
 end subroutine nekStab_resolve_mode
+
+!-----------------------------------------------------------------------
+! nekStab_clear_mode_flags - Clear user mode flags before string override
+!
+! Purpose:
+!   String mode has documented priority over flags and uparam(1).  A legacy
+!   .usr may still set if* flags before assigning nekstab_mode; clear only the
+!   mode-selection flags so the string selector is a true override.
+!-----------------------------------------------------------------------
+subroutine nekStab_clear_mode_flags
+
+   ifDNS = .false.
+   ifLinDNS = .false.
+   ifSFD = .false.
+   ifBoostConv = .false.
+   ifTDF = .false.
+   ifFloquet = .false.
+
+   isNewtonFP = .false.
+   isNewtonPO = .false.
+   isNewtonPO_T = .false.
+
+   isDirect = .false.
+   isAdjoint = .false.
+   isTransientGrowth = .false.
+   isFloquetDirect = .false.
+   isFloquetAdjoint = .false.
+   isFloquetTransientGrowth = .false.
+
+   ifEnergyBudget = .false.
+   ifWavemaker = .false.
+   ifBFSensitivity = .false.
+   ifForceSensReal = .false.
+   ifForceSensImag = .false.
+   ifDeltaForcing = .false.
+   ifAnimateMode = .false.
+   ifAnimateBFDeform = .false.
+   ifAnimateFloquet = .false.
+
+   ifotd = .false.
+   ifpod = .false.
+   ifdmd = .false.
+   ifspod = .false.
+
+end subroutine nekStab_clear_mode_flags
 
 !-----------------------------------------------------------------------
 ! nekStab_mode_from_string — Parse mode string into flags
