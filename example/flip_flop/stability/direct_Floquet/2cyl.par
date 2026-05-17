@@ -4,7 +4,7 @@ stopAt = endTime
 endTime = 8.73356  # Orbit period from UPO computation (updated by Newton)
 
 userParam01 = 3.11  # Direct Floquet analysis
-userParam07 = 48    # k_dim (Krylov subspace dimension)
+userParam07 = 50    # k_dim (Krylov subspace dimension)
 
 dt = 0
 variableDt = yes

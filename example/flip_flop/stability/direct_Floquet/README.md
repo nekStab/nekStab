@@ -20,6 +20,16 @@ nekbmpi 2cyl N  # Run on N MPI ranks
 ## Expected Output
 Floquet multipliers of the flip-flop periodic orbit.
 
+## Latest Result
+Verified 2026-05-17 on 8 ranks (Slurm):
+
+- 3 multipliers converged with residual ≤ 1e-7
+- Leading multiplier: σ = 0.0079, ω = 0.1408 (just above zero -- consistent
+  with Re=62 barely above the Re_c≈61.17 secondary bifurcation)
+- Wall time 656 s (~11 min)
+- Outputs: `dRe2cyl0.f0000{1..3}`, `dIm2cyl0.f0000{1..3}`,
+  `Spectre_NSd*.dat`, `Spectre_Hd*.dat`
+
 ## Plot Notes
 - Current `plot.py` shows velocity magnitude; paper plots **vx** component (vorticity proxy, asymmetry visible)
 - Use PiYG diverging colormap: ±1.5 clim for UPO base flow, ±0.5 for Floquet mode
