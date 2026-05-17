@@ -1,7 +1,7 @@
-# Triple-Port Jet Newton — Forced periodic orbit via Newton-GMRES
+# Time-Periodic Jet Newton — Forced periodic orbit via Newton-GMRES
 
 ## Physics
-Axisymmetric triple-port jet at Re = 1900. Computes the forced periodic orbit using Newton-GMRES at the forcing frequency St = 0.6 (T = 1.667).
+Axisymmetric time-periodic jet at Re = 1900. Computes the forced periodic orbit using Newton-GMRES at the forcing frequency St = 0.6 (T = 1.667).
 
 ## nekStab Mode
 `userParam01 = 2.2` — Newton-GMRES for forced periodic orbits
@@ -20,6 +20,13 @@ nekbmpi tpjet N  # Run on N MPI ranks
 
 ## Expected Output
 Converged forced periodic orbit at Re = 1900 (above Re_c ~ 1371).
+
+## Latest Result
+Verified 2026-05-17 on 8 ranks (Slurm):
+
+- 1 Newton outer iteration (already near converged UPO), |F| = 9.3e-9
+- Wall time 8.5 s
+- BF_tpjet0.f00001 refreshed (6.9 MB) and committed as proof
 
 ## Plot Notes
 - Current `plot.py` shows velocity magnitude; paper plots **vx** (axial velocity, Blues cmap 0 → 5)
