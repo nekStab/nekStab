@@ -71,12 +71,12 @@ def main():
         q = fields.get('vx')
         if q is not None:
             cf = nk.tricontourf(ax_bf, triang, q, levels=257,
-                                cmap='Blues', vmin=0., vmax=5.,
+                                cmap='Blues', vmin=0., vmax=1.,
                                 extend='both')
             nk.inset_colorbar(ax_bf, cf, orientation='horizontal',
                               width="20%", height="14%", loc=1,
-                              ticks=[0, 5],
-                              tick_labels=['0', '5'])
+                              ticks=[0, 1],
+                              tick_labels=['0', '1'])
         ax_bf.set_xlim(XLIM)
         ax_bf.set_ylim(YLIM)
         ax_bf.set_aspect('auto')
@@ -84,8 +84,10 @@ def main():
         nk.panel_label(ax_bf, rf'$\bf{{({next(labels)})}}$')
 
     # --- Panel: Leading mode vx (RdBu, ±2) ---
+    # Use last mode file: spurious modes (|mu|>>1) converge first,
+    # physical mode (|mu| ~ 1) is written last
     if ax_mode is not None and mode_files:
-        x, y, fields, time = nk.read_field(mode_files[0])
+        x, y, fields, time = nk.read_field(mode_files[-1])
         triang = nk.make_triangulation(x, y)
         q = fields.get('vx')
         if q is not None:

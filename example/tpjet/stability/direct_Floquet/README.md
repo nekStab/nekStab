@@ -1,7 +1,7 @@
-# Triple-Port Jet Direct Floquet — Floquet stability of forced jet
+# Time-Periodic Jet Direct Floquet — Floquet stability of forced jet
 
 ## Physics
-Axisymmetric triple-port jet at Re = 1900. Direct Floquet analysis of the forced periodic orbit (St = 0.6, T = 1.667) to detect secondary instabilities.
+Axisymmetric time-periodic jet at Re = 1900. Direct Floquet analysis of the forced periodic orbit (St = 0.6, T = 1.667) to detect secondary instabilities.
 
 ## nekStab Mode
 `userParam01 = 3.11` — Direct Floquet
@@ -20,6 +20,18 @@ nekbmpi tpjet N  # Run on N MPI ranks
 
 ## Expected Output
 Floquet multipliers at Re = 1900 (above Re_c ~ 1371).
+
+## Latest Result
+Verified 2026-05-17 on 8 ranks (Slurm):
+
+- 3 multipliers converged
+- Leading multiplier: sigma = 0.512, omega = 1.237 (positive growth rate
+  -- forced orbit unstable at Re=1900 as expected above Re_c ~ 1371)
+- Wall time 805 s (~13 min)
+- UZAWA warnings appear during the linearised solve but are tolerance
+  noise, not fatal
+- Outputs: `dRetpjet0.f0000{1..3}`, `dImtpjet0.f0000{1..3}`,
+  `Spectre_NSd*.dat`, `Spectre_Hd*.dat`
 
 ## Plot Notes
 - Current `plot.py` shows velocity magnitude; paper plots **vx** (axial velocity, streamwise)
