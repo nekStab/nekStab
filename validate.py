@@ -216,10 +216,10 @@ CASES = {
     },
     "thermosyphon": {
         "description": "Thermosyphon - Pitchfork bifurcation (Ra=500, above critical)",
-        "dir": "thersyphon/stability/direct",
+        "dir": "thermosyphon/stability/direct",
         "casename": "tsyphon",
         "tier": "short",
-        "family": "thersyphon",
+        "family": "thermosyphon",
         "requires": [],
         "output": "Spectre_NSd.dat",
         "reference": "AMR paper, Ra_c ~ 494",
@@ -563,10 +563,10 @@ CASES = {
     # ─── Full tier: Thermosyphon family ───────────────────────────────────
     "thermo_bf": {
         "description": "Newton baseflow (Ra=500)",
-        "dir": "thersyphon/baseflow",
+        "dir": "thermosyphon/baseflow",
         "casename": "tsyphon",
         "tier": "full",
-        "family": "thersyphon",
+        "family": "thermosyphon",
         "requires": ["BF_Ra400_tsyphon0.f00001"],
         "output": None,
         "checks": [],

@@ -106,7 +106,7 @@ Ready-to-run cases in `example/`:
 | `back_fstep/` | Separated flow (Re=500) | Newton baseflow, transient growth |
 | `flip_flop/` | Side-by-side cylinders (Re=62) | Newton UPO (natural frequency), Floquet |
 | `tpjet/` | Forced jet (Re=1900) | Newton UPO (forced frequency), TDF, Floquet period-doubling |
-| `thersyphon/` | Buoyancy-driven (Ra=500) | Newton baseflow, pitchfork + Hopf bifurcations |
+| `thermosyphon/` | Buoyancy-driven (Ra=500) | Newton baseflow, pitchfork + Hopf bifurcations |
 | `lid_driven/` | Confined flow (Re=3600) | Newton, steady bifurcations |
 | `cubic_cavity/` | 3D cavity (Re=1950–2500) | Newton, 3D steady bifurcations, UPO |
 | `naca0012/` | Airfoil (Re=2000–2500) | Newton, direct stability |

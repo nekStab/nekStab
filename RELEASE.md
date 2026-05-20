@@ -242,7 +242,7 @@ initial condition for direct cross-case comparison.
 | `cylinder/stability` | direct, adjoint, animate_modes |
 | `cylinder/postproc` | sensitivity_budget_wavemaker, steady_force_sensitivity |
 | `cylinder/other` | dns, ci_test, moving_cylinder (absorbed) |
-| non-cylinder | lid_driven (Re=3600), poiseuille_OTD (Re=5000), naca0012 (Re=2000), thersyphon/{baseflow, stability/direct} (Ra=500), flip_flop/{baseflow, stability/direct_Floquet} (Re=62), tpjet/{baseflow/newton, stability/direct_Floquet} (Re=1900) |
+| non-cylinder | lid_driven (Re=3600), poiseuille_OTD (Re=5000), naca0012 (Re=2000), thermosyphon/{baseflow, stability/direct} (Ra=500), flip_flop/{baseflow, stability/direct_Floquet} (Re=62), tpjet/{baseflow/newton, stability/direct_Floquet} (Re=1900) |
 
 **Deferred to HPC or v2.1**:
 

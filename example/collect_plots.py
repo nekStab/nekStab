@@ -4,7 +4,7 @@
 Walks example directories, finds plot.png files, extracts Re/Ra from .par files,
 and copies them to a single validation/figures/ folder with names like:
     cylinder_baseflow_sfd_Re50.png
-    thersyphon_stability_direct_Ra500.png
+    thermosyphon_stability_direct_Ra500.png
 
 Can also (re-)generate plots before collecting by running each plot.py.
 

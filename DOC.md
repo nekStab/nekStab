@@ -1222,7 +1222,7 @@ genmap
 | `poiseuille_OTD/` | Plane Poiseuille flow | OTD and FTLE tracking |
 | `poiseuille_RANS/` | Turbulent channel flow | RANS base flow and finite-difference stability |
 | `slot_FST/` | Flat plate + FST | Free-stream turbulence inflow |
-| `thersyphon/` | Buoyancy-driven convection | Pitchfork + Hopf bifurcations |
+| `thermosyphon/` | Buoyancy-driven convection | Pitchfork + Hopf bifurcations |
 | `torus/` | Toroidal pipe | Direct stability on baseline torus mesh |
 | `torus2/` | Toroidal pipe | Direct stability on variant mesh |
 | `torus_full/` | Toroidal pipe | Direct stability on full torus geometry |
@@ -1315,7 +1315,7 @@ The repository now ships with `validate.py`, which combines literature-facing va
 
 Validation is split into two tiers:
 - **Short tier**: AMR-oriented literature checks for `cylinder`, `thermosyphon`, `flipflop_bf`, `flipflop_floquet`, `backstep`, `tpjet_bf`, and `tpjet_floquet`
-- **Full tier**: compile/run coverage across the cases currently listed in `validate.py`, spanning cylinder variants plus `back_fstep`, `thersyphon`, `flip_flop`, `tpjet`, `lid_driven`, `cubic_cavity`, `naca0012`, `poiseuille_OTD`, and `slot_FST`
+- **Full tier**: compile/run coverage across the cases currently listed in `validate.py`, spanning cylinder variants plus `back_fstep`, `thermosyphon`, `flip_flop`, `tpjet`, `lid_driven`, `cubic_cavity`, `naca0012`, `poiseuille_OTD`, and `slot_FST`
 
 Operational behavior of `validate.py`:
 - Auto-detects CPU topology and prefers physical cores

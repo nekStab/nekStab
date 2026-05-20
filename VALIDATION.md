@@ -29,8 +29,8 @@ shipped in this repository.
 |---|---:|---|---|
 | `lid_driven` | 3600 | Newton (2.0) | converged steady state |
 | `poiseuille_OTD` | 5000 | OTD smoke | builds and runs |
-| `thersyphon/baseflow` | Ra = 500 | Newton + thermal (2.0) | converged thermal steady state |
-| `thersyphon/stability/direct` | Ra = 500 | Direct + thermal (3.1) | leading real eigenvalue (pitchfork) |
+| `thermosyphon/baseflow` | Ra = 500 | Newton + thermal (2.0) | converged thermal steady state |
+| `thermosyphon/stability/direct` | Ra = 500 | Direct + thermal (3.1) | leading real eigenvalue (pitchfork) |
 | `naca0012` | 2000 | Newton (2.0) | converged steady state |
 | `flip_flop/baseflow` | 62 | Newton-UPO (2.1) | converged UPO |
 | `flip_flop/stability/direct_Floquet` | 62 | Floquet direct (3.11) | leading multiplier just above unit circle |
