@@ -108,6 +108,7 @@
          ifSFD = .false.       ! Selective Frequency Damping
          ifBoostConv = .false. ! BoostConv acceleration
          ifTDF = .false.       ! Time-Delayed Feedback
+         ifDMT = .false.       ! Dynamic Mode Tracking
 
       !  Mode 2: Newton-Krylov (use existing isNewtonFP, isNewtonPO, isNewtonPO_T)
          isNewtonFP = .false.   ! Newton for fixed points
@@ -223,6 +224,7 @@ c        nStab_mode_flags
          call bcast(ifSFD, lsize)
          call bcast(ifBoostConv, lsize)
          call bcast(ifTDF, lsize)
+         call bcast(ifDMT, lsize)
          call bcast(ifFloquet, lsize)
          call bcast(isNewtonFP, lsize)
          call bcast(isNewtonPO, lsize)
@@ -366,6 +368,7 @@ c        OTD_params
          use nekstab_energy_budget
          use nekstab_sensitivity
          use nekstab_otd, only: otd
+         use nekstab_dmt, only: dmt
          use nekstab_modal_analysis
          use nekstab_vectors, only: zero_forcing
          implicit none
@@ -410,7 +413,7 @@ c        OTD_params
       !  inside if(ifDNS) would make the fixed-point path unreachable.
       !  Nek5000 handles time-stepping; these routines apply damping/feedback.
       !  ═══════════════════════════════════════════════════════════════════
-         if (ifSFD .or. ifBoostConv .or. ifTDF) then
+         if (ifSFD .or. ifBoostConv .or. ifTDF .or. ifDMT) then
 
             call nekStab_outpost
             call nekStab_comment
@@ -430,6 +433,9 @@ c        OTD_params
             elseif (ifTDF) then
                if (nid == 0) write (6, *) 'TDF'
                call TDF
+            elseif (ifDMT) then
+               if (nid == 0) write (6, *) 'DMT'
+               call dmt
             end if
 
             if (ifbfcv) call nek_end

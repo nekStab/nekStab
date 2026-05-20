@@ -53,6 +53,7 @@ subroutine nekStab_resolve_mode
       ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing &
       .or. ifAnimateMode .or. ifAnimateBFDeform &
       .or. ifAnimateFloquet .or. ifotd &
+      .or. ifDMT &
       .or. ifpod .or. ifdmd .or. ifspod
 
    !  Priority 1: String mode (nekstab_mode) - highest priority
@@ -97,6 +98,7 @@ subroutine nekStab_clear_mode_flags
    ifSFD = .false.
    ifBoostConv = .false.
    ifTDF = .false.
+   ifDMT = .false.
    ifFloquet = .false.
 
    isNewtonFP = .false.
@@ -168,6 +170,9 @@ subroutine nekStab_mode_from_string(mode_str)
    case ('tdf')
       ifTDF = .true.
 
+   case ('dmt')
+      ifDMT = .true.
+
    !  Mode 2: Newton-Krylov
    case ('newton_fp', 'newton')
       isNewtonFP = .true.
@@ -230,7 +235,7 @@ subroutine nekStab_mode_from_string(mode_str)
          write (6, *) 'ERROR: Unknown nekstab_mode: ', &
             trim(mode_str)
          write (6, *) 'Valid modes: dns, linear_dns, sfd, ', &
-            'boostconv, tdf,'
+            'boostconv, tdf, dmt,'
          write (6, *) '  newton_fp, newton_po, newton_po_t,'
          write (6, *) '  direct, adjoint, transient_growth,'
          write (6, *) '  floquet_direct, floquet_adjoint, ', &
@@ -298,6 +303,9 @@ subroutine nekStab_mode_from_uparam
       ifSFD = .true.
    elseif (abs(up1 - 1.2) < tol) then
       ifBoostConv = .true.
+   elseif (abs(up1 - 1.3) < tol) then
+      ifDMT = .true.
+
    elseif (abs(up1 - 1.4) < tol) then
       ifTDF = .true.
 
@@ -388,7 +396,7 @@ subroutine nekStab_validate_mode
 
    !  Count active mode categories
    if (ifDNS .or. ifLinDNS) nmodes = nmodes + 1
-   if (ifSFD .or. ifBoostConv .or. ifTDF) nmodes = nmodes + 1
+   if (ifSFD .or. ifBoostConv .or. ifTDF .or. ifDMT) nmodes = nmodes + 1
    if (isNewtonFP .or. isNewtonPO .or. isNewtonPO_T) &
       nmodes = nmodes + 1
    if (isDirect .or. isFloquetDirect .or. &
@@ -476,6 +484,8 @@ subroutine nekStab_sync_uparam
       uparam(1) = 1.1
    elseif (ifBoostConv) then
       uparam(1) = 1.2
+   elseif (ifDMT) then
+      uparam(1) = 1.3
    elseif (ifTDF) then
       uparam(1) = 1.4
 

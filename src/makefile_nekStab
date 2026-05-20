@@ -68,6 +68,7 @@ $(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O
 # Level 5: Modules that depend on eigensolvers
 # ─────────────────────────────────────────────────────────────────────
 $(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o $(O)/newton_krylov.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/dmt.o:               $(NS)/dmt.f90               $(O)/nekstab_nek_bridge.o $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o $(O)/newton_krylov.o $(O)/energy_budget.o $(O)/torque.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o ;$(FC) -c $(FL2_FREE) $< -o $@
@@ -88,7 +89,7 @@ $(O)/modal_analysis.o:    $(NS)/modal_analysis.f90    $(O)/krylov_subspace.o $(O
 $(O)/main.o: $(NS)/main.f90 \
    $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/mode_config.o \
    $(O)/eigensolvers.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o \
-   $(O)/sensitivity.o $(O)/newton_krylov.o $(O)/fixedp.o \
+   $(O)/sensitivity.o $(O)/newton_krylov.o $(O)/fixedp.o $(O)/dmt.o \
    $(O)/otd.o $(O)/fst.o $(O)/forcing.o $(O)/diagnostics.o \
    $(O)/energy_budget.o $(O)/IO.o $(O)/modal_analysis.o \
    $(O)/statistics.o $(O)/noise.o $(O)/probes.o $(O)/torque.o \

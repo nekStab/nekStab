@@ -58,6 +58,7 @@
       logical :: ifSFD       ! Selective Frequency Damping (uparam=1.1)
       logical :: ifBoostConv ! BoostConv acceleration (uparam=1.2)
       logical :: ifTDF       ! Time-Delayed Feedback (uparam=1.4)
+      logical :: ifDMT       ! Dynamic Mode Tracking (uparam=1.3)
 
       ! Mode 3: Stability analysis modifier
       logical :: ifFloquet   ! Floquet modifier (combines with isDirect/etc)
@@ -90,7 +91,7 @@
       logical :: use_cgs    ! CGS2 orthogonalization (vs MGS)
 
       common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv,
-     $   ifTDF, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity,
+     $   ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity,
      $   ifForceSensReal, ifForceSensImag, ifDeltaForcing,
      $   ifAnimateMode, ifAnimateBFDeform,
      $   ifAnimateFloquet, ifpod, ifdmd, ifspod,
