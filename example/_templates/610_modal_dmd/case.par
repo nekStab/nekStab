@@ -1,0 +1,5 @@
+# TEMPLATE: modal_dmd; dispatch=postproc keyword; subroutine=modal_dmd; status: scaffold only
+#
+# DMD = Dynamic Mode Decomposition of snapshot ensemble.
+# Triggered by  postproc = dmd  in [GENERAL].
+# Input: same snapshot set as POD; optionally provide time vector.

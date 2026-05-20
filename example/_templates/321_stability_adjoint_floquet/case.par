@@ -1,0 +1,11 @@
+# TEMPLATE: stability_adjoint_floquet; uparam01=3.21; subroutine=Krylov-Schur adjoint on periodic BF; status: scaffold only
+#
+# Adjoint Floquet analysis around a converged UPO (output of 210_baseflow_newton uparam01=2.1).
+# Mirror of 311_stability_direct_floquet but with adjoint time-stepper.
+# Reference: example/_templates/311_stability_direct_floquet/case.par
+#
+#   userParam01 = 3.21      # adjoint Floquet
+#   userParam07 = 100       # k_dim (same as direct Floquet)
+#   userParam08 = 5         # sponge left
+#   userParam09 = 5         # sponge right
+#   userParam10 = 1.7       # sponge strength

@@ -1,0 +1,37 @@
+# base -- variants override
+[GENERAL]
+# TEMPLATE: seed field — DNS snapshot or previous SFD checkpoint
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 400.0          # TEMPLATE: long enough for SFD residual to decay
+
+userParam01 = 1.1        # 1.1 = SFD; 1.2 = SFD dyn; 1.3 = SFD dyn + OIFS
+userParam04 = 0.12       # TEMPLATE: target frequency (Strouhal of leading mode)
+userParam05 = 0.05       # TEMPLATE: SFD gain (~ twice the leading growth rate)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.0
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

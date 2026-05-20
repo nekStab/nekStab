@@ -1,0 +1,5 @@
+# TEMPLATE: modal_spod; dispatch=postproc keyword; subroutine=modal_spod; status: scaffold only
+#
+# SPOD = Spectral Proper Orthogonal Decomposition.
+# Triggered by  postproc = spod  in [GENERAL].
+# Input: long time series (needs sufficient snapshots for spectral resolution).

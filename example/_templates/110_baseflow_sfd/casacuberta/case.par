@@ -1,0 +1,39 @@
+[GENERAL]
+# TEMPLATE: SFD dynamic (Casacuberta 2018); uparam01=1.1; status: scaffold only
+# Ref: Casacuberta et al., Phys. Rev. Fluids 3, 094401 (2018)
+# Dynamic SFD: Delta and chi updated adaptively each step via ifdyntol logic.
+# userParam08 is the dyn-tol factor (typically 0.9-0.99); userParam09 = stride.
+# Casacuberta variant: ifdyntol enabled, adaptive Delta driven by residual slope.
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 400.0
+
+userParam01 = 1.1        # SFD (dynamic variant enabled via userParam08 > 0)
+userParam04 = 0.12       # TEMPLATE: initial Delta (overridden dynamically)
+userParam05 = 0.05       # TEMPLATE: initial chi (overridden dynamically)
+userParam08 = 0.95       # dyn-tol factor (ifdyntol trigger; 0 = static SFD)
+userParam09 = 100        # dyn-tol update stride (steps)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.0
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

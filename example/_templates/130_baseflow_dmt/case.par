@@ -1,0 +1,14 @@
+# TEMPLATE: baseflow_dmt; uparam01=1.3; subroutine=dmt (src/dmt.f90 TO PORT); status: scaffold only
+#
+# DMT = Dynamic Mode Tracking (Queguineur et al., Phys. Fluids 31, 034101, 2019)
+# Source port: ~/Dropbox/nek/nekStab_old_bkp/core_dev_floquet_old/x_periodic_orbit.f:266
+# Spec: docs/SCHUH_FRANTZ_THESIS_2022/x_appendix/1_nek.tex section app:strategies:DMTC
+#
+# Reserved userParam slots for DMT (slots 11-15, shifted to avoid collision with SFD/TDF):
+#   userParam11 = omega_c  (target frequency)
+#   userParam12 = beta     (filter width)
+#   userParam13 = chi      (feedback gain)
+#   userParam14 = dmt_skp  (steps before forcing kicks in)
+#   userParam15 = dmt_tol  (convergence tolerance)
+#
+# See plan.md section 2.1 for full parameter audit.

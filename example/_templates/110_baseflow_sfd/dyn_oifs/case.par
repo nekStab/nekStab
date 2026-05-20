@@ -1,0 +1,38 @@
+[GENERAL]
+# TEMPLATE: SFD dyn-tol + OIFS; uparam01=1.1; status: scaffold only
+# OIFS (Operator Integration Factor Splitting) allows targetCFL >> 1 (typically 5).
+# Reference: example/cylinder/baseflow/sfd_dyn_oifs/1cyl.par (Re=50, factor=0.95)
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 400.0
+
+userParam01 = 1.1        # SFD dyn-tol + OIFS
+userParam04 = 0.12       # TEMPLATE: Delta (target frequency)
+userParam05 = 0.05       # TEMPLATE: chi (gain)
+userParam08 = 0.95       # dyn-tol factor
+userParam09 = 100        # dyn-tol update stride
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 5            # OIFS allows higher CFL
+extrapolation = OIFS
+
+writeControl = runTime
+writeInterval = 1000.0
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

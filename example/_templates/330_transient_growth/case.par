@@ -1,0 +1,10 @@
+# TEMPLATE: transient_growth; uparam01=3.3; subroutine=Krylov-Schur (rewrites to 3.1 internally); status: scaffold only
+#
+# Transient growth (optimal perturbation) around a steady baseflow.
+# Uses direct + adjoint time-steppers in tandem; uparam01=3.3 selects this path.
+#
+#   userParam01 = 3.3       # transient growth
+#   userParam07 = 50        # k_dim
+#   userParam08 = 5         # sponge left
+#   userParam09 = 5         # sponge right
+#   userParam10 = 1.7       # sponge strength

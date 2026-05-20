@@ -1,0 +1,5 @@
+# TEMPLATE: modal_pod; dispatch=postproc keyword (not uparam01); subroutine=modal_pod; status: scaffold only
+#
+# POD = Proper Orthogonal Decomposition of snapshot ensemble.
+# Triggered by setting  postproc = pod  in [GENERAL] (not by uparam01).
+# Input: a sequence of field files (e.g., dns0.f0000*).

@@ -1,0 +1,11 @@
+# TEMPLATE: baseflow_tdf; uparam01=1.4; subroutine=tdf (fixedp.f90); status: scaffold only
+#
+# TDF = Time-Delayed Feedback (Pyragas-type forcing for UPO stabilization)
+# Reference: example/tpjet/baseflow/tdf/tpjet.par  (Re~2000 axisymmetric jet)
+#
+# Key params:
+#   userParam01 = 1.4       # TDF mode
+#   userParam05 = 0.60      # forced frequency (St_D or omega_c, case-specific)
+#   userParam07 = 1         # k_dim (usually 1 for TDF)
+#
+# See example/_templates/210_baseflow_newton/case.par for the Newton follow-up stage.

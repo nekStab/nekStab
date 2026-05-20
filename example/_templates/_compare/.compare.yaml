@@ -1,0 +1,20 @@
+# .compare.yaml — configuration for nstab_compare.py
+#
+# Place this file in a nekStab stage directory (e.g., 110_baseflow_sfd/)
+# alongside the variant subdirs (akervik/, casacuberta/, dyn/, ...).
+# All keys are optional; defaults are shown.
+
+# Plot title. Default: "<stage_dir_name> — variant comparison"
+# title: "110_baseflow_sfd — SFD variant comparison"
+
+# Axis labels.
+# x_label: "Time"
+# y_label: "Residual"
+
+# Use log scale on the y-axis. Set to false for linear scale.
+log_y: true
+
+# Field diff: compare .fld output files across variants.
+# NOTE: .fld reader is TBD (needs pymech or in-house reader).
+# Setting this to true currently prints a note and does nothing.
+field_diff: false

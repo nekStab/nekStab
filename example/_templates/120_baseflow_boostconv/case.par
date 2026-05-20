@@ -1,0 +1,8 @@
+# TEMPLATE: baseflow_boostconv; uparam01=1.2; subroutine=BoostConv (fixedp.f90); status: scaffold only
+#
+# Reference: example/cylinder/baseflow/boostconv/1cyl.par
+# uparam01 = 1.2  (BoostConv Krylov acceleration)
+# No SFD-specific params; relies on internal Krylov acceleration.
+# Seed with a DNS snapshot or rough SFD output.
+#
+# See example/_templates/110_baseflow_sfd/case.par for full [GENERAL] block structure.
