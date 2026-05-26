@@ -1,0 +1,78 @@
+name: Deploy Validation Gallery
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - validation/index.html
+      - validation/figures/**
+      - .github/workflows/pages-validation.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-validation
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}validation/
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Pages artifact
+        run: |
+          set -euo pipefail
+          mkdir -p _site/validation
+          cp validation/index.html _site/validation/index.html
+          cp -a validation/figures _site/validation/figures
+          touch _site/.nojekyll
+
+      - name: Check static gallery references
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          base = Path("_site/validation")
+          refs = []
+
+          class Parser(HTMLParser):
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key not in {"src", "href"} or not value:
+                          continue
+                      if value.startswith(("#", "/", "mailto:")) or "://" in value:
+                          continue
+                      refs.append(value.split("#", 1)[0].split("?", 1)[0])
+
+          Parser().feed((base / "index.html").read_text(errors="ignore"))
+          missing = sorted({ref for ref in refs if not (base / ref).exists()})
+          if missing:
+              for ref in missing:
+                  print(f"missing: {ref}")
+              raise SystemExit(1)
+          print(f"checked {len(set(refs))} unique static references")
+          PY
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
