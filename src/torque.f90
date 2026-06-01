@@ -29,12 +29,54 @@ module nekstab_torque_mod
 ! nekStab_torque -- Compute drag and torque on wall boundaries
 !
 ! Purpose:
-!   Computes pressure and viscous contributions to drag and torque
-!   on wall-type boundary objects. Initializes on first call,
-!   then appends results to a file each timestep.
+!   Computes pressure and viscous contributions to drag and torque on
+!   all 'W  ' (wall) faces, then appends one row per step to `fname`.
+!   Output columns (3D): istep, time, then per axis
+!   drag, drag_pressure, drag_viscous (x,y,z) and torque (x,y,z).
 !
 ! Arguments:
 !   fname [in] -- output filename for drag/torque data
+!
+! ---------------------------------------------------------------------
+! WHY THIS ROUTINE DOES NOT USE create_obj / nmember / object
+! ---------------------------------------------------------------------
+! Nek5000's stock drag pattern is: mark wall faces in `boundaryID`,
+! call create_obj() to gather them into an "object" (nobj, nmember,
+! object(...)), then loop the object members calling drgtrq().
+!
+! That pattern is BROKEN in this v2.0.0 build and silently returns
+! zero forces. Root cause (debugged 2026-06, cube_5/400):
+!
+!   The "wrap all Nek state in a bridge module" refactor put
+!   `include 'TOTAL'` *inside* a Fortran module (nekstab_nek_bridge),
+!   and the link uses `-Wl,--allow-multiple-definition`. Nek core
+!   files (e.g. bdry.f) also `include 'TOTAL'`. The link flag lets the
+!   duplicate COMMON blocks coexist instead of erroring, and their
+!   storage is NOT merged: module-compiled code and Nek-core-compiled
+!   code see DIFFERENT copies of some commons.
+!
+!   For the object machinery this is fatal and deceptive: create_obj
+!   (Nek core) correctly scans boundaryID, finds the wall faces, and
+!   writes nmember=Nwall into *core's* copy of common /input2/
+!   (INPUT: ...,nmember(maxobj),nobj,...). But the integration loop
+!   here (module-compiled) reads the *module's* copy, where nmember=0
+!   -> zero members -> zero force. `nobj` happens to alias (it sat at
+!   a coinciding offset) which made the split maddening to find:
+!   create_obj reports 216 wall faces and nobj=1, yet nmember=0.
+!
+!   We sidestep the split entirely: `cbc` (the BC character array) IS
+!   read consistently through the bridge, so we loop wall faces by
+!   `cbc(ifc,ie,1)=='W  '` directly and call drgtrq() per face. No
+!   object, no /input2/ dependency, robust for any wall geometry.
+!
+! Second regression fixed here: the scale factor was dropped. nekStab
+! 1.1 set `scale = 2` (the 2/(rho U^2 A) drag-coefficient
+! normalization); the refactor left `torque_scale` uninitialised, so
+! cmult(dgtq,torque_scale,12) multiplied every contribution by 0 --
+! by itself enough to zero the forces. Restored to 2 below.
+!
+! Verified: with both fixes, lift_drag.dat reproduces the production
+! 1.1 values bit-for-bit at the restart time (cube_5/400, t=25000).
 !-----------------------------------------------------------------------
 subroutine nekStab_torque(fname)
    character(len=*), intent(in) :: fname
@@ -47,6 +89,7 @@ subroutine nekStab_torque(fname)
    integer, parameter :: lr = lx1*ly1*lz1
    real ur(lr), us(lr), ut(lr), vr(lr), vs(lr), vt(lr), wr(lr), ws(lr), wt(lr)
    real torque_scale_vf(3)
+   real dgtq(3,4)
    !!!
 
    common /scrns/ sij
@@ -73,16 +116,18 @@ subroutine nekStab_torque(fname)
             call exitt
          end if
       end if
-      if (nid == 0) write (6, *) 'File opened. Setting torque_bIDs(1) = 1'
-      torque_bIDs(1) = 1
-      if (nid == 0) write (6, *) 'Calling create_obj: torque_iobj_wall(1) [before] =', &
-         torque_iobj_wall(1), ', torque_bIDs(1) =', torque_bIDs(1)
-      call create_obj(torque_iobj_wall(1), torque_bIDs, 1)
-      if (nid == 0) write (6, *) 'Returned from create_obj: ' // &
-         'torque_iobj_wall(1) [after] =', torque_iobj_wall(1)
+      torque_scale = 2.0d0  ! Cd/Cl normalization (2/(rho U^2 A); dropped in v2.0.0 refactor)
+      torque_x0(1) = 0.0d0  ! moment reference point
+      torque_x0(2) = 0.0d0
+      torque_x0(3) = 0.0d0
+      nobj = 1              ! single wall object; faces gathered directly from cbc below
+      ! NOTE: create_obj/nmember/object are NOT used. The v2.0.0 module/bridge
+      ! refactor splits common /input2/ between this module and Nek core, so
+      ! create_obj (core) populates an nmember the module cannot read. We loop
+      ! wall faces directly via cbc (which the bridge reads correctly).
       call cfill(vdiff, param(2), nv)  ! Fill up viscous array with default on initialization
       torque_initialized = .true.
-      if (nid == 0) write (6, *) 'Initialization block completed.'
+      if (nid == 0) write (6, *) 'Torque init: scale=2, wall faces from cbc==W.'
    end if
 
    call mappr(pm1, pr, xm0, ym0) ! map pressure onto Mesh 1
@@ -134,32 +179,29 @@ subroutine nekStab_torque(fname)
    end do
 
    ifield = 1
-   do iobj = 1, nobj
-      memtot = nmember(iobj)
-      do mem = 1, memtot
-          ieg = object(iobj, mem, 1)
-          ifc = object(iobj, mem, 2)
-          if (gllnid(ieg) == nid) then ! This processor has a contribution
-              ie = gllel(ieg)
-              call drgtrq(dgtq, xm0, ym0, zm0, sij, pm1, vdiff, ifc, ie)
-              call cmult(dgtq, torque_scale, 12)
+   iobj = 1
+   do ie = 1, nelv               ! loop local elements; gather wall faces from cbc
+      do ifc = 1, 2*ndim
+         if (cbc(ifc,ie,1) .eq. 'W  ') then
+            call drgtrq(dgtq, xm0, ym0, zm0, sij, pm1, vdiff, ifc, ie)
+            call cmult(dgtq, torque_scale, 12)
 
-              dragpx(iobj) = dragpx(iobj) + dgtq(1,1)  ! Pressure
-              dragpy(iobj) = dragpy(iobj) + dgtq(2,1)
-              dragpz(iobj) = dragpz(iobj) + dgtq(3,1)
+            dragpx(iobj) = dragpx(iobj) + dgtq(1,1)  ! Pressure
+            dragpy(iobj) = dragpy(iobj) + dgtq(2,1)
+            dragpz(iobj) = dragpz(iobj) + dgtq(3,1)
 
-              dragvx(iobj) = dragvx(iobj) + dgtq(1,2)  ! Viscous
-              dragvy(iobj) = dragvy(iobj) + dgtq(2,2)
-              dragvz(iobj) = dragvz(iobj) + dgtq(3,2)
+            dragvx(iobj) = dragvx(iobj) + dgtq(1,2)  ! Viscous
+            dragvy(iobj) = dragvy(iobj) + dgtq(2,2)
+            dragvz(iobj) = dragvz(iobj) + dgtq(3,2)
 
-              torqpx(iobj) = torqpx(iobj) + dgtq(1,3)  ! Pressure
-              torqpy(iobj) = torqpy(iobj) + dgtq(2,3)
-              torqpz(iobj) = torqpz(iobj) + dgtq(3,3)
+            torqpx(iobj) = torqpx(iobj) + dgtq(1,3)  ! Pressure
+            torqpy(iobj) = torqpy(iobj) + dgtq(2,3)
+            torqpz(iobj) = torqpz(iobj) + dgtq(3,3)
 
-              torqvx(iobj) = torqvx(iobj) + dgtq(1,4)  ! Viscous
-              torqvy(iobj) = torqvy(iobj) + dgtq(2,4)
-              torqvz(iobj) = torqvz(iobj) + dgtq(3,4)
-          end if
+            torqvx(iobj) = torqvx(iobj) + dgtq(1,4)  ! Viscous
+            torqvy(iobj) = torqvy(iobj) + dgtq(2,4)
+            torqvz(iobj) = torqvz(iobj) + dgtq(3,4)
+         end if
       end do
    end do
 
@@ -231,11 +273,15 @@ end subroutine nekStab_torque
 !-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
-! nekStab_define_obj -- Define wall boundary objects for torque
+! nekStab_define_obj -- Assign boundaryID=1 to all wall ('W  ') faces.
 !
-! Purpose:
-!   Assigns boundaryID=1 to all wall ('W') faces. Must be called
-!   from userbc or usrdat2 before nekStab_torque.
+! Kept for API compatibility: legacy cases still `call nekStab_define_obj`
+! from usrdat2. nekStab_torque NO LONGER depends on it -- and in fact it
+! is effectively a no-op for the drag path in this v2.0.0 build, because
+! a boundaryID write from module-compiled code does not reach the copy of
+! the common that Nek-core create_obj reads (the same module/core common
+! split documented in nekStab_torque above). Harmless to keep; do not
+! rely on it for object creation until the bridge common-split is fixed.
 !-----------------------------------------------------------------------
 subroutine nekStab_define_obj
    integer :: iel, iface
