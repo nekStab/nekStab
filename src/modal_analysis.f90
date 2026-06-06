@@ -100,7 +100,7 @@ subroutine modal_analysis
    call nopcopy(vx, vy, vz, pr, t, &
         mean_snap%vx, mean_snap%vy, mean_snap%vz, &
         mean_snap%pr, mean_snap%t)
-   call outpost2(vx, vy, vz, pr, t, 0, 'mea')
+   call outpost2(vx, vy, vz, pr, t, 1, 'mea')
    if (nid == 0) write(6,*) '  Saved mean field as mea*'
 
 !        POD (also needed for POD-FFT spectral analysis)

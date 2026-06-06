@@ -296,13 +296,13 @@ subroutine fft_block_at_freq(snaps, blk_start, nfft, &
              call nopcopy(vx, vy, vz, pr, t, &
      &   mode_re%vx, mode_re%vy, mode_re%vz, &
      &   mode_re%pr, mode_re%t)
-            call outpost2(vx, vy, vz, pr, t, 0, 'sRe')
+            call outpost2(vx, vy, vz, pr, t, 1, 'sRe')
 
 !           Output imaginary part
              call nopcopy(vx, vy, vz, pr, t, &
      &   mode_im%vx, mode_im%vy, mode_im%vz, &
      &   mode_im%pr, mode_im%t)
-            call outpost2(vx, vy, vz, pr, t, 0, 'sIm')
+            call outpost2(vx, vy, vz, pr, t, 1, 'sIm')
 
 !           Print info for leading mode only
             if (m == 1) then

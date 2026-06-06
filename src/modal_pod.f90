@@ -115,7 +115,7 @@ subroutine pod_reconstruct_modes(snaps, eigvecs, eigvals, &
 
       call nopcopy(vx, vy, vz, pr, t, &
            mode%vx, mode%vy, mode%vz, mode%pr, mode%t)
-      call outpost2(vx, vy, vz, pr, t, 0, prefix)
+      call outpost2(vx, vy, vz, pr, t, 1, prefix)
 
       call k_norm(mode_norm, mode)
       norms(m) = mode_norm

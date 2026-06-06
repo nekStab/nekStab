@@ -303,11 +303,11 @@ module modal_dmd
 
             call nopcopy(vx, vy, vz, pr, t, mode_re%vx, mode_re%vy, mode_re%vz, mode_re%pr, mode_re%t)
 
-            call outpost2(vx, vy, vz, pr, t, 0, prefix_re)
+            call outpost2(vx, vy, vz, pr, t, 1, prefix_re)
 
             call nopcopy(vx, vy, vz, pr, t, mode_im%vx, mode_im%vy, mode_im%vz, mode_im%pr, mode_im%t)
 
-            call outpost2(vx, vy, vz, pr, t, 0, prefix_im)
+            call outpost2(vx, vy, vz, pr, t, 1, prefix_im)
 
             if (nid == 0) then
                mu_mag = abs(evals(m))
