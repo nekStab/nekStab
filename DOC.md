@@ -946,7 +946,7 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `nekstab_forcing_mod` | `forcing.f90` | `nekStab_forcing`, `nekStab_forcing_temp`, `activate_sponge`, `spng_init`, `spng_set`, `mth_stepf` |
 | `nekstab_mode_config` | `mode_config.f90` | `nekStab_resolve_mode`, `nekStab_mode_from_string`, `nekStab_mode_from_flags`, `nekStab_mode_from_uparam`, `nekStab_validate_mode`, `nekStab_sync_uparam` |
 | `nekstab_otd` | `otd.f90` | `otd`, `otd_construct_linear_operator`, `otd_compute_OTD_modes`, `otd_white_noise`, `otd_generate_forces`, `otd_orthonormalize_basis`, `otd_compute_FTLE` |
-| `nekstab_fst` | `fst.f90` | `fst`, `initWavenumbers`, `initModes`, `defineBC`, `interpolateModes`, `computeBC`, `computeTurbu` |
+| `nekstab_fst` | `fst.f90` | `fst`, `fst_uin`, `fst_vin`, `fst_win` (public); internals: `readFSTinflow`, `defineBC`, `interpolateModes`, `computeBC`, `computeTurbu`, `spline`, `splint` |
 | `nekstab_modal_analysis` | `modal_analysis.f90` | `modal_analysis`, `modal_compute_mean`, `modal_subtract_mean` |
 | `modal_pod` | `modal_pod.f90` | `pod_compute`, `pod_fft_spectrum`, `hamming_window` |
 | `modal_dmd` | `modal_dmd.f90` | `dmd_compute` |

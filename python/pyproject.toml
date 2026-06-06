@@ -1,0 +1,17 @@
+[project]
+name = "nekstab"
+version = "0.1.0"
+description = "nekStab Python tools: Free-Stream-Turbulence inflow generation and related pre/post-processing utilities for the nekStab spectral-element stability solver."
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nekstab*"]
