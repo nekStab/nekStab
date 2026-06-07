@@ -1,0 +1,46 @@
+[GENERAL]
+startFrom = BF_1cyl0.f00001
+
+stopAt = endTime
+endTime = 51.9 # 10 x UPO period T=5.1906 (Re=180)
+
+userParam01 = 4.52 # animate_mode_Floquet: advance base-flow DNS one period, animate shedding
+
+userParam07 = 100 # number of output frames over one base-flow period
+userParam08 = 5   # Sponge left side
+userParam09 = 5   # Sponge right side
+userParam10 = 0 # Sponge streght
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100 # 0.1
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = no
+writeToFieldFile = no
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = no
+density = 1.0
+viscosity = -180.0 # Re=180 (Barkley-Henderson Mode A threshold; was -100 historical)
+
+#[TEMPERATURE]
+#solver = none
+#residualtol = 1.0E-6
+#residualproj = yes
+#writetofieldfile = yes
+#conductivity = -50.0 # Re*Pr 
+#rhocp = 1.0
