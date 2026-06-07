@@ -498,10 +498,9 @@
     integer i, j
    real, dimension(lv, bst_snp), intent(in) :: x_x, x_y, x_z
    real, dimension(lv, bst_snp), intent(out) :: q_x, q_y, q_z
-   real, dimension(lv) :: dum_x, dum_y, dum_z, fwrk
+   real, dimension(lv) :: dum_x, dum_y, dum_z
    real, dimension(bst_snp, bst_snp), intent(out) :: rr
-   real, dimension(bst_snp) :: wk_gop
-   real norma, norma_loc, glsc3
+   real norma, norma_loc, glsc3, proj
 
    nv = nx1*ny1*nz1*nelv
    rr = 0.0d0; norma = 0.0d0
@@ -531,32 +530,23 @@
    call opcopy(dum_x, dum_y, dum_z, &
       x_x(:,j), x_y(:,j), x_z(:,j))
 
-!           Batch projection: rr(1:j-1, j) = Q(:,1:j-1)^T * bm1 * x(:,j)
-   call copy(fwrk, dum_x, nv)
-   call col2(fwrk, bm1, nv)
-   call dgemv('T', nv, j-1, 1.0d0, &
-      q_x, lv, fwrk, 1, 0.0d0, rr(1,j), 1)
-   call copy(fwrk, dum_y, nv)
-   call col2(fwrk, bm1, nv)
-   call dgemv('T', nv, j-1, 1.0d0, &
-      q_y, lv, fwrk, 1, 1.0d0, rr(1,j), 1)
-   if (if3d) then
-   call copy(fwrk, dum_z, nv)
-   call col2(fwrk, bm1, nv)
-   call dgemv('T', nv, j-1, 1.0d0, &
-      q_z, lv, fwrk, 1, 1.0d0, rr(1,j), 1)
-   end if
-   call gop(rr(1,j), wk_gop, '+  ', j-1)
-
-!           Subtract all projections: dum -= Q * rr(1:j-1,j)
-   call dgemv('N', nv, j-1, -1.0d0, &
-      q_x, lv, rr(1,j), 1, 1.0d0, dum_x, 1)
-   call dgemv('N', nv, j-1, -1.0d0, &
-      q_y, lv, rr(1,j), 1, 1.0d0, dum_y, 1)
-   if (if3d) then
-   call dgemv('N', nv, j-1, -1.0d0, &
-      q_z, lv, rr(1,j), 1, 1.0d0, dum_z, 1)
-   end if
+!           Modified Gram-Schmidt: project onto and subtract each q one at a
+!           time, vs the old classical GS that projected onto all previous q
+!           at once. Sequential subtraction keeps Q orthonormal even when the
+!           residual-difference subspace becomes near-linearly-dependent close
+!           to convergence; classical GS loses orthogonality there (error grows
+!           O(eps*kappa^2) vs O(eps*kappa)), which corrupted R and degraded the
+!           BoostConv correction to noise -> stall at the limit-cycle amplitude.
+!           glsc3 carries its own global reduction, so no separate gop is needed.
+   do i = 1, j - 1
+   proj = glsc3(dum_x, bm1, q_x(:,i), nv) &
+        + glsc3(dum_y, bm1, q_y(:,i), nv)
+   if (if3d) proj = proj + glsc3(dum_z, bm1, q_z(:,i), nv)
+   rr(i, j) = proj
+   call add2s2(dum_x, q_x(:,i), -proj, nv)
+   call add2s2(dum_y, q_y(:,i), -proj, nv)
+   if (if3d) call add2s2(dum_z, q_z(:,i), -proj, nv)
+   end do
 
 !           Column norm
    norma = glsc3(dum_x, bm1, dum_x, nv) &
