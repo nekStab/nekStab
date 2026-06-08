@@ -1,0 +1,9 @@
+{
+  "name": "nekstab-validation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser smoke tests for nekStab validation gallery",
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}
