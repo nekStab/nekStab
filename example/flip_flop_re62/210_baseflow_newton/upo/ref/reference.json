@@ -1,0 +1,12 @@
+{
+  "case": "flip_flop_re62/210_baseflow_newton/upo",
+  "description": "Flip-flop UPO at Re=62 via Newton-GMRES (T=8.73356)",
+  "produced": {"ranks": "8", "nekstab_mode": "2.1 (Newton-GMRES UPO)"},
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col6:last",
+      "value": 1.0e-8,
+      "tol_abs": 1.0e-7
+    }
+  }
+}
