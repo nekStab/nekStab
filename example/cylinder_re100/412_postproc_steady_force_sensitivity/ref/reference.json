@@ -1,0 +1,5 @@
+{
+  "case": "cylinder_re100/412_postproc_steady_force_sensitivity",
+  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
+  "quantities": {}
+}
