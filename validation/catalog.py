@@ -1,4 +1,4 @@
-"""Validation case catalog — bead vfl-vfl-020-introduce-catalog-model-1yr.
+"""Validation case catalog.
 
 Source contracts: validation-example-inventory-2026-05-20.md,
 validation-method-capability-matrix-2026-05-20.md,
@@ -1168,8 +1168,8 @@ CASES: dict[str, MethodCase] = {
             " and record the scalar range as a CHECKPOINT_STATS artifact.",
         ),
         why_note=(
-            "Rayleigh-driven case (Ra=500, Pr=5). vfl-vfl-074:"
-            " distinguish Ra parameter evidence (target) from actual"
+            "Rayleigh-driven case (Ra=500, Pr=5)."
+            " Distinguish Ra parameter evidence (target) from actual"
             " saved scalar-field statistics (evidence)."
         ),
     ),
@@ -1212,7 +1212,7 @@ CASES: dict[str, MethodCase] = {
         ),
         why_note=(
             "Direct stability of a thermally-coupled base flow."
-            " vfl-vfl-074: depends on the upstream baseflow's"
+            " Depends on the upstream baseflow's"
             " CHECKPOINT_STATS being satisfied first."
         ),
     ),
@@ -1684,7 +1684,7 @@ CASES["cylinder/baseflow/sfd_casacuberta"] = MethodCase(
 )
 
 # ---------------------------------------------------------------------------
-# Required public API — bead vfl-vfl-020 contract
+# Required public API contract
 # build_gallery.py calls families() / cases_for() / family_can() etc.
 # ---------------------------------------------------------------------------
 
@@ -1772,7 +1772,7 @@ def family_can(family_name: str, method: str) -> bool:
     return state in (CapabilityState.IMPLEMENTED, CapabilityState.SPECIAL_DIRECT_ONLY)
 
 
-# Update __all__ to expose the bead-required API
+# Update __all__ to expose the required API
 __all__ = [  # type: ignore[assignment]
     "CaseStatus", "ComputeClass", "EvidenceRole", "ArtifactRole", "CapabilityState",
     "TargetParameters", "SeedParameters", "EvidenceRequirement", "Artifact",
@@ -1780,7 +1780,7 @@ __all__ = [  # type: ignore[assignment]
     "FLOW_FAMILIES", "CAPABILITY_MATRIX", "CASES",
     # Legacy get_* API (kept for build_gallery.py compatibility)
     "get_flow_families", "get_cases", "get_case", "get_capability",
-    # Bead vfl-vfl-020 required public API
+    # Required public API
     "schema_version", "families", "family", "cases_for", "all_cases",
     "stage_number", "by_legacy_uparam", "family_can",
 ]
