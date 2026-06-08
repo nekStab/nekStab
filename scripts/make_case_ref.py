@@ -55,7 +55,11 @@ def classify(stage: Path, keep_checkpoints: int):
         n = p.name
         suf = p.suffix
         if suf in FIG_SUFFIX:
-            ref.append(p)
+            # canonical gallery panels only: plot_<semantic>.png + animations
+            if (n.startswith("plot_") and suf == ".png") or suf == ".gif":
+                ref.append(p)
+            else:
+                drop.append(p)  # legacy/duplicate/combined images
         elif is_checkpoint(n):
             if is_ic_seed(n):
                 keep.append(p)            # IC / seed / baseflow result

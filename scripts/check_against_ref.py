@@ -18,17 +18,8 @@ import sys
 from pathlib import Path
 
 
-def extract(stage: Path, source: str) -> float:
-    """Read a scalar from a fresh run output per a 'file:colN:reducer' spec."""
-    parts = source.split(":")
-    if len(parts) != 3 or not parts[1].startswith("col"):
-        raise ValueError(f"unsupported source spec: {source!r}")
-    fname, col_tok, reducer = parts
-    col = int(col_tok[3:]) - 1  # 1-indexed in the spec, 0-indexed here
-    path = stage / fname
-    if not path.exists():
-        raise FileNotFoundError(f"run output not found: {path} (run the case first?)")
-
+def _column(path: Path, col: int) -> list[float]:
+    """All numeric values in a 0-indexed column, skipping header/non-numeric rows."""
     values = []
     for line in path.read_text().splitlines():
         fields = line.split()
@@ -37,15 +28,57 @@ def extract(stage: Path, source: str) -> float:
         try:
             values.append(float(fields[col].replace("D", "E")))
         except ValueError:
-            continue  # header / non-numeric row
+            continue
+    return values
+
+
+def _strouhal(path: Path, signal_col: int, time_col: int = 0,
+              band=(0.05, 0.5), settle=0.3) -> float:
+    """Dominant shedding frequency from FFT of a probe-history signal column."""
+    import numpy as np
+    t = np.array(_column(path, time_col))
+    y = np.array(_column(path, signal_col))
+    n = min(len(t), len(y))
+    t, y = t[:n], y[:n]
+    m = int(n * settle)  # drop initial transient
+    t, y = t[m:], y[m:]
+    dt = float(np.median(np.diff(t)))
+    y = y - y.mean()
+    freqs = np.fft.rfftfreq(len(y), d=dt)
+    psd = np.abs(np.fft.rfft(y)) ** 2
+    sel = (freqs > band[0]) & (freqs < band[1])
+    return float(freqs[sel][np.argmax(psd[sel])])
+
+
+def extract(stage: Path, source: str) -> float:
+    """Read a scalar from a fresh run output.
+
+    Spec forms:
+      "<file>:col<N>:<reducer>"   reducer in {last,first,min,max}
+      "<file>:strouhal:col<N>"    FFT dominant frequency of column N (probe vy)
+    """
+    parts = source.split(":")
+    if len(parts) != 3:
+        raise ValueError(f"unsupported source spec: {source!r}")
+    fname, op, arg = parts
+    path = stage / fname
+    if not path.exists():
+        raise FileNotFoundError(f"run output not found: {path} (run the case first?)")
+
+    if op == "strouhal":
+        return _strouhal(path, int(arg[3:]) - 1)
+
+    if not op.startswith("col"):
+        raise ValueError(f"unsupported source spec: {source!r}")
+    col = int(op[3:]) - 1
+    values = _column(path, col)
     if not values:
         raise ValueError(f"no numeric data in column {col + 1} of {path}")
-
     reducers = {"last": values[-1], "first": values[0],
                 "min": min(values), "max": max(values)}
-    if reducer not in reducers:
-        raise ValueError(f"unknown reducer {reducer!r} in {source!r}")
-    return reducers[reducer]
+    if arg not in reducers:
+        raise ValueError(f"unknown reducer {arg!r} in {source!r}")
+    return reducers[arg]
 
 
 def check_quantity(name: str, spec: dict, actual: float) -> tuple[bool, str]:
