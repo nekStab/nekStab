@@ -1,7 +1,5 @@
 ![nekStab banner](assets/nekstab-readme-banner-v4.jpg)
 
-# nekStab
-
 | OS | Arch | Compiler | MPI | Status |
 |:---|:----:|:---------|:----|:------:|
 | Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI / MPICH | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
