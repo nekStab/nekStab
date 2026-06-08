@@ -1,0 +1,7 @@
+{
+  "case": "slot_fst_re495/000_dns",
+  "description": "Slot jet with free-stream turbulence (FST) inflow, DNS at Re=495",
+  "produced": {"ranks": "8", "nekstab_mode": "0.0 (DNS)"},
+  "note": "Figure/IC reference — the shipped slot.his is degenerate, so no numeric scalar is asserted. Compare a fresh run's spectra visually against ref/. FST inflow shipped as FST_data/FST_inflow.bin.",
+  "quantities": {}
+}
