@@ -850,8 +850,8 @@ CASES: dict[str, MethodCase] = {
     "cylinder/stability/direct": MethodCase(
         case_id="cylinder/stability/direct",
         flow_family="cylinder_re100", method_lane="stability_direct",
-        current_path="example/cylinder_re100/310_stability_direct/schur",
-        proposed_folder="example/cylinder_re100/310_stability_direct/schur", sort_prefix="310",
+        current_path="example/cylinder_re100/310_stability_direct/direct",
+        proposed_folder="example/cylinder_re100/310_stability_direct/direct", sort_prefix="310",
         label="Cylinder Direct Stability", mode_name="Direct LNSE", legacy_uparam01="3.1",
         expected_behavior="Direct linearized Navier-Stokes eigenvalue computation at Re=100",
         status=CaseStatus.VALIDATED, compute_class=_BLV,
@@ -863,9 +863,9 @@ CASES: dict[str, MethodCase] = {
             _img("validation/figures/cylinder_stability_direct_spectrum_ns_log_Re50.png"),
             _img("validation/figures/cylinder_stability_direct_mode_vx_Re50.png"),
             _img("validation/figures/cylinder_stability_direct_mode_vy_Re50.png"),
-            _spectrum("example/cylinder_re100/310_stability_direct/schur/Spectre_Hd.dat"),
-            _log("example/cylinder_re100/310_stability_direct/schur/Spectre_d.info"),
-            _provenance("example/cylinder_re100/310_stability_direct/schur/README.md"),
+            _spectrum("example/cylinder_re100/310_stability_direct/direct/Spectre_Hd.dat"),
+            _log("example/cylinder_re100/310_stability_direct/direct/Spectre_d.info"),
+            _provenance("example/cylinder_re100/310_stability_direct/direct/README.md"),
         ),
         prerequisites=("cylinder/baseflow/sfd",),
         evidence_prereqs=(
@@ -874,7 +874,7 @@ CASES: dict[str, MethodCase] = {
             "validation/figures/cylinder_stability_direct_spectrum_ns_log_Re50.png",
             "validation/figures/cylinder_stability_direct_mode_vx_Re50.png",
             "validation/figures/cylinder_stability_direct_mode_vy_Re50.png",
-            "example/cylinder_re100/310_stability_direct/schur/Spectre_Hd.dat",
+            "example/cylinder_re100/310_stability_direct/direct/Spectre_Hd.dat",
         ),
         why_note=(
             "Re=100-canonical; k_dim=50 (userParam07=50); sponge userParam08=5"
@@ -887,21 +887,23 @@ CASES: dict[str, MethodCase] = {
         current_path="example/cylinder_re180/311_stability_direct_floquet",
         proposed_folder="example/cylinder_re180/311_stability_direct_floquet", sort_prefix="311",
         label="Cylinder Direct Floquet at Re=180", mode_name="Direct Floquet", legacy_uparam01="3.11",
-        expected_behavior="Direct Floquet at Re=180 (just below Mode A threshold Re_A~188); leading multipliers approaching unit circle",
-        status=CaseStatus.NEEDS_DNS_SEED, compute_class=_MLO,
+        expected_behavior="Direct Floquet of the Re=180 UPO: leading multiplier mu=+1 (synchronous phase mode) on the unit circle; all other 2D modes damped (|mu|<1)",
+        status=CaseStatus.VALIDATED, compute_class=_MLO,
         target_parameters=TargetParameters(Re=180.0, geometry="cylinder", motion="static", model="DNS"),
-        evidence_requirements=(_REQ_IMG, EvidenceRequirement(role=EvidenceRole.SPECTRUM, required=False)),
-        artifacts=(_img("validation/figures/cylinder_stability_direct_Floquet_Re180.png"),),
-        prerequisites=("cylinder/baseflow/newton_upo",),
-        evidence_prereqs=("validation/figures/cylinder_stability_direct_Floquet_Re180.png",),
-        blockers=(
-            "Needs the Re=180 UPO base flow (cylinder/baseflow/newton_upo)"
-            " which is itself NEEDS_DNS_SEED. Floquet on cylinder at"
-            " Re<=100 is physically vacuous (all multipliers inside unit"
-            " circle); the meaningful Re is 180, near Barkley-Henderson"
-            " Mode A onset.",
+        evidence_requirements=(_REQ_IMG, _REQ_SPEC),
+        artifacts=(
+            _img("validation/figures/cylinder_stability_direct_Floquet_spectrum_Re180.png"),
+            _img("validation/figures/cylinder_stability_direct_Floquet_mode_Re180.png"),
+            _img("validation/figures/cylinder_stability_direct_Floquet_bf_Re180.png"),
+            _spectrum("example/cylinder_re180/311_stability_direct_floquet/Spectre_NSd_conv.dat"),
+            _log("example/cylinder_re180/311_stability_direct_floquet/logfile"),
         ),
-        why_note="Floquet moved to cylinder_re180 per Barkley & Henderson 1996; Re=100 Floquet is uninformative.",
+        prerequisites=("cylinder/baseflow/newton_upo",),
+        evidence_prereqs=(
+            "validation/figures/cylinder_stability_direct_Floquet_spectrum_Re180.png",
+            "validation/figures/cylinder_stability_direct_Floquet_mode_Re180.png",
+        ),
+        why_note="2D PROXY of Barkley & Henderson 1996: Mode A/B are 3D (beta!=0) and cannot appear in this 2D (beta=0) run; the only neutral mode here is the trivial mu=+1 phase mode. Pipeline demonstrator at the famous parameters, not a physical secondary-instability result.",
     ),
     "cylinder/stability/adjoint": MethodCase(
         case_id="cylinder/stability/adjoint",
@@ -934,18 +936,23 @@ CASES: dict[str, MethodCase] = {
         current_path="example/cylinder_re180/321_stability_adjoint_floquet",
         proposed_folder="example/cylinder_re180/321_stability_adjoint_floquet", sort_prefix="321",
         label="Cylinder Adjoint Floquet at Re=180", mode_name="Adjoint Floquet", legacy_uparam01="3.21",
-        expected_behavior="Adjoint Floquet at Re=180; spectrum should match direct Floquet (operator transpose consistency)",
-        status=CaseStatus.NEEDS_DNS_SEED, compute_class=_MLO,
+        expected_behavior="Adjoint Floquet of the Re=180 UPO: damped modes (|mu|<1), adjoint mode localized near/upstream of the body (receptivity); mirrors direct spectrum's oscillatory pairs",
+        status=CaseStatus.VALIDATED, compute_class=_MLO,
         target_parameters=TargetParameters(Re=180.0, geometry="cylinder", motion="static", model="DNS"),
-        evidence_requirements=(_REQ_IMG, EvidenceRequirement(role=EvidenceRole.SPECTRUM, required=False)),
-        artifacts=(_img("validation/figures/cylinder_stability_adjoint_Floquet_Re180.png"),),
-        prerequisites=("cylinder/baseflow/newton_upo",),
-        evidence_prereqs=("validation/figures/cylinder_stability_adjoint_Floquet_Re180.png",),
-        blockers=(
-            "Needs the Re=180 UPO base flow (cylinder/baseflow/newton_upo)"
-            " which is itself NEEDS_DNS_SEED.",
+        evidence_requirements=(_REQ_IMG, _REQ_SPEC),
+        artifacts=(
+            _img("validation/figures/cylinder_stability_adjoint_Floquet_spectrum_Re180.png"),
+            _img("validation/figures/cylinder_stability_adjoint_Floquet_mode_Re180.png"),
+            _img("validation/figures/cylinder_stability_adjoint_Floquet_bf_Re180.png"),
+            _spectrum("example/cylinder_re180/321_stability_adjoint_floquet/Spectre_NSa_conv.dat"),
+            _log("example/cylinder_re180/321_stability_adjoint_floquet/logfile"),
         ),
-        why_note="Floquet adjoint at Re=180; same family as direct Floquet 311.",
+        prerequisites=("cylinder/baseflow/newton_upo",),
+        evidence_prereqs=(
+            "validation/figures/cylinder_stability_adjoint_Floquet_spectrum_Re180.png",
+            "validation/figures/cylinder_stability_adjoint_Floquet_mode_Re180.png",
+        ),
+        why_note="2D PROXY (see 311). Adjoint mu=+1 phase mode did not converge into the leading set (known adjoint convergence difficulty); leading adjoint here is a decaying real mode. Oscillatory pairs match the direct spectrum.",
     ),
     # ------------------------------------------------------------------
     # Cylinder postproc / animation
@@ -954,7 +961,7 @@ CASES: dict[str, MethodCase] = {
         case_id="cylinder/stability/animate_modes",
         flow_family="cylinder_re100", method_lane="animation",
         current_path="example/cylinder_re100/410_postproc_animate_modes",
-        proposed_folder="example/cylinder_re100/310_stability_direct/schur/animate", sort_prefix="310",
+        proposed_folder="example/cylinder_re100/310_stability_direct/direct/animate", sort_prefix="310",
         label="Cylinder Animate Modes", mode_name="Mode Animation", legacy_uparam01=None,
         expected_behavior="Mode shape animation postprocessing at Re=100",
         status=CaseStatus.VALIDATED, compute_class=_BLV,
@@ -982,19 +989,23 @@ CASES: dict[str, MethodCase] = {
         current_path="example/cylinder_re180/410_postproc_animate_modes/upo",
         proposed_folder="example/cylinder_re180/411_postproc_animate_floquet_upo", sort_prefix="411",
         label="Cylinder Animate Floquet Modes on UPO at Re=180", mode_name="Mode Animation UPO", legacy_uparam01=None,
-        expected_behavior="Animate Floquet direct modes on the Re=180 UPO base flow over the orbit period",
-        status=CaseStatus.NEEDS_DNS_SEED, compute_class=_MLO,
+        expected_behavior="Animate the mu=+1 synchronous mode on the Re=180 UPO: base-flow DNS advanced one period T (the phase mode rides the orbit; shedding at omega_base=2pi/T)",
+        status=CaseStatus.VALIDATED, compute_class=_MLO,
         target_parameters=TargetParameters(Re=180.0, geometry="cylinder", motion="static", model="DNS"),
-        evidence_requirements=(_REQ_IMG, EvidenceRequirement(role=EvidenceRole.ANIMATION, required=False)),
-        artifacts=(_img("validation/figures/cylinder_stability_animate_modes_with_UPO_Re100.png"),),
+        evidence_requirements=(_REQ_IMG, _REQ_ANIM),
+        artifacts=(
+            _img("validation/figures/cylinder_stability_animate_modes_with_UPO_Re180.gif"),
+            _img("validation/figures/cylinder_stability_animate_modes_with_UPO_still_Re180.png"),
+            _anim("example/cylinder_re180/410_postproc_animate_modes/upo/floquet_mode_animation.mp4"),
+            _log("example/cylinder_re180/410_postproc_animate_modes/upo/logfile"),
+        ),
         prerequisites=("cylinder/baseflow/newton_upo",
                        "cylinder/stability/direct_Floquet"),
-        evidence_prereqs=("validation/figures/cylinder_stability_animate_modes_with_UPO_Re100.png",),
-        blockers=(
-            "Needs the Re=180 UPO + the direct Floquet modes upstream"
-            " (both NEEDS_DNS_SEED).",
+        evidence_prereqs=(
+            "validation/figures/cylinder_stability_animate_modes_with_UPO_Re180.gif",
+            "validation/figures/cylinder_stability_animate_modes_with_UPO_still_Re180.png",
         ),
-        why_note="Floquet animation moved to cylinder_re180 with the rest of the Floquet chain.",
+        why_note="2D PROXY (see 311). animate_mode_Floquet (uParam01=4.52): the leading mu=+1 mode is the synchronous phase mode, so its honest animation is the evolving base-flow shedding over one period T (not the static cos/sin reconstruction).",
     ),
     "cylinder/postproc/sensitivity_budget_wavemaker": MethodCase(
         case_id="cylinder/postproc/sensitivity_budget_wavemaker",
@@ -1082,9 +1093,13 @@ CASES: dict[str, MethodCase] = {
         evidence_requirements=(_REQ_IMG_OPT,),
         artifacts=(
             _img("validation/figures/cylinder_modal_snapshot_Re100.png"),
-            _img("validation/figures/cylinder_modal_signal_Re100.png"),
-            _img("validation/figures/cylinder_modal_eigvalues_Re100.png"),
-            _img("validation/figures/cylinder_modal_mode1_Re100.png"),
+            _img("validation/figures/cylinder_modal_pod_spectrum_Re100.png"),
+            _img("validation/figures/cylinder_modal_pod_mode1_Re100.png"),
+            _img("validation/figures/cylinder_modal_pod_mode2_Re100.png"),
+            _img("validation/figures/cylinder_modal_dmd_spectrum_Re100.png"),
+            _img("validation/figures/cylinder_modal_dmd_mode1_Re100.png"),
+            _img("validation/figures/cylinder_modal_spod_spectrum_Re100.png"),
+            _img("validation/figures/cylinder_modal_spod_mode1_Re100.png"),
         ),
         prerequisites=("cylinder/dns",),
         why_note=(

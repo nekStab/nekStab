@@ -63,10 +63,14 @@ MAP = [
         ("plot_bf.png",                  "cylinder_baseflow_sfd_akervik_dyn_oifs_bf_Re50.png"),
     ]),
     ("example/cylinder_re100/600_modal_pod", [
-        ("plot_snapshot.png",   "cylinder_modal_snapshot_Re100.png"),
-        ("plot_signal.png",     "cylinder_modal_signal_Re100.png"),
-        ("plot_eigvalues.png",  "cylinder_modal_eigvalues_Re100.png"),
-        ("plot_mode1.png",      "cylinder_modal_mode1_Re100.png"),
+        ("plot_snapshot.png",      "cylinder_modal_snapshot_Re100.png"),
+        ("plot_pod_spectrum.png",  "cylinder_modal_pod_spectrum_Re100.png"),
+        ("plot_pod_mode1.png",     "cylinder_modal_pod_mode1_Re100.png"),
+        ("plot_pod_mode2.png",     "cylinder_modal_pod_mode2_Re100.png"),
+        ("plot_dmd_spectrum.png",  "cylinder_modal_dmd_spectrum_Re100.png"),
+        ("plot_dmd_mode1.png",     "cylinder_modal_dmd_mode1_Re100.png"),
+        ("plot_spod_spectrum.png", "cylinder_modal_spod_spectrum_Re100.png"),
+        ("plot_spod_mode1.png",    "cylinder_modal_spod_mode1_Re100.png"),
     ]),
     ("example/cylinder_re100/110_baseflow_sfd/akervik_dyn", [
         ("plot_convergence.png", "cylinder_baseflow_sfd_akervik_dyn_convergence_Re50.png"),
@@ -182,11 +186,19 @@ MAP = [
     ]),
     ('example/cylinder_re180/311_stability_direct_floquet', [
         ('plot_spectrum.png', 'cylinder_stability_direct_Floquet_spectrum_Re180.png'),
+        ('plot_mode.png', 'cylinder_stability_direct_Floquet_mode_Re180.png'),
+        ('plot_bf.png', 'cylinder_stability_direct_Floquet_bf_Re180.png'),
     ]),
     ('example/cylinder_re180/321_stability_adjoint_floquet', [
         ('plot_spectrum.png', 'cylinder_stability_adjoint_Floquet_spectrum_Re180.png'),
+        ('plot_mode.png', 'cylinder_stability_adjoint_Floquet_mode_Re180.png'),
+        ('plot_bf.png', 'cylinder_stability_adjoint_Floquet_bf_Re180.png'),
     ]),
-    ('example/cylinder_re100/310_stability_direct/schur', [
+    ('example/cylinder_re180/410_postproc_animate_modes/upo', [
+        ('plot.gif', 'cylinder_stability_animate_modes_with_UPO_Re180.gif'),
+        ('plot.png', 'cylinder_stability_animate_modes_with_UPO_still_Re180.png'),
+    ]),
+    ('example/cylinder_re100/310_stability_direct/direct', [
         ('plot_bf.png',              'cylinder_stability_direct_bf_Re50.png'),
         ('plot_spectrum_circle.png', 'cylinder_stability_direct_spectrum_circle_Re50.png'),
         ('plot_spectrum_ns_log.png', 'cylinder_stability_direct_spectrum_ns_log_Re50.png'),
@@ -208,6 +220,9 @@ LEGACY_PNGS = [
     "thermosyphon_stability_direct_Ra500.png",
     "flip_flop_stability_direct_Floquet_Re62.png",
     "tpjet_stability_direct_Floquet_Re1900.png",
+    "cylinder_stability_direct_Floquet_Re180.png",   # superseded by _spectrum/_mode/_bf split
+    "cylinder_stability_adjoint_Floquet_Re180.png",  # superseded by _spectrum/_mode/_bf split
+    "cylinder_stability_animate_modes_with_UPO_Re100.png",  # stale Re100 name, now Re180 gif/still
     "lid_driven_Re3600.png",
     "cylinder_baseflow_sfd_akervik_dyn_Re50.png",
     "cylinder_baseflow_sfd_casacuberta_dyn_Re50.png",
