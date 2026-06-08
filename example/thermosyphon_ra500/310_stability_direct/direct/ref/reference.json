@@ -1,0 +1,17 @@
+{
+  "case": "thermosyphon_ra500/310_stability_direct/direct",
+  "description": "Thermosyphon direct stability at Ra=500 (leading eigenvalue)",
+  "produced": {"ranks": "8", "nekstab_mode": "3.1 (direct)"},
+  "quantities": {
+    "leading_sigma": {
+      "source": "Spectre_NSd.dat:col1:first",
+      "value": 0.1022191,
+      "tol_abs": 1.0e-3
+    },
+    "leading_omega": {
+      "source": "Spectre_NSd.dat:col2:first",
+      "value": 0.0,
+      "tol_abs": 1.0e-3
+    }
+  }
+}
