@@ -93,3 +93,36 @@ Rule: physics (mesh, .usr) DRY at NNN level; strategy (parameters) explicit per 
 - `<basename>.box` / `.re2` / `.ma2` -- mesh files (geometry-specific)
 - `SIZE` -- element counts, polynomial order (geometry-specific)
 - `SESSION.NAME` -- generated per case; must match .par basename
+
+---
+
+## Mode selector preferences
+
+For new cases, prefer the `nekstab_mode` string in `.par` over the raw `userParam01` decimal value:
+
+```ini
+# preferred (new cases)
+nekstab_mode = stability_direct
+
+# legacy — still accepted for backward compatibility
+userParam01 = 3.1
+```
+
+Both forms resolve to the same internal flags via `nekStab_resolve_mode`. String takes precedence if set.
+
+See the NNN stage table above for the string-to-mode mapping (e.g. `stability_adjoint` → 3.2, `dns` → 0.0).
+
+In `.usr` files, use named flags from the `nStab_mode_flags` common block instead of raw `uparam(1)` comparisons:
+
+```fortran
+! preferred
+if (isAdjoint) then    ! replaces uparam(1)==3.2
+if (ifDNS .and. istep.eq.0)  ! replaces uparam(1).eq.0
+
+! legacy — accepted but not preferred for new code
+if (uparam(1)==3.2) then
+```
+
+Available flags (via `include 'SIZE'`): `isAdjoint`, `isDirect`, `isFloquetDirect`,
+`isFloquetAdjoint`, `isTransientGrowth`, `isNewtonFP`, `isNewtonPO`, `isNewtonPO_T`,
+`ifDNS`, `ifSFD`, `ifBoostConv`, `ifTDF`, `ifotd`, and others — see `src/NEKSTAB`.
