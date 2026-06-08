@@ -1,0 +1,8 @@
+{
+  "case": "cylinder_re100/310_stability_direct/direct",
+  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
+  "quantities": {
+    "leading_eig_growth": {"value": 0.1247875e+00, "tol_abs": 1e-3, "source": "Spectre_NSd.dat:col1:first"},
+    "leading_eig_freq":   {"value": 0.7336851e+00, "tol_abs": 1e-3, "source": "Spectre_NSd.dat:col2:first"}
+  }
+}

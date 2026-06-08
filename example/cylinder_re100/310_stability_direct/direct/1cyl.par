@@ -1,0 +1,40 @@
+[GENERAL]
+startFrom = BF_1cyl0.f00001
+
+stopAt = endTime
+endTime = 1.0 # period of leading mode
+
+userParam01 = 3.1 # Direct eigensolver (Schur-Krylov)
+userParam03 = 2   # schur_tgt -- target eigenvalues to converge
+userParam04 = 0   # maxmodes  (0 = schur_tgt)
+userParam06 = 0   # isothermal (no buoyancy coupling)
+userParam07 = 50  # k_dim -- single-node-viable Krylov subspace size
+userParam08 = 5   # Sponge left side
+userParam09 = 5   # Sponge right side
+userParam10 = 0   # Sponge strength
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0
