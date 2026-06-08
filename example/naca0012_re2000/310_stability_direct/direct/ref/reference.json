@@ -1,0 +1,17 @@
+{
+  "case": "naca0012_re2000/310_stability_direct/direct",
+  "description": "NACA 0012 direct global stability at Re=2000 (leading eigenvalue)",
+  "produced": {"ranks": "8", "nekstab_mode": "3.1 (direct)"},
+  "quantities": {
+    "leading_sigma": {
+      "source": "Spectre_NSd.dat:col1:first",
+      "value": -0.1127203,
+      "tol_abs": 1.0e-3
+    },
+    "leading_omega": {
+      "source": "Spectre_NSd.dat:col2:first",
+      "value": 8.036574,
+      "tol_abs": 1.0e-2
+    }
+  }
+}

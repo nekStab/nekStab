@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = BF_naca00120.f00001
+stopAt = endTime
+endTime = 0.09  # sampling period ~ (1/1.41)/8 - matches root naca0012.par
+
+userParam01 = 3.2   # Direct eigensolver (Schur-Krylov)
+userParam07 = 90    # Krylov k_dim
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -2000.0

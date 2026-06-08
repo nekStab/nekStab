@@ -1,0 +1,17 @@
+{
+  "case": "naca0012_re2000/320_stability_adjoint",
+  "description": "NACA 0012 adjoint global stability at Re=2000 (leading eigenvalue)",
+  "produced": {"ranks": "8", "nekstab_mode": "3.2 (adjoint)"},
+  "quantities": {
+    "leading_sigma": {
+      "source": "Spectre_NSa.dat:col1:first",
+      "value": -0.1136699,
+      "tol_abs": 1.0e-3
+    },
+    "leading_omega": {
+      "source": "Spectre_NSa.dat:col2:first",
+      "value": 8.036728,
+      "tol_abs": 1.0e-2
+    }
+  }
+}

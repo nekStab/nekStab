@@ -1,0 +1,12 @@
+{
+  "case": "naca0012_re2000/210_baseflow_newton/fp",
+  "description": "NACA 0012 steady base flow at Re=2000 via Newton-GMRES",
+  "produced": {"ranks": "8", "nekstab_mode": "2.0 (Newton-GMRES fixed point)"},
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col6:last",
+      "value": 1.0e-9,
+      "tol_abs": 1.0e-8
+    }
+  }
+}
