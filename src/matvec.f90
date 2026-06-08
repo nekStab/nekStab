@@ -78,6 +78,20 @@ subroutine prepare_linearized_solver
          if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
 !        Calculate time step based on CFL target
          dt = param(26)/ctarg
+!        Guard: when prepare_linearized_solver runs from userchk at istep=0
+!        before Nek's mesh metric setup completes, compute_cfl can return
+!        +Infinity (degenerate Jacobian) -> dt = param(26)/Inf = 0 -> nsteps
+!        ceiling overflows int32 -> 0-step matvec -> degenerate Krylov
+!        spectrum (task #70 in back_fstep_re500/transient_growth).
+!        Fall back to a conservative fixed dt = 1e-3 (case-agnostic; small
+!        enough to be CFL-stable at unit velocity scale for typical meshes).
+         if (.not. (dt > 0.0d0 .and. dt < 1.0d3)) then
+            if (nid == 0) write (6, *) &
+                'WARN: compute_cfl gave unusable result (ctarg=', ctarg, &
+                '); falling back to dt = 1e-3. Set explicit dt in .par ', &
+                'to silence this.'
+            dt = 1.0d-3
+         end if
       end if
 
 !     Calculate number of steps needed to reach end time

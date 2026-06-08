@@ -145,10 +145,17 @@
 
       !     ----- Prepare stability parameters -----
 
+   !  Use the boolean Floquet flags resolved once at startup by
+   !  nekStab_mode_from_uparam (mode_config.f90) instead of comparing
+   !  uparam(1) to floats like 3.11 here. The float comparison was
+   !  fragile because 3.11 is not exactly representable in IEEE-754,
+   !  so the legacy `uparam(1) == 3.11` chain depended on tolerance
+   !  conventions that differ between callers. The mode-code cleanup
+   !  makes the gating boolean-clean here.
    if (istep == 0 .and. (&
-      uparam(1) == 3.11 .or. & ! Floquet direct
-      uparam(1) == 3.21 .or. & ! Floquet adjoint
-      uparam(1) == 3.31 & ! Floquet direct-adjoint
+      isFloquetDirect .or. & ! Floquet direct
+      isFloquetAdjoint .or. & ! Floquet adjoint
+      isFloquetTransientGrowth & ! Floquet direct-adjoint
       )) then
    param(10) = time ! upo period in field
    if (nid == 0) write (6, *) 'Floquet mode !!!'
@@ -407,7 +414,7 @@
       ! Miscellaneous variables
    integer :: i, m, n_press, n_temp, n_scalar
    real :: speriod, trim, spurious_tol
-   real :: alpha, alpha_r, alpha_i, beta, old_uparam1, omega
+   real :: alpha, alpha_r, alpha_i, beta, omega
       ! File handling variables
    character(len=80) filename
    character(len=20) fich1, fich2, fich3, fich4, fmt2, fmt3, fmt4, fmt5, fmt6
@@ -564,11 +571,23 @@
    call nopcmult(vx, vy, vz, pr, t, beta)
    call outpost2(vx, vy, vz, pr, t, nof, nIm)
 
-      !     computing and outposting optimal response from real part ! works with Floquet!
-   if ((uparam(1) == 3.3 .or. uparam(1) == 3.31)) then
-   old_uparam1 = uparam(1)
-   if (uparam(1) == 3.3) uparam(1) = 3.1 ! changing to linearized solver !
-   if (uparam(1) == 3.31) uparam(1) = 3.11 ! changing to linearized solver in Floquet
+      !     computing and outposting optimal response from real part
+      !     works with Floquet!
+   !
+   !  Why we still mutate uparam(1) here even though we now gate on
+   !  boolean flags: the linearized solver downstream (matvec ->
+   !  Nek5000) still inspects uparam(1) to choose its linear branch
+   !  (3.1 = direct, 3.11 = Floquet direct). Until that downstream
+   !  inspection is also flag-based, we temporarily push the linearized
+   !  code, run matvec, and push back the optimal-perturbation code
+   !  (3.3 / 3.31). We no longer round-trip through a captured
+   !  `old_uparam1`: the flag (isTransientGrowth vs
+   !  isFloquetTransientGrowth) is the source of truth and tells us
+   !  which restore literal to use. A later cleanup will remove the
+   !  remaining uparam(1) writes once matvec gates on flags too.
+   if (isTransientGrowth .or. isFloquetTransientGrowth) then
+   if (isTransientGrowth) uparam(1) = 3.1 ! linearized solver
+   if (isFloquetTransientGrowth) uparam(1) = 3.11 ! Floquet linearized
    call bcast(uparam(1), wdsize)
    call nopcopy(ff%vx, ff%vy, ff%vz, ff%pr, ff%t, &
       real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), &
@@ -576,9 +595,10 @@
    call matvec(qq, ff) ! baseflow already in ubase
    call outpost2(qq%vx, qq%vy, qq%vz, qq%pr, qq%t, nof, 'ore')
    call outpost_vort(qq%vx, qq%vy, qq%vz, 'orv')
-   uparam(1) = old_uparam1
+   if (isTransientGrowth) uparam(1) = 3.3
+   if (isFloquetTransientGrowth) uparam(1) = 3.31
    call bcast(uparam(1), wdsize)
-   end if ! uparam(1).eq.3.3.or.uparam(1).eq.3.31
+   end if ! isTransientGrowth.or.isFloquetTransientGrowth
    end if
 
    end do ! i=1, k_dim

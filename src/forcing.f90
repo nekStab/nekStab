@@ -64,15 +64,15 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
          ffy = ffy - spng_fn(ip)*vyp(ip, jp) ! spng_st alaways = 1
          if (if3D) ffz = ffz - spng_fn(ip)*vzp(ip, jp) ! spng_st alaways = 1
 
-         if (ifotd) then ! OTD forcing (note it has extra lpert size)
-            ip = ix + lx1*((iy - 1) + ly1*((iz - 1) + lz1*(iel - 1)))
-            ffx = ffx - otdfx(ip, jp)
-            ffy = ffy - otdfy(ip, jp)
-            if (if3D) ffz = ffz - otdfz(ip, jp)
-         end if ! ifotd
-
       end if
 
+   end if
+
+   if (ifotd .and. jp /= 0) then
+      ip = ix + lx1*((iy - 1) + ly1*((iz - 1) + lz1*(iel - 1)))
+      ffx = ffx - otdfx(ip, jp)
+      ffy = ffy - otdfy(ip, jp)
+      if (if3D) ffz = ffz - otdfz(ip, jp)
    end if
 end subroutine nekStab_forcing
 

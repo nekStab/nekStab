@@ -141,6 +141,17 @@
    subroutine newton_krylov()
    use krylov_subspace
 
+   !-----------------------------------------------------------------------
+   !  Why this routine reads isNewtonFP / isNewtonPO / isNewtonPO_T
+   !  instead of `uparam(1) == 2.0/2.1/2.2`:
+   !  the legacy float equality was fragile (2.1 and 2.2 are not exactly
+   !  representable in IEEE-754) and relied on caller-specific tolerance
+   !  conventions. The booleans are resolved once at startup by
+   !  nekStab_mode_from_uparam in src/mode_config.f90 from the
+   !  MODE_NEWTON_FP / MODE_NEWTON_PO / MODE_NEWTON_POT integer codes
+   !  in src/mode_codes.f90.
+   !-----------------------------------------------------------------------
+
        !     ----- Krylov vectors
    type(krylov_vector) :: f ! Right-hand side vector for Newton solver
    type(krylov_vector) :: q ! Current estimate of the solution
@@ -218,7 +229,7 @@
 
    call prepare_linearized_solver ! Compute nsteps and Nek parameters
 
-   if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
+   if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
    if (nid == 0) then ! Allocate nonlinear solution variable for natural or forced UPO
    write (6, "('  Allocating orbit for GMRES')")
    write (6, "('    Number of steps:',I6)") nsteps
@@ -251,8 +262,8 @@
 
       !     --> Outpost residual fields (optional)
    time = q%time ! adjust
-   if (uparam(1) == 2.0) time = real(i - 1) ! to ease visu in paraview
-   if (uparam(1) > 2.0) time = real(i - 1)*q%time ! to ease visu in paraview
+   if (isNewtonFP) time = real(i - 1) ! to ease visu in paraview
+   if (isNewtonPO .or. isNewtonPO_T) time = real(i - 1)*q%time ! to ease visu in paraview
    call outpost2(f%vx, f%vy, f%vz, f%pr, f%t, nof, 'res')
    time = q%time ! restore
 
@@ -320,12 +331,12 @@
 
    if (nid == 0) write (6, *) '  Outposting current solution estimate'
    time = q%time
-   if (uparam(1) == 2.0) time = real(i - 1) ! Ease visualization in paraview: file 1 is t = 0
-   if (uparam(1) == 2.2) time = real(i - 1)*q%time
+   if (isNewtonFP) time = real(i - 1) ! Ease visualization in paraview: file 1 is t = 0
+   if (isNewtonPO_T) time = real(i - 1)*q%time
    call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, 'nwt')
    time = q%time ! Restore
 
-   if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
+   if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
    if (nid == 0) write (6, *) '  Deallocating orbit storage'
    deallocate (uor, vor, wor)
    if (ifto .or. ldimt > 1) deallocate (tor)
@@ -343,12 +354,12 @@
    if (i > maxiter_newton) then
    write (6, *) 'Reached maxiter_newton. STOPPING! (verify convergence)'
    else
-   if (uparam(1) == 2) then
+   if (isNewtonFP) then
    write (6, *) 'NEWTON finished successfully after', i, 'iterations.'
-   elseif (uparam(1) == 2.1) then
+   elseif (isNewtonPO) then
    write (6, *) 'NEWTON UPO finished successfully', i, 'iterations.'
    write (6, *) ' period found:', time, 1.0d0/time
-   elseif (uparam(1) == 2.2) then
+   elseif (isNewtonPO_T) then
    write (6, *) 'NEWTON for forced UPO finished successfully', i, 'iterations.'
    write (6, *) ' period found:', time, 1.0d0/time
    end if
@@ -645,7 +656,7 @@
    do istep = 1, nsteps
    call nekStab_usrchk()
    call nek_advance()
-   if (ifstorebase .and. (uparam(1) == 2.1 .or. uparam(1) == 2.2)) then
+   if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
    if (nid == 0) then
    write (6, *) 'Storing nonlinear solution for GMRES:', istep, '/', nsteps
    end if

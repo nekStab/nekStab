@@ -15,10 +15,12 @@
 !
 ! Dependencies:
 !   nekstab_nek_bridge (for uparam, nid, common block flags)
+!   nekstab_mode_codes (for MODE_* integer constants, uparam_to_mode_code)
 !-----------------------------------------------------------------------
 
 module nekstab_mode_config
    use nekstab_nek_bridge
+   use nekstab_mode_codes
    implicit none
    private
    public :: nekStab_resolve_mode, &
@@ -284,100 +286,184 @@ end subroutine nekStab_mode_from_flags
 !
 ! Purpose:
 !   Backward-compatible decoder that maps uparam(1) floating-point
-!   values to boolean mode flags. Uses tolerance-based comparison.
+!   values to boolean mode flags.
+!   Primary path: integer select case on nint(uparam(1)*100) using
+!   MODE_* constants from nekstab_mode_codes.
+!   Fallback (case default): legacy tolerance-based float comparison
+!   for any value not matched by the primary path.
 !-----------------------------------------------------------------------
 subroutine nekStab_mode_from_uparam
    real :: up1
    real, parameter :: tol = 1.0e-4
+   integer :: icode
 
    up1 = uparam(1)
+   icode = uparam_to_mode_code(real(up1, 8))
+
+   !  Primary decoder: integer select case on nint(uparam(1)*100).
+   !  Unambiguous and collision-free (see docs/mode-code-constants-design.md).
+   select case (icode)
 
    !  Mode 0: DNS
-   if (abs(up1 - 0.0) < tol) then
+   case (MODE_DNS)
       ifDNS = .true.
-   elseif (abs(up1 - 0.1) < tol) then
+   case (MODE_LINDNS)
       ifLinDNS = .true.
 
    !  Mode 1: Fixed point methods
-   elseif (abs(up1 - 1.1) < tol) then
+   case (MODE_SFD)
       ifSFD = .true.
-   elseif (abs(up1 - 1.2) < tol) then
+   case (MODE_BOOSTCONV)
       ifBoostConv = .true.
-   elseif (abs(up1 - 1.3) < tol) then
+   case (MODE_DMT)
       ifDMT = .true.
-
-   elseif (abs(up1 - 1.4) < tol) then
+   case (MODE_TDF)
       ifTDF = .true.
 
    !  Mode 2: Newton-Krylov
-   elseif (abs(up1 - 2.0) < tol) then
+   case (MODE_NEWTON_FP)
       isNewtonFP = .true.
-   elseif (abs(up1 - 2.1) < tol) then
+   case (MODE_NEWTON_PO)
       isNewtonPO = .true.
-   elseif (abs(up1 - 2.2) < tol) then
+   case (MODE_NEWTON_POT)
       isNewtonPO_T = .true.
 
-   !  Mode 3: Eigenvalue problem (stability analysis)
-   elseif (abs(up1 - 3.1) < tol) then
+   !  Mode 3: Stability analysis
+   case (MODE_DIRECT)
       isDirect = .true.
-   elseif (abs(up1 - 3.11) < tol) then
+   case (MODE_FLOQUET_DIRECT)
       isFloquetDirect = .true.
-   elseif (abs(up1 - 3.2) < tol) then
+   case (MODE_ADJOINT)
       isAdjoint = .true.
-   elseif (abs(up1 - 3.21) < tol) then
+   case (MODE_FLOQUET_ADJOINT)
       isFloquetAdjoint = .true.
-   elseif (abs(up1 - 3.3) < tol) then
+   case (MODE_TG)
       isTransientGrowth = .true.
-   elseif (abs(up1 - 3.31) < tol) then
+   case (MODE_FLOQUET_TG)
       isFloquetTransientGrowth = .true.
 
-   !  Mode 4: Postprocessing
-   elseif (abs(up1 - 4.0) < tol) then
+   !  Mode 4: Post-processing
+   case (MODE_ALL_POST)
       ifEnergyBudget = .true.
       ifWavemaker = .true.
       ifBFSensitivity = .true.
-   elseif (abs(up1 - 4.1) < tol) then
+   case (MODE_ENERGY_BUDGET)
       ifEnergyBudget = .true.
-   elseif (abs(up1 - 4.11) < tol) then
+   case (MODE_ENERGY_BUD_FLQ)
       ifEnergyBudget = .true.
       ifFloquet = .true.
-   elseif (abs(up1 - 4.2) < tol) then
+   case (MODE_WAVEMAKER)
       ifWavemaker = .true.
-   elseif (abs(up1 - 4.3) < tol) then
+   case (MODE_BF_SENSITIVITY)
       ifBFSensitivity = .true.
-   elseif (abs(up1 - 4.41) < tol) then
+   case (MODE_FORCE_SENS_REAL)
       ifForceSensReal = .true.
-   elseif (abs(up1 - 4.42) < tol) then
+   case (MODE_FORCE_SENS_IMAG)
       ifForceSensImag = .true.
-   elseif (abs(up1 - 4.43) < tol) then
+   case (MODE_DELTA_FORCING)
       ifDeltaForcing = .true.
-   elseif (abs(up1 - 4.50) < tol) then
+   case (MODE_ANIMATE)
       ifAnimateMode = .true.
       animate_mode_num = int(uparam(7))
-   elseif (abs(up1 - 4.51) < tol) then
+   case (MODE_ANIMATE_DEFORM)
       ifAnimateBFDeform = .true.
       animate_mode_num = int(uparam(7))
-   elseif (abs(up1 - 4.52) < tol) then
+   case (MODE_ANIMATE_FLOQUET)
       ifAnimateFloquet = .true.
       animate_mode_num = int(uparam(7))
 
    !  Mode 5: OTD
-   elseif (abs(up1 - 5.0) < tol) then
+   case (MODE_OTD)
       ifotd = .true.
 
    !  Mode 6: Modal analysis
-   elseif (abs(up1 - 6.0) < tol) then
+   case (MODE_MODAL_ALL)
       ifpod = .true.
       ifdmd = .true.
       ifspod = .true.
-   elseif (abs(up1 - 6.1) < tol) then
+   case (MODE_POD)
       ifpod = .true.
-   elseif (abs(up1 - 6.2) < tol) then
+   case (MODE_DMD)
       ifdmd = .true.
-   elseif (abs(up1 - 6.3) < tol) then
+   case (MODE_SPOD)
       ifspod = .true.
 
-   end if
+   case default
+      !  Legacy fallback: tolerance-based float comparison.
+      !  Handles uparam(1) values not exactly representable after *100.
+      if (abs(up1 - 0.0) < tol) then
+         ifDNS = .true.
+      elseif (abs(up1 - 0.1) < tol) then
+         ifLinDNS = .true.
+      elseif (abs(up1 - 1.1) < tol) then
+         ifSFD = .true.
+      elseif (abs(up1 - 1.2) < tol) then
+         ifBoostConv = .true.
+      elseif (abs(up1 - 1.3) < tol) then
+         ifDMT = .true.
+      elseif (abs(up1 - 1.4) < tol) then
+         ifTDF = .true.
+      elseif (abs(up1 - 2.0) < tol) then
+         isNewtonFP = .true.
+      elseif (abs(up1 - 2.1) < tol) then
+         isNewtonPO = .true.
+      elseif (abs(up1 - 2.2) < tol) then
+         isNewtonPO_T = .true.
+      elseif (abs(up1 - 3.1) < tol) then
+         isDirect = .true.
+      elseif (abs(up1 - 3.11) < tol) then
+         isFloquetDirect = .true.
+      elseif (abs(up1 - 3.2) < tol) then
+         isAdjoint = .true.
+      elseif (abs(up1 - 3.21) < tol) then
+         isFloquetAdjoint = .true.
+      elseif (abs(up1 - 3.3) < tol) then
+         isTransientGrowth = .true.
+      elseif (abs(up1 - 3.31) < tol) then
+         isFloquetTransientGrowth = .true.
+      elseif (abs(up1 - 4.0) < tol) then
+         ifEnergyBudget = .true.
+         ifWavemaker = .true.
+         ifBFSensitivity = .true.
+      elseif (abs(up1 - 4.1) < tol) then
+         ifEnergyBudget = .true.
+      elseif (abs(up1 - 4.11) < tol) then
+         ifEnergyBudget = .true.
+         ifFloquet = .true.
+      elseif (abs(up1 - 4.2) < tol) then
+         ifWavemaker = .true.
+      elseif (abs(up1 - 4.3) < tol) then
+         ifBFSensitivity = .true.
+      elseif (abs(up1 - 4.41) < tol) then
+         ifForceSensReal = .true.
+      elseif (abs(up1 - 4.42) < tol) then
+         ifForceSensImag = .true.
+      elseif (abs(up1 - 4.43) < tol) then
+         ifDeltaForcing = .true.
+      elseif (abs(up1 - 4.50) < tol) then
+         ifAnimateMode = .true.
+         animate_mode_num = int(uparam(7))
+      elseif (abs(up1 - 4.51) < tol) then
+         ifAnimateBFDeform = .true.
+         animate_mode_num = int(uparam(7))
+      elseif (abs(up1 - 4.52) < tol) then
+         ifAnimateFloquet = .true.
+         animate_mode_num = int(uparam(7))
+      elseif (abs(up1 - 5.0) < tol) then
+         ifotd = .true.
+      elseif (abs(up1 - 6.0) < tol) then
+         ifpod = .true.
+         ifdmd = .true.
+         ifspod = .true.
+      elseif (abs(up1 - 6.1) < tol) then
+         ifpod = .true.
+      elseif (abs(up1 - 6.2) < tol) then
+         ifdmd = .true.
+      elseif (abs(up1 - 6.3) < tol) then
+         ifspod = .true.
+      end if
+
+   end select
 
 end subroutine nekStab_mode_from_uparam
 

@@ -27,7 +27,13 @@ $(O)/argsort.o:           $(NS)/argsort.f90           $(O)/nekstab_nek_bridge.o 
 $(O)/lapack_wrapper.o:    $(NS)/lapack_wrapper.f90    $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/vortex.o:            $(NS)/vortex.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/mode_config.o:       $(NS)/mode_config.f90       $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+# mode_codes.f90 has no nekstab_nek_bridge dependency: it is a leaf
+# module of integer parameters (MODE_*) used by mode_config to gate the
+# integer select-case in nekStab_mode_from_uparam. Must build before
+# mode_config.o so the `use nekstab_mode_codes` succeeds.
+# Mode code cleanup, Phase 1.
+$(O)/mode_codes.o:        $(NS)/mode_codes.f90                                   ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/mode_config.o:       $(NS)/mode_config.f90       $(O)/nekstab_nek_bridge.o $(O)/mode_codes.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────

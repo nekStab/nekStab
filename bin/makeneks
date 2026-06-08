@@ -415,6 +415,11 @@ USR+=" dmt.o"
 USR+=" otd.o"
 USR+=" forcing.o"
 USR+=" main.o"
+# mode_codes.o: MODE_* integer parameters used by mode_config.o
+# (mode-code cleanup Phase 1). Order matters:
+# mode_codes must appear before mode_config so the archived
+# libnek5000.a resolves `use nekstab_mode_codes` correctly.
+USR+=" mode_codes.o"
 USR+=" mode_config.o"
 USR+=" IO.o"
 USR+=" newton_krylov.o"
