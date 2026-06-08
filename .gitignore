@@ -22,7 +22,8 @@ nek5000.dbg
 *.nek5000
 *.fld*
 *.f?????
-*log*
+logfile
+*.log*
 *.info
 *.his
 *.dat*
