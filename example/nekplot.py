@@ -82,7 +82,8 @@ def read_field(fname):
             fields[key] = arr
 
     # Pressure
-    has_pres = any(np.any(elem.pres[0]) for elem in field.elem[:min(5, nel)])
+    has_pres = any(len(elem.pres) > 0 and np.any(elem.pres[0])
+                   for elem in field.elem[:min(5, nel)])
     if has_pres:
         arr = np.empty(ntotal)
         for ie, elem in enumerate(field.elem):
@@ -801,3 +802,99 @@ def plot_spectrum_NS_paper(ax, dat_file, tolerance=1e-5, freq=True,
     ax.axvline(0, lw=0.5, c='gray', ls='dotted')
     ax.set_xlabel(r'$f$')
     ax.set_ylabel(r'$\sigma$')
+
+# ── Reynolds number parsing ────────────────────────────────────────
+
+def re_from_par(par_path):
+    """Parse Reynolds number from a Nek5000 .par file or directory.
+    
+    If par_path is a directory, finds the single *.par file in it.
+    Parses the [VELOCITY] section for the 'viscosity' value.
+    Handles inline comments (# ...), whitespace, and case-insensitive keys.
+    
+    Returns Reynolds number as float:
+      - If viscosity < 0: Re = -viscosity (negative convention)
+      - If viscosity > 0: Re = 1.0 / viscosity (positive convention)
+    Returns None if not found or unreadable.
+    """
+    from pathlib import Path
+    
+    par_path = Path(par_path)
+    
+    # If directory, find the single *.par file
+    if par_path.is_dir():
+        par_files = list(par_path.glob('*.par'))
+        if len(par_files) != 1:
+            return None
+        par_path = par_files[0]
+    
+    # Try to read and parse
+    try:
+        with open(par_path, 'r') as f:
+            lines = f.readlines()
+    except Exception:
+        return None
+    
+    # Find [VELOCITY] section and extract viscosity
+    in_velocity = False
+    for line in lines:
+        # Strip inline comments
+        if '#' in line:
+            line = line[:line.index('#')]
+        line = line.strip()
+        
+        if line.lower() == '[velocity]':
+            in_velocity = True
+            continue
+        
+        # Stop at next section
+        if line.startswith('[') and in_velocity:
+            break
+        
+        # Look for viscosity key
+        if in_velocity and '=' in line:
+            key, val = line.split('=', 1)
+            if key.strip().lower() == 'viscosity':
+                try:
+                    nu = float(val.strip())
+                    if nu < 0:
+                        return -nu
+                    else:
+                        return 1.0 / nu if nu != 0 else None
+                except ValueError:
+                    return None
+    
+    return None
+
+
+def re_label(ax, re, loc='upper left'):
+    """Annotate axes with Reynolds number label.
+    
+    If re is not None, adds text "$Re = {re:g}$" to the axes in mathtext.
+    Uses fontsize ~7 and places in axes coordinates near top-left by default.
+    No-op if re is None.
+    
+    Parameters
+    ----------
+    ax : matplotlib axes
+    re : float or None
+        Reynolds number to display
+    loc : str
+        Location preset ('upper left', 'upper right', etc.)
+    """
+    if re is None:
+        return
+    
+    # Map location to axes coordinates
+    loc_map = {
+        'upper left': (0.02, 0.95),
+        'upper right': (0.98, 0.95),
+        'lower left': (0.02, 0.05),
+        'lower right': (0.98, 0.05),
+    }
+    xy = loc_map.get(loc, (0.02, 0.95))
+    ha = 'left' if xy[0] < 0.5 else 'right'
+    va = 'top' if xy[1] > 0.5 else 'bottom'
+    
+    ax.text(xy[0], xy[1], f'$Re = {re:g}$', transform=ax.transAxes,
+            fontsize=7, ha=ha, va=va, bbox=None)
