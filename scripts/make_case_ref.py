@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""make_case_ref.py — classify a case stage's files for committing + build ref/.
+
+For a given example stage directory it sorts every file into:
+  KEEP  reproduction ingredients (config, mesh, scripts, README, IC seeds,
+        and 1-2 representative output checkpoints)
+  REF   figures -> copied into <stage>/ref/ (the gallery's canonical source)
+  DROP  regenerable / large output, logs, build artifacts, extra checkpoints
+
+Default is a dry-run that just prints the classification. With --apply it copies
+figures into ref/, writes a reference.json stub, and prints the exact
+`git add` / `git add -f` commands to stage the case (checkpoints are force-added
+because *.f????? is gitignored). See example/REFERENCE_RESULTS.md.
+
+Usage:
+    scripts/make_case_ref.py example/<case>/<stage> [--apply] [--keep-checkpoints N]
+"""
+from __future__ import annotations
+import argparse
+import shutil
+import sys
+from pathlib import Path
+
+# config / source / mesh kept verbatim
+KEEP_SUFFIX = {".par", ".usr", ".re2", ".ma2", ".box", ".nek5000", ".inc",
+               ".map", ".sep", ".rea", ".py", ".sh", ".slurm", ".md", ".pbs"}
+KEEP_NAME = {"SIZE", "SESSION.NAME", "mkmesh", "makefile_usr.inc"}
+# never committed: logs, data dumps, build artifacts
+DROP_SUFFIX = {".log", ".his", ".state", ".gif"}  # .gif handled as figure below
+DROP_NAME = {"logfile", "nek5000", "makefile", "build.log", "mks.log",
+             "plot.log"}
+DROP_DIR = {"obj", "__pycache__", "benchmark_results", "ci_test", ".archive"}
+FIG_SUFFIX = {".png", ".gif"}
+
+
+def is_checkpoint(name: str) -> bool:
+    # Nek field files: <stem>.f00001 etc.
+    parts = name.rsplit(".f", 1)
+    return len(parts) == 2 and len(parts[1]) == 5 and parts[1].isdigit()
+
+
+def is_ic_seed(name: str) -> bool:
+    return name.startswith(("rst_", "BF_seed", "BF_")) and is_checkpoint(name)
+
+
+def classify(stage: Path, keep_checkpoints: int):
+    keep, ref, drop = [], [], []
+    out_checkpoints = []  # session output series <name>0.f0000N
+
+    for p in sorted(stage.iterdir()):
+        if p.is_dir():
+            if p.name in DROP_DIR or p.name == "ref":
+                continue
+            continue  # nested handled separately if needed
+        n = p.name
+        suf = p.suffix
+        if suf in FIG_SUFFIX:
+            ref.append(p)
+        elif is_checkpoint(n):
+            if is_ic_seed(n):
+                keep.append(p)            # IC / seed / baseflow result
+            else:
+                out_checkpoints.append(p)  # plain output series
+        elif n in DROP_NAME or suf in DROP_SUFFIX or ".log." in n or n.endswith(".dat") or ".dat" in suf:
+            drop.append(p)
+        elif n in KEEP_NAME or suf in KEEP_SUFFIX or n.startswith("README"):
+            keep.append(p)
+        else:
+            drop.append(p)  # unknown -> safe default: don't commit
+
+    # keep the LAST N output checkpoints per series (stem before .fNNNNN)
+    series: dict[str, list[Path]] = {}
+    for p in out_checkpoints:
+        stem = p.name.rsplit(".f", 1)[0]
+        series.setdefault(stem, []).append(p)
+    keep_ck = []
+    for stem, files in series.items():
+        files.sort(key=lambda p: p.name)
+        kept = files[-keep_checkpoints:] if keep_checkpoints else []
+        keep_ck += kept
+        drop += files[:-keep_checkpoints] if keep_checkpoints else files
+    keep += keep_ck
+    return keep, ref, drop, keep_ck
+
+
+def main(argv):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("stage")
+    ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--keep-checkpoints", type=int, default=1)
+    args = ap.parse_args(argv[1:])
+    stage = Path(args.stage)
+    if not stage.is_dir():
+        print(f"not a directory: {stage}")
+        return 2
+
+    keep, ref, drop, keep_ck = classify(stage, args.keep_checkpoints)
+    rel = stage
+    print(f"stage: {rel}")
+    print(f"  KEEP ({len(keep)}):")
+    for p in keep:
+        tag = " [checkpoint, force-add]" if is_checkpoint(p.name) else ""
+        print(f"      {p.name}{tag}")
+    print(f"  REF figures ({len(ref)}) -> ref/:")
+    for p in ref:
+        print(f"      {p.name}")
+    print(f"  DROP ({len(drop)}): {', '.join(p.name for p in drop[:8])}"
+          + (" ..." if len(drop) > 8 else ""))
+
+    if not args.apply:
+        print("\n(dry-run; re-run with --apply to build ref/ and emit git commands)")
+        return 0
+
+    refdir = stage / "ref"
+    refdir.mkdir(exist_ok=True)
+    for p in ref:
+        # normalize plot_<x>.png -> <x>.png; keep others as-is
+        dest = refdir / (p.name[5:] if p.name.startswith("plot_") else p.name)
+        shutil.copy2(p, dest)
+    refjson = refdir / "reference.json"
+    if not refjson.exists():
+        refjson.write_text(
+            '{\n  "case": "%s",\n  "produced": {"date": "FILL"},\n'
+            '  "quantities": {}\n}\n' % rel)
+    plain = [p for p in keep if not is_checkpoint(p.name)]
+    ck = [p for p in keep if is_checkpoint(p.name)]
+    print("\n# stage commands:")
+    print("git add " + " ".join(str(p) for p in plain) + f" {refdir}/")
+    if ck:
+        print("git add -f " + " ".join(str(p) for p in ck))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
