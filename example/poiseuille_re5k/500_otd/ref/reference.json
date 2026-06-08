@@ -1,0 +1,17 @@
+{
+  "case": "poiseuille_re5k/500_otd",
+  "description": "Optimally time-dependent (OTD) modes of plane Poiseuille flow at Re=5000",
+  "produced": {"ranks": "8", "nekstab_mode": "5.0 (OTD)"},
+  "quantities": {
+    "ftle_mode1": {
+      "source": "otd_ftle.dat:col2:last",
+      "value": -1.510589e-3,
+      "tol_abs": 1.0e-4
+    },
+    "ftle_mode2": {
+      "source": "otd_ftle.dat:col3:last",
+      "value": -1.771633e-3,
+      "tol_abs": 1.0e-4
+    }
+  }
+}
