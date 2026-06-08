@@ -83,6 +83,16 @@
    allocate(vx_aIm(lv), vy_aIm(lv), vz_aIm(lv))
    allocate(wavemaker(lv), work1(lv), work2(lv))
 
+!     Defensive zero-init: opcopy/load_fld only fill [1:nv]; trailing
+!     [nv+1:lv] (where lv = lelv max, nv = nelv*lx1**ndim runtime) was
+!     left uninitialized -> whole-array `sqrt(a**2 + b**2 + ...)` ops at
+!     line 115-117 squared garbage -> Inf/NaN in wm_ output.
+   vx_dRe = 0.0d0; vy_dRe = 0.0d0; vz_dRe = 0.0d0
+   vx_dIm = 0.0d0; vy_dIm = 0.0d0; vz_dIm = 0.0d0
+   vx_aRe = 0.0d0; vy_aRe = 0.0d0; vz_aRe = 0.0d0
+   vx_aIm = 0.0d0; vy_aIm = 0.0d0; vz_aIm = 0.0d0
+   wavemaker = 0.0d0; work1 = 0.0d0; work2 = 0.0d0
+
    ifto = .false.; ifpo = .false.
 
       !     --> Load real part of the direct mode
@@ -190,6 +200,32 @@
    allocate(vx_ti(lv), vy_ti(lv), vz_ti(lv))
    allocate(vx_pr(lv), vy_pr(lv), vz_pr(lv))
    allocate(vx_pi(lv), vy_pi(lv), vz_pi(lv))
+
+!     Defensive zero-init: same fix as in wave_maker (line ~85). Trailing
+!     [nv+1:lv] elements are uninitialized after allocate; opcopy/opaddcol3
+!     touch only [1:nv]; outpost writes element-bounded so the file is OK,
+!     but any whole-array op (incl. unary minus expressions like `-vx_dIm`
+!     creating Fortran temporaries) hits the garbage tail.
+   vx_dRe = 0.0d0; vy_dRe = 0.0d0; vz_dRe = 0.0d0
+   vx_dIm = 0.0d0; vy_dIm = 0.0d0; vz_dIm = 0.0d0
+   vx_aRe = 0.0d0; vy_aRe = 0.0d0; vz_aRe = 0.0d0
+   vx_aIm = 0.0d0; vy_aIm = 0.0d0; vz_aIm = 0.0d0
+   dudx_dRe = 0.0d0; dudy_dRe = 0.0d0; dudz_dRe = 0.0d0
+   dvdx_dRe = 0.0d0; dvdy_dRe = 0.0d0; dvdz_dRe = 0.0d0
+   dwdx_dRe = 0.0d0; dwdy_dRe = 0.0d0; dwdz_dRe = 0.0d0
+   dudx_dIm = 0.0d0; dudy_dIm = 0.0d0; dudz_dIm = 0.0d0
+   dvdx_dIm = 0.0d0; dvdy_dIm = 0.0d0; dvdz_dIm = 0.0d0
+   dwdx_dIm = 0.0d0; dwdy_dIm = 0.0d0; dwdz_dIm = 0.0d0
+   dudx_aRe = 0.0d0; dudy_aRe = 0.0d0; dudz_aRe = 0.0d0
+   dvdx_aRe = 0.0d0; dvdy_aRe = 0.0d0; dvdz_aRe = 0.0d0
+   dwdx_aRe = 0.0d0; dwdy_aRe = 0.0d0; dwdz_aRe = 0.0d0
+   dudx_aIm = 0.0d0; dudy_aIm = 0.0d0; dudz_aIm = 0.0d0
+   dvdx_aIm = 0.0d0; dvdy_aIm = 0.0d0; dvdz_aIm = 0.0d0
+   dwdx_aIm = 0.0d0; dwdy_aIm = 0.0d0; dwdz_aIm = 0.0d0
+   vx_tr = 0.0d0; vy_tr = 0.0d0; vz_tr = 0.0d0
+   vx_ti = 0.0d0; vy_ti = 0.0d0; vz_ti = 0.0d0
+   vx_pr = 0.0d0; vy_pr = 0.0d0; vz_pr = 0.0d0
+   vx_pi = 0.0d0; vy_pi = 0.0d0; vz_pi = 0.0d0
 
 ! real :: alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa
 ! alpha   = 0.0d0
@@ -961,6 +997,9 @@
    amplitude = A0*exp(sigma*time)
    if (nid == 0) write (6, *) 'Amplitude: ', A0, amplitude
    call k_cmult(Re_cos, amplitude)
+   ! deform rides on the *instantaneous* (evolving) base flow, not a static
+   ! snapshot: copy the current DNS state into BF before superposing the mode
+   call nopcopy(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, vx, vy, vz, pr, t)
    call k_add2(Re_cos, BF)
    call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
    call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qb')

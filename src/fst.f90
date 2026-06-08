@@ -7,15 +7,21 @@
 !   spectrum. Original implementation by M. A. Bucci.
 !
 ! Public interface:
-!   fst              -- main driver (init + update each step)
-!   initWavenumbers  -- read wavenumber data from files
-!   initModes        -- read velocity mode shapes from files
+!   fst                       -- main driver (init + update each step)
+!   fst_uin, fst_vin, fst_win -- inlet fluctuation fields (added in userbc)
+!
+! Internal:
+!   readFSTinflow    -- read the self-describing binary inflow file (NKSTFST2)
 !   defineBC         -- build pointer to inlet boundary points
 !   interpolateModes -- spline-interpolate modes onto inlet mesh
 !   computeBC        -- generate turbulent velocity at inlet
 !   computeTurbu     -- synthesize turbulent fluctuations
-!   spline           -- cubic spline second-derivative setup
-!   splint           -- cubic spline evaluation
+!   spline / splint  -- cubic spline setup / evaluation
+!
+! Enabling FST in any case (no per-case FST_PARAMS or FST subroutines):
+!   1. generate FST_data/FST_inflow.bin  (python -m nekstab.fst --format bin)
+!   2. use nekstab_fst, only: fst, fst_uin, fst_vin, fst_win
+!   3. call fst   (in userchk); add fst_uin/vin/win to the inflow in userbc
 !
 ! Dependencies:
 !   SIZE, TOTAL
@@ -25,25 +31,28 @@ module nekstab_fst
    use nekstab_nek_bridge
    implicit none
    private
-   public :: fst, initWavenumbers, initModes, &
-             defineBC, interpolateModes, computeBC, &
-             computeTurbu, spline, splint
+   public :: fst, fst_uin, fst_vin, fst_win
 
-   ! FST parameters (override in SIZE if using FST)
-   integer, parameter :: fst_numk_default = 20
-   integer, parameter :: fst_nmodes_default = 10
+   ! Max inlet boundary points (caps pointBC; mode counts are sized at runtime)
    integer, parameter :: fst_maxpoints = 9999
 
-    ! FST field arrays
-    integer :: fst_numk, fst_nmodes, npointModes, npointBC
-    real :: fst_okini, fst_okfin, fst_length, fst_tu
-    real, allocatable :: fst_uin(:,:,:,:)
-    real, allocatable :: fst_vin(:,:,:,:)
-    real, allocatable :: fst_win(:,:,:,:)
-   real :: frec(2,fst_numk_default*fst_nmodes_default)
+   ! FST physics parameters -- read from the self-describing file header
+   integer :: fst_numk, fst_nmodes, npointModes, npointBC
+   real :: fst_okini, fst_okfin, fst_length, fst_tu
+
+   ! Inlet fluctuation fields (added to the BC in userbc). Static module arrays
+   ! sized from compile-time SIZE params -- always present, like the old common
+   ! block, so userbc can reference them without an allocation-order guard.
+   real :: fst_uin(lx1,ly1,lz1,lelv)
+   real :: fst_vin(lx1,ly1,lz1,lelv)
+   real :: fst_win(lx1,ly1,lz1,lelv)
+
+   ! Mode data, sized from the file header in readFSTinflow:
+   !   frec(2,ntot), umodes(Ny,7,ntot), umodesBC(npointBC,6,ntot); ntot=numk*nmodes
    real :: pointBC(fst_maxpoints,7)
-   real :: umodes(fst_maxpoints,7,fst_numk_default*fst_nmodes_default)
-   real :: umodesBC(fst_maxpoints,6,fst_numk_default*fst_nmodes_default)
+   real, allocatable :: frec(:,:)
+   real, allocatable :: umodes(:,:,:)
+   real, allocatable :: umodesBC(:,:,:)
 
 contains
 
@@ -57,63 +66,83 @@ contains
 subroutine fst
 ! Freestream turbulence (original implementation by M A Bucci)
 
-    if (istep == 0) then
-       if (allocated(fst_uin)) deallocate(fst_uin)
-       if (allocated(fst_vin)) deallocate(fst_vin)
-       if (allocated(fst_win)) deallocate(fst_win)
-       allocate(fst_uin(lx1,ly1,lz1,lelv))
-       allocate(fst_vin(lx1,ly1,lz1,lelv))
-       allocate(fst_win(lx1,ly1,lz1,lelv))
-       call oprzero(fst_uin, fst_vin, fst_win)
-       call initWavenumbers
-       call initModes
-       call defineBC
-       call interpolateModes
-    end if
+   ! One-time init on the first call (istep 0 OR a restart at istep>0): guard on
+   ! allocation, not istep, so a restarted run still loads modes and injects FST.
+   if (.not. allocated(frec)) then
+      call oprzero(fst_uin, fst_vin, fst_win)
+      call readFSTinflow
+      call defineBC
+      call interpolateModes
+   end if
 
    call computeBC
 
 end subroutine fst
 
 !-----------------------------------------------------------------------
-! initWavenumbers -- Read wavenumber/frequency data from FST_data/
+! readFSTinflow -- Read the consolidated, self-describing FST inflow file
+!                  (little-endian stream binary, magic NKSTFST2) written by
+!                  `python -m nekstab.fst --format bin`.
+!
+!   The header carries every FST physics parameter, so the case needs no
+!   FST_PARAMS.  Replaces the legacy initWavenumbers + initModes, which opened
+!   hundreds of tiny ASCII files (one wavenumber + one velocity file per mode).
+!   Fills the arrays the rest of the pipeline expects:
+!     frec(1,m)=omega, frec(2,m)=beta ; umodes(i,1,m)=y (shared grid),
+!     umodes(i,2..7,m)=Re/Im of u,v,w ; npointModes=Ny.
 !-----------------------------------------------------------------------
-subroutine initWavenumbers
-   integer :: itervp, i
-   character(len=60) :: filename
-   itervp = 0
-   do i = 1, fst_numk*fst_nmodes
-      itervp = itervp + 1
-      write (filename, '(A,I3.3,A)') 'FST_data/wavenumber', itervp, '.dat'
-      open (299, file=trim(filename), form='formatted', status='old')
-      read (299, *) frec(1, i) !omega
-      read (299, *)
-      read (299, *) frec(2, i) !beta
-      close (299)
-   end do
-end subroutine initWavenumbers
+subroutine readFSTinflow
+   integer*4 :: numk_file, nmodes_file, ny_file
+   integer :: i, m, ntot
+   real*8 :: re_file, om, ga, be
+   real*8 :: r1, r2, r3, r4, r5, r6
+   real*8, allocatable :: yloc(:)
+   character(len=8) :: magic
+   character(len=80) :: fname
 
-!-----------------------------------------------------------------------
-! initModes -- Read velocity mode shapes from FST_data/
-!-----------------------------------------------------------------------
-subroutine initModes
-   integer :: i, j, k, itervp
-   character(len=60) :: filename
-   itervp = 0
-   do k = 1, fst_numk
-      do j = 1, fst_nmodes
-         itervp = itervp + 1
-         write (filename, '(A,I3.3,A)') 'FST_data/velocity', itervp, '.dat'
-         open (200, file=trim(filename), form='formatted', status='unknown')
-         read (200, *) npointModes
-         do i = 1, npointModes
-            read (200, *) umodes(i, 1, itervp), umodes(i, 2, itervp), umodes(i, 3, itervp), &
-   umodes(i, 4, itervp), umodes(i, 5, itervp), umodes(i, 6, itervp), umodes(i, 7, itervp)
-         end do
-         close (200)
+   fname = 'FST_data/FST_inflow.bin'
+   open (299, file=trim(fname), form='unformatted', access='stream', status='old')
+   read (299) magic
+   if (magic /= 'NKSTFST2') then
+      if (nid == 0) write(6,*) 'FST: bad magic in ', trim(fname), ' (expected NKSTFST2)'
+      call exitt
+   end if
+
+   read (299) numk_file, nmodes_file, ny_file
+   read (299) re_file, fst_okini, fst_okfin, fst_length, fst_tu
+   fst_numk = numk_file
+   fst_nmodes = nmodes_file
+   npointModes = ny_file
+   ntot = fst_numk*fst_nmodes
+
+   if (allocated(frec))   deallocate(frec)
+   if (allocated(umodes)) deallocate(umodes)
+   allocate(frec(2, ntot))
+   allocate(umodes(ny_file, 7, ntot))
+   allocate(yloc(ny_file))
+
+   read (299) (yloc(i), i = 1, ny_file)
+   do m = 1, ntot
+      read (299) om, ga, be
+      frec(1, m) = om
+      frec(2, m) = be
+      do i = 1, ny_file
+         read (299) r1, r2, r3, r4, r5, r6
+         umodes(i, 1, m) = yloc(i)
+         umodes(i, 2, m) = r1
+         umodes(i, 3, m) = r2
+         umodes(i, 4, m) = r3
+         umodes(i, 5, m) = r4
+         umodes(i, 6, m) = r5
+         umodes(i, 7, m) = r6
       end do
    end do
-end subroutine initModes
+   close (299)
+   deallocate(yloc)
+
+   if (nid == 0) write(6,*) 'FST: read ', ntot, ' modes, Ny=', ny_file, &
+      ' Re=', re_file
+end subroutine readFSTinflow
 
 !-----------------------------------------------------------------------
 ! defineBC -- Identify inlet boundary points for FST injection
@@ -158,7 +187,11 @@ subroutine interpolateModes
    real y1(npointModes), y2(npointModes), y3(npointModes), &
    y4(npointModes), y5(npointModes), y6(npointModes), &
    uint1, uint2, uint3, uint4, uint5, uint6, yint
-   integer itervp, kvalue, j, i
+   integer itervp, kvalue, j, i, ntot
+
+   ntot = fst_numk*fst_nmodes
+   if (allocated(umodesBC)) deallocate(umodesBC)
+   allocate(umodesBC(npointBC, 6, ntot))
 
    itervp = 0
    do kvalue = 1, fst_numk
