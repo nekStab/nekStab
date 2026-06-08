@@ -1,0 +1,35 @@
+[GENERAL]
+startFrom = BF_seed_1cyl0.f00001
+
+stopAt = endTime
+endTime = 1000.0
+
+userParam01 = 1.1  # SFD (Casacuberta formulation -- uparam04<0)
+userParam04 = -0.166 # NEGATIVE sign -> Casacuberta mode; magnitude = St at Re=100
+userParam05 = 0.26  # sigma; Casacuberta uses optimal (cutoff,gain) from (frq,sigma) via fixedp.f90:226-227
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-10
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-10
+residualProj = no
+density = 1.0
+viscosity = -100.0

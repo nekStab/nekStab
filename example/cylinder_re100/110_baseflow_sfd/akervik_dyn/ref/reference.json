@@ -1,0 +1,7 @@
+{
+  "case": "cylinder_re100/110_baseflow_sfd/akervik_dyn",
+  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
+  "quantities": {
+    "final_residual": {"value": 0.9982776e-10, "tol_rel": 5e-2, "source": "residu.dat:col2:last"}
+  }
+}
