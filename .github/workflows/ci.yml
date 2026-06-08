@@ -10,6 +10,7 @@ on:
 env:
   NEKSTAB_SOURCE_ROOT: ${{ github.workspace }}
   NEK_SOURCE_ROOT: ${{ github.workspace }}/Nek5000
+  NEKSTAB_CI_CASE: example/cylinder_re100/000_dns/ci_test
 
 jobs:
   build:
@@ -106,7 +107,7 @@ jobs:
           if [ -f /opt/intel/oneapi/setvars.sh ]; then
             source /opt/intel/oneapi/setvars.sh --force
           fi
-          cd example/cylinder/ci_test
+          cd "$NEKSTAB_CI_CASE"
           mks 1cyl
 
       - name: Run smoke test (10 timesteps, 2 procs)
@@ -117,14 +118,14 @@ jobs:
           fi
           # Set stack size (unlimited on Linux, skip on macOS)
           ulimit -s unlimited 2>/dev/null || true
-          cd example/cylinder/ci_test
+          cd "$NEKSTAB_CI_CASE"
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
           mpirun -np 2 ./nek5000 > logfile 2>&1 || { cat logfile; exit 1; }
 
       - name: Verify output
         run: |
-          cd example/cylinder/ci_test
+          cd "$NEKSTAB_CI_CASE"
           cat logfile | tail -20
           if grep -q "run successful" logfile; then
             echo "Simulation completed successfully"

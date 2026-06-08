@@ -1,0 +1,32 @@
+# Minimal CI test configuration - runs ~10 timesteps
+# Cold start (no restart file needed)
+[GENERAL]
+stopAt = numSteps
+numSteps = 10
+
+userParam01 = 0 # DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = timeStep
+writeInterval = 10
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0
