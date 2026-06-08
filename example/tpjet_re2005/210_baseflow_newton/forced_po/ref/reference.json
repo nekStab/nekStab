@@ -1,0 +1,12 @@
+{
+  "case": "tpjet_re2005/210_baseflow_newton/forced_po",
+  "description": "Triple-port jet forced periodic orbit at Re=1900 via Newton-GMRES (St=0.6)",
+  "produced": {"ranks": "8", "nekstab_mode": "2.2 (Newton-GMRES forced periodic orbit)", "Re": "1900"},
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col6:last",
+      "value": 1.0e-8,
+      "tol_abs": 1.0e-7
+    }
+  }
+}
