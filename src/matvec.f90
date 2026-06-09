@@ -487,6 +487,8 @@ subroutine adjoint_linearized_map(f, q)
    call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1), &
    q%vx, q%vy, q%vz, q%pr, q%t)
 
+   if (ifheat) call gradm1(dTdx, dTdy, dTdz, t)
+
 !     --> Adjoint integration (backward in time). When the orbit is stored,
 !     restore the base BEFORE each advance and replay it time-reversed:
 !     step 1 -> U(T)=U(0), step 2 -> U(T-dt), ..., step nsteps -> U(dt).
@@ -497,10 +499,17 @@ subroutine adjoint_linearized_map(f, q)
    istep, nsteps, mstep, k_dim, schur_cnt
 
       if (ifstorebase .and. init) call orbit_restore(nsteps - istep + 1)
+      if (ifstorebase .and. init .and. ifheat) then
+         call gradm1(dTdx, dTdy, dTdz, t)
+      end if
 
       call nekstab_usrchk()
       call nek_advance()
    end do
+
+   if (ifbuoyancy .and. ifheat .and. .not. buoyancy_qvol_wired) then
+      call exitti('buoyancy adjoint requires userq -> nekStab_qvol$', 1)
+   end if
 
 !     --> Copy the solution.
    call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, &

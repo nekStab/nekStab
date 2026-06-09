@@ -38,7 +38,8 @@
       
       ! Logical variables for various stability flags
       logical :: ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm
-      logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol, ifotd
+      logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol
+      logical :: ifotd, ifbuoyancy, buoyancy_qvol_wired
       logical :: iffindiff, isNekStabinit
       logical :: isDirect, isAdjoint, isTransientGrowth
       logical :: isFloquetDirect, isFloquetAdjoint
@@ -83,8 +84,9 @@
 
       common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois,
      $   ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol,
-     $   iffindiff, ifotd, isNekStabinit, isDirect, isAdjoint,
-     $   isTransientGrowth, isFloquetDirect, isFloquetAdjoint,
+     $   iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired,
+     $   isNekStabinit, isDirect, isAdjoint, isTransientGrowth,
+     $   isFloquetDirect, isFloquetAdjoint,
      $   isFloquetTransientGrowth, isNewtonFP,
      $   isNewtonPO, isNewtonPO_T
 
@@ -107,11 +109,12 @@
       ! TN_* selectors in krylov_subspace for mode semantics.
       real :: thermal_norm_weight
       real :: thermal_buoyancy_coeff
+      real :: buoyancy_dir(3)
       real :: thermal_norm_min, thermal_norm_max
       common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base,
      $   dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap,
      $   thermal_norm_weight, thermal_buoyancy_coeff,
-     $   thermal_norm_min, thermal_norm_max
+     $   buoyancy_dir, thermal_norm_min, thermal_norm_max
       
       ! Integer variables for boost convergence and spatial dimensions
       integer :: bst_skp, bst_snp, k_dim

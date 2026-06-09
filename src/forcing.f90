@@ -23,8 +23,32 @@ module nekstab_forcing_mod
    implicit none
    private
    public :: nekStab_forcing, nekStab_forcing_temp, &
+      nekStab_set_buoyancy, nekStab_qvol, &
       activate_sponge, spng_init, spng_set, mth_stepf
 contains
+
+!-----------------------------------------------------------------------
+! nekStab_set_buoyancy -- Configure Boussinesq buoyancy forcing
+!
+! Purpose:
+!   Enables the shared Boussinesq coupling ff_i += coeff*dir_i*T
+!   and broadcasts the configuration to all MPI ranks.
+!-----------------------------------------------------------------------
+subroutine nekStab_set_buoyancy(dx, dy, dz, coeff)
+   real, intent(in) :: dx, dy, dz, coeff
+
+   ifbuoyancy = .true.
+   buoyancy_qvol_wired = .false.
+   buoyancy_dir(1) = dx
+   buoyancy_dir(2) = dy
+   buoyancy_dir(3) = dz
+   thermal_buoyancy_coeff = coeff
+
+   call bcast(ifbuoyancy, lsize)
+   call bcast(buoyancy_qvol_wired, lsize)
+   call bcast(buoyancy_dir, 3*wdsize)
+   call bcast(thermal_buoyancy_coeff, wdsize)
+end subroutine nekStab_set_buoyancy
 
 !-----------------------------------------------------------------------
 ! nekStab_forcing -- Velocity forcing callback
@@ -42,6 +66,7 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
    real, intent(inout) :: ffx, ffy, ffz
    integer, intent(in) :: ix, iy, iz, ieg
    integer :: iel, ip
+   real :: tloc
 
    iel = gllel(ieg) ! local element number
 
@@ -49,6 +74,22 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
    ffx = ffx + fcx(ix, iy, iz, iel)
    ffy = ffy + fcy(ix, iy, iz, iel)
    if (if3D) ffz = ffz + fcz(ix, iy, iz, iel)
+
+   if (ifbuoyancy .and. ifheat) then
+      if (jp == 0 .or. .not. ifadj) then
+         ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
+         if (jp == 0) then
+            tloc = t(ix, iy, iz, iel, 1)
+         else
+            tloc = tp(ip, 1, jp)
+         end if
+         ffx = ffx + buoyancy_dir(1)*thermal_buoyancy_coeff*tloc
+         ffy = ffy + buoyancy_dir(2)*thermal_buoyancy_coeff*tloc
+         if (if3D) then
+            ffz = ffz + buoyancy_dir(3)*thermal_buoyancy_coeff*tloc
+         end if
+      end if
+   end if
 
    if (spng_st /= 0) then
 
@@ -75,6 +116,29 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
       if (if3D) ffz = ffz - otdfz(ip, jp)
    end if
 end subroutine nekStab_forcing
+
+!-----------------------------------------------------------------------
+! nekStab_qvol -- Temperature forcing callback for adjoint buoyancy
+!
+! Purpose:
+!   Adds the transpose of the Boussinesq momentum forcing to the
+!   adjoint temperature equation.
+!-----------------------------------------------------------------------
+subroutine nekStab_qvol(qvol, ix, iy, iz, ieg)
+   real, intent(inout) :: qvol
+   integer, intent(in) :: ix, iy, iz, ieg
+   integer :: iel, ip
+   real :: vdot
+
+   if (ifbuoyancy .and. ifheat .and. ifadj .and. jp > 0) then
+      iel = gllel(ieg)
+      ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
+      vdot = buoyancy_dir(1)*vxp(ip, jp) + buoyancy_dir(2)*vyp(ip, jp)
+      if (if3D) vdot = vdot + buoyancy_dir(3)*vzp(ip, jp)
+      qvol = qvol + thermal_buoyancy_coeff*vdot
+      buoyancy_qvol_wired = .true.
+   end if
+end subroutine nekStab_qvol
 
 !-----------------------------------------------------------------------
 ! nekStab_forcing_temp -- Temperature forcing callback
@@ -287,3 +351,21 @@ real function mth_stepf(x)
 end function mth_stepf
 
 end module nekstab_forcing_mod
+
+subroutine nekStab_set_buoyancy(dx, dy, dz, coeff)
+   use nekstab_forcing_mod, &
+      only: mod_nekStab_set_buoyancy => nekStab_set_buoyancy
+   implicit none
+   real, intent(in) :: dx, dy, dz, coeff
+
+   call mod_nekStab_set_buoyancy(dx, dy, dz, coeff)
+end subroutine nekStab_set_buoyancy
+
+subroutine nekStab_qvol(qvol, ix, iy, iz, ieg)
+   use nekstab_forcing_mod, only: mod_nekStab_qvol => nekStab_qvol
+   implicit none
+   real, intent(inout) :: qvol
+   integer, intent(in) :: ix, iy, iz, ieg
+
+   call mod_nekStab_qvol(qvol, ix, iy, iz, ieg)
+end subroutine nekStab_qvol

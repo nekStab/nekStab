@@ -57,6 +57,9 @@
          ew_tol_cap = 0.0d0 ! EW solver cap (0=uncapped, e.g. 1e-5 for conservative)
          thermal_norm_weight = 1.0d0
          thermal_buoyancy_coeff = 0.0d0
+         buoyancy_dir = 0.0d0
+         ifbuoyancy = .false.
+         buoyancy_qvol_wired = .false.
          thermal_norm_min = 1.0d0
          thermal_norm_max = 50.0d0
          thermal_norm_mode = TN_MANUAL
@@ -175,6 +178,7 @@ c        nStab_real (tolerances, domain bounds)
          call bcast(ew_tol_cap, wdsize)
          call bcast(thermal_norm_weight, wdsize)
          call bcast(thermal_buoyancy_coeff, wdsize)
+         call bcast(buoyancy_dir, 3*wdsize)
          call bcast(thermal_norm_min, wdsize)
          call bcast(thermal_norm_max, wdsize)
 
@@ -217,6 +221,8 @@ c        nStab_logical
          call bcast(ifstorebase, lsize)
          call bcast(ifdyntol, lsize)
          call bcast(ifotd, lsize)
+         call bcast(ifbuoyancy, lsize)
+         call bcast(buoyancy_qvol_wired, lsize)
 
 c        nStab_mode_flags
          call bcast(ifDNS, lsize)

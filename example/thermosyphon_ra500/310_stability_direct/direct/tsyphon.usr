@@ -24,14 +24,14 @@
         ifvox = .false. ; call bcast(ifvox,lsize)
         ifdyntol = .true. ; call bcast(ifdyntol,lsize)
 c       Thermosyphon direct stability uses the same Pr*Ra buoyancy
-c       coefficient as the base-flow case, so keep the norm scaling consistent.
+c       coefficient as base-flow case, keep norm scaling consistent.
         thermal_norm_mode = 2
-        thermal_buoyancy_coeff = abs(param(2))*abs(uparam(6))
+        call nekStab_set_buoyancy(0.0d0,1.0d0,0.0d0,
+     $       abs(param(2))*abs(uparam(6)))
         thermal_norm_min = 1.0d0
         thermal_norm_max = 5.0d3
         thermal_norm_weight = 1.0d0
         call bcast(thermal_norm_mode,isize)
-        call bcast(thermal_buoyancy_coeff,wdsize)
         call bcast(thermal_norm_min,wdsize)
         call bcast(thermal_norm_max,wdsize)
         call bcast(thermal_norm_weight,wdsize)
@@ -43,24 +43,23 @@ c       coefficient as the base-flow case, so keep the norm scaling consistent.
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      integer ip, iel
-      real rtmp
 
       ffx = 0.0d0
       ffy = 0.0d0
       ffz = 0.0d0
 
-      if (ifheat) then
-      iel = gllel(ieg)
-      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
-      if (jp .eq. 0) rtmp = t(ix, iy, iz, iel, 1)
-      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
-
-                 ! Pr         !  Ra
-      ffy = rtmp*abs(param(2))*abs(uparam(6))
-      endif
-
       call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      return
+      end
+! -----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      qvol = 0.0d0
+      call nekStab_qvol(qvol,ix,iy,iz,ieg)
 
       return
       end
