@@ -452,42 +452,55 @@ subroutine adjoint_linearized_map(f, q)
    ifpert = .true.; ifadj = .true.
    call bcast(ifpert, lsize); call bcast(ifadj, lsize)
 
-!     --> Turning-off the base flow side-by-side computation. Need to change for Floquet.
+!     --> Base flow handling for the adjoint.
+!     Steady adjoint (3.2): base is time-independent (ifbase=.false.).
+!     Adjoint Floquet (3.21): base is T-periodic and the adjoint integrates
+!     BACKWARD, so the stored orbit must be replayed in REVERSE. We build the
+!     orbit ONCE here with a dedicated base-only forward sweep, so that EVERY
+!     adjoint matvec -- including the first -- replays the same time-reversed
+!     orbit. (Building+perturbing in one sweep would make the first matvec
+!     integrate the adjoint against forward-order base, i.e. a different
+!     operator than later matvecs, corrupting the Arnoldi subspace.)
    ifbase = .false.
    if (uparam(01) == 3.21) ifbase = .true. ! activate floquet
 
    if (ifstorebase .and. init) ifbase = .false.
 
+   if (uparam(01) == 3.31) init = .true. ! intracycle transient growth: orbit already built by forward map
+
+!     --> Build the periodic base-flow orbit once (forward, base only).
    if (ifstorebase .and. ifbase .and. .not. init) then
       call allocate_orbit(nsteps)
+      ifpert = .false.; call bcast(ifpert, lsize)
+      time = 0.0d+00
+      do istep = 1, nsteps
+         if (nid == 0) write (6, *) 'building base orbit:', istep, '/', nsteps
+         call nekstab_usrchk()
+         call nek_advance()
+         call orbit_store(istep)        ! orbit(j) = U(j*dt)
+      end do
+      ifpert = .true.; call bcast(ifpert, lsize)
+      ifbase = .false.; init = .true.
    end if
-   if (uparam(01) == 3.31) init = .true. ! activate Floquet for intracycle transient growth (base flow already computed)
 
 !     --> Pass the initial condition for the perturbation.
    call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1), &
    q%vx, q%vy, q%vz, q%pr, q%t)
 
+!     --> Adjoint integration (backward in time). When the orbit is stored,
+!     restore the base BEFORE each advance and replay it time-reversed:
+!     step 1 -> U(T)=U(0), step 2 -> U(T-dt), ..., step nsteps -> U(dt).
    time = 0.0d+00
    do istep = 1, nsteps
 !     --> Output current info to logfile.
       if (nid == 0) write (6, "(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") &
    istep, nsteps, mstep, k_dim, schur_cnt
 
-!     Integrate backward in time.
+      if (ifstorebase .and. init) call orbit_restore(nsteps - istep + 1)
+
       call nekstab_usrchk()
       call nek_advance()
-
-      if (ifstorebase .and. ifbase .and. .not. init) then !storing first time
-         if (nid == 0) write (6, *) 'storing first series:', istep, '/', nsteps
-         call orbit_store(istep)
-      elseif (ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
-         if (nid == 0) write (6, *) 'using stored baseflow'
-         call orbit_restore(istep)
-      end if
    end do
-   if (ifstorebase .and. .not. init .and. ifbase) then
-      ifbase = .false.; init = .true.
-   end if
 
 !     --> Copy the solution.
    call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, &
