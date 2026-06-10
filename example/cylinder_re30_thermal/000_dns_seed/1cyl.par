@@ -1,0 +1,40 @@
+[GENERAL]
+# Side-DNS at Re=25 with temperature, from uniform IC, 100 T_c to wash transients.
+# Final snapshot becomes BFre25t_1cyl0.f00001 seed for cylinder_re30_thermal/dyn_temp (#79).
+startFrom = 0
+
+stopAt = endTime
+endTime = 100.0
+userParam01 = 0   # plain DNS mode
+userParam06 = 0.2 # Ri: thermal buoyancy coupling (match dyn_temp config)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 25.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -25.0  # Re=25
+
+[TEMPERATURE]
+residualTol = 1.0E-9
+conductivity = -25.0  # Re*Pr with Pr=1
+rhoCp = 1.0
