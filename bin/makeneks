@@ -490,7 +490,17 @@ echo 'include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab' >> "$FILE"
 check_gslib_compat
 
 set +a -e
-"$NEK_SOURCE_ROOT/bin/nekconfig" "$target"
+if [ -f .state ]; then
+    for state_var in FC FFLAGS CC CFLAGS NEK_SOURCE_ROOT; do
+        if ! grep -q "$state_var=${!state_var}" .state; then
+            echo "configuration change detected, preparing fresh build"
+            rm -f .state
+            make clean >/dev/null 2>&1 || true
+            break
+        fi
+    done
+fi
+printf 'n\n' | "$NEK_SOURCE_ROOT/bin/nekconfig" "$target"
 "$NEK_SOURCE_ROOT/bin/nekconfig" -build-dep
 set -o pipefail
 touch "${target}.usr"

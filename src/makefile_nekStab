@@ -15,7 +15,7 @@ O  = $(OBJDIR)
 # ─────────────────────────────────────────────────────────────────────
 # Bridge module — compiled FIXED-format (wraps all Nek5000 includes)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/nekstab_nek_bridge.o: $(NS)/nekstab_nek_bridge.f90
+$(O)/nekstab_nek_bridge.o: $(NS)/nekstab_nek_bridge.f90 NEKSTAB.inc SIZE
 	$(FC) -c $(FL2) -I$(NEKSTAB_SOURCE_ROOT) -I$(NEKSTAB_SOURCE_ROOT)/Nek5000/core $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ $(O)/modal_analysis.o:    $(NS)/modal_analysis.f90    $(O)/krylov_subspace.o $(O
 # Main entry points — FIXED-format (bare subroutines called by Nek5000)
 # These still use include 'SIZE'/'TOTAL' directly (no use statement)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/main.o: $(NS)/main.f90 \
+$(O)/main.o: $(NS)/main.f90 NEKSTAB.inc SIZE \
    $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/mode_config.o \
    $(O)/eigensolvers.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o \
    $(O)/sensitivity.o $(O)/newton_krylov.o $(O)/fixedp.o $(O)/dmt.o \
@@ -109,7 +109,7 @@ $(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
 # .usr compilation needs .mod files from nekStab modules.
 # GNU Make merges prerequisites from multiple rules for the same target.
 # ─────────────────────────────────────────────────────────────────────
-$(USRF): $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o
+$(USRF): SIZE NEKSTAB.inc $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o
 
 # ─────────────────────────────────────────────────────────────────────
 # Catch-all for case-local .f90 files (e.g., torus_utils.f90)
