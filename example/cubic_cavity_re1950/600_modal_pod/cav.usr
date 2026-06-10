@@ -1,0 +1,94 @@
+! -----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab
+
+      end
+! -----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if (istep.eq.0) then
+!       MODAL ANALYSIS CONFIG (cavity Re=1950)
+!       Snapshots from 000_dns are cav0.f00001..cav0.f00179
+!       Default modal_prefix='dns' was looking for dnscav0.f* -> HANG.
+!       Empty prefix makes load_files use SESSION (cav) directly.
+        modal_prefix = '   '; call bcast(modal_prefix, 3)
+        modal_nsnap = 100;    call bcast(modal_nsnap, isize)
+        modal_dt = 0.5d0;     call bcast(modal_dt, wdsize)
+        modal_nsave = 4;      call bcast(modal_nsave, isize)
+        ifpod = .true.;       call bcast(ifpod, lsize)
+        ifdmd = .true.;       call bcast(ifdmd, lsize)
+        ifspod = .true.;      call bcast(ifspod, lsize)
+        ifwinamp = .true.;    call bcast(ifwinamp, lsize)
+        dmd_rank = 20;        call bcast(dmd_rank, isize)
+        spod_nfft = 64;       call bcast(spod_nfft, isize)
+        spod_noverlap = 48;   call bcast(spod_noverlap, isize)
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer ip, iel
+      real rtmp
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+! -----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 1.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat2
+      end

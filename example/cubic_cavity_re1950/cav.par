@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = 1960_PO_cav0.f00001
+stopAt = endTime
+
+# endTime = 10.76922830770972 # from fft at Re=1950
+endTime = 10.7737861323877 # solution for Re = 1950
+
+userParam01 = 2.1   # 0:DNS, 2.1:Newton UPO, 3.11: Floq
+userParam07 = 200  # Krylov base lenght (from 80-200) 
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-10
+residualProj = yes
+
+[VELOCITY]
+residualTol = 1.0E-10
+residualProj = yes
+density = 1.0
+viscosity = -1950.0 # rec = 1916

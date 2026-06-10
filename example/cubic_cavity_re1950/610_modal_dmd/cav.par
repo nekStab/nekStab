@@ -1,0 +1,31 @@
+[GENERAL]
+startFrom = cav0.f00001
+stopAt = endTime
+endTime = 50  # > startFrom time (11.0) so userchk fires at istep=0 -> modal_analysis -> nek_end
+
+userParam01 = 6.1  # DMD modal analysis
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6
+residualProj = yes
+
+[VELOCITY]
+residualTol = 1.0E-6
+residualProj = yes
+density = 1.0
+viscosity = -1950.0

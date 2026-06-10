@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = rst_cav0.f00001
+
+stopAt = endTime
+endTime = 100  # ~9 cavity periods (T_UPO=10.77); for limit-cycle snapshots
+
+userParam01 = 0  # DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 0.5  # ~20 snapshots per period; ~200 total in endTime=100 -> POD/DMD/SPOD-ready
+writeDoublePrecision = yes  # task #69 workaround: single-prec snapshots hang Nek MPI-IO read on 16 ranks for 3D fields. Double-prec (12 MB each) reads cleanly.
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-6
+residualProj = yes
+density = 1.0
+viscosity = -1950.0
