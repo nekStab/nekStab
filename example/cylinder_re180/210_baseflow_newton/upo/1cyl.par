@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = rstcyl0.f00001
+
+stopAt = endTime
+endTime = 5.251 # Re=170 FFT period (St=0.190); good guess for Re=180 orbit
+userParam01 = 2.1 # Newton-GMRES for UPOs
+userParam07 = 100 # k_dim
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 10.
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -180.0 # Re=180 (Barkley-Henderson Mode A threshold; was -100 historical)

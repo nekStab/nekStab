@@ -1,0 +1,34 @@
+[GENERAL]
+# Side-DNS at Re=150 to produce rstcyl0.f00001 seed for Re=180 Newton UPO (#79 chain)
+startFrom = 0
+
+stopAt = endTime
+endTime = 500.0   # 500 T_c — well past the ~50 T_c needed to reach the limit cycle at Re=150
+
+userParam01 = 0    # plain DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 50.0   # snapshot every 50 T_c -> 10 frames; final = rstcyl0.f00001 seed
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -150.0   # Re=150 (lower than Re=180 target so transients wash before going to 180)

@@ -1,0 +1,36 @@
+[GENERAL]
+startFrom = BF_1cyl0.f00001
+
+stopAt = endTime
+endTime = 100.0
+userParam01 = 5
+userParam07 = 92 # k_dim
+userParam08 = 5   # Sponge left side
+userParam09 = 5   # Sponge right side
+userParam10 = 0 # Sponge streght
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.0
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6
+residualProj = yes
+writeToFieldFile = no
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -180.0
