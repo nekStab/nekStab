@@ -1,0 +1,17 @@
+{
+  "case": "thermosyphon_ra500/320_stability_adjoint",
+  "description": "Steady thermal adjoint stability at Ra=500; leading adjoint eigenvalue matches the direct 310 eigenvalue 0.1022191, the adjoint-validation criterion.",
+  "produced": {"date": "2026-06-10", "ranks": "8", "nekstab_mode": "3.2 (steady adjoint)"},
+  "quantities": {
+    "adjoint_leading_sigma": {
+      "source": "Spectre_NSa.dat:col1:first",
+      "value": 0.1022272,
+      "tol_abs": 1.0e-3
+    },
+    "adjoint_leading_omega": {
+      "source": "Spectre_NSa.dat:col2:first",
+      "value": 0.0,
+      "tol_abs": 1.0e-3
+    }
+  }
+}
