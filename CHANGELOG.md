@@ -1,72 +1,106 @@
 # Changelog
 
-All notable changes to nekStab are documented here.
+Differences between tagged versions. `RELEASE.md` is the complete change
+description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [2.0.0-rc3] - 2026-06-10
 
+Adjoint correctness and reproducibility. ~95 commits since rc2.
+
 ### Added
-- General Boussinesq buoyancy API (`nekStab_set_buoyancy` + `nekStab_qvol`
-  hooks) carrying the adjoint transpose terms, so thermal adjoint stability
-  works in any buoyant case from the `.usr` file alone.
+- General Boussinesq buoyancy API (`nekStab_set_buoyancy` + `nekStab_qvol`)
+  carrying the adjoint transpose terms — thermal adjoint stability from the
+  `.usr` file alone.
+- Dynamic Mode Tracking (DMT) base-flow method (mode 1.3 / `dmt`).
+- FST (free-stream turbulence) inflow as a reusable `src/` module with a
+  self-describing binary mode file.
 - Reproducibility framework: per-stage `ref/` reference results
   (`reference.json` + figures) with `scripts/check_against_ref.py`, plus
   parsers, a Slurm submit/check driver, and field-inspection utilities.
 - Validation gallery deployed to GitHub Pages, catalog-driven and
   Playwright-tested.
-- FST (free-stream turbulence) inflow consolidated into a reusable `src/`
-  module with a self-describing binary format.
-- Dynamic Mode Tracking (DMT) baseflow method.
-- Numbered stage layout (`000_dns` through `6xx_modal`) tracked for all
-  example families, including the 3D cubic cavity, NACA0012, lid-driven
-  cavity, backward-facing step, thermosyphon, flip-flop, tpjet, slot FST,
-  and Poiseuille cases.
-- Validated flagship stages with committed reference data, among them the
-  cylinder Re=100 family, flip-flop Re=62 Newton UPO with direct and adjoint
-  Floquet analysis, and thermosyphon Ra=500 baseflow with direct and adjoint
-  stability.
+- Numbered stage layout (`000_dns` through `6x0_modal_*`) tracked for all
+  16 example families; validated flagship stages committed with reference
+  data (cylinder Re=100 family, flip-flop Re=62 UPO + direct/adjoint
+  Floquet, thermosyphon Ra=500 direct/adjoint, and others).
 
 ### Fixed
-- Adjoint Floquet analysis replays the stored base-flow orbit time-reversed;
-  adjoint Floquet spectra now match their direct counterparts.
-- Thermal adjoint for Boussinesq flows: the buoyancy transpose enters through
-  the scalar source and the base temperature gradients feed the adjoint
-  momentum production; adjoint eigenvalues now match the direct ones.
+- Adjoint Floquet analysis replays the stored base-flow orbit
+  time-reversed; adjoint Floquet spectra now match their direct
+  counterparts (flip-flop Re=62: 0.0078864 +/- 0.1407585i vs direct
+  0.0078930 +/- 0.1407626i).
+- Thermal (Boussinesq) adjoint: buoyancy transpose enters the adjoint
+  scalar source and base temperature gradients feed the adjoint momentum
+  production; adjoint eigenvalues match the direct ones (thermosyphon
+  Ra=500: 0.1022272 vs 0.1022191).
 - BoostConv QR re-orthogonalization restored to modified Gram-Schmidt.
 - POD/DMD/SPOD and mean-field outposts write the scalar field again.
 - Drag computed directly on wall (`W`) faces with the correct scaling.
 - Floquet mode animation writes the correct deformed output.
-- Builds survive configuration changes in non-interactive shells (Slurm, CI);
-  missing include dependency edges added so stale objects are rebuilt after
-  `NEKSTAB.inc`/`SIZE` changes.
+- Builds survive configuration changes in non-interactive shells
+  (Slurm, CI); include dependency edges added so stale objects rebuild
+  after `NEKSTAB.inc`/`SIZE` changes.
 - Orbit allocation failures report the requested size and exit cleanly;
   time-step and energy-budget divisions guarded; per-step solver logging
   throttled (orbit-replay logfiles shrink by two orders of magnitude).
 
 ### Changed
-- Solver dispatch gated by integer mode-code constants with a string selector
-  (`nekstab_mode`) in addition to the numeric `userParam01` codes.
+- Solver dispatch gated by integer mode-code constants behind the string
+  selector (`nekstab_mode`) and the numeric `userParam01` codes.
 - Legacy flat-layout example directories removed in favor of the numbered
   stages.
 
 ## [2.0.0-rc2] - 2026-05-19
 
-Per-case verification campaign on a local Slurm queue (Newton, SFD,
-BoostConv, Floquet, and thermal cases re-verified at their reference
-parameters), cylinder examples unified on a 2128-element mesh, and build
-fixes for spurious full rebuilds.
+Validation campaign. 675 commits since alpha.1.
+
+### Added
+- Per-case verification on a local Slurm queue: 24 cases re-verified at
+  their reference parameters (SFD ladder, BoostConv, Newton fixed points
+  and UPOs, direct/adjoint stability, Floquet, thermal Newton-GMRES),
+  each with base flow and leading-mode evidence committed.
+- String-based mode selection (`nekstab_mode = 'direct'` etc.) with
+  3-priority resolution: string > flags > `uparam(1)`.
+
+### Changed
+- All isothermal cylinder cases unified on a 2128-element mesh with a
+  shared seed initial condition for cross-case comparison.
+
+### Fixed
+- `makeneks` no longer rewrites `NEKSTAB.inc` spuriously on every build.
+- Mode flags cleared before the string-mode override is applied.
 
 ## [2.0.0-alpha.1] - 2026-04-28
 
-First 2.0 preview: sources reorganized into free-form `.f90` modules,
-Krylov routines batched through BLAS, Krylov-Schur improvements (locking,
-adaptive restart), and the example tree reworked around per-case directories.
+The 2.0 rewrite. ~660 commits since 1.0.1; see `RELEASE.md` for the full
+description.
+
+- All sources restructured into free-form Fortran modules;
+  `nekstab_nek_bridge` isolates the Nek5000 common-block imports.
+- Multiple passive scalars, RANS (finite-difference Fréchet operator),
+  and conjugate heat transfer (`lt != lv`) supported through the whole
+  stability/modal pipeline.
+- MPI reduction batching: Gram matrices, projections, and cross-spectral
+  densities computed via BLAS with a single allreduce; CGS2
+  orthogonalization (2 allreduces per Arnoldi step, independent of k).
+- Krylov-Schur improvements: heap allocation, eigenvalue locking,
+  adaptive restart, conjugate-pair handling, combined abs/rel
+  convergence.
+- Inexact Newton-GMRES with residual-proportional adaptive tolerance and
+  stagnation guard.
+- Modal analysis framework: POD, projected DMD, and SPOD (batch and
+  streaming) sharing the batch inner-product infrastructure.
+- Floquet energy budget (mode 4.11) for time-periodic base flows.
 
 ## [1.0.1] - 2021-03-20
 
-Maintenance release of the original toolbox.
+- Fixed an extra outpost when using Krylov-Schur.
+- CFL limiter threshold raised from 1 to 10.
+- Sensitivity subroutine with normalization; adjoint reference modes.
+- New example cases (porous, MFM); GitHub Actions compiler check.
 
 ## [1.0] - 2021-01-22
 
 First public release: steady-state computation (SFD, BoostConv, Newton),
-direct/adjoint eigenvalue problems, transient growth, and post-processing
-for Nek5000.
+direct and adjoint eigenvalue problems, transient growth, and
+post-processing tools for Nek5000.

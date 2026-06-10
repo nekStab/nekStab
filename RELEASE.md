@@ -139,11 +139,54 @@ throughout.  Pressure uses `lp = lx2*ly2*lz2*lelv`.  Passive scalar
 fields use per-field extents via `nelfld(m+1)`.  This fixes incorrect
 array strides in conjugate heat transfer cases where `lelt > lelv`.
 
+#### Adjoint correctness (rc3)
+
+Two defects fixed.  In both cases the validation criterion is that the
+adjoint spectrum must match the direct one (an operator and its adjoint
+share eigenvalues).
+
+- **Floquet adjoint base-flow replay** — the time-periodic base flow is
+  built once in a dedicated forward sweep, and every adjoint matvec then
+  replays it **time-reversed**: step k of the backward integration uses
+  orbit snapshot nsteps-k+1.  The previous implementation replayed the
+  orbit forward, so each Arnoldi matvec saw a different effective
+  operator.  Storing the orbit remains a memory-for-compute option
+  (`ifstorebase`); when the orbit does not fit in memory the base flow
+  is recomputed instead.  Validated on the flip-flop UPO at Re=62:
+  adjoint pair 0.0078864 +/- 0.1407585i vs direct
+  0.0078930 +/- 0.1407626i.
+- **Thermal (Boussinesq) adjoint** — the adjoint of the buoyancy
+  coupling has two halves: the buoyancy transpose enters the adjoint
+  scalar equation as a volumetric source, and the base-flow temperature
+  gradients feed the adjoint momentum production term already present
+  in the Nek5000 core (`advabp_adjoint`), which requires dTdx/dTdy/dTdz
+  to be populated.  nekStab now computes the base temperature gradients
+  before each adjoint matvec (and per orbit step in Floquet mode).
+  Validated on the thermosyphon at Ra=500: adjoint eigenvalue 0.1022272
+  vs direct 0.1022191.
+
+#### General buoyancy API (rc3)
+
+Buoyant cases declare the buoyancy direction and coefficient once in
+`nekStab_usrchk`:
+
+```fortran
+call nekStab_set_buoyancy(0.0d0, 1.0d0, 0.0d0, coeff)
+```
+
+and route the standard hooks through nekStab (`nekStab_forcing` in
+`userf`, `nekStab_qvol` in `userq`).  The forcing hook applies the
+direct buoyancy term for both nonlinear and perturbation solves; the
+qvol hook applies the adjoint transpose.  A guard aborts a buoyant
+adjoint run if `userq` is not wired, instead of returning silently
+wrong eigenvalues.
+
 ### New features
 
 | Mode | uparam(1) | String | Description |
 |------|-----------|--------|-------------|
 | Linearized DNS | 0.1 | `linear_dns` | Time-stepping of LNSE without eigensolver |
+| Dynamic Mode Tracking | 1.3 | `dmt` | UPO stabilization by band-pass filtering (Queguineur et al., 2019) |
 | Floquet energy budget | 4.11 | `energy_budget_floquet` | PKE budget for time-periodic base flows |
 | Animate mode | 4.50 | `animate_mode` | Reconstruct eigenmode as time series |
 | Animate BF deform | 4.51 | `animate_bf_deform` | Base flow + eigenmode deformation |
@@ -202,6 +245,46 @@ production and dissipation over one orbit period.  Base flow is
 re-loaded from disk at each orbit step to avoid storing the full
 time-periodic base flow in memory.
 
+#### Dynamic Mode Tracking (rc3)
+
+Base-flow stabilization of unstable periodic orbits by band-pass
+filtering the velocity field (Queguineur et al., Phys. Fluids 31,
+034101, 2019), ported from the legacy code into `dmt.f90`.  Target
+frequency, filter width, gain, start time, and tolerance map to
+`uparam(11..15)`.
+
+#### FST inflow module (rc3)
+
+The free-stream turbulence inflow generation previously embedded in the
+slot case is now a reusable module (`fst.f90`): any case enables it
+with `use nekstab_fst` and a `call fst` in the inflow hook.  Mode data
+is precomputed once and stored in a self-describing binary file, so the
+expensive generation step is decoupled from the run.
+
+#### Reproducibility framework (rc3)
+
+Each validated example stage carries a `ref/` directory holding
+`reference.json` — machine-checkable quantities with a source pointer
+(file, column, row) and an absolute tolerance — plus the reference
+figures produced by the stage's own `plot.py`.
+
+```bash
+python3 scripts/check_against_ref.py example/<family>/<stage>
+```
+
+re-extracts the quantities from the run outputs and reports PASS/FAIL
+per quantity.  Supporting tooling under `scripts/`: residual and
+spectrum parsers, a Slurm submit/check driver, field/IC inspection
+utilities, and `make_case_ref.py` to classify case files and build
+`ref/` skeletons.
+
+#### Validation gallery (rc3)
+
+The validation evidence is published as a static gallery
+(`validation/index.html` + figures) deployed to GitHub Pages at
+https://nekstab.github.io/nekStab/validation/, catalog-driven and
+checked by a Playwright test suite.
+
 ### String-based mode selection (new in 2.0)
 
 In the `.usr` file, set `nekstab_mode` instead of encoding `uparam(1)`:
@@ -221,46 +304,75 @@ Priority: string > if-flags > uparam(1).  All three methods remain supported.
 - TDF: circular buffer for orbit storage, semicolon bug in single-line IF
 - Module vs common-block variable collisions (OTD)
 - Intel `ifx` compatibility (assumed-size arrays)
+- BoostConv: QR re-orthogonalization restored to modified Gram-Schmidt
+  (rc3; had regressed to classical GS, stalling convergence)
+- POD/DMD/SPOD and mean-field outposts write the scalar field again
+  (nfldt, rc3)
+- Drag computed directly on wall (`W`) faces with the correct scaling
+  (rc3)
+- Floquet mode animation writes the correct deformed output (rc3)
+
+### Robustness and diagnostics (rc3)
+
+- The three orbit allocations (Floquet, TDF, Newton-UPO) — the largest
+  arrays in the code — report the requested size in GB and exit cleanly
+  on failure instead of hanging rank-asymmetrically on OOM
+- Time-step guard in the sensitivity I/O setup and a division guard in
+  the Floquet energy budget (same idiom as the existing matvec guard)
+- Per-step solver logging inside the linearized maps throttled to ~10
+  lines per matvec, and Nek core residual chatter silenced during
+  matvecs; orbit-replay logfiles shrink by two orders of magnitude
+  (flip-flop adjoint Floquet: 905k lines -> 2k)
 
 ### Build system
 
 - `makefile_nekStab` with level-based dependency ordering
 - `makeneks` archives all `.o` into `libnek5000.a`
 - `.f90` compiled with `-ffixed-form -ffixed-line-length-none`
+- Non-interactive builds survive configuration changes (rc3): `makeneks`
+  pre-handles the makenek `.state` mismatch and answers the rebuild
+  prompt itself, so Slurm/CI shells no longer die at an interactive
+  `read` with a misleading "see build.log" message
+- Include dependency edges (rc3): `NEKSTAB.inc` and `SIZE` are listed as
+  prerequisites of the objects that include them, so incremental builds
+  rebuild stale objects instead of relying on a full clean
 
-### Examples
+### Examples (numbered stage layout, rc3)
 
-The v2.0 example tree contains ~32 cases.  All cylinder isothermal cases
-share the same 2128-element mesh and a shared `BF_seed_1cyl0.f00001`
-initial condition for direct cross-case comparison.
+The example tree was reorganized (rc3) as `example/<family>_<parameter>/`
+with numbered stages encoding the workflow order, so each family reads
+as a tutorial: produce a seed, converge a base flow, analyze it,
+post-process it.
 
-**Locally validated (24 cases, 8-rank Slurm runs, 2026-05-17):**
-
-| Family | Cases |
+| Stage | Meaning |
 |---|---|
-| `cylinder/baseflow` | boostconv, newton, newton_dyn, sfd, sfd_dyn, sfd_dyn_oifs |
-| `cylinder/stability` | direct, adjoint, animate_modes |
-| `cylinder/postproc` | sensitivity_budget_wavemaker, steady_force_sensitivity |
-| `cylinder/other` | dns, ci_test, moving_cylinder (absorbed) |
-| non-cylinder | lid_driven (Re=3600), poiseuille_OTD (Re=5000), naca0012 (Re=2000), thermosyphon/{baseflow, stability/direct} (Ra=500), flip_flop/{baseflow, stability/direct_Floquet} (Re=62), tpjet/{baseflow/newton, stability/direct_Floquet} (Re=1900) |
+| `000_dns` | DNS / seed generation |
+| `1x0_baseflow_*` | base flow by filtering (110 SFD, 120 BoostConv, 130 DMT) |
+| `210_baseflow_newton` | base flow / UPO by Newton-GMRES |
+| `3x0/3x1_stability_*` | 310 direct, 311 direct Floquet, 320 adjoint, 321 adjoint Floquet, 330 transient growth |
+| `4xx_postproc_*` | 410 mode animation, 411 wavemaker, 412 steady-force sensitivity |
+| `500_otd` | OTD modes |
+| `6x0_modal_*` | 600 POD, 610 DMD, 620 SPOD |
 
-**Deferred to HPC or v2.1**:
+Families: `cylinder_re100` (flagship, full ladder), `cylinder_re180`
+(Floquet chain; 2D proxy — Mode A/B physics needs 3D), `cylinder_re30_thermal`,
+`cylinder_re1m` (2D RANS), `moving_cylinder_re100`, `flip_flop_re62`,
+`thermosyphon_ra500`, `naca0012_re2000`, `lid_driven_re3600`,
+`back_fstep_re500`, `cubic_cavity_re1914`/`_re1950`, `tpjet_re2005`,
+`slot_fst_re495`, `poiseuille_re5k` (OTD), `poiseuille_re1e5` (RANS).
 
-- `cylinder/baseflow/{newton_dyn_temp, newton_dyn_upo}` — thermal seed + UPO
-  too heavy on workstation
-- `cylinder/stability/{direct_Floquet, adjoint_Floquet, animate_modes_with_UPO}`
-  — depend on the deferred UPO
-- `cylinder/{otd, modal, RANS}` — `otd` has NaN-at-init src/ bug on the 2128
-  mesh; `modal` has endTime=2050; `RANS` uses its own 11840-element mesh and
-  is a research demo
-- `back_fstep/*`, `cubic_cavity*`, `tpjet/baseflow/tdf`, `slot_FST`,
-  `blasius`, `poiseuille_RANS` — CFL exit on rerun, HPC-only runtime,
-  legacy `.rea` format, or multi-stage workflow requiring more than a
-  smoke run
+All cylinder isothermal cases share the same 2128-element mesh and a
+shared seed initial condition for direct cross-case comparison.  RANS
+cases (`cylinder_re1m`, `poiseuille_re1e5`) use the finite-difference
+Fréchet operator only — no adjoint, wavemaker, or transient growth,
+since the analytical RANS Jacobian is unavailable.
 
-Validation script: `validate.py` exists but was not exercised during the v2.0
-release campaign; the local Slurm + per-case re-run pattern
-served as the validation suite.
+Validated stages carry `ref/` reference data checked by
+`scripts/check_against_ref.py` (see Reproducibility framework above);
+the rc2 campaign validated 24 cases on the previous flat layout
+(8-rank Slurm runs, 2026-05-17), and those results carry over to the
+renumbered stages.  Stages without `ref/` are tracked configurations
+whose reference runs are still pending.
 
 
 ## Full mode reference (uparam encoding)
@@ -312,13 +424,19 @@ served as the validation suite.
 
 ## TODO before tagging 2.0
 
-- [x] Run validation suite across examples — 24 validated, 15 deferred
-- [ ] Finalize `validate.py` regression tests — deferred to v2.1
+- [x] Run validation suite across examples — 24 validated at rc2, 15 deferred
+- [x] Tag `v2.0.0-rc2` and run rc cycle
+- [x] Adjoint correctness: Floquet orbit replay + thermal adjoint — fixed
+      and validated (rc3)
+- [x] Tag `v2.0.0-rc3`
+- [ ] Finish the rerun campaign: `ref/` reference data for every remaining
+      stage (RANS findiff, cubic cavity, moving cylinder, thermal cylinder,
+      wavemakers)
+- [ ] `check_against_ref.py` sweep across all migrated stages as the
+      regression gate (replaces the old `validate.py` plan)
 - [ ] Update `DOC.md` with string-mode documentation — partial
 - [ ] Update copyright year (2020-2026) in `main.f90`
 - [ ] Review SPOD streaming module status — deferred to v2.1
-- [x] Verify all example READMEs are current — done for 24 validated cases
-- [ ] Tag `v2.0.0-rc2` and run rc cycle
 - [ ] Tag `v2.0.0` and merge `dev` → `main`
 
 
