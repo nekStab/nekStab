@@ -1,0 +1,38 @@
+[GENERAL]
+startFrom = BF_tpjet0.f00001
+stopAt = endTime
+endTime = 200.0
+
+userParam01 = 1.3  # DMT mode
+userParam05 = 0.600000  # forced frequency (St_D)
+
+userParam11 = 3.7699  # omc = 2*pi*St_D
+userParam12 = 0.3770  # beta = 0.1*omc
+userParam13 = 0.05    # chi (feedback gain)
+userParam14 = 5.0     # t_start (time before forcing kicks in)
+userParam15 = 1e-6    # convergence tolerance
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+dealiasing = yes
+
+[PROBLEMTYPE]
+axiSymmetry = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -1900.0  # Re=1900
