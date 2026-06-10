@@ -1,0 +1,17 @@
+{
+  "case": "flip_flop_re62/321_stability_adjoint_floquet",
+  "description": "Adjoint Floquet stability of the flip-flop UPO at Re=62; leading conjugate pair matches the direct Floquet multiplier from 311 (0.0078930 +/- 0.1407626).",
+  "produced": {"date": "2026-06-10", "ranks": "16", "nekstab_mode": "3.21 (adjoint Floquet)"},
+  "quantities": {
+    "adjoint_leading_sigma": {
+      "source": "Spectre_NSa.dat:col1:first",
+      "value": 0.0078864,
+      "tol_abs": 1.0e-3
+    },
+    "adjoint_leading_omega": {
+      "source": "Spectre_NSa.dat:col2:first",
+      "value": 0.1407585,
+      "tol_abs": 1.0e-3
+    }
+  }
+}
