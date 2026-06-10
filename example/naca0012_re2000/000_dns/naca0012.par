@@ -1,0 +1,37 @@
+[GENERAL]
+startFrom = resnaca00120.f00010
+
+stopAt = endTime
+endTime = 70.0
+
+userParam01 = 0   # DNS
+userParam07 = 220 # k_dim, unused by DNS but kept with family defaults
+userParam08 = 1   # Sponge left side
+userParam09 = 5   # Sponge right side
+userParam10 = 1.7 # Sponge strength
+
+dt = 2.0E-4
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 10.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = yes
+density = 1.0
+viscosity = -2000.0

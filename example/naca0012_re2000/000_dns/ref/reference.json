@@ -1,0 +1,37 @@
+{
+  "case": "naca0012_re2000/000_dns",
+  "description": "NACA 0012 Re=2000 DNS from finite-amplitude Re=2000 wake restart; outcome=ringdown. The late-window DNS frequency agrees with the linear eigenvalue omega=8.036574 to about 0.4%, but the decay rate differs from the linear prediction sigma=-0.1127203 and remains under investigation. The DNS steady state differs from the Newton base flow by O(1e-2) in the wake and O(0.2) in the sponge zone.",
+  "produced": {
+    "date": "2026-06-10",
+    "ranks": "8",
+    "nekstab_mode": "0 (DNS)",
+    "initial_condition": "resnaca00120.f00010"
+  },
+  "quantities": {
+    "dominant_frequency": {
+      "source": "analysis_metrics.dat:col1:first",
+      "value": 1.283760723048621,
+      "tol_rel": 0.02
+    },
+    "late_amplitude": {
+      "source": "analysis_metrics.dat:col2:first",
+      "value": 2.93584999999999e-05,
+      "tol_rel": 0.02
+    },
+    "fitted_sigma": {
+      "source": "analysis_metrics.dat:col3:first",
+      "value": -0.0638021658174721,
+      "tol_rel": 0.02
+    },
+    "fitted_omega": {
+      "source": "analysis_metrics.dat:col4:first",
+      "value": 8.066106512993338,
+      "tol_rel": 0.02
+    },
+    "sigma_window_ratio": {
+      "source": "analysis_metrics.dat:col5:first",
+      "value": -0.06536825812276982,
+      "tol_rel": 0.02
+    }
+  }
+}
