@@ -94,8 +94,10 @@
         
     real, allocatable, save :: do1(:), do2(:), do3(:)
     real :: h1, semi, l2, linf, rate, tol
+   real :: request_gb
    real, save :: residu0, gain, porbit
    integer, save :: i, norbit, m, ibuf
+   integer :: alloc_stat
       
    nt = nx1*ny1*nz1*nelt
    if (.not. tdf_init) then
@@ -119,16 +121,35 @@
    gain = -0.04432d0*2.0d0*NEKSTAB_PI/porbit ! Theoretical optimal feedback parameter see reference
       
    if (nid == 0) write (6, *) 'Allocating TDF orbit with nsteps:', norbit, norbit*dt
-   allocate (uor(lv, norbit), vor(lv, norbit))
+   request_gb = 2.0d0*real(lv)*real(norbit)*8.0d0/1.0d9
+   allocate (uor(lv, norbit), vor(lv, norbit), stat=alloc_stat)
+   if (alloc_stat /= 0) then
+   if (nid == 0) write (6, *) &
+      'ERROR: orbit allocation failed for uor/vor; requested GB:', request_gb
+   call exitti('orbit allocation failed$', alloc_stat)
+   end if
    if (if3d) then
-   allocate (wor(lv, norbit))
+   request_gb = real(lv)*real(norbit)*8.0d0/1.0d9
+   allocate (wor(lv, norbit), stat=alloc_stat)
    else
-   allocate (wor(1, 1))
+   request_gb = 8.0d0/1.0d9
+   allocate (wor(1, 1), stat=alloc_stat)
+   end if
+   if (alloc_stat /= 0) then
+   if (nid == 0) write (6, *) &
+      'ERROR: orbit allocation failed for wor; requested GB:', request_gb
+   call exitti('orbit allocation failed$', alloc_stat)
    end if
    call oprzero(uor(:, :), vor(:, :), wor(:, :))
       
    if (ifto .or. ldimt > 1) then
-   allocate (tor(lt, norbit, ldimt))
+   request_gb = real(lt)*real(norbit)*real(ldimt)*8.0d0/1.0d9
+   allocate (tor(lt, norbit, ldimt), stat=alloc_stat)
+   if (alloc_stat /= 0) then
+   if (nid == 0) write (6, *) &
+      'ERROR: orbit allocation failed for tor; requested GB:', request_gb
+   call exitti('orbit allocation failed$', alloc_stat)
+   end if
    tor(:, :, :) = 0.0d0
    end if
 
@@ -521,6 +542,7 @@
    return
    end if
 
+   ! norma >= 1e-60 guaranteed by the early return above.
    call opcmult(dum_x, dum_y, dum_z, 1./norma)
    call opcopy(q_x(:,1), q_y(:,1), q_z(:,1), &
       dum_x, dum_y, dum_z)

@@ -425,6 +425,8 @@ end subroutine k_matmul
 subroutine allocate_orbit(nsteps_in)
 
    integer, intent(in) :: nsteps_in
+   integer :: alloc_stat
+   real :: request_gb
 
    if (nid == 0) write (6, *) &
         'ALLOCATING ORBIT WITH NSTEPS:', nsteps_in
@@ -432,14 +434,34 @@ subroutine allocate_orbit(nsteps_in)
    if (allocated(uor)) deallocate(uor, vor, wor)
    if (allocated(tor)) deallocate(tor)
 
-   allocate(uor(lv, nsteps_in), vor(lv, nsteps_in))
-   if (if3d) then
-      allocate(wor(lv, nsteps_in))
-   else
-      allocate(wor(1, 1))
+   request_gb = 2.0d0*real(lv)*real(nsteps_in)*8.0d0/1.0d9
+   allocate(uor(lv, nsteps_in), vor(lv, nsteps_in), stat=alloc_stat)
+   if (alloc_stat /= 0) then
+      if (nid == 0) write (6, *) &
+         'ERROR: orbit allocation failed for uor/vor; requested GB:', request_gb
+      call exitti('orbit allocation failed$', alloc_stat)
    end if
-   if (ifto .or. ldimt > 1) &
-        allocate(tor(lt, nsteps_in, ldimt))
+   if (if3d) then
+      request_gb = real(lv)*real(nsteps_in)*8.0d0/1.0d9
+      allocate(wor(lv, nsteps_in), stat=alloc_stat)
+   else
+      request_gb = 8.0d0/1.0d9
+      allocate(wor(1, 1), stat=alloc_stat)
+   end if
+   if (alloc_stat /= 0) then
+      if (nid == 0) write (6, *) &
+         'ERROR: orbit allocation failed for wor; requested GB:', request_gb
+      call exitti('orbit allocation failed$', alloc_stat)
+   end if
+   if (ifto .or. ldimt > 1) then
+      request_gb = real(lt)*real(nsteps_in)*real(ldimt)*8.0d0/1.0d9
+      allocate(tor(lt, nsteps_in, ldimt), stat=alloc_stat)
+      if (alloc_stat /= 0) then
+         if (nid == 0) write (6, *) &
+            'ERROR: orbit allocation failed for tor; requested GB:', request_gb
+         call exitti('orbit allocation failed$', alloc_stat)
+      end if
+   end if
 
 end subroutine allocate_orbit
 

@@ -43,6 +43,20 @@ module nekstab_matvec
 contains
 
 !-----------------------------------------------------------------------
+! nek_advance_quiet — Advance Nek with core logfile chatter disabled
+!-----------------------------------------------------------------------
+subroutine nek_advance_quiet()
+
+   integer :: saved_nio
+
+   saved_nio = nio
+   nio = -1
+   call nek_advance()
+   nio = saved_nio
+
+end subroutine nek_advance_quiet
+
+!-----------------------------------------------------------------------
 ! prepare_linearized_solver — Set up Nek parameters for linearized solver
 !-----------------------------------------------------------------------
 subroutine prepare_linearized_solver
@@ -286,17 +300,21 @@ subroutine forward_linearized_map(f, q)
    time = 0.0d+00
    do istep = 1, nsteps
 !     --> Output current info to logfile.
-      if (nid == 0) write (6, "(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
+      if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+         istep == 1 .or. istep == nsteps)) &
+         write (6, "(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
 
 !     Integrate forward in time.
       call nekstab_usrchk()
-      call nek_advance()
+      call nek_advance_quiet()
 
       if (ifstorebase .and. ifbase .and. .not. forward_linearized_map_init) then !storing first time
-         if (nid == 0) write (6, *) 'storing first series:', istep, '/', nsteps
+         if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+            istep == 1 .or. istep == nsteps)) &
+            write (6, *) 'storing first series:', istep, '/', nsteps
          call orbit_store(istep)
       elseif (ifstorebase .and. forward_linearized_map_init .and. .not. ifbase) then !just moving in memory
-         if (nid == 0) write (6, *) 'using stored baseflow'
+         if (nid == 0 .and. istep == 1) write (6, *) 'using stored baseflow'
          call orbit_restore(istep)
       end if
    end do
@@ -392,18 +410,22 @@ subroutine forward_finite_difference_map(f, q)
       time = 0.0d+00
       do istep = 1, nsteps
 !     --> Output current info to logfile.
-         if (nid == 0) write (6, "(' DIRECT FD [',I1,'/',I1,']:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") i, &
-   findiff_order, istep, nsteps, mstep, k_dim, schur_cnt
+         if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+            istep == 1 .or. istep == nsteps)) &
+            write (6, "(' DIRECT FD [',I1,'/',I1,']:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") i, &
+      findiff_order, istep, nsteps, mstep, k_dim, schur_cnt
 
 !        Nek5000 computational core.
          call nekstab_usrchk()
-         call nek_advance()
+         call nek_advance_quiet()
 
          if (i == 1 .and. ifstorebase .and. ifbase .and. .not. init) then !storing first time
-            if (nid == 0) write (6, *) 'storing first series:', istep, '/', nsteps
+            if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+               istep == 1 .or. istep == nsteps)) &
+               write (6, *) 'storing first series:', istep, '/', nsteps
             call orbit_store(istep)
          elseif (i > 1 .and. ifstorebase .and. init .and. .not. ifbase) then !just moving in memory
-            if (nid == 0) write (6, *) 'using stored baseflow'
+            if (nid == 0 .and. istep == 1) write (6, *) 'using stored baseflow'
             call orbit_restore(istep)
          end if
       end do
@@ -474,9 +496,11 @@ subroutine adjoint_linearized_map(f, q)
       ifpert = .false.; call bcast(ifpert, lsize)
       time = 0.0d+00
       do istep = 1, nsteps
-         if (nid == 0) write (6, *) 'building base orbit:', istep, '/', nsteps
+         if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+            istep == 1 .or. istep == nsteps)) &
+            write (6, *) 'building base orbit:', istep, '/', nsteps
          call nekstab_usrchk()
-         call nek_advance()
+         call nek_advance_quiet()
          call orbit_store(istep)        ! orbit(j) = U(j*dt)
       end do
       ifpert = .true.; call bcast(ifpert, lsize)
@@ -495,8 +519,10 @@ subroutine adjoint_linearized_map(f, q)
    time = 0.0d+00
    do istep = 1, nsteps
 !     --> Output current info to logfile.
-      if (nid == 0) write (6, "(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") &
-   istep, nsteps, mstep, k_dim, schur_cnt
+      if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+         istep == 1 .or. istep == nsteps)) &
+         write (6, "(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") &
+      istep, nsteps, mstep, k_dim, schur_cnt
 
       if (ifstorebase .and. init) call orbit_restore(nsteps - istep + 1)
       if (ifstorebase .and. init .and. ifheat) then
@@ -504,7 +530,7 @@ subroutine adjoint_linearized_map(f, q)
       end if
 
       call nekstab_usrchk()
-      call nek_advance()
+      call nek_advance_quiet()
    end do
 
    if (ifbuoyancy .and. ifheat .and. .not. buoyancy_qvol_wired) then
@@ -641,7 +667,7 @@ subroutine compute_bvec(bvec, qbase)
    time = 0.0d+00
    do istep = 1, 1
       call nekStab_usrchk()
-      call nek_advance()
+      call nek_advance_quiet()
    end do
    call nopcopy(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, vx, vy, vz, pr, t)
 

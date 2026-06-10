@@ -419,7 +419,7 @@
    E_bar = glsc2(bm1, energy_avg, n)
 
    sigma_check = (sum(integrals(1:9)) - integrals(10)) &
-      / (2.0d0 * E_bar)
+      / (2.0d0 * max(E_bar, 1.0d-30))
 
    rel_error = abs(sigma_check - sigma_r) &
       / max(abs(sigma_r), 1.0d-30)

@@ -939,6 +939,13 @@
    if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
 
    dt = param(26)/ctarg ! param(26) is the max CFL specified by the user
+   if (.not. (dt > 0.0d0 .and. dt < 1.0d3)) then
+      if (nid == 0) write (6, *) &
+          'WARN: compute_cfl gave unusable result (ctarg=', ctarg, &
+          '); falling back to dt = 1e-3. Set explicit dt in .par ', &
+          'to silence this.'
+      dt = 1.0d-3
+   end if
    nsteps = ceiling(fintim/dt)
    dt = fintim/dble(nsteps)
 

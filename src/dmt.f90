@@ -46,6 +46,7 @@ module nekstab_dmt
    private
 
    logical, save :: dmt_initialized = .false.
+   logical, save :: dmt_log_open = .false.
    real, allocatable, save :: vxo(:,:), vyo(:,:), vzo(:,:)
    real, allocatable, save :: xxo(:), xyo(:), xzo(:)
    real, allocatable, save :: yxo(:), yyo(:), yzo(:)
@@ -64,6 +65,7 @@ contains
    integer, parameter :: lt = lx1*ly1*lz1*lelt
    real :: dmt_omc, dmt_ban, dmt_gan, dmt_skp, dmt_tol
    logical :: file_exists
+   integer :: open_stat
 
    if (dmt_initialized) return
 
@@ -96,9 +98,15 @@ contains
    if (nid == 0) then
       inquire(file='residu_dmt.dat', exist=file_exists)
       if (file_exists) then
-         open(unit=11, file='residu_dmt.dat', status='old', position='append')
+         open(unit=11, file='residu_dmt.dat', status='old', &
+            position='append', iostat=open_stat)
       else
-         open(unit=11, file='residu_dmt.dat', status='new')
+         open(unit=11, file='residu_dmt.dat', status='new', iostat=open_stat)
+      end if
+      if (open_stat /= 0) then
+         write(6,*) 'ERROR: unable to open residu_dmt.dat, iostat=', open_stat
+      else
+         dmt_log_open = .true.
       end if
 
       write(6,*) '   DMT: Dynamic Mode Tracking (Queguineur et al. 2019)'
@@ -188,7 +196,7 @@ contains
    if (time > dmt_skp) call opadd2(fcx, fcy, fcz, do1, do2, do3)
 
    if (nid == 0) then
-      write(11,"(3E15.7)") time, residu, rate
+      if (dmt_log_open) write(11,"(3E15.7)") time, residu, rate
       write(6,"(' DMT residu=',1pE11.4,' rate of change= ',1pE11.4)") residu, rate
       write(6,*) ' '
    end if
@@ -200,7 +208,10 @@ contains
       lastep = 1
    end if
 
-   if (istep == nsteps .and. nid == 0) close(11)
+   if (istep == nsteps .and. nid == 0 .and. dmt_log_open) then
+      close(11)
+      dmt_log_open = .false.
+   end if
 
    end subroutine dmt
 

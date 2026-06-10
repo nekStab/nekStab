@@ -169,7 +169,9 @@
    integer :: prev_total_calls = 0 ! Track calls from previous iteration
    integer, save :: k_out ! Store k from GMRES
    integer, save :: k_sum = 0 ! Accumulator for total k values across Newton iterations
+   integer :: alloc_stat
    real :: saved_tol21, saved_tol22 ! Save/restore param(21:22)
+   real :: request_gb
 
       !     ----- Call Counting -----
 ! total_calls  = cumulative time-steps (nonlinear + linear matvecs)
@@ -234,13 +236,34 @@
    write (6, "('  Allocating orbit for GMRES')")
    write (6, "('    Number of steps:',I6)") nsteps
    end if
-   allocate (uor(lv, nsteps), vor(lv, nsteps))
-   if (if3d) then
-   allocate (wor(lv, nsteps))
-   else
-   allocate (wor(1, 1))
+   request_gb = 2.0d0*real(lv)*real(nsteps)*8.0d0/1.0d9
+   allocate (uor(lv, nsteps), vor(lv, nsteps), stat=alloc_stat)
+   if (alloc_stat /= 0) then
+   if (nid == 0) write (6, *) &
+      'ERROR: orbit allocation failed for uor/vor; requested GB:', request_gb
+   call exitti('orbit allocation failed$', alloc_stat)
    end if
-   if (ifto .or. ldimt > 1) allocate (tor(lt, nsteps, ldimt))
+   if (if3d) then
+   request_gb = real(lv)*real(nsteps)*8.0d0/1.0d9
+   allocate (wor(lv, nsteps), stat=alloc_stat)
+   else
+   request_gb = 8.0d0/1.0d9
+   allocate (wor(1, 1), stat=alloc_stat)
+   end if
+   if (alloc_stat /= 0) then
+   if (nid == 0) write (6, *) &
+      'ERROR: orbit allocation failed for wor; requested GB:', request_gb
+   call exitti('orbit allocation failed$', alloc_stat)
+   end if
+   if (ifto .or. ldimt > 1) then
+   request_gb = real(lt)*real(nsteps)*real(ldimt)*8.0d0/1.0d9
+   allocate (tor(lt, nsteps, ldimt), stat=alloc_stat)
+   if (alloc_stat /= 0) then
+   if (nid == 0) write (6, *) &
+      'ERROR: orbit allocation failed for tor; requested GB:', request_gb
+   call exitti('orbit allocation failed$', alloc_stat)
+   end if
+   end if
    end if
 
    call nonlinear_forward_map(f, q) ! rhs of Newton iteration f(q)

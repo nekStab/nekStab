@@ -69,6 +69,8 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
    real :: tloc
 
    iel = gllel(ieg) ! local element number
+   ! compute the corresponding index in the pertubation arrays
+   ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
 
    ! here we add other forcings (SFD, TDF, if any)
    ffx = ffx + fcx(ix, iy, iz, iel)
@@ -77,7 +79,6 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
 
    if (ifbuoyancy .and. ifheat) then
       if (jp == 0 .or. .not. ifadj) then
-         ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
          if (jp == 0) then
             tloc = t(ix, iy, iz, iel, 1)
          else
@@ -94,8 +95,7 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
    if (spng_st /= 0) then
 
       ! compute the corresponding index in the pertubation arrays
-      ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
-
+      ! computed once above for buoyancy and sponge forcing
       if (jp == 0) then ! dns
          ffx = ffx + spng_fn(ip)*(spng_vr(ip, 1) - vx(ix, iy, iz, iel))*spng_st
          ffy = ffy + spng_fn(ip)*(spng_vr(ip, 2) - vy(ix, iy, iz, iel))*spng_st
@@ -160,13 +160,14 @@ subroutine nekStab_forcing_temp(temp, ix, iy, iz, ieg, m)
 
    ! local element number
    iel = gllel(ieg)
+   ! compute the corresponding index in the pertubation arrays
+   ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
    if (jp == 0) temp = temp + fct(ix, iy, iz, iel, m)
 
    if (spng_st /= 0) then !!!HERE SPONGE STRENGHT ALWAYS UNITY!
 
       ! compute the corresponding index in the pertubation arrays
-      ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
-
+      ! computed once above for temperature sponge forcing
       if (jp == 0) then ! dns ! t(1,1,1,1,ifield-1)
          temp = temp + spng_fn(ip)*(spng_vt(ip, m) - t(ix, iy, iz, iel, m))
       else ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
