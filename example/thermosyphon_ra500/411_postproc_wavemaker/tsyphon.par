@@ -1,0 +1,39 @@
+[GENERAL]
+startFrom = BF_tsyphon0.f00001
+stopAt = endTime
+endTime = 0
+
+userParam01 = 4  # wavemaker + bf_sensitivity + PKE budget
+userParam06 = 500.0  # Ra=500, slightly above critical Ra_c≈494
+userParam07 = 120  # k_dim (Krylov subspace dimension)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[VELOCITY]
+viscosity = 5.0  # Prandtl number (Pr = 5)
+residualTol = 1.0E-11
+residualProj = yes
+density = 1.0
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-11
+residualProj = yes
+writeToFieldFile = yes
+
+[TEMPERATURE]
+solver = helm
+residualTol = 1.0E-11
+residualProj = yes
+writeToFieldFile = yes
+conductivity = 1.0
+rhocp = 1.0
