@@ -1,0 +1,9 @@
+-2                      spatial dimension
+2                     number of fields
+ctest
+0.0	0.0
+-8    -32             nelx,nely,nelz for Box
+1      2     1        x0 x1 ratio 
+0      360     1      y0 y1 ratio 
+W  ,W  ,P  ,P  ,    V bc's  ! NB:  3 characters each !
+t  ,t  ,P  ,P  ,    T bc's  ! You must have 2 spaces!!

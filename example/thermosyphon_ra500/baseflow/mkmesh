@@ -1,0 +1,9 @@
+genbox << EOF
+tsyphon.box
+EOF
+genmap << EOF
+box
+.01
+EOF
+mv box.re2 tsyphon.re2
+mv box.ma2 tsyphon.ma2
