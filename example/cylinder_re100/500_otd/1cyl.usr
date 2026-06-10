@@ -1,0 +1,105 @@
+! -----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+      call nekStab
+      end
+! -----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if (istep.eq.0) then !change defaults
+
+c       OTD (Optimally Time-Dependent modes): evolves lpert orthonormal
+c       perturbations alongside the DNS base flow, tracking instantaneous
+c       instability subspace.  Basis size = lpert (compile-time in SIZE).
+        nekstab_mode = 'otd'
+        call bcast(nekstab_mode,32*csize)
+
+c       Belt-and-suspenders: also set flag directly
+        ifotd = .true. ; call bcast(ifotd,lsize)
+
+c       Sponge zone (suppress reflections at outflow)
+        xLspg = 5.0d0 ; call bcast(xLspg, wdsize)
+        xRspg = 10.0d0; call bcast(xRspg, wdsize)
+        spng_st = 1.7d0; call bcast(spng_st, wdsize)
+
+c       OTD diagnostics and Gram-Schmidt cadence (defaults from main.f90)
+        otd_printStep = 100; call bcast(otd_printStep, isize)
+        otd_gsStep    = 10 ; call bcast(otd_gsStep,    isize)
+
+c       TODO Ricardo: lpert in SIZE controls OTD basis size (currently
+c       lpert=1 in this scaffold).  Set lpert=N and recompile for N OTD
+c       modes.  See src/otd.f90 line ~78: param(31)=lpert; npert=int(param(31))
+
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+! -----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab_define_obj
+
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat3
+      end
+! -----------------------------------------------------------------------

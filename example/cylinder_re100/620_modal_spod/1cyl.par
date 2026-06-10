@@ -1,0 +1,41 @@
+#
+# Cylinder Re=100 - SPOD-only modal analysis
+#
+# Loads DNS snapshots and computes Spectral Proper Orthogonal Decomposition.
+# Expected: peak SPOD energy at St ~= 0.164-0.167 (vortex shedding)
+# spod_nfft=64, noverlap=48: df=1/(64*0.5)=0.03125 St; 3 spectral blocks from 100 snapshots
+#
+
+[GENERAL]
+startFrom = rst_1cyl0.f00001
+
+stopAt = endTime
+endTime = 2050
+
+userParam01 = 6.2 # SPOD modal analysis (sets ifspod=.true. via nekstab_mode='spod')
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 0.5
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-06
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-08
+residualProj = no
+density = 1.0
+viscosity = -100.0

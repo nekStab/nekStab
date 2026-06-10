@@ -1,0 +1,40 @@
+#
+# Cylinder Re=100 - DMD-only modal analysis
+#
+# Loads DNS snapshots and computes Dynamic Mode Decomposition.
+# Expected: dominant DMD frequency St ~= 0.164-0.167 (vortex shedding)
+#
+
+[GENERAL]
+startFrom = rst_1cyl0.f00001
+
+stopAt = endTime
+endTime = 2050
+
+userParam01 = 6.1 # DMD modal analysis (sets ifdmd=.true. via nekstab_mode='dmd')
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 0.5
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-06
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-08
+residualProj = no
+density = 1.0
+viscosity = -100.0

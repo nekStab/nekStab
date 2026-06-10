@@ -1,0 +1,35 @@
+[GENERAL]
+startFrom = rst_1cyl0.f00001
+
+stopAt = endTime
+endTime = 100 # OTD evolves alongside DNS; long enough to see basis convergence
+
+userParam01 = 5.0 # OTD (Optimally Time-Dependent modes)
+# OTD basis size controlled by lpert in SIZE (compile-time); set lpert=N for N modes
+# Eigensolver params (userParam03/04/07/08/09/10) are not used by the OTD driver
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 5.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0

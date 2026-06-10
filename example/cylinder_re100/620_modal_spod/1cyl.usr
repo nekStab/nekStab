@@ -1,0 +1,151 @@
+! -----------------------------------------------------------------------
+!     Cylinder Re = 100 - SPOD Modal Analysis
+!
+!     Expected results:
+!       SPOD: Energy peak at f ~= 0.164-0.167 Hz (vortex shedding)
+!       spod_nfft=64, noverlap=48: df=0.03125 St; 3 spectral blocks
+! -----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab
+
+      ! when in uparam(1) = 0 mode (dns) we have hpts at every iteration (meaning at dt)
+      call hpts  ! disabled - no history points file
+
+      call nekStab_torque('lift_drag.dat', 10)!here we save every 10
+
+      end
+! -----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if (istep .eq. 0) then
+
+!       Sponge zone (suppress reflections at outflow)
+        xLspg = 5;   call bcast(xLspg, wdsize)
+        xRspg = 10;  call bcast(xRspg, wdsize)
+        spng_st = 1.7; call bcast(spng_st, wdsize)
+
+!       ═══════════════════════════════════════════════════════════════
+!       SPOD ANALYSIS CONFIGURATION (Mode 6.2)
+!       ═══════════════════════════════════════════════════════════════
+
+!       Set mode via string (higher priority than uparam(1))
+        nekstab_mode = 'spod'
+        call bcast(nekstab_mode, 32*csize)
+
+!       Belt-and-suspenders: also set flag directly
+        ifspod = .true.; call bcast(ifspod, lsize)
+
+!       Snapshot source (prefix of DNS output files)
+!       Empty prefix means use SESSION name directly (1cyl0.f*)
+        modal_prefix = '   '
+        call bcast(modal_prefix, 3)
+
+!       Number of snapshots to load
+!       writeInterval = 0.5, endTime = 50 -> 100 snapshots
+        modal_nsnap = 100
+        call bcast(modal_nsnap, isize)
+
+!       Time between snapshots (must match writeInterval)
+        modal_dt = 0.5d0
+        call bcast(modal_dt, wdsize)
+
+!       Number of modes to save
+        modal_nsave = 1
+        call bcast(modal_nsave, isize)
+
+!       Window normalization: .true. = PySPOD compatible (amplitude)
+!                            .false. = Parseval (energy-preserving)
+        ifwinamp = .true.; call bcast(ifwinamp, lsize)
+
+!       DMD rank (set for common block consistency; not used in SPOD-only mode)
+        dmd_rank = 20
+        call bcast(dmd_rank, isize)
+
+!       POD-FFT/SPOD: FFT block size and overlap
+!       nfft = 64 with dt = 0.5 gives df = 1/(64*0.5) = 0.03125 St
+!       With 100 snaps, noverlap = 48: nblk = (100-64)/(64-48)+1 = 3 blocks
+        spod_nfft = 64
+        call bcast(spod_nfft, isize)
+        spod_noverlap = 48
+        call bcast(spod_noverlap, isize)
+
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
+
+      end
+! -----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP .eq. 0) then       ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP .eq. 0) then       ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+
+         if (x .gt. -1 .and. x .lt. 1) temp = 1.0d0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab_define_obj
+
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat3
+      end
+! -----------------------------------------------------------------------

@@ -1,0 +1,38 @@
+[GENERAL]
+startFrom = BF_seed_1cyl0.f00001
+
+stopAt = endTime
+endTime = 400.0
+
+userParam01 = 1.1  # SFD (Akervik formulation -- uparam04>0)
+userParam04 = 0.166 # freq = St of leading mode at Re=100 (Williamson 1996); POSITIVE -> Akervik mode
+userParam05 = 0.26  # gain chi = 2*sigma_r at Re=100 (Akervik: cutoff=0.5*omega, gain=-2*sigma)
+userParam08 = 0.95 # dynamic velocity tolerance factor
+userParam09 = 100  # dynamic tolerance update stride
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 5
+extrapolation = OIFS
+
+writeControl = runTime
+writeInterval = 1000.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-6
+residualProj = no
+density = 1.0
+viscosity = -100.0
