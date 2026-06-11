@@ -167,7 +167,7 @@
       real :: spng_vr(lx1*ly1*lz1*lelv, ldim)
       real :: spng_vt(lx1*ly1*lz1*lelv, ldimt)
       real :: spng_st, spng_wl(ldim), spng_wr(ldim)
-      real :: spng_dl(ldim), spng_dr(ldim), bm1s(lx1, ly1, lz1, lelv)
+      real :: spng_dl(ldim), spng_dr(ldim), bm1s(lx1, ly1, lz1, lelt)
       real :: xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
       common/nStab_sponge/spng_fn, spng_vr, spng_vt, spng_st, spng_wl,
      $   spng_wr, spng_dl, spng_dr, bm1s, xLspg, xRspg, yLspg, yRspg,

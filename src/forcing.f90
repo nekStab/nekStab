@@ -101,9 +101,9 @@ subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
          ffy = ffy + spng_fn(ip)*(spng_vr(ip, 2) - vy(ix, iy, iz, iel))*spng_st
          if (if3D) ffz = ffz + spng_fn(ip)*(spng_vr(ip, ndim) - vz(ix, iy, iz, iel))*spng_st
       else ! perturbation
-         ffx = ffx - spng_fn(ip)*vxp(ip, jp) ! spng_st alaways = 1
-         ffy = ffy - spng_fn(ip)*vyp(ip, jp) ! spng_st alaways = 1
-         if (if3D) ffz = ffz - spng_fn(ip)*vzp(ip, jp) ! spng_st alaways = 1
+         ffx = ffx - spng_fn(ip)*vxp(ip, jp)*spng_st
+         ffy = ffy - spng_fn(ip)*vyp(ip, jp)*spng_st
+         if (if3D) ffz = ffz - spng_fn(ip)*vzp(ip, jp)*spng_st
 
       end if
 
@@ -164,14 +164,14 @@ subroutine nekStab_forcing_temp(temp, ix, iy, iz, ieg, m)
    ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
    if (jp == 0) temp = temp + fct(ix, iy, iz, iel, m)
 
-   if (spng_st /= 0) then !!!HERE SPONGE STRENGHT ALWAYS UNITY!
+   if (spng_st /= 0) then
 
       ! compute the corresponding index in the pertubation arrays
       ! computed once above for temperature sponge forcing
       if (jp == 0) then ! dns ! t(1,1,1,1,ifield-1)
-         temp = temp + spng_fn(ip)*(spng_vt(ip, m) - t(ix, iy, iz, iel, m))
+         temp = temp + spng_fn(ip)*(spng_vt(ip, m) - t(ix, iy, iz, iel, m))*spng_st
       else ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
-         temp = temp - spng_fn(ip)*tp(ip, m, jp)
+         temp = temp - spng_fn(ip)*tp(ip, m, jp)*spng_st
       end if
 
    end if

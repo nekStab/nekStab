@@ -298,6 +298,7 @@ c        OTD_params
          integer i
 
          nv = nx1*ny1*nz1*nelv
+         nt = nx1*ny1*nz1*nelt
 
          if (.not. isNekStabinit) then
             call nekStab_setDefault
@@ -323,7 +324,7 @@ c        OTD_params
                print *, ''
             end if
 
-            call copy(bm1s, bm1, nv) ! never comment this !
+            call copy(bm1s, bm1, nt) ! never comment this !
             ifbfcv = .false.
 
             if (spng_st > 0) call activate_sponge
