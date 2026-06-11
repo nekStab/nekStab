@@ -1,0 +1,36 @@
+{
+  "case": "cylinder_re100/500_otd",
+  "produced": {
+    "date": "2026-06-11",
+    "ranks": 8,
+    "mode": "userParam01=5.0",
+    "compiler": "gfortran"
+  },
+  "quantities": {
+    "otd_final_time": {
+      "value": 0.8701904,
+      "source": "otd_growth_rates.dat:col1:last",
+      "tol_abs": 1.0e-6
+    },
+    "otd_growth_rate_1": {
+      "value": 0.0,
+      "source": "otd_growth_rates.dat:col2:last",
+      "tol_abs": 1.0e-12
+    },
+    "otd_growth_rate_2": {
+      "value": 0.0,
+      "source": "otd_growth_rates.dat:col3:last",
+      "tol_abs": 1.0e-12
+    },
+    "otd_growth_rate_3": {
+      "value": 0.0,
+      "source": "otd_growth_rates.dat:col4:last",
+      "tol_abs": 1.0e-12
+    },
+    "otd_growth_rate_4": {
+      "value": 0.0,
+      "source": "otd_growth_rates.dat:col5:last",
+      "tol_abs": 1.0e-12
+    }
+  }
+}

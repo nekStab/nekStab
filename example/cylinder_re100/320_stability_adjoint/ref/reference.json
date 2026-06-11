@@ -1,8 +1,8 @@
 {
   "case": "cylinder_re100/320_stability_adjoint",
-  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
+  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-11"},
   "quantities": {
-    "leading_eig_growth": {"value": 0.1247880e+00, "tol_abs": 1e-3, "source": "Spectre_NSa.dat:col1:first"},
-    "leading_eig_freq":   {"value": 0.7336845e+00, "tol_abs": 1e-3, "source": "Spectre_NSa.dat:col2:first"}
+    "leading_eig_growth": {"value": 0.1247881e+00, "tol_abs": 1e-3, "source": "Spectre_NSa.dat:col1:first"},
+    "leading_eig_freq":   {"value": 0.7336846e+00, "tol_abs": 1e-3, "source": "Spectre_NSa.dat:col2:first"}
   }
 }

@@ -28,17 +28,29 @@ mpirun -np 8 ./nek5000 > logfile  # adjoint Floquet (Arnoldi on the adjoint mono
 ```
 
 ## Results (this 2D run)
-`Spectre_NSa_conv.dat` — 6 converged exponents `(σ, ω)`. The adjoint
-spectrum should mirror the direct one (operator-transpose consistency),
-but here the leading adjoint mode is a **decaying real mode**
-(σ = −0.0137, ω = 0, |μ| ≈ 0.93) — the **neutral μ=+1 phase mode did NOT
-converge into the leading adjoint set**. This is a known convergence
-difficulty for the adjoint phase mode (it is weakly observable in the
-adjoint operator), *not* a physics inconsistency; the oscillatory pairs
-(ω ≈ 0.40, 0.46) do match their direct counterparts. To pull μ=+1 into the
-adjoint set, increase the Krylov dimension / restarts. The adjoint mode
-field localizes **near and upstream of the body** (receptivity), the
-expected mirror of the downstream-amplifying direct mode.
+`Spectre_NSa_conv.dat` — converged exponents `(sigma, omega)`. The adjoint
+spectrum should mirror the direct one (operator-transpose consistency). In the
+2026-06-11 rerun with the sponge-strength fix, the leading adjoint Floquet
+exponent is near neutral: sigma = 4.601637e-04, omega = 0. The prior saved
+`run_adj.log` leading value was sigma = -1.372756e-02, omega = 0, so this is
+a large shift relative to that stale output and should be treated as a real
+reference update.
+
+## Latest Result
+
+Verified 2026-06-11 on 8 ranks (Slurm direct submission), with active sponge
+strength `userParam10 = 1.7`:
+
+- Leading adjoint Floquet exponent: sigma = 4.601637e-04, omega = 0.
+  As in the direct stage, this is the trivial unit multiplier (phase
+  mode, mu = 1 exactly); its deviation from zero measures the
+  time-reversed orbit-replay error, larger than the direct stage's
+  (-4.0e-06) but well inside the 1e-3 reference tolerance.
+- Prior saved `run_adj.log` leading value: sigma = -1.372756e-02, omega = 0.
+- Wall time: 1103 s.
+- Outputs: `Spectre_NSa.dat`, `Spectre_Ha.dat`, `aRe1cyl0.f0000*`,
+  `aIm1cyl0.f0000*`, `aRv1cyl0.f0000*`, `plot_bf.png`,
+  `plot_spectrum.png`, `plot_mode.png`, and matching `ref/` copies.
 
 ## Plot
 ```bash

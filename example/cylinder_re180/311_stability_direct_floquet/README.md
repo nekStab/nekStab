@@ -43,6 +43,19 @@ mpirun -np 8 ./nek5000 > logfile  # direct Floquet (Arnoldi on the monodromy)
 NOTE: Mode A (|μ|>1 near Re~189) and Mode B (~259) are **3D** and will
 **not** appear in this 2D run — see the caveat.
 
+## Latest Result
+
+Verified 2026-06-11 on 8 ranks (Slurm direct submission), with active sponge
+strength `userParam10 = 1.7`:
+
+- Leading direct Floquet exponent: sigma = -4.044230e-06, omega = 0.
+- Prior saved `run_floquet.log` leading value was sigma = -1.443211e-05,
+  omega = 0; the absolute shift is below the 1e-3 reference tolerance.
+- Wall time: 1053 s.
+- Outputs: `Spectre_NSd.dat`, `Spectre_Hd.dat`, `dRe1cyl0.f0000*`,
+  `dIm1cyl0.f0000*`, `dRv1cyl0.f0000*`, `plot_bf.png`,
+  `plot_spectrum.png`, `plot_mode.png`, and matching `ref/` copies.
+
 ## Plot
 ```bash
 # from this directory (shared renderer is example/nekplot.py)

@@ -37,11 +37,11 @@ downstream in the wake.
 isothermal suite.
 
 ## Latest Result
-Verified 2026-05-15 on 8 ranks (Slurm), 2128 mesh, BF from `../../baseflow/newton/`:
+Verified 2026-06-11 on 8 ranks (Slurm), 2128 mesh, BF from `../../baseflow/newton/`:
 
-- 2 eigenvalues converged with residual ≤ 3.0e-7
-- Leading mode: σ = 0.1247587, ω = 0.7337421 (matches direct to 6 digits)
-- Wall time: 812 s
+- 2 eigenvalues converged with residual <= 6.1e-7
+- Leading mode: sigma = 0.1247881, omega = 0.7336846 (matches direct to 6 digits)
+- Wall time: 118 s
 - Outputs: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}`,
   `Spectre_NSa*.dat`, `Spectre_Ha*.dat`
 

@@ -31,3 +31,17 @@ python3 scripts/check_against_ref.py example/flip_flop_re62/411_postproc_wavemak
 - `plot_wavemaker.png`: direct/adjoint overlap proxy for the leading Floquet mode
 - `plot_direct_mode.png`, `plot_adjoint_mode.png`, `plot_budget_field.png`
 - `wm_metrics.dat`: scalar reference inputs used by `ref/reference.json`
+
+## Latest Result
+
+Verified 2026-06-11 on 8 ranks (Slurm), using the stage-local committed
+direct/adjoint Floquet mode inputs:
+
+- Nek run completed one UPO period, T = 8.73356; wall time: 40.37 s.
+- Wavemaker metrics: max = 0.03216049123256942 at x = 2.4090390205383301,
+  y = 0.6052520275115967; mean = 0.0005153653561364195.
+- `python3 plot.py` regenerated `plot_wavemaker.png`,
+  `plot_direct_mode.png`, `plot_adjoint_mode.png`, `plot_budget_field.png`,
+  `wm_metrics.dat`, and the matching `ref/plot_*.png` copies.
+- Upstream fresh `311`/`321` Floquet mode reruns are pending `SIZE` approval;
+  this result refreshes the post-processing stage from its existing mode inputs.

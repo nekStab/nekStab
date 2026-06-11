@@ -1,16 +1,16 @@
 {
   "case": "flip_flop_re62/311_stability_direct_floquet",
   "description": "Direct Floquet stability of the flip-flop UPO at Re=62",
-  "produced": {"date": "2026-05-17", "ranks": "8", "nekstab_mode": "3.11 (direct Floquet)"},
+  "produced": {"date": "2026-06-11", "ranks": "16", "nekstab_mode": "3.11 (direct Floquet)"},
   "quantities": {
     "floquet_leading_sigma": {
       "source": "Spectre_NSd.dat:col1:first",
-      "value": 0.0078930,
+      "value": 0.007896231,
       "tol_abs": 1.0e-3
     },
     "floquet_leading_omega": {
       "source": "Spectre_NSd.dat:col2:first",
-      "value": 0.1407626,
+      "value": 0.1407652,
       "tol_abs": 1.0e-3
     }
   }

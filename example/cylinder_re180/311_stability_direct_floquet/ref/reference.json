@@ -1,0 +1,21 @@
+{
+  "case": "cylinder_re180/311_stability_direct_floquet",
+  "produced": {
+    "date": "2026-06-11",
+    "ranks": 8,
+    "mode": "userParam01=3.11",
+    "compiler": "gfortran"
+  },
+  "quantities": {
+    "direct_floquet_leading_sigma": {
+      "value": -0.4044230e-05,
+      "source": "Spectre_NSd.dat:col1:first",
+      "tol_abs": 1.0e-3
+    },
+    "direct_floquet_leading_omega": {
+      "value": 0.0,
+      "source": "Spectre_NSd.dat:col2:first",
+      "tol_abs": 1.0e-3
+    }
+  }
+}

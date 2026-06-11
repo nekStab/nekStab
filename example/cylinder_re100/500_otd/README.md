@@ -28,6 +28,18 @@ flow), not the variant that linearises around a steady baseflow.
 - `dQ_1cyl0.f*****`     — OTD mode field snapshots (every writeInterval=5)
 - `logfile`             — Slurm job log
 
+## Latest Result
+
+Verified 2026-06-11 on 8 ranks (Slurm), restarted from `rst_1cyl0.f00001`:
+
+- OTD FTLE convergence reached at step 300, t = 0.8701904.
+- Final FTLEs: 0, 0, 0, 0.
+- Wall time: 4.13 s.
+- Outputs: `otd_growth_rates.dat`, `otd_eigenvalues.dat`,
+  `otd_ftle.dat`, `otd_residuals.dat`, and `logfile`.
+- No `dQ_1cyl0.f*` snapshots were written because convergence occurred before
+  the first `writeInterval = 5.0` output time.
+
 ## How to run
 
 ```bash

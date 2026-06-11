@@ -21,16 +21,17 @@ periodic orbit used by the direct Floquet stage.
 ## Run
 ```bash
 mks 2cyl
-sbatch run.local.slurm
+sbatch --ntasks=16 --mem-per-cpu=2000 run.local.slurm
 ```
 
 `run.local.slurm` refreshes `SESSION.NAME` for the current directory and writes
 stdout/stderr to `logfile`.
 
-## Latest Result (verified 2026-06-10)
+## Latest Result (verified 2026-06-11)
 - Reference produced with 16 ranks.
-- Leading adjoint pair: sigma = 0.0078864, omega = +/-0.1407585.
-- Direct 311 leading pair: sigma = 0.0078930, omega = +/-0.1407626.
+- Leading adjoint pair: sigma = 0.007889578, omega = +/-0.1407610.
+- Direct 311 leading pair: sigma = 0.007896231, omega = +/-0.1407652.
+- Wall time = 1804.39 s.
 
 ## Reference (ref/)
 - `reference.json` - leading adjoint Floquet pair from `Spectre_NSa.dat` row 1.

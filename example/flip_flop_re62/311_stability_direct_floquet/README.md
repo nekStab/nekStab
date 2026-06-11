@@ -19,14 +19,14 @@ leading multiplier is just above the imaginary axis.
 ## Run
 ```bash
 mks 2cyl
-sbatch run.local.slurm     # 8 ranks
+sbatch --ntasks=16 --mem-per-cpu=2000 run.local.slurm
 ```
 
-## Latest result (verified 2026-05-17, 8 ranks)
+## Latest result (verified 2026-06-11, 16 ranks)
 - 3 multipliers converged with residual ≤ 1e-7
-- Leading multiplier: σ = 0.00789, ω = 0.14076 (just above zero — consistent with
+- Leading multiplier: sigma = 0.007896231, omega = +/-0.1407652 (just above zero - consistent with
   Re = 62 barely above the secondary bifurcation)
-- Wall time ≈ 656 s
+- Wall time = 652.93 s
 
 ## Reference (ref/)
 - `reference.json` — leading Floquet multiplier (σ, ω) from `Spectre_NSd.dat`
