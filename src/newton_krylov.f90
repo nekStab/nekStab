@@ -695,6 +695,7 @@
 
       !     --> Compute the right hand side of the time-stepper Newton.
    call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, vx, vy, vz, pr, t) ! F(q)
+   f%time = q%time
    call k_copy(fc_nwt, f) ! for Newton UPO newton_linearized_map
    call k_sub2(f, q) ! f = F(q) - q
    f%time = 0.0d0
