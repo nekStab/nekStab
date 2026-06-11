@@ -274,6 +274,12 @@ subroutine k_normalize(p, alpha)
    !     --> Compute the user-defined norm.
    call k_norm(alpha, p)
 
+   if (alpha /= alpha) then
+      if (nid == 0) write(6,*) &
+         'ERROR [k_normalize]: NaN norm; refusing to zero Krylov vector.'
+      call exitti('k_normalize NaN norm$', 1)
+   end if
+
    !     --> Warn if norm is dangerously small (but don't modify alpha).
    if (alpha < NORM_WARN_TOL) then
       if (nid == 0) then
