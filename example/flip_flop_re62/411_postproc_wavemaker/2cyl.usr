@@ -1,0 +1,131 @@
+! -----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab
+
+      return
+      end
+! -----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if (istep.eq.0) then !change defaults
+
+        xLspg = 2.0d0; call bcast(xLspg, wdsize) ! x left
+        xRspg = 20.0d0; call bcast(xRspg, wdsize) ! x right
+        acc_spg = 0.333d0; call bcast(acc_spg, wdsize)
+        spng_st = 1.7d0;  call bcast(spng_st, wdsize)
+
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
+        maxmodes = 2 ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
+
+        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+        ifstorebf = .true. ; call bcast(ifstorebf,lsize)
+        if (uparam(6).gt.0.0d0) call nekStab_set_buoyancy(
+     $       0.0d0,1.0d0,0.0d0,uparam(6))
+
+      endif
+
+      return
+      end
+! -----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      return
+      end
+! -----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      qvol = 0.0d0
+      call nekStab_qvol(qvol,ix,iy,iz,ieg)
+
+      return
+      end
+! -----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+! -----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+
+         if (x.gt.-1.and.x.lt.1)temp = 1.0d0 !cylinder with T
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+
+      if (ifheat) then
+       cbc(:,:,2) = cbc(:,:,1)
+       do iel = 1,nelt
+        do ifc = 1, 2*ndim
+         if (cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2) = 't  '
+         if (cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2) = 't  '
+        enddo
+       enddo
+      endif
+
+      return
+      end
+! -----------------------------------------------------------------------

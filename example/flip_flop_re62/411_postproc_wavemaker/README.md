@@ -1,20 +1,33 @@
-# flip_flop/411_postproc_wavemaker
+# Flip-flop Re=62 Floquet post-processing
 
-**Stage**: wavemaker / energy budget
-**uparam01**: 4.11
-**Subroutine**: stability_energy_budget
-**Status**: scaffold only — no case files yet
+This stage runs the time-periodic post-processing path for the flip-flop UPO at
+Re = 62. It is assembled from the committed `321_stability_adjoint_floquet`
+case files and uses `userParam01 = 4.11`, which dispatches
+`energy_budget_floquet` over the UPO period `T = 8.73356`.
 
-**Migration source**: (none — to build from template)
+## Inputs
 
-**Template**: example/_templates/411_postproc_wavemaker/case.par
+- Base-flow orbit seed: `BF_2cyl0.f00001`
+- Sponge field: `SPG2cyl0.f00001`
+- Direct Floquet modes: `dRe2cyl0.f0000{1,2}` and `dIm2cyl0.f0000{1,2}`
+- Adjoint Floquet modes: `aRe2cyl0.f0000{1,2}` and `aIm2cyl0.f0000{1,2}`
 
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/flip_flop/411_postproc_wavemaker/ golden artifact captured
+The stage-local `maxmodes` is set to 2 because those are the direct Floquet
+mode snapshots available to the budget loop.
 
+## Run
+
+```bash
+mks 2cyl
+sbatch --ntasks=8 --mem-per-cpu=2000 run.local.slurm
+python3 plot.py
+python3 scripts/check_against_ref.py example/flip_flop_re62/411_postproc_wavemaker
+```
+
+## Outputs
+
+- `F01*`, `F02*`: orbit-averaged Floquet budget fields
+- `PKE_floquet_2cyl0.f0000{1,2}`: orbit-averaged budget integrals
+- `plot_wavemaker.png`: direct/adjoint overlap proxy for the leading Floquet mode
+- `plot_direct_mode.png`, `plot_adjoint_mode.png`, `plot_budget_field.png`
+- `wm_metrics.dat`: scalar reference inputs used by `ref/reference.json`

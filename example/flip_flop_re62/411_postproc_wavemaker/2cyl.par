@@ -1,0 +1,29 @@
+[GENERAL]
+startFrom = BF_2cyl0.f00001
+stopAt = endTime
+endTime = 8.73356  # Orbit period from UPO computation (updated by Newton)
+
+userParam01 = 4.11  # Floquet PKE budget post-processing
+userParam07 = 90    # k_dim (bumped 50->90 to converge leading adjoint mode)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -62.0  # Re=62 (above critical Re_c≈61.17, matches Newton UPO)

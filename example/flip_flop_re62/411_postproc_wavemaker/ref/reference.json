@@ -1,0 +1,32 @@
+{
+  "case": "flip_flop_re62/411_postproc_wavemaker",
+  "description": "Flip-flop Re=62 Floquet mode-4.11 post-processing: wavemaker maximum and location from leading direct/adjoint Floquet modes.",
+  "produced": {
+    "date": "2026-06-10",
+    "ranks": 8,
+    "mode": "userParam01=4.11",
+    "spectrum_source": "example/flip_flop_re62/stability/direct_Floquet/Spectre_NSd*.dat"
+  },
+  "quantities": {
+    "wm_max": {
+      "value": 0.03216049123256942,
+      "source": "wm_metrics.dat:col1:first",
+      "tol_rel": 1.0e-3
+    },
+    "wm_x_at_max": {
+      "value": 2.4090390205383301,
+      "source": "wm_metrics.dat:col2:first",
+      "tol_abs": 1.0e-3
+    },
+    "wm_y_at_max": {
+      "value": 0.6052520275115967,
+      "source": "wm_metrics.dat:col3:first",
+      "tol_abs": 1.0e-3
+    },
+    "wm_mean": {
+      "value": 0.0005153653561364195,
+      "source": "wm_metrics.dat:col4:first",
+      "tol_rel": 1.0e-3
+    }
+  }
+}
