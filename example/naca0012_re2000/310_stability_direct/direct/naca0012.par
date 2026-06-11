@@ -4,7 +4,10 @@ stopAt = endTime
 endTime = 0.09  # sampling period ~ (1/1.41)/8 - matches root naca0012.par
 
 userParam01 = 3.1   # Direct eigensolver (Schur-Krylov)
-userParam07 = 90    # Krylov k_dim
+userParam07 = 220   # Krylov k_dim
+userParam08 = 1     # Sponge left side
+userParam09 = 5     # Sponge right side
+userParam10 = 1.7   # Sponge strength
 
 dt = 0
 variableDt = yes

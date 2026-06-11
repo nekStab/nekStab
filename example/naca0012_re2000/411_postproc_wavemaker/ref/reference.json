@@ -2,28 +2,31 @@
   "case": "naca0012_re2000/411_postproc_wavemaker",
   "description": "NACA 0012 Re=2000 mode-4 post-processing: wavemaker maximum and location from wm_naca00120.f00001",
   "produced": {
-    "date": "2026-06-10",
+    "date": "2026-06-11",
     "ranks": 8,
-    "mode": "userParam01=4"
+    "mode": "userParam01=4",
+    "source_modes": "2026-06-11 direct/adjoint reruns with k_dim=220 and sponge_strength=1.7",
+    "sponge_strength": "1.7",
+    "provenance": "Recomputed after the sponge-strength correction."
   },
   "quantities": {
     "wm_max": {
-      "value": 74.45438385009766,
+      "value": 57.896751403808594,
       "source": "wm_metrics.dat:col1:first",
       "tol_rel": 1.0e-3
     },
     "wm_x_at_max": {
-      "value": 0.9131271243095398,
+      "value": 0.9003774523735046,
       "source": "wm_metrics.dat:col2:first",
       "tol_abs": 1.0e-3
     },
     "wm_y_at_max": {
-      "value": -0.0755169466137886,
+      "value": -0.07858546078205109,
       "source": "wm_metrics.dat:col3:first",
       "tol_abs": 1.0e-3
     },
     "wm_mean": {
-      "value": 1.2617466762137564,
+      "value": 0.9894870266391281,
       "source": "wm_metrics.dat:col4:first",
       "tol_rel": 1.0e-3
     }

@@ -3,6 +3,9 @@ startFrom = 0  # wavemaker reads mode files directly, no IC needed
 stopAt = endTime
 endTime = 0
 userParam01 = 4  # wavemaker + bf_sensitivity (Mode 4)
+userParam08 = 1  # Sponge left side
+userParam09 = 5  # Sponge right side
+userParam10 = 1.7  # Sponge strength
 
 dt = 0
 variableDt = yes

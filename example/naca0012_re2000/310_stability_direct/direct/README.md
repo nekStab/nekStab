@@ -19,9 +19,13 @@ mks naca0012
 sbatch run.local.slurm     # 8 ranks
 ```
 
+## Latest Result
+- 2026-06-11, 8 ranks, `k_dim = 220`, sponge strength 1.7: σ = -0.06653824, ω = 8.005787.
+- Sponge-fix provenance: recomputed after the sponge-strength correction.
+
 ## Reference (ref/)
 - `reference.json` — leading eigenvalue (σ, ω) from `Spectre_NSd.dat` row 1
-  (σ = -0.11272, ω = 8.03657). Verify with
+  (σ = -0.06653824, ω = 8.005787). Verify with
   `scripts/check_against_ref.py example/naca0012_re2000/310_stability_direct/direct`.
 
 Outputs: leading direct eigenmodes `dRenaca00120.f0000{1,2}` (shipped).

@@ -19,9 +19,13 @@ mks naca0012
 sbatch run.local.slurm     # 8 ranks
 ```
 
+## Latest Result
+- 2026-06-11, 8 ranks, `k_dim = 220`, sponge strength 1.7: σ = -0.0665164, ω = 8.00577.
+- Sponge-fix provenance: recomputed after the sponge-strength correction.
+
 ## Reference (ref/)
 - `reference.json` — leading adjoint eigenvalue (σ, ω) from `Spectre_NSa.dat`
-  row 1 (σ = -0.11367, ω = 8.03673). Verify with
+  row 1 (σ = -0.0665164, ω = 8.00577). Verify with
   `scripts/check_against_ref.py example/naca0012_re2000/320_stability_adjoint`.
 
 Outputs: leading adjoint eigenmodes `aRenaca00120.f0000{1,2}` (shipped).

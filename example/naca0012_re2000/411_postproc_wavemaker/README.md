@@ -23,6 +23,12 @@ python3 plot.py
 python3 scripts/check_against_ref.py example/naca0012_re2000/411_postproc_wavemaker
 ```
 
+## Latest Result
+- 2026-06-11, 8 ranks, refreshed 310/320 modes with sponge strength 1.7:
+  `wm_max = 57.89675140` at `(x, y) = (0.90037745, -0.07858546)`,
+  `wm_mean = 0.98948703`.
+- Sponge-fix provenance: recomputed after the sponge-strength correction.
+
 ## Outputs
 
 - `wm_naca00120.f00001`: structural-sensitivity wavemaker field
