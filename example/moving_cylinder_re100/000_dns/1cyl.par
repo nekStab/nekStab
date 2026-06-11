@@ -1,0 +1,52 @@
+[GENERAL]
+startFrom = 0 # BF_1cyl0.f00001
+
+stopAt = endTime
+endTime = 100. # side-DNS seed run (#79): 100 T_c washes transients at Re=100 static
+
+userParam01 = 0 # standard DNS
+#userParam01 = 2.2 # Newton for forced UPO
+#userParam01 = 3.11 # Floquet direct eigenproblem
+
+userParam02 = 0.0 #
+userParam03 = 0.0 #
+userParam04 = 0.0 #
+
+userParam05 = 0.0  # static (zero amplitude) for the seed run; restore to 1.08 after seed captured
+userParam06 = 0.1643000 # frequency
+userParam07 = 200 # k_dim
+
+dt = 1.8931345E-03 # ok for DNS
+variableDt = yes # so we set based on targetCFL
+timeStepper = bdf3
+targetCFL = 0.35
+
+writeControl = runTime
+writeInterval = 25. # snapshot every 25 T_c -> 4 frames; last = seed
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+stressFormulation = yes
+
+[MESH]
+motion = user
+viscosity = 0.4
+numberOfBCFields = 1
+firstBCFieldIndex = 1
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6 #9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = yes
+density = 1.0
+viscosity = -100.0

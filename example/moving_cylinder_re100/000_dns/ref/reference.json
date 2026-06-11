@@ -1,0 +1,21 @@
+{
+  "case": "moving_cylinder_re100/000_dns",
+  "description": "Moving-cylinder Re=100 DNS late-window dominant frequency and amplitude from 1cyl.his.",
+  "produced": {
+    "date": "2026-06-10",
+    "ranks": 8,
+    "mode": "userParam01=0"
+  },
+  "quantities": {
+    "dominant_frequency": {
+      "value": 0.16629992432514834,
+      "source": "analysis_metrics.dat:col1:first",
+      "tol_rel": 0.001
+    },
+    "late_amplitude": {
+      "value": 0.50332897,
+      "source": "analysis_metrics.dat:col2:first",
+      "tol_rel": 0.02
+    }
+  }
+}
