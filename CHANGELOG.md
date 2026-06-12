@@ -3,6 +3,15 @@
 Differences between tagged versions. `RELEASE.md` is the complete change
 description for the 2.0 series; entries here are the per-tag deltas.
 
+## [Unreleased]
+
+### Fixed
+- Newton backtracking with periodic-orbit modes evaluates each trial at
+  its damped period: the time horizon (`nsteps`) is re-prepared per
+  trial and the orbit storage grows when a trial orbit is longer than
+  the allocation. This closes the rc4 known limitation; the flag is now
+  safe for UPO runs.
+
 ## [2.0.0-rc4] - 2026-06-12
 
 Newton robustness. 15 commits since rc3.
