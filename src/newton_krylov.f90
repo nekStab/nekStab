@@ -335,10 +335,6 @@
       merge('↑', '↓', residual > prev_residual), abs(residual - prev_residual), &
       residual/prev_residual
    end if
-   if (stagnation_count >= 3) then
-   write (6, *) 'WARNING: Newton stagnation', &
-      ' (3 iterations without progress)'
-   end if
    write (6, "('          Time: ',1PE15.6,'s  GMRES calls: ', I4) ") newton_iter_time, total_gmres_calls
    write (newton_log_unit, "(4I9,4(1PE15.6))") i, total_calls, total_calls - prev_total_calls, k_sum, tottime, &
       max(param(21), param(22)), residual, dtol
@@ -347,6 +343,14 @@
    end if
    if (residual < dtol) then
    if (nid == 0) write (6, *) '  Converged. Exiting Newton loop...'
+   exit newton
+   end if
+
+      ! WHY: a repeated stall should end gracefully so the best state is
+      ! outposted instead of spinning or aborting near the convergence floor.
+   if (stagnation_count >= 3) then
+   if (nid == 0) write (6, *) 'WARNING: Newton stagnation', &
+      ' (3 iterations without progress); exiting Newton loop'
    exit newton
    end if
 
@@ -529,8 +533,8 @@
 
       ! All trials failed the Armijo test.  Policy: take the best finite
       ! trial that still decreased the residual (hard cases keep moving);
-      ! abort loudly only when every trial made things worse — silently
-      ! accepting growth is how the old full-step divergences happened.
+      ! hold only when every trial made things worse — silently accepting
+      ! growth is how the old full-step divergences happened.
    if (.not. accepted .and. best_residual < residual) then
       ! Re-run the forward map at best_alpha: the arrays currently hold
       ! the LAST trial, and base-flow/orbit data stored during the map
@@ -543,10 +547,13 @@
    end if
 
    if (.not. accepted) then
-   if (nid == 0) write (6, "('ERROR: Newton backtracking found no ', &
-      'decreasing trial; base=',1PE15.6,' best=',1PE15.6, &
-      ' trials=',I2)") residual, best_residual, max_backtracks + 1
-   call exitti('newton backtracking no decreasing trial$', 1)
+      ! WHY: near the convergence floor no damped step may reduce the residual;
+      ! holding the state lets the outer stagnation guard terminate cleanly.
+   if (nid == 0) write (6, "('WARNING: Newton backtracking no ', &
+      'decreasing trial; holding state; base=',1PE15.6, &
+      ' best_no_decrease=',1PE15.6,' trials=',I2)") &
+      residual, best_residual, max_backtracks + 1
+   accepted = .true.
    end if
 
    deallocate (q_trial, f_trial)

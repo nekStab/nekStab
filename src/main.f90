@@ -117,7 +117,8 @@
          isNewtonFP = .false.   ! Newton for fixed points
          isNewtonPO = .false.   ! Newton for periodic orbits
          isNewtonPO_T = .false. ! Newton for forced periodic orbits
-         ifnewton_backtrack = .false. ! Optional residual backtracking
+         ifnewton_backtrack = .true.  ! Optional residual backtracking
+         ! WHY: robust default; clean-converging cases accept alpha=1 on trial 0 and stay bit-identical to old full-step.
 
       !  Mode 3: Stability analysis
          isDirect = .false.           ! Direct eigenmodes

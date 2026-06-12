@@ -5,6 +5,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [Unreleased]
 
+### Changed
+- Newton residual backtracking is now enabled by default; a case can
+  still disable it by setting `ifnewton_backtrack = .false.` in the
+  `.usr`. A stalling Newton run now leaves the loop gracefully and
+  outposts its best state instead of aborting: when no damped step can
+  reduce the residual the current state is held, and three iterations
+  without progress end the loop.
+
 ### Fixed
 - Newton backtracking with periodic-orbit modes evaluates each trial at
   its damped period: the time horizon (`nsteps`) is re-prepared per
