@@ -34,6 +34,8 @@
         call bcast(maxmodes,isize)
         ifres = .false.
         call bcast(ifres,lsize)
+        ifdyntol = .true.
+        call bcast(ifdyntol,lsize)
 c       ifvor = .true.
 c       call bcast(ifvor,lsize)
 c       ifvox = .true.
