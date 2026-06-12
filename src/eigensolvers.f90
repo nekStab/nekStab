@@ -113,7 +113,7 @@
    real :: alpha
    logical :: converged
    integer :: i, j
-   character(len=30) :: filename
+   character(len=132) :: filename
 
       !     ----- Allocate arrays -----
    allocate (Q(k_dim + 1))
@@ -132,7 +132,7 @@
 
    if (ifldbf) then !skip loading if single run
    if (nid == 0) write (*, *) 'Loading base flow from disk:'
-   write (filename, '(a,a,a)') 'BF_', trim(SESSION), '0.f00001'
+   write (filename, '(a,a,a)') 'BF_', trim(SESSION), '0.f00001 U P'
    call load_fld(filename)
    if (nid == 0) write (*, *) ' Number os scalars found (npscal): ', npscal
    if (nid == 0) write (*, *) ' ifldbf done.'
@@ -170,6 +170,9 @@
    if (nid == 0) write (6, *) 'Starting first Arnoldi decomposition...'
 
       !     ----- Creates seed vector for the Krylov subspace -----
+
+   call k_zero(wrk)
+   call k_zero(wrk2)
 
    if (ifseed_nois) then ! noise as initial seed
 
@@ -214,6 +217,7 @@
    end if
 
       !     ----- Normalized to unit-norm -----
+   call k_normalize(wrk, alpha)
    mstart = 1; istep = 1; time = 0.0d0
 
    call k_copy(Q(1), wrk)
