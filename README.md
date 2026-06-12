@@ -262,6 +262,16 @@ Three equivalent ways to select operating mode:
 
 Website: [https://nekstab.github.io/](https://nekstab.github.io/)
 
+## Acknowledgments
+
+Several capabilities in nekStab started from work shared by others:
+
+- The free-stream turbulence inflow generation builds on original work by M. A. Bucci.
+- The optimally time-dependent (OTD) modes capability grew out of groundwork contributed by [Simon Kern](https://github.com/Simkern) (KTH); the implementation follows Babaee & Sapsis (2016).
+- The sponge/fringe damping was first prototyped against the [KTH Toolbox](https://github.com/KTH-Nek5000/KTH_Toolbox) and follows Nordström, Nordin & Henningson (1999) and Lundbladh et al. (1999).
+
+The full list of authors and contributors is in [AUTHORS](AUTHORS).
+
 ## Citation
 
 When using **nekStab**, please cite [Frantz et al. (2023)](https://doi.org/10.1115/1.4056808). See [CITATIONS.md](CITATIONS.md) for BibTeX entries and additional references.
