@@ -283,6 +283,16 @@
 !           Save initial residual for divergence guard
    if (i == 1) initial_residual = residual
 
+!           A true machine-zero first residual means F(q)==q before Newton has
+!           taken a step.  In practice this marks a degenerate forward map
+!           (for example nsteps<=0 after dt/CFL setup), which would otherwise
+!           report fake convergence for any nontrivial seed field.
+   if (i == 1 .and. residual == 0.0d0) then
+   if (nid == 0) write (6, *) &
+      'ERROR: first Newton residual is exactly zero; degenerate forward map likely used nsteps<=0'
+   call exitti('newton degenerate forward map nsteps<=0$', 1)
+   end if
+
       !     --> Outpost residual fields (optional)
    time = q%time ! adjust
    if (isNewtonFP) time = real(i - 1) ! to ease visu in paraview
