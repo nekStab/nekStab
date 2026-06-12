@@ -152,7 +152,7 @@
    !  in src/mode_codes.f90.
    !-----------------------------------------------------------------------
 
-       !     ----- Krylov vectors
+      !     ----- Krylov vectors
    type(krylov_vector) :: f ! Right-hand side vector for Newton solver
    type(krylov_vector) :: q ! Current estimate of the solution
    type(krylov_vector) :: dq ! Newton correction obtained from GMRES
@@ -172,6 +172,10 @@
    integer :: alloc_stat
    real :: saved_tol21, saved_tol22 ! Save/restore param(21:22)
    real :: request_gb
+   real :: accepted_residuals(3) ! Non-monotone Armijo window (last 3 accepted)
+   integer :: accepted_residual_count
+   integer :: accepted_residual_next
+   real :: armijo_reference
 
       !     ----- Call Counting -----
 ! total_calls  = cumulative time-steps (nonlinear + linear matvecs)
@@ -212,6 +216,9 @@
 !        stability run that reads param(21:22) for its own tolerances.
    saved_tol21 = param(21)
    saved_tol22 = param(22)
+   accepted_residuals = 0.0d0
+   accepted_residual_count = 0
+   accepted_residual_next = 1
 
    newton: do i = 1, maxiter_newton
    if (nid == 0) write (6, *) '------------------------------------------------'
@@ -293,6 +300,14 @@
    call exitti('newton degenerate forward map nsteps<=0$', 1)
    end if
 
+   if (ifnewton_backtrack) then
+   accepted_residuals(accepted_residual_next) = residual
+   if (accepted_residual_count < 3) accepted_residual_count = accepted_residual_count + 1
+   accepted_residual_next = accepted_residual_next + 1
+   if (accepted_residual_next > 3) accepted_residual_next = 1
+   armijo_reference = maxval(accepted_residuals(1:accepted_residual_count))
+   end if
+
       !     --> Outpost residual fields (optional)
    time = q%time ! adjust
    if (isNewtonFP) time = real(i - 1) ! to ease visu in paraview
@@ -360,7 +375,12 @@
    tottime = tottime + calls*dt
    total_gmres_calls = total_gmres_calls + calls
 
+   if (ifnewton_backtrack) then
+   call newton_backtrack(q, dq, f, residual, armijo_reference, i, &
+      nonlin_calls, total_calls, tottime)
+   else
    call k_sub2(q, dq) ! accepting the full step of the Newton update q = q - dq
+   end if
 
    if (nid == 0) write (6, *) '  Outposting current solution estimate'
    time = q%time
@@ -414,6 +434,160 @@
    call close_newton_log_units()
 
    end subroutine
+
+      !-----------------------------------------------------------------------
+      ! newton_backtrack — Globalized acceptance of the Newton update
+      !
+      ! Replaces the unconditional full step q = q - dq with damped trials
+      ! q - alpha*dq, alpha = 1, 1/2, 1/4, ...  A trial is accepted by a
+      ! NON-MONOTONE Armijo test against the worst of the last 3 accepted
+      ! residuals (armijo_reference) rather than the previous residual:
+      ! with a rough initial guess the Newton residual can legitimately
+      ! rise for an iteration before falling, and a strict monotone test
+      ! would strangle exactly those runs.  alpha scales the WHOLE
+      ! correction, including the UPO period component dq%time.
+      !
+      ! Each trial costs one nonlinear forward map (nsteps time-steps);
+      ! the counters are passed inout so the caller's accounting stays
+      ! exact.  On acceptance, q/f/residual are updated in place and the
+      ! accepted trial is the last forward map run, so base-flow and
+      ! ifstorebase orbit data left behind belong to the accepted state.
+      !
+      ! KNOWN LIMITATION (UPO modes): trials are integrated with the
+      ! nsteps/dt prepared for the undamped q%time; a damped trial period
+      ! is carried in the state but not yet in the horizon.  Keep the
+      ! feature off for UPO runs until that is fixed.
+      !-----------------------------------------------------------------------
+   subroutine newton_backtrack(q, dq, f, residual, armijo_reference, &
+      newton_iter, nonlin_calls, total_calls, tottime)
+
+   type(krylov_vector), intent(inout) :: q ! Accepted state (updated in place)
+   type(krylov_vector), intent(in) :: dq ! Newton correction from GMRES
+   type(krylov_vector), intent(inout) :: f ! Residual field of the accepted state
+   real, intent(inout) :: residual ! Squared L2 residual of the accepted state
+   real, intent(in) :: armijo_reference ! Non-monotone acceptance reference
+   integer, intent(in) :: newton_iter ! Outer iteration (logging only)
+   integer, intent(inout) :: nonlin_calls, total_calls
+   real, intent(inout) :: tottime
+
+   integer, parameter :: max_backtracks = 4
+   real, parameter :: c1 = 1.0d-4 ! Armijo sufficient-decrease constant
+   real, parameter :: shrink = 0.5d0 ! Geometric step reduction
+
+      ! Trial state on the heap: a krylov_vector holds full velocity,
+      ! pressure and temperature fields, far too large for the stack.
+   type(krylov_vector), allocatable :: q_trial, f_trial
+   integer :: trial, best_trial, alloc_stat
+   real :: alpha, trial_residual, best_residual, best_alpha
+   logical :: accepted, trial_finite
+
+   allocate (q_trial, f_trial, stat=alloc_stat)
+   if (alloc_stat /= 0) &
+      call exitti('newton backtracking allocation failed$', alloc_stat)
+
+   accepted = .false.
+   best_residual = huge(best_residual)
+   best_alpha = 0.0d0
+   best_trial = -1
+   alpha = 1.0d0
+
+   do trial = 0, max_backtracks
+   call evaluate_trial(alpha, trial_residual, trial_finite)
+
+   if (trial_finite .and. trial_residual < best_residual) then
+   best_residual = trial_residual
+   best_alpha = alpha
+   best_trial = trial
+   end if
+
+      ! Trial diagnostics go to stdout ONLY.  residu_newton.dat must
+      ! contain one row per ACCEPTED Newton iterate: its consumers
+      ! (validation/parsers/residual.py) read every row as an iterate,
+      ! so rejected trials in that file would corrupt convergence plots.
+   if (nid == 0) write (6, "('  BACKTRACK iter=',I3,' trial=',I2, &
+      ' alpha=',1PE12.4,' residual=',1PE15.6,' ref=',1PE15.6)") &
+      newton_iter, trial, alpha, trial_residual, armijo_reference
+
+   if (trial_finite .and. &
+      trial_residual <= (1.0d0 - c1*alpha)*armijo_reference) then
+   call accept_trial(trial_residual)
+   exit
+   end if
+
+   alpha = alpha*shrink
+   end do
+
+      ! All trials failed the Armijo test.  Policy: take the best finite
+      ! trial that still decreased the residual (hard cases keep moving);
+      ! abort loudly only when every trial made things worse — silently
+      ! accepting growth is how the old full-step divergences happened.
+   if (.not. accepted .and. best_residual < residual) then
+      ! Re-run the forward map at best_alpha: the arrays currently hold
+      ! the LAST trial, and base-flow/orbit data stored during the map
+      ! must belong to the state actually accepted.
+   call evaluate_trial(best_alpha, trial_residual, trial_finite)
+   if (nid == 0) write (6, "('  BACKTRACK fallback accepted trial=',I2, &
+      ' alpha=',1PE12.4,' residual=',1PE15.6)") &
+      best_trial, best_alpha, trial_residual
+   call accept_trial(trial_residual)
+   end if
+
+   if (.not. accepted) then
+   if (nid == 0) write (6, "('ERROR: Newton backtracking found no ', &
+      'decreasing trial; base=',1PE15.6,' best=',1PE15.6, &
+      ' trials=',I2)") residual, best_residual, max_backtracks + 1
+   call exitti('newton backtracking no decreasing trial$', 1)
+   end if
+
+   deallocate (q_trial, f_trial)
+
+   contains
+
+      ! Build q - alpha_in*dq and measure its true nonlinear residual.
+      ! Shared by the search loop and the fallback so the two paths can
+      ! never drift apart.
+   subroutine evaluate_trial(alpha_in, res_out, finite_out)
+   real, intent(in) :: alpha_in
+   real, intent(out) :: res_out
+   logical, intent(out) :: finite_out
+
+   call k_copy(q_trial, q)
+   call k_add2s2(q_trial, dq, -alpha_in) ! damps dq%time too (UPO period)
+
+   if (isNewtonPO .or. isNewtonPO_T) then
+      ! A non-finite or non-positive trial period must never reach Nek.
+   if (.not. (is_finite(q_trial%time) .and. q_trial%time > 0.0d0)) then
+   res_out = huge(res_out)
+   finite_out = .false.
+   return
+   end if
+   end if
+
+   call nonlinear_forward_map(f_trial, q_trial)
+   nonlin_calls = nonlin_calls + nsteps
+   total_calls = total_calls + nsteps
+   tottime = tottime + time
+   call k_norm(res_out, f_trial)
+   res_out = res_out**2 ! squared L2, same units as every Newton check
+   finite_out = is_finite(res_out)
+   end subroutine evaluate_trial
+
+   subroutine accept_trial(res_in)
+   real, intent(in) :: res_in
+   call k_copy(q, q_trial)
+   call k_copy(f, f_trial)
+   residual = res_in
+   accepted = .true.
+   end subroutine accept_trial
+
+   logical function is_finite(x)
+   real, intent(in) :: x
+      ! x == x is false only for NaN (no IEEE intrinsics needed);
+      ! the huge() bound rejects +/-Inf.
+   is_finite = x == x .and. abs(x) < huge(x)
+   end function is_finite
+
+   end subroutine newton_backtrack
 
       !-----------------------------------------------------------------------
       ! ts_gmres — Time-stepper GMRES solver for the Newton correction equation

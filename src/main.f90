@@ -117,6 +117,7 @@
          isNewtonFP = .false.   ! Newton for fixed points
          isNewtonPO = .false.   ! Newton for periodic orbits
          isNewtonPO_T = .false. ! Newton for forced periodic orbits
+         ifnewton_backtrack = .false. ! Optional residual backtracking
 
       !  Mode 3: Stability analysis
          isDirect = .false.           ! Direct eigenmodes
@@ -235,6 +236,7 @@ c        nStab_mode_flags
          call bcast(isNewtonFP, lsize)
          call bcast(isNewtonPO, lsize)
          call bcast(isNewtonPO_T, lsize)
+         call bcast(ifnewton_backtrack, lsize)
          call bcast(isDirect, lsize)
          call bcast(isAdjoint, lsize)
          call bcast(isTransientGrowth, lsize)

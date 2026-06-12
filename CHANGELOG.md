@@ -3,6 +3,45 @@
 Differences between tagged versions. `RELEASE.md` is the complete change
 description for the 2.0 series; entries here are the per-tag deltas.
 
+## [2.0.0-rc4] - 2026-06-12
+
+Newton robustness. 15 commits since rc3.
+
+### Added
+- Newton residual backtracking globalization (opt-in via
+  `ifnewton_backtrack` in the `.usr`, default off): a non-monotone
+  Armijo line search wraps the Newton update, rejecting overshooting
+  or NaN steps and damping the periodic-orbit period correction with
+  the same factor as the state. The non-monotone window (worst of the
+  last three accepted residuals) deliberately tolerates the transient
+  residual growth seen with rough initial guesses. Validated on the
+  backward-facing-step baseflow: a configuration whose full Newton
+  step previously grew the residual now converges, with the
+  overshooting step rejected at full length and accepted at half.
+- Backward-facing-step Re=500 transient-growth stage validated against
+  Barkley, Blackburn & Sherwin (2008) at six time horizons.
+- Moving-cylinder DNS stage with reference data; NACA0012 DNS ringdown
+  and wavemaker stages; thermosyphon and flip-flop wavemaker stages,
+  all with reference data.
+
+### Fixed
+- Sponge strength is applied to every forcing branch (perturbation and
+  temperature, not just the velocity DNS branch); sponge-affected
+  stability references regenerated.
+- Newton aborts loudly when the first residual is exactly zero (a
+  degenerate forward map previously reported instant fake convergence).
+- The cached periodic-orbit boundary vector carries the orbit period,
+  fixing the period column of the UPO Jacobian.
+- Krylov vector normalization fails loudly on a NaN norm instead of
+  silently zeroing the vector.
+- Cleaner Krylov seed initialization and baseflow reload in the
+  eigensolvers.
+
+### Known limitations
+- With backtracking enabled for periodic-orbit Newton, trial residuals
+  are still evaluated at the undamped period; keep the flag off for
+  UPO runs until the follow-up fix lands.
+
 ## [2.0.0-rc3] - 2026-06-10
 
 Adjoint correctness and reproducibility. ~95 commits since rc2.

@@ -63,6 +63,7 @@
 
       ! Mode 3: Stability analysis modifier
       logical :: ifFloquet   ! Floquet modifier (combines with isDirect/etc)
+      logical :: ifnewton_backtrack ! Newton residual backtracking globalization
 
       ! Mode 4: Postprocessing flags
       logical :: ifEnergyBudget    ! Stability energy budget (uparam=4.1)
@@ -97,7 +98,7 @@
      $   ifForceSensReal, ifForceSensImag, ifDeltaForcing,
      $   ifAnimateMode, ifAnimateBFDeform,
      $   ifAnimateFloquet, ifpod, ifdmd, ifspod,
-     $   ifwinamp, use_cgs
+     $   ifwinamp, use_cgs, ifnewton_backtrack
       
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
