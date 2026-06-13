@@ -1,20 +1,5 @@
-# cubic_cavity/210_baseflow_newton/upo
+# cubic_cavity_re1914 / 210_baseflow_newton/upo
 
-**Stage**: baseflow Newton
-**uparam01**: 2.0/2.1
-**Subroutine**: newton_krylov
-**Status**: scaffold only — no case files yet
+**Status**: not applicable at Re=1914.
 
-**Migration source**: (none — to build from template)
-
-**Template**: example/_templates/210_baseflow_newton/upo/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/cubic_cavity/210_baseflow_newton/ golden artifact captured
-
+Newton-UPO needs a periodic orbit; none exists below the Hopf (Re_c≈1916.6). Run at a supercritical Re (see cubic_cavity_re1950) to use this stage.

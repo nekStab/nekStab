@@ -1,0 +1,37 @@
+[GENERAL]
+# TEMPLATE: converged baseflow
+startFrom = BF_cav0.f00001
+
+stopAt = endTime
+endTime = 1.0
+
+userParam01 = 4.11       # 4.11 = energy budget / sensitivity (Floquet variant)
+# Reads pre-existing direct + adjoint eigenmodes (dRe*, dIm*, aRe*, aIm*)
+# from the run directory and assembles wavemaker / production fields.
+
+userParam08 = 0          # sponge left
+userParam09 = 0          # sponge right
+userParam10 = 0          # sponge strength
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1.0
+writeDoublePrecision = yes
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -1914.0   # Re=1914

@@ -1,0 +1,41 @@
+[GENERAL]
+# TEMPLATE: converged baseflow (output of SFD/Newton/BoostConv)
+startFrom = BF_cav0.f00001
+
+stopAt = endTime
+endTime = 1.0            # TEMPLATE: integration time per Arnoldi step
+
+userParam01 = 3.1        # 3.1 = direct stability (Schur–Krylov / Arnoldi)
+userParam03 = 2          # schur_tgt — number of targeted eigenvalues
+userParam04 = 0          # maxmodes (0 = schur_tgt)
+userParam06 = 0          # 0 = isothermal; 1 = thermal coupling
+userParam07 = 50         # k_dim — Krylov subspace size (single-node viable)
+userParam08 = 0          # sponge left
+userParam09 = 0          # sponge right
+userParam10 = 0          # sponge strength
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -1914.0   # Re=1914

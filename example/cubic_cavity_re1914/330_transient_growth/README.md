@@ -1,20 +1,11 @@
-# cubic_cavity/330_transient_growth
+# cubic_cavity_re1914 / 330_transient_growth
 
-**Stage**: transient growth
+**Stage**: 330_transient_growth
 **uparam01**: 3.3
-**Subroutine**: transient growth
-**Status**: scaffold only — no case files yet
+**Re**: 1914
+**Start from**: BF_cav0.f00001
+**Ranks**: 16
 
-**Migration source**: (none — to build from template)
-
-**Template**: example/_templates/330_transient_growth/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/cubic_cavity/330_transient_growth/ golden artifact captured
-
+Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
+`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
+applicable; tune endTime/k_dim for this operating point before the final run.
