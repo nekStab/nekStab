@@ -220,8 +220,8 @@ end subroutine activate_sponge
 !-----------------------------------------------------------------------
 subroutine spng_init
 
-   integer n
-   n = nx1*ny1*nz1*nelv
+   integer :: nv
+   nv = nx1*ny1*nz1*nelv
    acc_spg = abs(acc_spg)
 
    spng_wl(1) = (1.0d0 - acc_spg)*xLspg ! Left flat/outer fringe width in x
@@ -249,7 +249,7 @@ subroutine spng_init
 
    !     save reference field -> sponge value reference
    call opcopy(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, NDIM), vx, vy, vz) !only DNS
-   if (ifto) call copy(spng_vt(:, 1), t(1, 1, 1, 1, 1), n) !only DNS - temperature
+   if (ifto) call copy(spng_vt(:, 1), t(1, 1, 1, 1, 1), nv) !only DNS - temperature
    call spng_set ! -> compute spng_fn
 
 end subroutine spng_init
@@ -257,20 +257,20 @@ end subroutine spng_init
 !-----------------------------------------------------------------------
 ! spng_set -- compute the spatial fringe (sponge) mask spng_fn on the mesh
 !
-! Clean-room implementation of the fringe-region mask described by
+! Implementation based on the fringe-region mask described by
 ! Nordstrom, Nordin & Henningson (1999) and Lundbladh et al. (1999).
 !-----------------------------------------------------------------------
 subroutine spng_set
-   integer :: npts, idir
+   integer :: nv, idir
    real :: bmin(ldim), bmax(ldim)
    real :: xxmin, xxmax, xxmin_c, xxmax_c
    logical :: ltmp, ltmp2
    real lcoord(lx1*ly1*lz1*lelv)
    common /SCRUZ/ lcoord
 
-   npts = nx1*ny1*nz1*nelv
+   nv = nx1*ny1*nz1*nelv
 
-   call rzero(spng_fn, npts)
+   call rzero(spng_fn, nv)
 
    bmin(1) = xmn
    bmax(1) = xmx
@@ -295,8 +295,8 @@ subroutine spng_set
          if (xxmax <= xxmin) then
             if (nid == 0) write (6, *) 'Sponge too wide'
          else
-            call load_fringe_coordinate(idir, lcoord, npts)
-            call accumulate_fringe_dimension(idir, lcoord, npts, xxmin_c, xxmin, xxmax, xxmax_c)
+            call load_fringe_coordinate(idir, lcoord, nv)
+            call accumulate_fringe_dimension(idir, lcoord, nv, xxmin_c, xxmin, xxmax, xxmax_c)
          end if
       end if
    end do
@@ -367,7 +367,7 @@ end subroutine spng_set
 !-----------------------------------------------------------------------
 ! fringe_step -- smooth step ramp primitive for fringe-region profiles
 !
-! Clean-room implementation from the Nordstrom, Nordin & Henningson (1999)
+! Implementation based on the Nordstrom, Nordin & Henningson (1999)
 ! and Lundbladh et al. (1999) fringe-region smooth-step specification.
 !-----------------------------------------------------------------------
 pure real function fringe_step(x)
