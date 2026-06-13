@@ -12,7 +12,7 @@
 !   activate_sponge      -- initialize sponge zone
 !   spng_init            -- set sponge parameters and reference fields
 !   spng_set             -- compute sponge spatial function
-!   mth_stepf            -- smooth step function for sponge profile
+!   fringe_step          -- smooth step function for fringe profiles
 !
 ! Dependencies:
 !   nekstab_nek_bridge, krylov_subspace
@@ -24,7 +24,7 @@ module nekstab_forcing_mod
    private
    public :: nekStab_forcing, nekStab_forcing_temp, &
       nekStab_set_buoyancy, nekStab_qvol, &
-      activate_sponge, spng_init, spng_set, mth_stepf
+      activate_sponge, spng_init, spng_set, fringe_step
 contains
 
 !-----------------------------------------------------------------------
@@ -224,19 +224,19 @@ subroutine spng_init
    n = nx1*ny1*nz1*nelv
    acc_spg = abs(acc_spg)
 
-   spng_wl(1) = (1.0d0 - acc_spg)*xLspg ! Sponge left section width; dimension X
+   spng_wl(1) = (1.0d0 - acc_spg)*xLspg ! Left flat/outer fringe width in x
    spng_wl(2) = (1.0d0 - acc_spg)*yLspg
    if (if3D) spng_wl(3) = (1.0d0 - acc_spg)*zLspg
 
-   spng_wr(1) = (1.0d0 - acc_spg)*xRspg ! Sponge right section width; dimension X
+   spng_wr(1) = (1.0d0 - acc_spg)*xRspg ! Right flat/outer fringe width in x
    spng_wr(2) = (1.0d0 - acc_spg)*yRspg
    if (if3D) spng_wr(3) = (1.0d0 - acc_spg)*zRspg
 
-   spng_dl(1) = (acc_spg)*xLspg ! Sponge left drop/rise section width; dimension X
+   spng_dl(1) = (acc_spg)*xLspg ! Left smooth-ramp fringe width in x
    spng_dl(2) = (acc_spg)*yLspg
    if (if3D) spng_dl(3) = (acc_spg)*zLspg
 
-   spng_dr(1) = (acc_spg)*xRspg !Sponge right drop/rise section width; dimension X
+   spng_dr(1) = (acc_spg)*xRspg ! Right smooth-ramp fringe width in x
    spng_dr(2) = (acc_spg)*yRspg
    if (if3D) spng_dr(3) = (acc_spg)*zRspg
 
@@ -255,101 +255,132 @@ subroutine spng_init
 end subroutine spng_init
 
 !-----------------------------------------------------------------------
-! spng_set -- Compute spatial sponge function on the mesh
+! spng_set -- compute the spatial fringe (sponge) mask spng_fn on the mesh
+!
+! Clean-room implementation of the fringe-region mask described by
+! Nordstrom, Nordin & Henningson (1999) and Lundbladh et al. (1999).
 !-----------------------------------------------------------------------
 subroutine spng_set
-! credits to KTH Toolbox https://github.com/KTH-Nek5000/KTH_Toolbox/blob/b7dc43a92bb6759132a1baae9d290727de29c257/utility/forcing/sponge_box/spongebx.f
-!     set sponge function and refernece fields
+   integer :: npts, idir
+   real :: bmin(ldim), bmax(ldim)
+   real :: xxmin, xxmax, xxmin_c, xxmax_c
+   logical :: ltmp, ltmp2
+   real lcoord(lx1*ly1*lz1*lelv)
+   common /SCRUZ/ lcoord
 
-   real lcoord(LX1*LY1*LZ1*LELV)
-   common/SCRUZ/lcoord
+   npts = nx1*ny1*nz1*nelv
 
-   integer ntot, il, jl
-   real rtmp, bmin(LDIM), bmax(LDIM)
-   real xxmax, xxmax_c, xxmin, xxmin_c, arg
-   logical ltmp, ltmp2
+   call rzero(spng_fn, npts)
 
-   ntot = NX1*NY1*NZ1*NELV
    bmin(1) = xmn
    bmax(1) = xmx
    bmin(2) = ymn
    bmax(2) = ymx
    if (if3D) then
-      bmin(NDIM) = zmn
-      bmax(NDIM) = zmx
+      bmin(3) = zmn
+      bmax(3) = zmx
    end if
 
-   call rzero(spng_fn, ntot)
-   !     for every dimension
-   do il = 1, NDIM
-
-      if (spng_wl(il) > 0.0 .or. spng_wr(il) > 0.0) then
-
-         if (spng_wl(il) < spng_dl(il) .or. spng_wr(il) < spng_dr(il)) then
-            write (6, *) 'Wrong sponge parameters!'
+   do idir = 1, ndim
+      if (spng_wl(idir) > 0.0d0 .or. spng_wr(idir) > 0.0d0) then
+         if (spng_wl(idir) < spng_dl(idir) .or. spng_wr(idir) < spng_dr(idir)) then
+            if (nid == 0) write (6, *) 'Wrong sponge parameters!'
          end if
 
-         xxmax = bmax(il) - spng_wr(il) ! sponge beginning (rise at xmax; right)
-         xxmin = bmin(il) + spng_wl(il) ! end (drop at xmin; left)
-         xxmax_c = xxmax + spng_dr(il) ! beginnign of constant part (right)
-         xxmin_c = xxmin - spng_dl(il) ! beginnign of constant part (left)
+         xxmax = bmax(idir) - spng_wr(idir)
+         xxmin = bmin(idir) + spng_wl(idir)
+         xxmax_c = xxmax + spng_dr(idir)
+         xxmin_c = xxmin - spng_dl(idir)
 
-         !     get SPNG_FUN
          if (xxmax <= xxmin) then
-            write (6, *) 'Sponge too wide'
+            if (nid == 0) write (6, *) 'Sponge too wide'
          else
-            !     this should be done by pointers, but for now I avoid it
-            if (il == 1) then
-               call copy(lcoord, XM1, ntot)
-            elseif (il == 2) then
-               call copy(lcoord, YM1, ntot)
-            elseif (il == 3) then
-               call copy(lcoord, ZM1, ntot)
-            end if
-
-            do jl = 1, ntot
-               rtmp = lcoord(jl)
-               if (rtmp <= xxmin_c) then ! constant; xmin
-                  rtmp = 1.0d0
-               elseif (rtmp < xxmin) then ! fall; xmin
-                  arg = (xxmin - rtmp)/spng_wl(il)
-                  rtmp = mth_stepf(arg)
-               elseif (rtmp <= xxmax) then ! zero
-                  rtmp = 0.0
-               elseif (rtmp < xxmax_c) then ! rise
-                  arg = (rtmp - xxmax)/spng_wr(il)
-                  rtmp = mth_stepf(arg)
-               else ! constant
-                  rtmp = 1.0d0
-               end if
-               spng_fn(jl) = max(spng_fn(jl), rtmp)
-            end do
-         end if ! xxmax.le.xxmin
-      end if ! spng_w(il).gt.0.0
+            call load_fringe_coordinate(idir, lcoord, npts)
+            call accumulate_fringe_dimension(idir, lcoord, npts, xxmin_c, xxmin, xxmax, xxmax_c)
+         end if
+      end if
    end do
 
+      ! SPG diagnostic dump: write the mask as the scalar field with no
+      ! pressure. outpost2 takes nfldt before the 3-char name; the ifto/
+      ! ifpo toggle is the pinned SPG-outpost contract (sponge-spec sec 2).
    ltmp = ifto; ltmp2 = ifpo
    ifto = .true.; ifpo = .false.
-   call outpost2(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, NDIM), spng_fn, spng_fn, 1, 'SPG')
+   call outpost2(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, ndim), spng_fn, spng_fn, 1, 'SPG')
    ifto = ltmp; ifpo = ltmp2
+
+contains
+
+      ! Coordinate selection for the Nordstrom, Nordin & Henningson (1999)
+      ! and Lundbladh et al. (1999) fringe-region mask pass.
+   subroutine load_fringe_coordinate(idir_in, coord, ncoord)
+      integer, intent(in) :: idir_in, ncoord
+      real, intent(out) :: coord(ncoord)
+
+      select case (idir_in)
+      case (1)
+         call copy(coord, xm1, ncoord)
+      case (2)
+         call copy(coord, ym1, ncoord)
+      case (3)
+         call copy(coord, zm1, ncoord)
+      end select
+   end subroutine load_fringe_coordinate
+
+      ! Max-accumulation pass for the Nordstrom, Nordin & Henningson (1999)
+      ! and Lundbladh et al. (1999) one-dimensional fringe ramps.
+   subroutine accumulate_fringe_dimension(idir_in, coord, ncoord, left_outer, left_inner, right_inner, right_outer)
+      integer, intent(in) :: idir_in, ncoord
+      real, intent(in) :: coord(ncoord)
+      real, intent(in) :: left_outer, left_inner, right_inner, right_outer
+      integer :: ipt
+      real :: lambda
+
+      do ipt = 1, ncoord
+         lambda = fringe_profile_value(coord(ipt), spng_wl(idir_in), spng_wr(idir_in), &
+            left_outer, left_inner, right_inner, right_outer)
+         spng_fn(ipt) = max(spng_fn(ipt), lambda)
+      end do
+   end subroutine accumulate_fringe_dimension
+
+      ! Pure one-dimensional ramp for the Nordstrom, Nordin & Henningson
+      ! (1999) and Lundbladh et al. (1999) fringe-region profile.
+   pure real function fringe_profile_value(r, left_width, right_width, left_outer, left_inner, right_inner, right_outer)
+      real, intent(in) :: r, left_outer, left_inner, right_inner, right_outer
+      real, intent(in) :: left_width, right_width
+
+      if (r <= left_outer) then
+         fringe_profile_value = 1.0d0
+      else if (r < left_inner) then
+         fringe_profile_value = fringe_step((left_inner - r)/left_width)
+      else if (r <= right_inner) then
+         fringe_profile_value = 0.0d0
+      else if (r < right_outer) then
+         fringe_profile_value = fringe_step((r - right_inner)/right_width)
+      else
+         fringe_profile_value = 1.0d0
+      end if
+   end function fringe_profile_value
 
 end subroutine spng_set
 
 !-----------------------------------------------------------------------
-! mth_stepf -- Smooth step function for sponge profile (KTH Toolbox)
+! fringe_step -- smooth step ramp primitive for fringe-region profiles
+!
+! Clean-room implementation from the Nordstrom, Nordin & Henningson (1999)
+! and Lundbladh et al. (1999) fringe-region smooth-step specification.
 !-----------------------------------------------------------------------
-real function mth_stepf(x)
+pure real function fringe_step(x)
    real, intent(in) :: x
-   real :: xdmin, xdmax
-   parameter(xdmin=0.0010d0, xdmax=0.9990d0)
-   if (x <= xdmin) then
-      mth_stepf = 0.0d0
-   elseif (x <= xdmax) then
-      mth_stepf = 1.0d0/(1.0d0 + exp(1.0d0/(x - 1.0d0) + 1.0d0/x))
+
+   if (x <= 0.0010d0) then
+      fringe_step = 0.0d0
+   else if (x <= 0.9990d0) then
+      fringe_step = 1.0d0/(1.0d0 + exp(1.0d0/(x - 1.0d0) + 1.0d0/x))
    else
-      mth_stepf = 1.0d0
+      fringe_step = 1.0d0
    end if
-end function mth_stepf
+end function fringe_step
 
 end module nekstab_forcing_mod
 
