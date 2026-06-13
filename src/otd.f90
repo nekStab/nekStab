@@ -330,20 +330,24 @@ end subroutine otd_compute_OTD_modes
 !-----------------------------------------------------------------------
 subroutine otd_outpost_OTD_modes
 
-   integer ipert
-   character(len=2) :: str
-   character(len=3) :: oname
+   integer :: mode
+   character(len=2) :: mode_tag
+   character(len=3) :: field_prefix
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §3.3.
+   ! docs/otd-spec.md §3.4: OTDm* fields are NEKSTAB.inc common-block
+   ! storage; keep the public handoff and field-prefix layout unchanged.
    call otd_compute_OTD_modes
-   do ipert = 1, npert
+   do mode = 1, npert
       if (lpert >= 10) then
-         write (str, '(I2.2)') ipert
-         oname = 'M'//trim(str)
+         write (mode_tag, '(I2.2)') mode
+         field_prefix = 'M'//trim(mode_tag)
       else
-         write (str, '(I1)') ipert
-         oname = 'M'//trim(str)//'_'
+         write (mode_tag, '(I1)') mode
+         field_prefix = 'M'//trim(mode_tag)//'_'
       end if
-      call outpost(OTDmrx(1, ipert), OTDmry(1, ipert), OTDmrz(1, ipert), prp(1, ipert), t, oname)
+      call outpost(OTDmrx(1, mode), OTDmry(1, mode), &
+         OTDmrz(1, mode), prp(1, mode), t, field_prefix)
 
    end do
 
@@ -354,23 +358,22 @@ end subroutine otd_outpost_OTD_modes
 !   for restart
 !-----------------------------------------------------------------------
 subroutine otd_outpost_orthonormal_basis
-! Output the OTD basis directly to restart.
-!     We could alternatively reconstruct the OTD basis from the modes
-!     but for this we would need both real and imaginary part. Since we
-!     currently only outpost the real part, it's cheaper to just outpost
-!     the OTD basis directly when we also outpost the baseflow.
 
-   integer ipert
-   character(len=2) :: str
-   character(len=3) :: oname
+   integer :: mode
+   character(len=2) :: mode_tag
+   character(len=3) :: field_prefix
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §3.3.
+   ! Force the same orthonormalization path used by the time-step driver, then
+   ! write restart-compatible rNN fields from the shared perturbation basis.
    gsstep_override = .true.
-   call otd_orthonormalize_basis ! orthonormalize
+   call otd_orthonormalize_basis
 
-   do ipert = 1, npert
-      write (str, '(I2.2)') ipert
-      oname = 'r'//trim(str)
-      call outpost(vxp(1, ipert), vyp(1, ipert), vzp(1, ipert), prp(1, ipert), t, oname)
+   do mode = 1, npert
+      write (mode_tag, '(I2.2)') mode
+      field_prefix = 'r'//trim(mode_tag)
+      call outpost(vxp(1, mode), vyp(1, mode), &
+         vzp(1, mode), prp(1, mode), t, field_prefix)
    end do
 
 end subroutine otd_outpost_orthonormal_basis
@@ -388,17 +391,21 @@ end subroutine otd_outpost_orthonormal_basis
 subroutine otd_white_noise
    use nekstab_noise, only: mth_rand
 
-   integer :: i, ix, iy, iz, ie, ieg, nv, ijke
+   integer :: mode, ix, iy, iz, ie, ieg, nv, ijke
    real :: xl(ldim), fc(3), sin2
    real :: glmin, glmax, nmin, nmax
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.6.
+   ! The mode-dependent sin(mode)^2 factor scales the frequency coefficients
+   ! before each mth_rand call, so every perturbation mode gets a distinct
+   ! deterministic hash field while keeping restart/IC common-block layout.
    nv = nx1*ny1*nz1*nelv
 
-   do i = 1, npert
-      sin2 = sin(real(i))**2
-      call rzero(vxpic(1, i), nv)
-      call rzero(vypic(1, i), nv)
-      if (if3d) call rzero(vzpic(1, i), nv)
+   do mode = 1, npert
+      sin2 = sin(real(mode))**2
+      call rzero(vxpic(1, mode), nv)
+      call rzero(vypic(1, mode), nv)
+      if (if3d) call rzero(vzpic(1, mode), nv)
 
       do ie = 1, nelv
          do iz = 1, nz1
@@ -414,20 +421,20 @@ subroutine otd_white_noise
                   fc(1) = sin2*3.0e4
                   fc(2) = sin2*(-1.5e3)
                   fc(3) = sin2*0.5e5
-                  vxpic(ijke, i) = &
+                  vxpic(ijke, mode) = &
                      mth_rand(ix, iy, iz, ieg, xl, fc)
 
                   fc(1) = sin2*2.3e4
                   fc(2) = sin2*2.3e3
                   fc(3) = sin2*(-2.0e5)
-                  vypic(ijke, i) = &
+                  vypic(ijke, mode) = &
                      mth_rand(ix, iy, iz, ieg, xl, fc)
 
                   if (if3d) then
                      fc(1) = sin2*2.0e4
                      fc(2) = sin2*1.0e3
                      fc(3) = sin2*1.0e5
-                     vzpic(ijke, i) = &
+                     vzpic(ijke, mode) = &
                         mth_rand(ix, iy, iz, ieg, xl, fc)
                   end if
                end do
@@ -435,15 +442,16 @@ subroutine otd_white_noise
          end do
       end do
 
-      !     DSS averaging + velocity BCs
-      call opdssum(vxpic(1, i), vypic(1, i), vzpic(1, i))
-      call opcolv(vxpic(1, i), vypic(1, i), &
-         vzpic(1, i), vmult)
-      call dsavg(vxpic(1, i))
-      call dsavg(vypic(1, i))
-      if (if3d) call dsavg(vzpic(1, i))
-      call bcdirVC(vxpic(1, i), vypic(1, i), &
-         vzpic(1, i), v1mask, v2mask, v3mask)
+      ! docs/otd-spec.md §2.6: enforce continuity, mass weighting, averaging,
+      ! and velocity Dirichlet masks after all components are generated.
+      call opdssum(vxpic(1, mode), vypic(1, mode), vzpic(1, mode))
+      call opcolv(vxpic(1, mode), vypic(1, mode), &
+         vzpic(1, mode), vmult)
+      call dsavg(vxpic(1, mode))
+      call dsavg(vypic(1, mode))
+      if (if3d) call dsavg(vzpic(1, mode))
+      call bcdirVC(vxpic(1, mode), vypic(1, mode), &
+         vzpic(1, mode), v1mask, v2mask, v3mask)
    end do
 
    nmin = glmin(vxpic, nv)
@@ -497,8 +505,9 @@ end subroutine otd_orthonormalize_basis
 !-----------------------------------------------------------------------
 subroutine otd_zero_FTLE
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.6.
    call rzero(FTLEv, lpert)
-   call rzero(LEintegral, lpert) ! Blanchard
+   call rzero(LEintegral, lpert)
 
 end subroutine otd_zero_FTLE
 
@@ -506,25 +515,17 @@ end subroutine otd_zero_FTLE
 ! otd_compute_FTLE — compute finite-time Lyapunov exponents
 !-----------------------------------------------------------------------
 subroutine otd_compute_FTLE
-   !
-   !  Compute finite-time Lyapunov exponents via trapezoidal
-   !  quadrature of the diagonal of L_r:
-   !
-   !     lambda_i(T) = (1/T) * integral_0^T  L_r(i,i) dt
-   !
-   !  When otd_FTLEPeriod > 0, the integral resets every period.
-   !  Otherwise it accumulates from the first call onward.
-   !
-
-   integer i
-   real pfrac ! time past the most recent period boundary
-   real ftledt ! sub-step width for integration
-   real Lrc(lpert, lpert) ! interpolated L_r at period boundary
-   real fact, period
+   integer :: mode
+   real :: pfrac
+   real :: ftledt
+   real :: Lrc(lpert, lpert)
+   real :: fact, period
    real, save :: Lrp(lpert, lpert)
-   character(len=20) fmte
+   character(len=20) :: fmte
 
-   !  --- Determine FTLE horizon ---
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.6.
+   ! Accumulate finite-time Lyapunov exponents by trapezoidal integration of
+   ! diag(Lr), using the exact period-boundary split-step order in the spec.
    if (otd_FTLEPeriod > 0.0d0) then
       period = otd_FTLEPeriod
       pfrac = mod(time, period)
@@ -537,7 +538,6 @@ subroutine otd_compute_FTLE
       pfrac = time - OTD_ftle_t0
    end if
 
-   !  --- First call: initialise ---
    if (.not. OTD_ftle_init) then
       call copy(Lrp, otd_Lr, lpert*lpert)
       OTD_ftle_init = .true.
@@ -548,57 +548,50 @@ subroutine otd_compute_FTLE
       end if
    end if
 
-   !  --- Integrate L_r(i,i) with trapezoidal rule ---
    if (pfrac < dt) then
-      !     We just crossed a period boundary.  Split the step:
-      !       [t_prev .. t_boundary]  then  [t_boundary .. t_curr]
-      !     Linearly interpolate L_r at the boundary.
+      ! docs/otd-spec.md §1.6: split a boundary-crossing step and linearly
+      ! interpolate Lr at the period boundary before resetting the integral.
       ftledt = dt - pfrac
       call copy(Lrc, Lrp, lpert*lpert)
       fact = ftledt/dt
       call add2s2(Lrc, Lrp, -fact, lpert*lpert)
       call add2s2(Lrc, otd_Lr, fact, lpert*lpert)
 
-      !     Finish previous period
       call integrate_trap(Lrp, Lrc, period, ftledt)
 
       if (nid == 0) then
          write (6, *) '[OTD] FTLE PRD', istep, &
-            't=', time, (FTLEv(i), i=1, npert)
+            't=', time, (FTLEv(mode), mode=1, npert)
       end if
 
-      !     Reset and start new period
       call otd_zero_FTLE
       call copy(Lrp, Lrc, lpert*lpert)
       call copy(Lrc, otd_Lr, lpert*lpert)
       call integrate_trap(Lrp, Lrc, period, pfrac)
 
    else
-      !     Normal step (no boundary crossing)
       call integrate_trap(Lrp, otd_Lr, pfrac, dt)
 
    end if
 
-   !  --- Shift history ---
    call copy(Lrp, otd_Lr, lpert*lpert)
 
-   !  --- Output (skip istep=0 where period=0 produces zeros) ---
+   ! docs/otd-spec.md §3.2: preserve otd_ftle.dat layout and precision.
    if (nid == 0 .and. istep > 0) then
       open (unit=459, file='otd_ftle.dat', &
          position='append', status='unknown', &
          form='formatted')
       write (fmte, '("(",I0,"(E15.7,1X))")') npert + 1
-      write (459, fmte) time, (FTLEv(i), i=1, npert)
+      write (459, fmte) time, (FTLEv(mode), mode=1, npert)
       close (459)
    end if
 
    if (nid == 0 .and. &
       mod(istep, otd_printStep) == 0) then
       write (6, *) '[OTD] FTLE', istep, 't=', time, &
-         pfrac, (FTLEv(i), i=1, npert)
+         pfrac, (FTLEv(mode), mode=1, npert)
    end if
 
-   !  --- Convergence check (at printStep frequency) ---
    if (istep > 0 .and. &
       mod(istep, otd_printStep) == 0 &
       .and. otd_convTol > 0.0d0) then
@@ -609,44 +602,40 @@ contains
 
    subroutine integrate_trap(Lrprev, Lrcurr, &
       deltat, hstep)
-      !     Trapezoidal quadrature: accumulate LEintegral and
-      !     update FTLEv = LEintegral / deltat.
-
-      real, intent(in) :: deltat ! FTLE averaging window
-      real, intent(in) :: hstep ! integration sub-step
+      real, intent(in) :: deltat
+      real, intent(in) :: hstep
       real, intent(in), dimension(lpert, lpert) :: Lrprev
       real, intent(in), dimension(lpert, lpert) :: Lrcurr
-      integer :: i
+      integer :: mode
 
-      do i = 1, npert
-         LEintegral(i) = LEintegral(i) &
-            + 0.50d0*hstep*(Lrprev(i, i) + Lrcurr(i, i))
+      ! docs/otd-spec.md §1.6: use only diagonal entries and update FTLEv
+      ! immediately from the current averaging horizon.
+      do mode = 1, npert
+         LEintegral(mode) = LEintegral(mode) &
+            + 0.50d0*hstep*(Lrprev(mode, mode) + Lrcurr(mode, mode))
          if (deltat > 0.0d0) then
-            FTLEv(i) = LEintegral(i)/deltat
+            FTLEv(mode) = LEintegral(mode)/deltat
          else
-            FTLEv(i) = 0.0d0
+            FTLEv(mode) = 0.0d0
          end if
       end do
 
    end subroutine integrate_trap
 
    subroutine otd_check_FTLE_convergence
-      !     Compute step-to-step FTLE residuals, write to file,
-      !     and stop early if all modes have converged.
-
       real :: resid(lpert), rmax
-      integer :: i
+      integer :: mode
       character(len=20) :: fmtr
 
-      !     Compute absolute change per mode
+      ! docs/otd-spec.md §3.4: residuals compare against the NEKSTAB.inc
+      ! FTLEv_prev common-block handoff, then refresh it.
       rmax = 0.0d0
-      do i = 1, npert
-         resid(i) = abs(FTLEv(i) - FTLEv_prev(i))
-         if (resid(i) /= resid(i)) resid(i) = 0.0d0
-         if (resid(i) > rmax) rmax = resid(i)
+      do mode = 1, npert
+         resid(mode) = abs(FTLEv(mode) - FTLEv_prev(mode))
+         if (resid(mode) /= resid(mode)) resid(mode) = 0.0d0
+         if (resid(mode) > rmax) rmax = resid(mode)
       end do
 
-      !     Write residual to file
       if (nid == 0) then
          open (unit=460, file='otd_residuals.dat', &
             position='append', status='unknown', &
@@ -655,11 +644,10 @@ contains
             '("(",I0,"(E15.7,1X))")') &
             npert + 1
          write (460, fmtr) &
-            time, (resid(i), i=1, npert)
+            time, (resid(mode), mode=1, npert)
          close (460)
       end if
 
-      !     Screen output
       if (nid == 0) then
          write (6, '(A,I7,1x,E14.7,A,E10.3)') &
             '  [OTD] FTLE resid ', &
@@ -687,14 +675,13 @@ contains
             write (6, '(A)', ADVANCE='NO') &
                '  [OTD] Final FTLEs: '
             write (6, fmtr) &
-               (FTLEv(i), i=1, npert)
+               (FTLEv(mode), mode=1, npert)
             write (6, *) '==============================' &
                //'========================'
          end if
          lastep = 1
       end if
 
-      !     Update history
       call copy(FTLEv_prev, FTLEv, lpert)
 
    end subroutine otd_check_FTLE_convergence
@@ -1016,44 +1003,45 @@ subroutine otd_compute_orthonormality_measures( &
    real, intent(out) :: normality, orthogonality
    logical, intent(in) :: flag
    character(len=6), intent(in) :: info
-   integer :: pert_i, pert_j, nv, ldv, j
+   integer :: row, col, nv, ldv, mode
    real :: G(lpert, lpert)
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.4.
+   ! Reuse diff* as mass-weighted workspace, then form the shared Gram matrix
+   ! so normality and orthogonality use the same global reduction as the core.
    nv = lx1*ly1*lz1*nelv
    ldv = lx1*ly1*lz1*lelv
 
-   !     Weight vxp/vyp/vzp into diffx/diffy/diffz workspace
-   do j = 1, npert
-      call copy(diffx(1, j), vxp(1, j), nv)
-      call col2(diffx(1, j), bm1, nv)
-      call copy(diffy(1, j), vyp(1, j), nv)
-      call col2(diffy(1, j), bm1, nv)
+   do mode = 1, npert
+      call copy(diffx(1, mode), vxp(1, mode), nv)
+      call col2(diffx(1, mode), bm1, nv)
+      call copy(diffy(1, mode), vyp(1, mode), nv)
+      call col2(diffy(1, mode), bm1, nv)
    end do
    if (if3d) then
-      do j = 1, npert
-         call copy(diffz(1, j), vzp(1, j), nv)
-         call col2(diffz(1, j), bm1, nv)
+      do mode = 1, npert
+         call copy(diffz(1, mode), vzp(1, mode), nv)
+         call col2(diffz(1, mode), bm1, nv)
       end do
    end if
 
-   !     Gram matrix via shared helper
    call otd_gram_matrix(G, diffx, diffy, diffz, &
       vxp, vyp, vzp, nv, ldv)
 
    if (nid == 0) then
       normality = 0.0d0
-      do pert_i = 1, npert
+      do row = 1, npert
          normality = normality &
-            + G(pert_i, pert_i)**2
+            + G(row, row)**2
       end do
       normality = sqrt(normality/npert)
 
       if (npert > 1) then
          orthogonality = 0.0d0
-         do pert_i = 1, npert
-            do pert_j = pert_i + 1, npert
+         do row = 1, npert
+            do col = row + 1, npert
                orthogonality = orthogonality &
-                  + G(pert_i, pert_j)**2
+                  + G(row, col)**2
             end do
          end do
          orthogonality = &
