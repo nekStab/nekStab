@@ -39,6 +39,18 @@ module nekstab_otd
    real :: OTD_ftle_t0 = 0.0d0
    logical :: OTD_ftle_init = .false.
 
+   ! ── Named Fortran I/O unit numbers for OTD diagnostic output files ──
+   !  Replaces the magic literals previously hardcoded at every open/close.
+   !  Each unit is bound to a single, fixed diagnostic file:
+   !    OTD_UNIT_GROWTH -> otd_growth_rates.dat (symmetric Ls growth rates)
+   !    OTD_UNIT_EIGEN  -> otd_eigenvalues.dat  (Lr eigenvalues)
+   !    OTD_UNIT_FTLE   -> otd_ftle.dat         (finite-time Lyapunov exps)
+   !    OTD_UNIT_RESID  -> otd_residuals.dat    (FTLE convergence residuals)
+   integer, parameter :: OTD_UNIT_GROWTH = 457
+   integer, parameter :: OTD_UNIT_EIGEN = 458
+   integer, parameter :: OTD_UNIT_FTLE = 459
+   integer, parameter :: OTD_UNIT_RESID = 460
+
    ! ── Public subroutines ──
    public :: otd, otd_construct_linear_operator, &
       otd_compute_OTD_modes, &
@@ -84,9 +96,9 @@ subroutine otd
       call bcast(ifotd, lsize)
 
       if (nid == 0) then
-         open (unit=457, file='otd_growth_rates.dat', status='replace', form='formatted'); close (457)
-         open (unit=458, file='otd_eigenvalues.dat', status='replace', form='formatted'); close (458)
-         open (unit=460, file='otd_residuals.dat', status='replace', form='formatted'); close (460)
+         open (unit=OTD_UNIT_GROWTH, file='otd_growth_rates.dat', status='replace', form='formatted'); close (OTD_UNIT_GROWTH)
+         open (unit=OTD_UNIT_EIGEN, file='otd_eigenvalues.dat', status='replace', form='formatted'); close (OTD_UNIT_EIGEN)
+         open (unit=OTD_UNIT_RESID, file='otd_residuals.dat', status='replace', form='formatted'); close (OTD_UNIT_RESID)
       end if
 
       write (filename, '(A,A,A)') 'BF_', trim(SESSION), '0.f00001'
@@ -265,10 +277,10 @@ subroutine otd_compute_OTD_modes
    call otd_sort_eigenvalues('otd_Ls')
 
    if (nid == 0) then ! save to file
-      open (unit=457, file='otd_growth_rates.dat', position='append', status='unknown', form='formatted')
+      open (unit=OTD_UNIT_GROWTH, file='otd_growth_rates.dat', position='append', status='unknown', form='formatted')
       write (real_fmt, '("(",I0,"(E15.7,1X))")') npert + 1
-      write (457, real_fmt) time, (EIGR(row), row=1, npert)
-      close (457)
+      write (OTD_UNIT_GROWTH, real_fmt) time, (EIGR(row), row=1, npert)
+      close (OTD_UNIT_GROWTH)
    end if
 
    if (mod(istep, otd_printStep) == 0 .and. nid == 0) then ! print out
@@ -286,10 +298,10 @@ subroutine otd_compute_OTD_modes
    call copy(otd_Lr, saved_Lr, lpert*lpert)
 
    if (nid == 0) then ! save to file
-      open (unit=458, file='otd_eigenvalues.dat', position='append', status='unknown', form='formatted')
+      open (unit=OTD_UNIT_EIGEN, file='otd_eigenvalues.dat', position='append', status='unknown', form='formatted')
       write (real_fmt, '("(",I0,"(E15.7,1X))")') npert + 1
-      write (458, real_fmt) time, (EIGR(row), row=1, npert)
-      close (458)
+      write (OTD_UNIT_EIGEN, real_fmt) time, (EIGR(row), row=1, npert)
+      close (OTD_UNIT_EIGEN)
    end if
 
    if (mod(istep, otd_printStep) == 0 .and. nid == 0) then ! print out
@@ -551,9 +563,9 @@ subroutine otd_compute_FTLE
       call copy(Lrp, otd_Lr, lpert*lpert)
       OTD_ftle_init = .true.
       if (nid == 0) then
-         open (unit=459, file='otd_ftle.dat', &
+         open (unit=OTD_UNIT_FTLE, file='otd_ftle.dat', &
             status='replace', form='formatted')
-         close (459)
+         close (OTD_UNIT_FTLE)
       end if
    end if
 
@@ -590,12 +602,12 @@ subroutine otd_compute_FTLE
 
    ! docs/otd-spec.md §3.2: preserve otd_ftle.dat layout and precision.
    if (nid == 0 .and. istep > 0) then
-      open (unit=459, file='otd_ftle.dat', &
+      open (unit=OTD_UNIT_FTLE, file='otd_ftle.dat', &
          position='append', status='unknown', &
          form='formatted')
       write (fmte, '("(",I0,"(E15.7,1X))")') npert + 1
-      write (459, fmte) time, (FTLEv(mode), mode=1, npert)
-      close (459)
+      write (OTD_UNIT_FTLE, fmte) time, (FTLEv(mode), mode=1, npert)
+      close (OTD_UNIT_FTLE)
    end if
 
    if (nid == 0 .and. &
@@ -652,15 +664,15 @@ contains
       end do
 
       if (nid == 0) then
-         open (unit=460, file='otd_residuals.dat', &
+         open (unit=OTD_UNIT_RESID, file='otd_residuals.dat', &
             position='append', status='unknown', &
             form='formatted')
          write (fmtr, &
             '("(",I0,"(E15.7,1X))")') &
             npert + 1
-         write (460, fmtr) &
+         write (OTD_UNIT_RESID, fmtr) &
             time, (resid(mode), mode=1, npert)
-         close (460)
+         close (OTD_UNIT_RESID)
       end if
 
       if (nid == 0) then
