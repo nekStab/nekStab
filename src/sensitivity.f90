@@ -10,7 +10,7 @@
       !   wave_maker, bf_sensitivity, ts_steady_force_sensitivity,
       !   initialize_rhs_ts_steady_force_sensitivity, biorthogonalize,
       !   delta_forcing, animate_mode_only, compute_omegaR,
-      !   animate_mode, animate_mode_Floquet
+      !   animate_mode
       !
       ! Dependencies:
       !   krylov_subspace, SIZE, TOTAL, ADJOINT
@@ -34,7 +34,7 @@
       initialize_rhs_ts_steady_force_sensitivity,&
       biorthogonalize, delta_forcing,&
       animate_mode_only, compute_omegaR,&
-      animate_mode, animate_mode_Floquet
+      animate_mode
    contains
 
       !-----------------------------------------------------------------------
@@ -227,18 +227,6 @@
    vx_pr = 0.0d0; vy_pr = 0.0d0; vz_pr = 0.0d0
    vx_pi = 0.0d0; vy_pi = 0.0d0; vz_pi = 0.0d0
 
-! real :: alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa
-! alpha   = 0.0d0
-! beta    = 0.0d0
-! gamma   = 0.0d0
-! delta   = 0.0d0
-! epsilon = 0.0d0
-! zeta    = 0.0d0
-! eta     = 0.0d0
-! theta   = 0.0d0
-! iota    = 0.0d0
-! kappa   =-1.0d0
-
    ifto = .false.; ifpo = .false.
 
       !     load real part of the direct mode
@@ -329,32 +317,18 @@
    call opaddcol3(vx_pi, vy_pi, vz_pi, -vz_dIm, -vz_dIm, -vz_dIm, dudz_aRe, dvdz_aRe, dwdz_aRe)
 
    ifvo = .true.; ifpo = .false.; ifto = .false.
-      !     call filter_s0(vx_tr,0.5,1,'vortx')
-      !     call filter_s0(vy_tr,0.5,1,'vortx')
-      !     call filter_s0(vz_tr,0.5,1,'vortx')
    call outpost(vx_tr, vy_tr, vz_tr, pr, t, 'tr_')
 
-      !     call filter_s0(vx_ti,0.5,1,'vortx')
-      !     call filter_s0(vy_ti,0.5,1,'vortx')
-      !     call filter_s0(vz_ti,0.5,1,'vortx')
    call outpost(vx_ti, vy_ti, vz_ti, pr, t, 'ti_')
 
-      !     call filter_s0(vx_pr,0.5,1,'vortx')
-      !     call filter_s0(vy_pr,0.5,1,'vortx')
-      !     call filter_s0(vz_pr,0.5,1,'vortx')
    call outpost(vx_pr, vy_pr, vz_pr, pr, t, 'pr_')
 
-      !     call filter_s0(vx_pi,0.5,1,'vortx')
-      !     call filter_s0(vy_pi,0.5,1,'vortx')
-      !     call filter_s0(vz_pi,0.5,1,'vortx')
    call outpost(vx_pi, vy_pi, vz_pi, pr, t, 'pi_')
 
    call opadd2(vx_tr, vy_tr, vz_tr, vx_pr, vy_pr, vz_pr)
    call opadd2(vx_ti, vy_ti, vz_ti, vx_pi, vy_pi, vz_pi)
 
    call outpost(vx_tr, vy_tr, vz_tr, pr, t, 'sr_')
-      !     call opcmult(vx_ti, vy_ti, vz_ti, kappa)
-
       !     ! check
       !     call opchsgn(vx_ti, vy_ti, vz_ti)
    call outpost(vx_ti, vy_ti, vz_ti, pr, t, 'si_')
@@ -699,12 +673,8 @@
    ifto = .true.
    call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
 
-!u_max = glmax(vx, nv)
    A0 = 1.0e-3
    sigma = 1.0e-1 ! force a value of sigma
-
-!u_max = glmax(vx, nv)
-!A0 = (2.0*u_max) / exp(sigma*fintim)
 
    call load_mode_pair(mode, Re, Im)
 
@@ -817,7 +787,7 @@
       !-----------------------------------------------------------------------
       ! animate_mode — Animate eigenmode with base flow superposition
       !-----------------------------------------------------------------------
-   subroutine animate_mode(num_of_files, mode)
+   subroutine animate_mode(num_of_files, mode, floquet_flag)
 
       !  Animate the eigenmode by computing and outputting snapshots
       !  of the perturbation field at different phases of the period.
@@ -826,85 +796,7 @@
 
    integer, intent(in) :: num_of_files
    character(len=*), intent(in) :: mode ! 'd' or 'a'
-
-   type(krylov_vector), save :: BF, Re, Im
-   type(krylov_vector) :: Re_cos
-   real, save :: frequency, omega, sigma, u_max, A0
-   character(len=80) :: filename
-   character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
-   real :: amplitude
-   integer :: i
-
-   mode_local = mode ! copy to local before trim() for ifx compatibility
-
-   if (nid == 0) then
-   write (6, *) 'Animating mode function in mode:', mode
-   write (6, *) 'Number of steps:', num_of_files
-   end if
-
-   call read_eigenvalue(sigma, omega)
-
-! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
-! frequency = omega / (2.0d0 * NEKSTAB_PI)  ! f = omega / (2 * pi)
-! omega = 2.0d0 * NEKSTAB_PI * frequency  ! omega = 2 * pi * f
-
-   call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
-   call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
-   ifto = .true.
-   call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
-
-!u_max = glmax(vx, nv)
-   A0 = 1.0e-3
-   sigma = 1.0e-1 ! force a value of sigma
-
-!u_max = glmax(vx, nv)
-!A0 = (2.0*u_max) / exp(sigma*fintim)
-
-   call load_mode_pair(mode, Re, Im)
-
-! Loop over num_of_files to create snapshots
-   do i = 1, num_of_files
-
-   time = i*(param(10)/num_of_files)
-
-   if (nid == 0) then
-   write (6, '(A, I0, A, F8.4, A, I0)') 'i: ', i, ', time: ', time, ', n: ', num_of_files
-   write (6, '(A, F8.4, A, F8.4, A, F8.4, A)')&
-      'Time/param(10): ', time/param(10),&
-      ' (', time,&
-      ' / ', param(10),&
-      ') [time/period]'
-   end if
-
-   ifto = .true.
-
-   call k_copy(Re_cos, Re)
-   call k_axpby(Re_cos, cos(omega*time), Im, -sin(omega*time))
-
-   call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
-   call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qm')
-
-   amplitude = A0*exp(sigma*time)
-   if (nid == 0) write (6, *) 'Amplitude: ', A0, amplitude
-
-   call k_cmult(Re_cos, amplitude)
-   call k_add2(Re_cos, BF)
-   call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
-   call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qb')
-
-   end do
-
-   end subroutine animate_mode
-
-      !-----------------------------------------------------------------------
-      ! animate_mode_Floquet — Animate Floquet eigenmode over orbit period
-      !-----------------------------------------------------------------------
-   subroutine animate_mode_Floquet(num_of_files, mode)
-
-   use krylov_subspace
-
-   integer, intent(in) :: num_of_files
-   character(len=*), intent(in) :: mode ! 'd' or 'a'
+   logical, intent(in) :: floquet_flag
 
    type(krylov_vector), save :: BF, Re, Im
    type(krylov_vector) :: Re_cos
@@ -923,6 +815,12 @@
    end if
 
    call read_eigenvalue(sigma, omega)
+
+! frequency = 1.0 / param(10)  ! f = 1 / T (T = period)
+! frequency = omega / (2.0d0 * NEKSTAB_PI)  ! f = omega / (2 * pi)
+! omega = 2.0d0 * NEKSTAB_PI * frequency  ! omega = 2 * pi * f
+
+   if (floquet_flag) then
 
    A0 = 1.0e-3
    sigma = 1.0e-1 ! force a value of sigma
@@ -1017,6 +915,52 @@
    if (lastep == 1) exit
    end do
 
-   end subroutine animate_mode_Floquet
+   else
+
+   call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
+   call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
+   ifto = .true.
+   call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
+
+   A0 = 1.0e-3
+   sigma = 1.0e-1 ! force a value of sigma
+
+   call load_mode_pair(mode, Re, Im)
+
+! Loop over num_of_files to create snapshots
+   do i = 1, num_of_files
+
+   time = i*(param(10)/num_of_files)
+
+   if (nid == 0) then
+   write (6, '(A, I0, A, F8.4, A, I0)') 'i: ', i, ', time: ', time, ', n: ', num_of_files
+   write (6, '(A, F8.4, A, F8.4, A, F8.4, A)')&
+      'Time/param(10): ', time/param(10),&
+      ' (', time,&
+      ' / ', param(10),&
+      ') [time/period]'
+   end if
+
+   ifto = .true.
+
+   call k_copy(Re_cos, Re)
+   call k_axpby(Re_cos, cos(omega*time), Im, -sin(omega*time))
+
+   call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
+   call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qm')
+
+   amplitude = A0*exp(sigma*time)
+   if (nid == 0) write (6, *) 'Amplitude: ', A0, amplitude
+
+   call k_cmult(Re_cos, amplitude)
+   call k_add2(Re_cos, BF)
+   call compute_omegaR(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%t(:, 1))
+   call outpost(Re_cos%vx, Re_cos%vy, Re_cos%vz, Re_cos%pr, Re_cos%t, trim(mode_local)//'Qb')
+
+   end do
+
+   end if
+
+   end subroutine animate_mode
 
    end module nekstab_sensitivity

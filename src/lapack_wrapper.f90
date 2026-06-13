@@ -183,8 +183,6 @@ subroutine eig(A, vecs, vals, n)
       if (wi(i) > 0) then
          vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0) + vr(:, i + 1)*(0.0d0, 1.0d0)
          vecs(:, i + 1) = vr(:, i)*(1.0d0, 0.0d0) - vr(:, i + 1)*(0.0d0, 1.0d0)
-      !else if (wi(i) == 0) then ! redundant code since it's handled by the initialization
-      !   vecs(:, i) = vr(:, i)*(1.0d0, 0.0d0)
       end if
    end do
 

@@ -126,7 +126,6 @@
    do i = 1, k_dim + 1
    call k_zero(Q(i))
    end do
-      !call k_zero(Q(1:k_dim + 1))
 
       !     ----- Loading baseflow from disk (optional) -----
 
@@ -185,9 +184,7 @@
    end do
    end if
    call k_normalize(wrk2, alpha)
-      !call outpost2(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, nof, 'NOS')
    call matvec(wrk, wrk2)
-      !call outpost2(wrk%vx, wrk%vy, wrk%vz, wrk%pr, wrk%t, nof, 'NOS')
 
    elseif (ifseed_symm) then ! symmetry initial seed
 
@@ -533,11 +530,6 @@
    cycle
    end if
    beta = 1.0d0/sqrt(alpha)
-
-      !call norm_grad(real(fp_cx), real(fp_cy), real(fp_cz), real(fp_cp), real(fp_ct), norma_Re)
-      !call norm_grad(aimag(fp_cx), aimag(fp_cy), aimag(fp_cz), aimag(fp_cp), aimag(fp_ct), norma_Im)
-      !if (nid == 0) write (6, *) '  grad norm Re/Im:', norma_Re, norma_Im
-      !if (nid == 0) write (6, *)
 
       !    if (norma_Re > 1.1 .or. norma_Im > 1.1) then
       !       if (nid == 0) write (6, *) ' Skipping spurious (non-physical) eigenvector:', i, real(vals(i)), aimag(vals(i))

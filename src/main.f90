@@ -502,9 +502,9 @@ c        OTD_params
          if (ifAnimateMode)
      &        call animate_mode_only(animate_mode_num, 'd')
          if (ifAnimateBFDeform)
-     &        call animate_mode(animate_mode_num, 'd')
+     &        call animate_mode(animate_mode_num, 'd', .false.)
          if (ifAnimateFloquet)
-     &        call animate_mode_Floquet(animate_mode_num, 'd')
+     &        call animate_mode(animate_mode_num, 'd', .true.)
 
          if (ifEnergyBudget .or. ifWavemaker .or. ifBFSensitivity .or.
      &       ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing

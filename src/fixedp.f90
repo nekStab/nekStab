@@ -608,7 +608,6 @@
    real, intent(out) :: outp(size_m)
    outp = 0.0d0
    do j = size_m, 1, -1
-      !outp(j) = inp(j) - sum(m(j,j+1:size_m)*outp(j+1:size_m))/m(j,j)
    outp(j) = inp(j)
    do k = j + 1, size_m
    outp(j) = outp(j) - m(j, k)*outp(k)
