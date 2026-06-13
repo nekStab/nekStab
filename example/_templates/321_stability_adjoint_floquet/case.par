@@ -1,11 +1,38 @@
-# TEMPLATE: stability_adjoint_floquet; uparam01=3.21; subroutine=Krylov-Schur adjoint on periodic BF; status: scaffold only
-#
-# Adjoint Floquet analysis around a converged UPO (output of 210_baseflow_newton uparam01=2.1).
-# Mirror of 311_stability_direct_floquet but with adjoint time-stepper.
-# Reference: example/_templates/311_stability_direct_floquet/case.par
-#
-#   userParam01 = 3.21      # adjoint Floquet
-#   userParam07 = 100       # k_dim (same as direct Floquet)
-#   userParam08 = 5         # sponge left
-#   userParam09 = 5         # sponge right
-#   userParam10 = 1.7       # sponge strength
+[GENERAL]
+# TEMPLATE: UPO checkpoint (output of Newton 2.1)
+startFrom = BF_case0.f00001
+
+stopAt = endTime
+endTime = 1.0            # placeholder; nekStab adjusts to UPO period
+
+userParam01 = 3.21       # 3.21 = adjoint Floquet (periodic adjoint over one UPO period)
+userParam07 = 100        # k_dim (Floquet usually needs larger subspace)
+userParam08 = 5          # sponge left
+userParam09 = 5          # sponge right
+userParam10 = 1.7        # sponge strength
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.0
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re (at periodic regime)
