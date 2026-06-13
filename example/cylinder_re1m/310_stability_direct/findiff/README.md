@@ -1,24 +1,6 @@
-# Cylinder RANS — Reynolds-averaged Navier-Stokes
+# cylinder_re1m / 310_stability_direct/findiff
 
-## Physics
-2D flow around a circular cylinder at Re = 40,000. RANS simulation with turbulence model (k-tau), stress formulation, and OIFS time stepping (CFL = 2.5).
-
-## nekStab Mode
-`userParam01 = 0` — DNS (RANS via variable properties)
-- `variableProperties = yes`, `stressFormulation = yes`
-- Scalars: SCALAR01 (tke), SCALAR02 (tau)
-
-## Prerequisites
-- Optional restart: `BF_1cyl0.f00001` (commented out; cold start by default)
-
-## Run
-```bash
-mks 1cyl        # Compile
-nekbmpi 1cyl N  # Run on N MPI ranks
-```
-
-## Expected Output
-RANS solution at Re = 40,000. Turbulent kinetic energy and dissipation rate fields.
-
-## Reference
-Internal example.
+**Stage**: direct stability via finite-difference Frechet (RANS; `iffindiff=.true.` in .usr).
+**Re**: 1e6 (user-directed).
+**Status**: files in place; BLOCKED on a RANS base flow (startFrom). Set up SFD/RANS baseflow first, then wire startFrom=BF before running.
+**Note**: confirm the 1cyl.re2 mesh resolves the Re=1e6 RANS boundary layer before the production run.

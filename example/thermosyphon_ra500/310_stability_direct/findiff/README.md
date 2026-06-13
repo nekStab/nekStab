@@ -1,20 +1,3 @@
-# thermosyphon/310_stability_direct/findiff
+# thermosyphon_ra500 / 310_stability_direct/findiff
 
-**Stage**: stability direct
-**uparam01**: 3.1
-**Subroutine**: Krylov-Schur
-**Status**: scaffold only — no case files yet
-
-**Migration source**: (none — to build from template)
-
-**Template**: example/_templates/310_stability_direct/findiff/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/thermosyphon/310_stability_direct/ golden artifact captured
-
+**Status**: not applicable — laminar case; use 310_stability_direct/direct (analytic linearisation). Finite-difference Frechet is reserved for RANS (see cylinder_re1m).

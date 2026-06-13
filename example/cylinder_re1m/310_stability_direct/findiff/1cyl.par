@@ -3,7 +3,7 @@ startFrom = 0 # BF_1cyl0.f00001
 stopAt = endTime
 endTime = 200.0
 
-userParam01 = 0
+userParam01 = 3.1   # direct stability (FD-Frechet via iffindiff in .usr)
 userParam02 = 0     # krylov snapshot to load - output frequency for statistics
 userParam03 = 0     # stabilization technique: 1:sfd - surface
 # Akervik
@@ -46,7 +46,7 @@ residualProj = yes
 
 [VELOCITY]
 density = 1.0
-viscosity = -40000.0
+viscosity = -1000000.0   # Re=1e6 (RANS; user-directed)
 residualTol = 1.0e-6
 
 [TEMPERATURE] # keep temp field on !
