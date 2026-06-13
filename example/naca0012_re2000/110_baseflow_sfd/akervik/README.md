@@ -1,20 +1,11 @@
-# naca0012/110_baseflow_sfd/akervik
+# naca0012_re2000 / 110_baseflow_sfd/akervik
 
-**Stage**: baseflow SFD
+**Stage**: 110_baseflow_sfd (akervik)
 **uparam01**: 1.1
-**Subroutine**: SFD
-**Status**: scaffold only — no case files yet
+**Re**: 2000
+**Start from**: BF_naca00120.f00001
+**Ranks**: 8
 
-**Migration source**: (none — to build from template)
-
-**Template**: example/_templates/110_baseflow_sfd/akervik/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/naca0012/110_baseflow_sfd/ golden artifact captured
-
+Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
+`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
+applicable; tune endTime/k_dim for this operating point before the final run.

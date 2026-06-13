@@ -1,20 +1,11 @@
-# naca0012/500_otd
+# naca0012_re2000 / 500_otd
 
-**Stage**: OTD
-**uparam01**: 5.0
-**Subroutine**: OTD module
-**Status**: scaffold only — no case files yet
+**Stage**: 500_otd
+**uparam01**: 5
+**Re**: 2000
+**Start from**: cold start (useric)
+**Ranks**: 8
 
-**Migration source**: (none — to build from template)
-
-**Template**: example/_templates/500_otd/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/naca0012/500_otd/ golden artifact captured
-
+Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
+`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
+applicable; tune endTime/k_dim for this operating point before the final run.

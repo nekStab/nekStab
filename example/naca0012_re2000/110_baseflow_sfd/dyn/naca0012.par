@@ -1,0 +1,37 @@
+[GENERAL]
+# TEMPLATE: SFD dyn-tol; uparam01=1.1; status: scaffold only
+# Dynamic tolerance SFD: residualTol updated each userParam09 steps by factor userParam08.
+# Reference: example/cylinder/baseflow/sfd_dyn/1cyl.par (Re=50, factor=0.9, stride=100)
+startFrom = BF_naca00120.f00001
+
+stopAt = endTime
+endTime = 400.0
+
+userParam01 = 1.1        # SFD with dynamic tolerance
+userParam04 = 0.12       # TEMPLATE: Delta (target frequency)
+userParam05 = 0.05       # TEMPLATE: chi (gain)
+userParam08 = 1          # sponge left
+userParam09 = 5          # sponge right
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.0
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -2000.0   # Re=2000

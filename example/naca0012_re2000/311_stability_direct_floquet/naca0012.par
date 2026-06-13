@@ -1,0 +1,38 @@
+[GENERAL]
+# TEMPLATE: UPO checkpoint (output of Newton 2.1)
+startFrom = BF_naca00120.f00001
+
+stopAt = endTime
+endTime = 1.0            # placeholder; nekStab adjusts to UPO period
+
+userParam01 = 3.11       # 3.11 = direct Floquet; 3.21 = adjoint Floquet
+userParam07 = 100        # k_dim (Floquet usually needs larger subspace)
+userParam08 = 1          # sponge left
+userParam09 = 5          # sponge right
+userParam10 = 1.7          # sponge strength
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.0
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -2000.0   # Re=2000
