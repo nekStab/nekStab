@@ -1,20 +1,11 @@
-# lid_driven/320_stability_adjoint
+# lid_driven_re3600 / 320_stability_adjoint
 
-**Stage**: stability adjoint
+**Stage**: 320_stability_adjoint
 **uparam01**: 3.2
-**Subroutine**: Krylov-Schur (adjoint)
-**Status**: scaffold only — no case files yet
+**Re**: 3600
+**Start from**: BF_cav0.f00001
+**Ranks**: 4
 
-**Migration source**: (none — to build from template)
-
-**Template**: example/_templates/320_stability_adjoint/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/lid_driven/320_stability_adjoint/ golden artifact captured
-
+Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
+`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
+applicable; tune endTime/k_dim for this operating point before the final run.

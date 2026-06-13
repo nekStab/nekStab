@@ -1,20 +1,32 @@
 [GENERAL]
+# TEMPLATE: seed field — SFD output or coarse DNS snapshot
 startFrom = BF_cav0.f00001
-stopAt = endTime
-endTime = 0.5 # ~ (1/0.34)/6 according to Nyquist theorem
 
-userParam01 = 2   # 0:DNS, 2:Newton, 3.1: Eigenproblem
-userParam02 = 0   # Krylov vector to load (if restarting)
-userParam07 = 90  # Krylov base lenght (from 80-200) 
-userParam10 = 1.5 # Cavity aspect ratio 
+stopAt = endTime
+endTime = 1.0            # Newton: 1 step (or 1 period for 2.1 UPO)
+
+userParam01 = 2          # 2.0 = steady Newton; 2.1 = periodic (UPO); 2.2 = dyn-tol
+userParam10 = 1.5   # cavity aspect ratio (.usr rescales Y to [0,uparam10])
+userParam07 = 100        # k_dim (GMRES Krylov subspace dimension)
+
+# For 2.1 (UPO) add:
+#   userParam02 = <period_guess>
+# For 2.2 (dyn-tol) add:
+#   userParam03 = <tol_floor>
 
 dt = 0
-variableDt = yes
+variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 100.
+writeInterval = 10.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
@@ -24,13 +36,6 @@ writeToFieldFile = yes
 
 [VELOCITY]
 residualTol = 1.0E-9
+residualProj = no
 density = 1.0
-viscosity = -3600.0
-
-#[TEMPERATURE]
-#solver = helm
-#residualTol = 1.0E-9
-#residualProj = yes
-#writeToFieldFile = yes
-#conductivity = -2000.0
-#rhoCp = 1.0
+viscosity = -3600.0   # Re=3600

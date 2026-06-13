@@ -1,0 +1,37 @@
+[GENERAL]
+# TEMPLATE: any reasonable initial field (DNS snapshot or baseflow)
+# startFrom =            # cold start
+
+stopAt = endTime
+endTime = 100.0          # OTD evolves alongside DNS
+
+userParam01 = 5          # 5 = OTD (optimally time-dependent modes)
+userParam10 = 1.5   # cavity aspect ratio (.usr rescales Y to [0,uparam10])
+userParam02 = 4          # TEMPLATE: number of OTD modes to evolve
+# Additional OTD-specific knobs live in src/otd.f90 — see comments there.
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 5.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -3600.0   # Re=3600

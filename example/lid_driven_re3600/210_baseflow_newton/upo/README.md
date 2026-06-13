@@ -1,20 +1,5 @@
-# lid_driven/210_baseflow_newton/upo
+# lid_driven_re3600 / 210_baseflow_newton/upo
 
-**Stage**: baseflow Newton
-**uparam01**: 2.0/2.1
-**Subroutine**: newton_krylov
-**Status**: scaffold only — no case files yet
+**Status**: not applicable at Re=3600.
 
-**Migration source**: (none — to build from template)
-
-**Template**: example/_templates/210_baseflow_newton/upo/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/lid_driven/210_baseflow_newton/ golden artifact captured
-
+Newton-UPO needs a periodic orbit; the lid-driven cavity at Re=3600 is steady (first Hopf ~Re 8000). Use a supercritical Re for this stage.

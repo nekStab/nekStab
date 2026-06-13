@@ -1,20 +1,11 @@
-# lid_driven/000_dns
+# lid_driven_re3600 / 000_dns
 
-**Stage**: DNS
+**Stage**: 000_dns
 **uparam01**: 0
-**Subroutine**: no-op
-**Status**: scaffold only — no case files yet
+**Re**: 3600
+**Start from**: cold start (useric)
+**Ranks**: 4
 
-**Migration source**: example/lid_driven
-
-**Template**: example/_templates/000_dns/case.par
-
-**Acceptance**:
-- [ ] case.par populated from template
-- [ ] *.usr, *.re2, *.ma2, SIZE present (symlink or copy from migration source)
-- [ ] SESSION.NAME set
-- [ ] run.local.slurm with 8 ranks
-- [ ] mks builds clean
-- [ ] sbatch run completes, produces expected artifacts
-- [ ] refs/lid_driven/000_dns/ golden artifact captured
-
+Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
+`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
+applicable; tune endTime/k_dim for this operating point before the final run.
