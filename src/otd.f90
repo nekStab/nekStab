@@ -63,21 +63,25 @@ contains
 !-----------------------------------------------------------------------
 ! otd — main OTD driver (initialization and time-stepping)
 !
-! Implementation by Simon Kern (skern@mech.kth.se)
-! Based on Babaee & Sapsis (2016) https://dx.doi.org/10.1098/rspa.2015.0779
+! Implementation based on Babaee & Sapsis (2016)
+! https://dx.doi.org/10.1098/rspa.2015.0779
 !-----------------------------------------------------------------------
 subroutine otd
-   logical :: exist_IC
-   integer i, j, maxnum
-   character(len=3) :: istr
+   logical :: file_found
+   integer :: mode, restart_id, latest_restart
+   character(len=3) :: mode_tag
    character(len=30) :: filename
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.1.
    if (.not. OTD_init) then
 
-      ifpert = .true.; call bcast(ifpert, lsize)
-      param(31) = lpert; npert = int(param(31))
+      ifpert = .true.
+      call bcast(ifpert, lsize)
+      param(31) = lpert
+      npert = int(param(31))
 
-      ifotd = .true.; call bcast(ifotd, lsize)
+      ifotd = .true.
+      call bcast(ifotd, lsize)
 
       if (nid == 0) then
          open (unit=457, file='otd_growth_rates.dat', status='replace', form='formatted'); close (457)
@@ -86,8 +90,8 @@ subroutine otd
       end if
 
       write (filename, '(A,A,A)') 'BF_', trim(SESSION), '0.f00001'
-      inquire(file=filename, exist=exist_IC)
-      if (exist_IC) then
+      inquire(file=filename, exist=file_found)
+      if (file_found) then
          if (nid == 0) write (6, *) 'OTD: loading base flow from ', trim(filename)
          call load_fld(filename)
          call opcopy(ubic, vbic, wbic, vx, vy, vz)
@@ -99,25 +103,28 @@ subroutine otd
 
       call otd_white_noise ! Initialise all IC fields to white noise
 
-      ! Search for existing IC files
-      maxnum = 0
-      do j = 1, 99
-         write (filename, '(A,A,A,I5.5)') 'r01', trim(SESSION), '0.f', j
-         inquire (file=filename, exist=exist_IC)
-         if (exist_IC) then
-            maxnum = j
+      latest_restart = 0
+      do restart_id = 1, 99
+         write (filename, '(A,A,A,I5.5)') &
+            'r01', trim(SESSION), '0.f', restart_id
+         inquire (file=filename, exist=file_found)
+         if (file_found) then
+            latest_restart = restart_id
          end if
       end do
-      if (maxnum > 0) then
-         if (nid == 0) write (6, *) 'Found ', maxnum, ' IC files'
-         do i = 1, npert
-            write (istr, '(A1,I2.2)') 'r', i
-            write (filename, '(2A,I5.5)') trim(istr), trim(SESSION)//'0.f', maxnum
+
+      if (latest_restart > 0) then
+         if (nid == 0) write (6, *) 'Found ', latest_restart, ' IC files'
+         do mode = 1, npert
+            write (mode_tag, '(A1,I2.2)') 'r', mode
+            write (filename, '(2A,I5.5)') &
+               trim(mode_tag), trim(SESSION)//'0.f', latest_restart
             if (nid == 0) write (6, *) 'Looking for ICs in ', trim(filename)
-            inquire (file=filename, exist=exist_IC)
-            if (exist_IC) then
+            inquire (file=filename, exist=file_found)
+            if (file_found) then
                call load_fld(filename)
-               call opcopy(vxpic(1, i), vypic(1, i), vzpic(1, i), vx, vy, vz)
+               call opcopy(vxpic(1, mode), &
+                  vypic(1, mode), vzpic(1, mode), vx, vy, vz)
             end if
          end do
       else
@@ -133,16 +140,19 @@ subroutine otd
       time = 0.0d0 ! set time to zero
 
       call outpost(ubic, vbic, wbic, pr, t, 'ip0')
-      do i = 1, npert
-         write (istr, '(I1)') i
-         call outpost(upic(1, i), vpic(1, i), wpic(1, i), pr, t, 'ip'//trim(istr))
+      do mode = 1, npert
+         write (mode_tag, '(I1)') mode
+         call outpost(upic(1, mode), vpic(1, mode), &
+            wpic(1, mode), pr, t, 'ip'//trim(mode_tag))
       end do
 
       if (uparam(1) > 5) then
-         ifbase = .true.; call bcast(ifbase, lsize)
+         ifbase = .true.
+         call bcast(ifbase, lsize)
       elseif (uparam(1) == 5) then
          if (nid == 0) write (6, *) 'OTD in Frozen baseflow mode!'
-         ifbase = .false.; call bcast(ifbase, lsize)
+         ifbase = .false.
+         call bcast(ifbase, lsize)
       end if
 
       gsstep_override = .true.
@@ -152,8 +162,7 @@ subroutine otd
       OTD_init = .true.
    end if ! init
 
-   !  Time-stepping: always runs (including istep=0 after init,
-   !  which initialises t0=0 in otd_compute_FTLE).
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.1.
    gsstep_override = .false.
    call otd_orthonormalize_basis
    call otd_construct_linear_operator
@@ -172,55 +181,61 @@ end subroutine otd
 !   operator on perturbation field
 !-----------------------------------------------------------------------
 subroutine otd_construct_linear_operator
-   integer ipert, jpert, nv, ldv, i
+   integer :: mode, row, active_count, storage_count
 
-   !     Build the elements of the linearized NS-operator L_{NS} (u_j)
-   !         L_{NS} (u_j) = 1/Re (grad^2 u)_j - (grad p)_j - (Ub.grad) u_j - (u_j.grad) Ub
-
-   do ipert = 1, npert
-      call otd_construct_convective_terms(vxp(1, ipert), vyp(1, ipert), vzp(1, ipert), ipert)
-      call otd_construct_pressure_gradient_terms(prp(1, ipert), ipert)
-      call otd_construct_diffusive_terms(vxp(1, ipert), vyp(1, ipert), vzp(1, ipert), ipert)
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.2.
+   ! Build the linearized Navier-Stokes action on each OTD basis vector:
+   !   L_NS(u_j) = (1/Re) grad^2 u_j - grad p_j
+   !             - (Ub.grad) u_j - (u_j.grad) Ub.
+   do mode = 1, npert
+      call otd_construct_convective_terms( &
+         vxp(1, mode), vyp(1, mode), vzp(1, mode), mode)
+      call otd_construct_pressure_gradient_terms(prp(1, mode), mode)
+      call otd_construct_diffusive_terms( &
+         vxp(1, mode), vyp(1, mode), vzp(1, mode), mode)
    end do
 
-   !     Assemble the action of the operator
-   !
-   !     L_{NS} (u_j) = 1/Re grad^2 u_j - grad p - (Ub.grad) u_j - (u_j.grad) Ub
-   !
-   nv = lx1*ly1*lz1*nelv
-   ldv = lx1*ly1*lz1*lelv
-   do jpert = 1, npert
-      do i = 1, nv
-         otd_Lux(i, jpert) = diffx(i, jpert) - gradpx(i, jpert) - convx(i, jpert)
-         otd_Luy(i, jpert) = diffy(i, jpert) - gradpy(i, jpert) - convy(i, jpert)
-         if (if3d) otd_Luz(i, jpert) = diffz(i, jpert) - gradpz(i, jpert) - convz(i, jpert)
+   active_count = lx1*ly1*lz1*nelv
+   storage_count = lx1*ly1*lz1*lelv
+
+   do mode = 1, npert
+      do row = 1, active_count
+         otd_Lux(row, mode) = &
+            diffx(row, mode) - gradpx(row, mode) - convx(row, mode)
+         otd_Luy(row, mode) = &
+            diffy(row, mode) - gradpy(row, mode) - convy(row, mode)
+         if (if3d) then
+            otd_Luz(row, mode) = &
+               diffz(row, mode) - gradpz(row, mode) - convz(row, mode)
+         end if
       end do
    end do
 
-   !     Compute Lr(i,j) = <L_NS(u_i), u_j> via batched dgemm.
-   !     Weight otd_Lu by mass matrix in-place (safe: not reused).
-   do jpert = 1, npert
-      call col2(otd_Lux(1, jpert), bm1, nv)
-      call col2(otd_Luy(1, jpert), bm1, nv)
-      if (if3d) call col2(otd_Luz(1, jpert), bm1, nv)
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.2-§1.3.
+   ! Apply the mass weight before forming <L_NS(u_i), u_j>.
+   do mode = 1, npert
+      call col2(otd_Lux(1, mode), bm1, active_count)
+      call col2(otd_Luy(1, mode), bm1, active_count)
+      if (if3d) call col2(otd_Luz(1, mode), bm1, active_count)
    end do
+
    call otd_gram_matrix(otd_Lr, &
       otd_Lux, otd_Luy, otd_Luz, &
-      vxp, vyp, vzp, nv, ldv)
+      vxp, vyp, vzp, active_count, storage_count)
 
-   !     --- Internal rotation matrix phi_rot ---
-   !     Skew-symmetric: phi_rot(i,j) = -phi_rot(j,i)
-   !     Extracted from Lr (same inner products, already computed).
+   ! Internal rotation is skew-symmetric:
+   !   phi_rot(i,j) = -phi_rot(j,i).
+   ! It is extracted from the just-computed reduced operator Lr.
    call rzero(phi_rot, lpert*lpert)
    if (npert > 1) then
-      do jpert = 1, npert
-         do ipert = jpert + 1, npert
-            phi_rot(ipert, jpert) =  otd_Lr(ipert, jpert)
-            phi_rot(jpert, ipert) = -otd_Lr(ipert, jpert)
+      do mode = 1, npert
+         do row = mode + 1, npert
+            phi_rot(row, mode) =  otd_Lr(row, mode)
+            phi_rot(mode, row) = -otd_Lr(row, mode)
          end do
       end do
    end if
-   call sub2(otd_Lr, phi_rot, lpert*lpert) ! add internal rotation if defined
+   call sub2(otd_Lr, phi_rot, lpert*lpert)
 
 end subroutine otd_construct_linear_operator
 
@@ -230,76 +245,81 @@ end subroutine otd_construct_linear_operator
 !-----------------------------------------------------------------------
 subroutine otd_compute_OTD_modes
 
-   ! Compute eigenspectrum of the reduced operator Lr_{ij} and project the velocity
-   !       perturbations onto the eigendirections to obtain the most unstable modes
+   real :: saved_Lr(lpert, lpert)
+   integer :: active_count, row, col
+   character(len=20) :: real_fmt, int_fmt
 
-
-   real tmp(lpert, lpert)
-   integer nv, i, j
-   character(len=20) fmtr, fmti
-
-   call copy(tmp, otd_Lr, lpert*lpert) ! Save otd_Lr in tmp
-   do i = 1, npert
-      do j = 1, npert
-         otd_Lr(i, j) = 0.50d0*(tmp(i, j) + tmp(j, i)) ! Compute Lsym = (otd_Lr+otd_Lr^T)/2
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.5.
+   ! Symmetric growth-rate operator:
+   !   Lsym = (Lr + Lr^T)/2.
+   ! The full Lr is saved because the nonlinear OTD forcing still uses it.
+   call copy(saved_Lr, otd_Lr, lpert*lpert)
+   do row = 1, npert
+      do col = 1, npert
+         otd_Lr(row, col) = &
+            0.50d0*(saved_Lr(row, col) + saved_Lr(col, row))
       end do
    end do
-   call otd_compute_eig_wrapper(npert, 'r') ! Compute lambdas from otd_Lr
-   call otd_sort_eigenvalues('otd_Ls') ! Sort lambdas
+
+   call otd_compute_eig_wrapper(npert, 'r')
+   call otd_sort_eigenvalues('otd_Ls')
 
    if (nid == 0) then ! save to file
       open (unit=457, file='otd_growth_rates.dat', position='append', status='unknown', form='formatted')
-      write (fmtr, '("(",I0,"(E15.7,1X))")') npert + 1
-      write (457, fmtr) time, (EIGR(i), i=1, npert)
+      write (real_fmt, '("(",I0,"(E15.7,1X))")') npert + 1
+      write (457, real_fmt) time, (EIGR(row), row=1, npert)
       close (457)
    end if
 
    if (mod(istep, otd_printStep) == 0 .and. nid == 0) then ! print out
-      write (fmtr, '("(",I0,"(E15.7,1X))")') npert
+      write (real_fmt, '("(",I0,"(E15.7,1X))")') npert
       if (nid == 0) write (6, '(A,I7,1x,E14.7,1x,A8)', ADVANCE='NO') '  [OTD] ', istep, time, 'Ls | Re '
-      write (6, fmtr) (EIGR(i), i=1, npert)
+      write (6, real_fmt) (EIGR(row), row=1, npert)
    end if
 
-   call copy(otd_Lr, tmp, lpert*lpert) ! Restore otd_Lr
-   call otd_compute_eig_wrapper(npert, 'r') ! Compute lambdas eigenvalues of otd_Lr
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.5.
+   ! Restore the unsymmetrized reduced operator and eigendecompose it to
+   ! obtain the OTD-mode directions.
+   call copy(otd_Lr, saved_Lr, lpert*lpert)
+   call otd_compute_eig_wrapper(npert, 'r')
    call otd_sort_eigenvalues('otd_Lr ')
-   call copy(otd_Lr, tmp, lpert*lpert) ! Restore otd_Lr
+   call copy(otd_Lr, saved_Lr, lpert*lpert)
 
    if (nid == 0) then ! save to file
       open (unit=458, file='otd_eigenvalues.dat', position='append', status='unknown', form='formatted')
-      write (fmtr, '("(",I0,"(E15.7,1X))")') npert + 1
-      write (458, fmtr) time, (EIGR(i), i=1, npert)
+      write (real_fmt, '("(",I0,"(E15.7,1X))")') npert + 1
+      write (458, real_fmt) time, (EIGR(row), row=1, npert)
       close (458)
    end if
 
    if (mod(istep, otd_printStep) == 0 .and. nid == 0) then ! print out
       write (6, '(A,I7,1x,E14.7,1x,A8)', ADVANCE='NO') '  [OTD] ', istep, time, 'Lr | Re '
-      write (6, fmtr) (EIGR(i), i=1, npert)
+      write (6, real_fmt) (EIGR(row), row=1, npert)
 
       write (6, '(A,I7,1x,E14.7,1x,A8)', ADVANCE='NO') '  [OTD] ', istep, time, 'Lr | Im '
-      write (6, fmtr) (EIGI(i), i=1, npert) ! print order for reference
-      write (fmti, '("(",I0,"(I4,1X))")') npert
+      write (6, real_fmt) (EIGI(row), row=1, npert) ! print order for reference
+      write (int_fmt, '("(",I0,"(I4,1X))")') npert
 
       write (6, '(A,I7,1x,E14.7,1x,A8)', ADVANCE='NO') '  [OTD] ', istep, time, 's-otd_idx   '
-      write (6, fmti) (otd_idx(i), i=1, npert) ! print out non-zero elements of rotated otd_Lr
+      write (6, int_fmt) (otd_idx(row), row=1, npert) ! print out non-zero elements of rotated otd_Lr
 
-      write (fmtr, '("(",I0,"(E15.7,1X))")') npert*(npert + 1)/2
+      write (real_fmt, '("(",I0,"(E15.7,1X))")') npert*(npert + 1)/2
       write (6, '(A,I7,1x,E14.7,1x,A8)', ADVANCE='NO') '  [OTD] ', istep, time, 'Lrmat   '
-      write (6, fmtr) ((otd_Lr(i, j), j=i, npert), i=1, npert)
+      write (6, real_fmt) ((otd_Lr(row, col), col=row, npert), row=1, npert)
 
    end if
 
-   !   Project the perturbation velocity field (OTD basis) onto the eigendirections of
-   !   the reduced operator to obtain the most unstable directions
-
-   nv = lx1*ly1*lz1*nelv
-   call mxm(vxp, nv, EVRr, lpert, OTDmrx, npert)
-   call mxm(vxp, nv, EVRi, lpert, OTDmix, npert)
-   call mxm(vyp, nv, EVRr, lpert, OTDmry, npert)
-   call mxm(vyp, nv, EVRi, lpert, OTDmiy, npert)
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.5.
+   ! Project the physical OTD basis fields onto the sorted eigendirections:
+   ! real parts use EVRR, imaginary parts use EVRI.
+   active_count = lx1*ly1*lz1*nelv
+   call mxm(vxp, active_count, EVRr, lpert, OTDmrx, npert)
+   call mxm(vxp, active_count, EVRi, lpert, OTDmix, npert)
+   call mxm(vyp, active_count, EVRr, lpert, OTDmry, npert)
+   call mxm(vyp, active_count, EVRi, lpert, OTDmiy, npert)
    if (if3d) then
-      call mxm(vzp, nv, EVRr, lpert, OTDmrz, npert)
-      call mxm(vzp, nv, EVRi, lpert, OTDmiz, npert)
+      call mxm(vzp, active_count, EVRr, lpert, OTDmrz, npert)
+      call mxm(vzp, active_count, EVRi, lpert, OTDmiz, npert)
    end if
 
 end subroutine otd_compute_OTD_modes
@@ -437,10 +457,13 @@ end subroutine otd_white_noise
 !-----------------------------------------------------------------------
 subroutine otd_generate_forces
 
-   integer nv; nv = lx1*ly1*lz1*nelv
-   call mxm(VXP, nv, otd_Lr, lpert, OTDfx, npert)
-   call mxm(VYP, nv, otd_Lr, lpert, OTDfy, npert)
-   if (if3d) call mxm(VZP, nv, otd_Lr, lpert, OTDfz, npert)
+   integer :: active_count
+
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.4.
+   active_count = lx1*ly1*lz1*nelv
+   call mxm(VXP, active_count, otd_Lr, lpert, OTDfx, npert)
+   call mxm(VYP, active_count, otd_Lr, lpert, OTDfy, npert)
+   if (if3d) call mxm(VZP, active_count, otd_Lr, lpert, OTDfz, npert)
 
 end subroutine otd_generate_forces
 
@@ -450,20 +473,20 @@ end subroutine otd_generate_forces
 subroutine otd_orthonormalize_basis
 
    real :: N, O
-   logical :: runON
+   logical :: needs_gs
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.3.
    call otd_compute_orthonormality_measures(N, O, 'pre   ', .true.)
 
-   runON = .false.
+   needs_gs = .false.
    if (otd_gsStep /= 0) then ! gsstep=0 => no GS
       if (mod(istep, otd_gsStep) == 0) then
-         runON = .true.
+         needs_gs = .true.
       end if
    end if
-   if (gsstep_override) runON = .true. ! override when needed
+   if (gsstep_override) needs_gs = .true. ! override when needed
 
-   if (runON) then
-      !call otd_classic_Gram_Schmidt    ! Classical Gram-Schmidt
+   if (needs_gs) then
       call otd_mod_Gram_Schmidt ! Modified Gram-Schmidt
    end if
 
@@ -684,44 +707,44 @@ end subroutine otd_compute_FTLE
 subroutine otd_construct_convective_terms(uxp, uyp, uzp, ipert)
 
    real, dimension(lx1*ly1*lz1*lelv), intent(in) :: uxp, uyp, uzp
-   real, dimension(lx1, ly1, lz1, lelv), save :: ta1, ta2, ta3, tb1, tb2, tb3
    integer, intent(in) :: ipert
-   integer nv
+   real, dimension(lx1, ly1, lz1, lelv), save :: work_x, work_y, work_z
+   real, dimension(lx1, ly1, lz1, lelv), save :: saved_x, saved_y, saved_z
 
-   nv = lx1*ly1*lz1*nelv
-
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.5.
+   ! convop differentiates its second argument along the current velocity
+   ! field and handles Nek's dealiasing path internally.
+   ! First pass: set the current velocity to u and compute (u.grad) Ub.
+   ! Second pass: restore Ub as the current velocity and compute (Ub.grad) u.
+   ! In 2D, the third component is only a dummy slot required by opcopy/opadd2.
    if (if3d) then
-      call opcopy(tb1, tb2, tb3, vx, vy, vz) ! Save velocity
-      call opcopy(vx, vy, vz, uxp, uyp, uzp) ! U <-- u
-      !     convop(conv,fld): builds the convective term for the scalar field fld
-      !     conv_i = (v_j.grad_j)*fld_i                 => (vp_j.grad_j)*v_i
-      call convop(ta1, tb1) ! (u.grad) Ub (takes care of dealiasing)
-      call convop(ta2, tb2)
-      call convop(ta3, tb3)
-      !     Copy fields into the correct variables
-      call opcopy(convx(1, ipert), convy(1, ipert), convz(1, ipert), ta1, ta2, ta3)
-      call opcopy(vx, vy, vz, tb1, tb2, tb3) ! Restore velocity
-      !     conv_i = (v_j.grad_j)*fld_i                 => (v_j.grad_j)*vp_i
-      call convop(tb1, uxp) ! (Ub.grad) u
-      call convop(tb2, uyp)
-      call convop(tb3, uzp)
-      !     Add fields to the convective term
-      call opadd2(convx(1, ipert), convy(1, ipert), convz(1, ipert), tb1, tb2, tb3)
+      call opcopy(saved_x, saved_y, saved_z, vx, vy, vz)
+      call opcopy(vx, vy, vz, uxp, uyp, uzp)
+      call convop(work_x, saved_x)
+      call convop(work_y, saved_y)
+      call convop(work_z, saved_z)
+      call opcopy(convx(1, ipert), convy(1, ipert), &
+         convz(1, ipert), work_x, work_y, work_z)
+
+      call opcopy(vx, vy, vz, saved_x, saved_y, saved_z)
+      call convop(saved_x, uxp)
+      call convop(saved_y, uyp)
+      call convop(saved_z, uzp)
+      call opadd2(convx(1, ipert), convy(1, ipert), &
+         convz(1, ipert), saved_x, saved_y, saved_z)
    else ! 2D
-      call opcopy(tb1, tb2, tb3, vx, vy, vz) ! Save velocity
-      call opcopy(vx, vy, vz, uxp, uyp, uzp) ! U <-- u
-      !     convop(conv,fld): builds the convective term for the scalar field fld
-      !     conv_i = (v_j.grad_j)*fld_i                 => (vp_j.grad_j)*v_i
-      call convop(ta1, tb1) ! (u.grad) Ub
-      call convop(ta2, tb2)
-      !     Copy fields into the correct variables
-      call opcopy(convx(1, ipert), convy(1, ipert), ta3, ta1, ta2, ta3)
-      call opcopy(vx, vy, vz, tb1, tb2, tb3) ! Restore velocity
-      !     conv_i = (v_j.grad_j)*fld_i                 => (v_j.grad_j)*vp_i
-      call convop(tb1, uxp) ! (Ub.grad) u
-      call convop(tb2, uyp)
-      !     Add fields to the convective term
-      call opadd2(convx(1, ipert), convy(1, ipert), tb3, tb1, tb2, tb3)
+      call opcopy(saved_x, saved_y, saved_z, vx, vy, vz)
+      call opcopy(vx, vy, vz, uxp, uyp, uzp)
+      call convop(work_x, saved_x)
+      call convop(work_y, saved_y)
+      call opcopy(convx(1, ipert), convy(1, ipert), &
+         work_z, work_x, work_y, work_z)
+
+      call opcopy(vx, vy, vz, saved_x, saved_y, saved_z)
+      call convop(saved_x, uxp)
+      call convop(saved_y, uyp)
+      call opadd2(convx(1, ipert), convy(1, ipert), &
+         saved_z, saved_x, saved_y, saved_z)
    end if ! if3d
 
 end subroutine otd_construct_convective_terms
@@ -732,12 +755,14 @@ end subroutine otd_construct_convective_terms
 !-----------------------------------------------------------------------
 subroutine otd_construct_pressure_gradient_terms(prpert, ipert)
 
-   real, intent(in) :: prpert(lx2*ly2*lz2*lelv, 1) ! perturbation pressure field
-   integer, intent(in) :: ipert ! number of the considered pert.
-   real, dimension(lx1, ly1, lz1, lelv), save :: ta1, ta2, wrk
+   real, intent(in) :: prpert(lx2*ly2*lz2*lelv, 1)
+   integer, intent(in) :: ipert
+   real, dimension(lx1, ly1, lz1, lelv), save :: map_x, map_y, mapped_p
 
-   call mappr(wrk, prpert, ta1, ta2) ! Map the perturbation pressure to the velocity mesh
-   call gradm1(gradpx(1, ipert), gradpy(1, ipert), gradpz(1, ipert), wrk) ! gradient on the velocity mesh directly
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.5.
+   call mappr(mapped_p, prpert, map_x, map_y)
+   call gradm1(gradpx(1, ipert), gradpy(1, ipert), &
+      gradpz(1, ipert), mapped_p)
 
 end subroutine otd_construct_pressure_gradient_terms
 
@@ -748,16 +773,18 @@ subroutine otd_construct_diffusive_terms(uxp, uyp, uzp, ipert)
 
    real, dimension(lx1*ly1*lz1*lelv), intent(in) :: uxp, uyp, uzp
    integer, intent(in) :: ipert
-   integer nv
+   integer :: active_count
 
-   nv = lx1*ly1*lz1*nelv
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.5.
+   ! otd_compute_laplacian returns grad^2 u; multiplying by vdiff applies
+   ! the viscous coefficient, i.e. 1/Re for constant-viscosity cases.
+   active_count = lx1*ly1*lz1*nelv
    call otd_compute_laplacian(diffx(1, ipert), uxp)
    call otd_compute_laplacian(diffy(1, ipert), uyp)
    if (if3d) call otd_compute_laplacian(diffz(1, ipert), uzp)
-   ! multiply by 1/Re > remove for operator diagnostics
-   call col2(diffx(1, ipert), vdiff, nv)
-   call col2(diffy(1, ipert), vdiff, nv)
-   if (if3d) call col2(diffz(1, ipert), vdiff, nv)
+   call col2(diffx(1, ipert), vdiff, active_count)
+   call col2(diffy(1, ipert), vdiff, active_count)
+   if (if3d) call col2(diffz(1, ipert), vdiff, active_count)
 
 end subroutine otd_construct_diffusive_terms
 
@@ -767,41 +794,59 @@ end subroutine otd_construct_diffusive_terms
 !-----------------------------------------------------------------------
 subroutine otd_compute_laplacian(lapu, up)
 
-   real, intent(in) :: up(lx1*ly1*lz1*lelv, 1) ! perturbation velocity component
+   real, intent(in) :: up(lx1*ly1*lz1*lelv, 1)
    real, intent(out), dimension(lx1*ly1*lz1, lelv) :: lapu
-   real, dimension(lx1*ly1*lz1, lelv), save :: ux, uy, uz
-   real, dimension(lx1*ly1*lz1) :: otd_ur, otd_us, otd_ut
-   ! common/ctmp1/otd_ur, otd_us, otd_ut
-   integer e, i, lxyz, nel
+   real, dimension(lx1*ly1*lz1, lelv), save :: grad_x, grad_y, grad_z
+   real, dimension(lx1*ly1*lz1) :: ref_r, ref_s, ref_t
+   integer :: elem, point, lxyz, polynomial_degree
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.5.
    lxyz = lx1*ly1*lz1
-   nel = nx1 - 1
-   call gradm1(ux, uy, uz, up)
-   do e = 1, nelv
+   polynomial_degree = nx1 - 1
+   call gradm1(grad_x, grad_y, grad_z, up)
+   do elem = 1, nelv
       if (if3d) then
-         call local_grad3(otd_ur, otd_us, otd_ut, ux, nel, e, dxm1, dxtm1)
-         do i = 1, lxyz
-            lapu(i, e) = jacmi(i, e)*(otd_ur(i)*rxm1(i, 1, 1, e) + &
-               otd_us(i)*sxm1(i, 1, 1, e) + otd_ut(i)*txm1(i, 1, 1, e))
+         call local_grad3(ref_r, ref_s, ref_t, grad_x, &
+            polynomial_degree, elem, dxm1, dxtm1)
+         do point = 1, lxyz
+            lapu(point, elem) = jacmi(point, elem) &
+               *(ref_r(point)*rxm1(point, 1, 1, elem) &
+               + ref_s(point)*sxm1(point, 1, 1, elem) &
+               + ref_t(point)*txm1(point, 1, 1, elem))
          end do
-         call local_grad3(otd_ur, otd_us, otd_ut, uy, nel, e, dxm1, dxtm1)
-         do i = 1, lxyz
-            lapu(i, e) = lapu(i, e) + jacmi(i, e)*(otd_ur(i)*rym1(i, 1, 1, e) + &
-               otd_us(i)*sym1(i, 1, 1, e) + otd_ut(i)*tym1(i, 1, 1, e))
+         call local_grad3(ref_r, ref_s, ref_t, grad_y, &
+            polynomial_degree, elem, dxm1, dxtm1)
+         do point = 1, lxyz
+            lapu(point, elem) = lapu(point, elem) &
+               + jacmi(point, elem) &
+               *(ref_r(point)*rym1(point, 1, 1, elem) &
+               + ref_s(point)*sym1(point, 1, 1, elem) &
+               + ref_t(point)*tym1(point, 1, 1, elem))
          end do
-         call local_grad3(otd_ur, otd_us, otd_ut, uz, nel, e, dxm1, dxtm1)
-         do i = 1, lxyz
-            lapu(i, e) = lapu(i, e) + jacmi(i, e)*(otd_ur(i)*rzm1(i, 1, 1, e) + &
-               otd_us(i)*szm1(i, 1, 1, e) + otd_ut(i)*tzm1(i, 1, 1, e))
+         call local_grad3(ref_r, ref_s, ref_t, grad_z, &
+            polynomial_degree, elem, dxm1, dxtm1)
+         do point = 1, lxyz
+            lapu(point, elem) = lapu(point, elem) &
+               + jacmi(point, elem) &
+               *(ref_r(point)*rzm1(point, 1, 1, elem) &
+               + ref_s(point)*szm1(point, 1, 1, elem) &
+               + ref_t(point)*tzm1(point, 1, 1, elem))
          end do
       else ! 2D
-         call local_grad2(otd_ur, otd_us, ux, nel, e, dxm1, dytm1)
-         do i = 1, lxyz
-            lapu(i, e) = jacmi(i, e)*(otd_ur(i)*rxm1(i, 1, 1, e) + otd_us(i)*sxm1(i, 1, 1, e))
+         call local_grad2(ref_r, ref_s, grad_x, &
+            polynomial_degree, elem, dxm1, dytm1)
+         do point = 1, lxyz
+            lapu(point, elem) = jacmi(point, elem) &
+               *(ref_r(point)*rxm1(point, 1, 1, elem) &
+               + ref_s(point)*sxm1(point, 1, 1, elem))
          end do
-         call local_grad2(otd_ur, otd_us, uy, nel, e, dxm1, dytm1)
-         do i = 1, lxyz
-            lapu(i, e) = lapu(i, e) + jacmi(i, e)*(otd_ur(i)*rym1(i, 1, 1, e) + otd_us(i)*sym1(i, 1, 1, e))
+         call local_grad2(ref_r, ref_s, grad_y, &
+            polynomial_degree, elem, dxm1, dytm1)
+         do point = 1, lxyz
+            lapu(point, elem) = lapu(point, elem) &
+               + jacmi(point, elem) &
+               *(ref_r(point)*rym1(point, 1, 1, elem) &
+               + ref_s(point)*sym1(point, 1, 1, elem))
          end do
       end if ! if3d
    end do
@@ -818,8 +863,11 @@ real function otd_op_glsc2(vcx, vcy, vcz, jpert)
    integer, intent(in) :: jpert
    real :: op_glsc2_wt
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.2.
    ifield = 1
-   otd_op_glsc2 = 0.50d0*op_glsc2_wt(vcx, vcy, vcz, VXP(1, jpert), VYP(1, jpert), VZP(1, jpert), bm1)
+   otd_op_glsc2 = 0.50d0*op_glsc2_wt( &
+      vcx, vcy, vcz, VXP(1, jpert), VYP(1, jpert), &
+      VZP(1, jpert), bm1)
 
 end function otd_op_glsc2
 
@@ -832,12 +880,16 @@ real function otd_inner_product(ipert, jpert, iflag)
    integer, intent(in) :: ipert, jpert
    integer, intent(in) :: iflag
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.2.
    otd_inner_product = 0.0d0
 
    if (iflag == 1) then
-      otd_inner_product = otd_op_glsc2(VXP(1, ipert), VYP(1, ipert), VZP(1, ipert), jpert)
+      otd_inner_product = otd_op_glsc2( &
+         VXP(1, ipert), VYP(1, ipert), VZP(1, ipert), jpert)
    elseif (iflag == 2) then
-      otd_inner_product = otd_op_glsc2(otd_Lux(1, ipert), otd_Luy(1, ipert), otd_Luz(1, ipert), jpert)
+      otd_inner_product = otd_op_glsc2( &
+         otd_Lux(1, ipert), otd_Luy(1, ipert), &
+         otd_Luz(1, ipert), jpert)
    else
       if (nid == 0) write (6, *) 'Error: Invalid iflag in otd_inner_product'
       call exitt
@@ -851,21 +903,21 @@ end function otd_inner_product
 subroutine otd_normalize_vector_field(uxp, uyp, uzp)
 
    real, dimension(lx1*ly1*lz1*lelv, 1), intent(inout) :: uxp, uyp, uzp
-   integer :: nv
-   real :: invnorm, n2, op_glsc2_wt
+   integer :: active_count
+   real :: invnorm, norm_sq, op_glsc2_wt
 
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.3.
    ifield = 1
-   nv = lx1*ly1*lz1*nelv
-   n2 = 0.50d0*op_glsc2_wt(uxp, uyp, uzp, uxp, uyp, uzp, bm1)
-   if (n2 <= 0.0d0) then
-      !  Semicolon: write is guarded by nid==0, but nek_end runs on ALL
-      !  MPI ranks (intentional — guarding it would hang other ranks).
-      if (nid == 0) write (6, *) 'Error in otd_normalize_vector_field!'; call nek_end
+   active_count = lx1*ly1*lz1*nelv
+   norm_sq = 0.50d0*op_glsc2_wt(uxp, uyp, uzp, uxp, uyp, uzp, bm1)
+   if (norm_sq <= 0.0d0) then
+      if (nid == 0) write (6, *) 'Error in otd_normalize_vector_field!'
+      call nek_end
    end if
-   invnorm = 1.0d0/sqrt(n2)
-   call cmult(uxp(1:nv, :), invnorm, nv)
-   call cmult(uyp(1:nv, :), invnorm, nv)
-   if (if3d) call cmult(uzp(1:nv, :), invnorm, nv)
+   invnorm = 1.0d0/sqrt(norm_sq)
+   call cmult(uxp(1:active_count, :), invnorm, active_count)
+   call cmult(uyp(1:active_count, :), invnorm, active_count)
+   if (if3d) call cmult(uzp(1:active_count, :), invnorm, active_count)
 
 end subroutine otd_normalize_vector_field
 
@@ -874,38 +926,37 @@ end subroutine otd_normalize_vector_field
 !   on the perturbation velocity field
 !-----------------------------------------------------------------------
 subroutine otd_mod_Gram_Schmidt
-   !Perform Modified Gram-Schmidt orthonormalization on the
-   !         perturbation velocity field for improved numerical stability
-   !
-   !     do i=1,npert
-   !       u_i = v_i/||v_i||
-   !       do j=i+1,npert
-   !         u_j = v_j - proj_{u_i} (v_j)
-   !       enddo
-   !     enddo
-   !
-   !        with proj_{u_i} (v_j) = < v_j , u_i >/||u_i|| * u_i
-   !                              = < v_j , u_i > * u_i   since ||u_i|| = 1
+   integer :: basis_col, target_col, active_count
+   real :: invnorm, projection
 
-   integer i, j, nv
-   real invnorm, proj
-
-   nv = lx1*ly1*lz1*nelv
-   do i = 1, npert ! orthonormalize
-      invnorm = otd_inner_product(i, i, 1)
-      if (invnorm > 0.0) then
-         invnorm = 1.0/sqrt(invnorm)
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.3.
+   ! Modified Gram-Schmidt, written in OTD basis notation:
+   !   u_i = v_i / ||v_i||
+   !   v_j <- v_j - <v_j, u_i> u_i,  j > i.
+   ! The stored projection is negated because add2s2 performs an addition.
+   active_count = lx1*ly1*lz1*nelv
+   do basis_col = 1, npert
+      invnorm = otd_inner_product(basis_col, basis_col, 1)
+      if (invnorm > 0.0d0) then
+         invnorm = 1.0d0/sqrt(invnorm)
       else
-         invnorm = 0.0
+         invnorm = 0.0d0
       end if
-      call cmult(vxp(1, i), invnorm, nv)
-      call cmult(vyp(1, i), invnorm, nv)
-      if (if3d) call cmult(vzp(1, i), invnorm, nv)
-      do j = i + 1, npert
-         proj = -otd_inner_product(i, j, 1)
-         call add2s2(vxp(1, j), vxp(1, i), proj, nv)
-         call add2s2(vyp(1, j), vyp(1, i), proj, nv)
-         if (if3d) call add2s2(vzp(1, j), vzp(1, i), proj, nv)
+
+      call cmult(vxp(1, basis_col), invnorm, active_count)
+      call cmult(vyp(1, basis_col), invnorm, active_count)
+      if (if3d) call cmult(vzp(1, basis_col), invnorm, active_count)
+
+      do target_col = basis_col + 1, npert
+         projection = -otd_inner_product(basis_col, target_col, 1)
+         call add2s2(vxp(1, target_col), &
+            vxp(1, basis_col), projection, active_count)
+         call add2s2(vyp(1, target_col), &
+            vyp(1, basis_col), projection, active_count)
+         if (if3d) then
+            call add2s2(vzp(1, target_col), &
+               vzp(1, basis_col), projection, active_count)
+         end if
       end do
    end do
 
@@ -922,33 +973,35 @@ end subroutine otd_mod_Gram_Schmidt
 !
 ! ax/ay/az must be pre-weighted by the mass matrix bm1.
 ! bx/by/bz are unweighted perturbation fields.
-! npts = nx1*ny1*nz1*nelv (active points), ldv = lx1*ly1*lz1*lelv
+! nv = nx1*ny1*nz1*nelv (active points), ldv = lx1*ly1*lz1*lelv
 !-----------------------------------------------------------------------
 subroutine otd_gram_matrix(G, ax, ay, az, &
-   bx, by, bz, npts, ldv)
+   bx, by, bz, nv, ldv)
 
-   integer, intent(in) :: npts, ldv
+   integer, intent(in) :: nv, ldv
    real, intent(out) :: G(lpert, lpert)
    real, intent(in), dimension(ldv, lpert) :: &
       ax, ay, az, bx, by, bz
    real :: wk_gop(lpert*lpert)
 
-   !     X-component (beta=0 initialises G)
-   call dgemm('T', 'N', npert, npert, npts, &
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.1.
+   ! Accumulate component contributions locally with BLAS:
+   !   X initializes G with beta=0,
+   !   Y accumulates into G with beta=1,
+   !   Z accumulates likewise in 3D.
+   ! One gop then performs the global reduction for the full matrix.
+   call dgemm('T', 'N', npert, npert, nv, &
       0.5d0, ax, ldv, bx, ldv, &
       0.0d0, G, lpert)
-   !     Y-component (accumulate)
-   call dgemm('T', 'N', npert, npert, npts, &
+   call dgemm('T', 'N', npert, npert, nv, &
       0.5d0, ay, ldv, by, ldv, &
       1.0d0, G, lpert)
-   !     Z-component (3D only)
    if (if3d) then
-      call dgemm('T', 'N', npert, npert, npts, &
+      call dgemm('T', 'N', npert, npert, nv, &
          0.5d0, az, ldv, bz, ldv, &
          1.0d0, G, lpert)
    end if
 
-   !     Single global reduction
    call gop(G, wk_gop, '+  ', lpert*lpert)
 
 end subroutine otd_gram_matrix
@@ -1022,63 +1075,57 @@ end subroutine otd_compute_orthonormality_measures
 !   and reorder eigenvector columns accordingly
 !-----------------------------------------------------------------------
 subroutine otd_sort_eigenvalues(str)
-   ! 1. Sort the eigenvalues l_i such that their real parts are ranked in decreasing order
-   !       Re(l_1) .ge. Re(l_i) .ge. Re(l_r), i = 1,...,r
-   !
-   !  2. Apply the same sorting to the columns of the right
-   !     eigenvector matrix and separate real and imaginary parts
-   !       EVR => EVRR + i*EVRI
-   !
-
    character(len=*), intent(in) :: str
-   integer i, j, id
-   logical mk(lpert)
-   real, dimension(lpert) :: wrk1, wrk2
+   integer :: row, sorted_col, source_col
+   logical :: active(lpert)
+   real, dimension(lpert) :: real_part, imag_part
 
    if (nid == 0) write (6, *) 'OTD: Sorting eigs of ', str
 
-   !   zero out indices, output and mask
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.7.
+   ! Sorting has two steps: rank eigenvalues by decreasing real part, then
+   ! reorder the corresponding dgeev eigenvector columns into EVRR/EVRI.
+   ! Real modes occupy one sorted column; complex pairs occupy two columns.
    call izero(otd_idx, lpert)
    call rzero(EVRR, lpert*lpert)
    call rzero(EVRI, lpert*lpert)
-   do i = 1, npert
-      mk(i) = .true.
+   do row = 1, npert
+      active(row) = .true.
    end do
-   call copy(wrk1, EIGR, lpert)
-   call copy(wrk2, EIGI, lpert)
+   call copy(real_part, EIGR, lpert)
+   call copy(imag_part, EIGI, lpert)
 
-   ! we need to exclude the trailing zeros for the sorting to work
    if (lpert > npert) then
-      do i = npert + 1, lpert
-         mk(i) = .false.
+      do row = npert + 1, lpert
+         active(row) = .false.
       end do
    end if
 
-   ! sorting
-   j = 1
-   do while (j <= npert)
-      EIGR(j) = maxval(wrk1, mask=mk) ! find largest real eigenvalue in remaining list
-      id = maxloc(wrk1, 1, mk) ! find its index
-      EIGI(j) = wrk2(id) ! extract corresponding imaginary part
-      mk(id) = .false. ! update mask
-      otd_idx(j) = id
-      if (abs(EIGI(j)) < 1.0d-12) then
-         do i = 1, npert
-            EVRR(i, j) = EVR(i, id)
+   sorted_col = 1
+   do while (sorted_col <= npert)
+      EIGR(sorted_col) = maxval(real_part, mask=active)
+      source_col = maxloc(real_part, 1, active)
+      EIGI(sorted_col) = imag_part(source_col)
+      active(source_col) = .false.
+      otd_idx(sorted_col) = source_col
+
+      if (abs(EIGI(sorted_col)) < 1.0d-12) then
+         do row = 1, npert
+            EVRR(row, sorted_col) = EVR(row, source_col)
          end do
-         j = j + 1
+         sorted_col = sorted_col + 1
       else ! complex conjugate eigenvectors!
-         EIGI(j + 1) = -EIGI(j)
-         EIGR(j + 1) = EIGR(j)
-         mk(id + 1) = .false.
-         otd_idx(j + 1) = id + 1
-         do i = 1, npert
-            EVRR(i, j) = EVR(i, id)
-            EVRR(i, j + 1) = EVR(i, id)
-            EVRI(i, j) = EVR(i, id + 1)
-            EVRI(i, j + 1) = -EVR(i, id + 1)
+         EIGI(sorted_col + 1) = -EIGI(sorted_col)
+         EIGR(sorted_col + 1) = EIGR(sorted_col)
+         active(source_col + 1) = .false.
+         otd_idx(sorted_col + 1) = source_col + 1
+         do row = 1, npert
+            EVRR(row, sorted_col) = EVR(row, source_col)
+            EVRR(row, sorted_col + 1) = EVR(row, source_col)
+            EVRI(row, sorted_col) = EVR(row, source_col + 1)
+            EVRI(row, sorted_col + 1) = -EVR(row, source_col + 1)
          end do
-         j = j + 2
+         sorted_col = sorted_col + 2
       end if
    end do
 
@@ -1089,37 +1136,36 @@ end subroutine otd_sort_eigenvalues
 !   non-symmetric eigenvalue problem on the reduced operator
 !-----------------------------------------------------------------------
 subroutine otd_compute_eig_wrapper(n, kind)
-   ! LAPACK interface for the non-symmetric eigenvalue solver.
-   ! Upon finishing, RITZR and RITZI contain the real and imaginary parts
-   ! of the computed eigenvalues. Complex conjugate pairs of the
-   ! eigenvalues appear with the eigenvalue having the positive
-   ! imaginary part first.
-   ! The corresponding eigenvectors are stored in EVEC. If the j:th and
-   ! (j+1):th eigenvalue form a complex conjugate pair, then:
-   ! v(j) = EVEC(:,j)+i*EVEC(:,j+1), v(j+1) = EVEC(:,j)-i*EVEC(:,j+1)
-
    integer, intent(in) :: n
    character(len=1) :: jobvl, jobvr
    character(len=1), intent(in) :: kind
-   integer :: lda, ldvl, ldvr, info, i, i0
+   integer :: lda, ldvl, ldvr, info, eig_idx
 
-   ! Input parameter 'kind' determines whether left and/or right eigenvectors should be computed
+   ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.7.
+   ! dgeev stores complex-conjugate eigenpairs as adjacent real columns:
+   ! for lambda = a +/- ib, EVR(:,k) is the real part and EVR(:,k+1)
+   ! is the imaginary part. otd_sort_eigenvalues converts that contract
+   ! into explicit EVRR/EVRI columns for later projection.
    if (kind == 'r') then
-      jobvl = 'N'; jobvr = 'V'
+      jobvl = 'N'
+      jobvr = 'V'
    elseif (kind == 'l') then
-      jobvl = 'V'; jobvr = 'N'
+      jobvl = 'V'
+      jobvr = 'N'
    elseif (kind == 'b') then
-      jobvl = 'V'; jobvr = 'V'
+      jobvl = 'V'
+      jobvr = 'V'
    else
       if (nid == 0) write (6, *) 'ERROR: choose left/right/both eigenvectors', kind
    end if
 
-   lda = npert; ldvl = npert; ldvr = npert
+   lda = npert
+   ldvl = npert
+   ldvr = npert
 
-   ! Compute the eigenvalues/eigenvectors in double precision
-   call dgeev(jobvl, jobvr, n, otd_Lr, lda, EIGR, EIGI, EVL, ldvl, EVR, ldvr, RWORK, LWORKR, info)
+   call dgeev(jobvl, jobvr, n, otd_Lr, lda, &
+      EIGR, EIGI, EVL, ldvl, EVR, ldvr, RWORK, LWORKR, info)
 
-   ! Error-check
    if (info < 0) then
       if (nid == 0) write (6, *) 'ERROR: the i:th argument had an illegal value.', abs(info)
       call exitt
@@ -1127,17 +1173,11 @@ subroutine otd_compute_eig_wrapper(n, kind)
       if (nid == 0) then
          write (6, *) 'ERROR: the QR algorithm failed.', info
          write (6, *) '         Converged eigenvalues:'
-         i0 = info + 1
-         do i = i0, n
-            write (6, *) EIGR(i), EIGI(i)
+         do eig_idx = info + 1, n
+            write (6, *) EIGR(eig_idx), EIGI(eig_idx)
          end do
       end if
       call exitt
-      ! else
-      !    if (nid == 0) then
-      !       write (6, *) 'DGEEV: successful exit!'
-      !       write (6, *) '        Optimal LWORKR=', int(RWORK(1)), LWORKR
-      !    end if ! nid.eq.0
    end if ! info < 0
 
 end subroutine otd_compute_eig_wrapper
