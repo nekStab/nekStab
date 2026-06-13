@@ -1,5 +1,16 @@
 # Cylinder Moving Mesh — Forced Oscillation DNS
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This case exercises forced motion and moving-domain mechanics for the circular
+cylinder wake. The named thesis chapters discuss periodic orbits, Floquet
+multipliers, and circular-cylinder wake instabilities, but they do not contain
+a separate forced-oscillating-cylinder case section. Thesis source for the
+underlying concepts: chapter 2, `Periodic orbits`, `Bifurcations of periodic
+orbits`, and `sec:ex:1cyl`.
+
 ## Physics
 2D flow around a circular cylinder undergoing forced transverse oscillation
 at amplitude `A = 1.08` (`userParam05`) and frequency `f = 0.1643` (`userParam06`),

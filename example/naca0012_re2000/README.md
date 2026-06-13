@@ -1,5 +1,16 @@
 # NACA 0012 — Newton-GMRES base flow
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This airfoil case demonstrates the open-shear-flow matrix-free stability and
+wavemaker pipeline on a thin-airfoil wake. The named thesis chapters and
+AMR_Krylov examples cite airfoils as part of the broader nekStab application
+set, but they do not contain a dedicated NACA 0012 thesis case section. Source
+for the method framing: AMR_Krylov_V5/Main `S4_nekstab.tex` and thesis chapter
+2, `sec: nekStab`.
+
 ## Physics
 2D flow around a NACA 0012 airfoil at Re = 2000. Computes the steady base flow using Newton-GMRES with sponge regions.
 

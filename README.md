@@ -92,22 +92,10 @@ See [DOC.md](DOC.md) for full parameter reference.
 
 ## Examples
 
-Ready-to-run cases in `example/`:
-
-| Case | Physics | Demonstrated Features |
-|------|---------|----------------------|
-| `cylinder/` | 2D wake (Re=50–180) | DNS, SFD, BoostConv, Newton, direct/adjoint stability, Floquet, wavemaker, sensitivity, OTD, POD/DMD/SPOD |
-| `back_fstep/` | Separated flow (Re=500) | Newton baseflow, transient growth |
-| `flip_flop/` | Side-by-side cylinders (Re=62) | Newton UPO (natural frequency), Floquet |
-| `tpjet/` | Forced jet (Re=1900) | Newton UPO (forced frequency), TDF, Floquet period-doubling |
-| `thermosyphon/` | Buoyancy-driven (Ra=500) | Newton baseflow, pitchfork + Hopf bifurcations |
-| `lid_driven/` | Confined flow (Re=3600) | Newton, steady bifurcations |
-| `cubic_cavity/` | 3D cavity (Re=1950–2500) | Newton, 3D steady bifurcations, UPO |
-| `naca0012/` | Airfoil (Re=2000–2500) | Newton, direct stability |
-| `blasius/` | Flat-plate boundary layer | Tollmien-Schlichting waves |
-| `torus/` | Curved pipe | Dean instability, 3D modes |
-| `poiseuille_OTD/` | Channel flow (Re=5000) | OTD modes |
-| `slot_FST/` | Slot jet | Free-stream turbulence synthesis |
+Ready-to-run cases live under `example/`, from canonical cylinder workflows to
+thermal, airfoil, cavity, channel, and Floquet examples.
+See [EXAMPLES.md](EXAMPLES.md) for the stage rationale, case catalog, and
+public validation status.
 
 ## First Steps
 
@@ -183,7 +171,7 @@ source "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash"
 
 Go to a given example folder and compile the code:
 ```bash
-cd ~/nekStab/example/cylinder/baseflow/newton
+cd ~/nekStab/example/cylinder_re100/210_baseflow_newton/fp
 mks 1cyl
 ```
 

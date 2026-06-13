@@ -35,6 +35,10 @@ cd example/<geom>/310_stability_direct
 
 > Authoritative dispatch source: grep `uparam(1) ==` in `src/` and `src/mode_config.f90`.
 
+Shared "why this stage exists" prose is maintained in
+[EXAMPLES.md](../../EXAMPLES.md). Keep geometry READMEs focused on the
+case-specific motivation and operating point.
+
 ---
 
 ## Variant subdirs -- canonical example: `110_baseflow_sfd/`

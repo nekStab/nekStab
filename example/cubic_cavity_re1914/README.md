@@ -1,5 +1,17 @@
 # Cubic Cavity at Re=1914 — primary Hopf criticality (Newton-GMRES baseflow)
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This case represents the cubic lid-driven cavity near the primary oscillatory
+instability of the steady 3D base flow. It is the steady-state counterpart to
+`cubic_cavity_re1950`: compute the base flow, then use direct, adjoint,
+transient-growth, wavemaker, modal, or OTD stages to interrogate the linear
+mechanisms around that state. Thesis source: chapter 4,
+`cav:sec:problem_formulation`, `cavsubsec:BaseFlows`, and
+`cavsubsec:LinearStability`.
+
 ## Why Re=1914
 
 The 3D cubic lid-driven cavity (aspect ratio Λ=1) undergoes its primary

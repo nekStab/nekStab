@@ -1,5 +1,16 @@
 # Cubic Cavity UPO — Unstable periodic orbit
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This case targets the periodic regime of the cubic lid-driven cavity after the
+primary Hopf bifurcation discussed for confined lid-driven cavities. It is the
+periodic-orbit companion to `cubic_cavity_re1914`, intended for DNS, Floquet,
+and snapshot-modal analyses of the post-critical dynamics. Thesis source:
+chapter 4, `cavsubsec:Non-linearEvolution`, with the problem definition in
+`cav:sec:problem_formulation`.
+
 ## Physics
 3D lid-driven cubic cavity at Re = 1950. Computes an unstable periodic orbit using Newton-GMRES for time-periodic solutions (T ~ 10.77).
 

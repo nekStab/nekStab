@@ -1,5 +1,16 @@
 # Poiseuille OTD — Optimally time-dependent modes in channel flow
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This channel-flow case is the OTD demonstration: evolve a perturbation basis
+and finite-time Lyapunov diagnostics on a canonical shear profile rather than
+freezing the problem into one steady eigenoperator. The named thesis source
+does not provide a dedicated Poiseuille OTD case section; its relevant framing
+is chapter 2, `Modal and non-modal linear stability`, plus bibliography entries
+on transient linear stability and OTD modes in pulsating Poiseuille flow.
+
 ## Background
 
 This example computes the Optimally Time-Dependent (OTD) decomposition of

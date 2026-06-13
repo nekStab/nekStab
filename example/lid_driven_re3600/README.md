@@ -1,5 +1,16 @@
 # Lid-Driven Cavity — Newton-GMRES base flow
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This 2D lid-driven-cavity case is a compact Newton/baseflow exercise and a
+baseline for the broader lid-driven-cavity stability discussion. The named
+thesis material focuses on 3D spanwise-aspect-ratio effects, but its problem
+formulation and base-flow sections define the same driven-cavity family.
+Thesis source: chapter 4, `cav:sec:problem_formulation` and
+`cavsubsec:BaseFlows`.
+
 ## Physics
 2D lid-driven cavity at Re = 3600 with aspect ratio 1.5 (`userParam10 = 1.5`). Computes the steady base flow using Newton-GMRES.
 

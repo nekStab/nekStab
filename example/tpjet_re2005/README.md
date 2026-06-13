@@ -1,5 +1,17 @@
 # Triple-port jet (tpjet)
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This axisymmetric forced-jet case supports periodic-orbit and Floquet analysis
+of vortex-pairing dynamics. The AMR_Krylov examples discuss the harmonically
+forced jet as a period-doubling Floquet case; the named thesis jet chapter
+covers jet transition, nonlinear regimes, base-flow description, global
+stability, and secondary instability. Sources: AMR_Krylov_V5/Main
+`S5_examples.tex` section `sec:ex:hjet`; thesis chapter 6,
+`jet_sec:probform`, `jet_sec:global`, and `jet_sec:secondary_jet`.
+
 Axisymmetric triple-port jet — forced-orbit base flow and Floquet stability.
 
 ## ⚠ Directory naming vs operating point

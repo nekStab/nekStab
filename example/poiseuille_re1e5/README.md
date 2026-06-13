@@ -1,5 +1,16 @@
 # Poiseuille RANS — Turbulent channel flow stability
 
+Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
+
+## Case note
+
+This channel-flow case exercises direct stability with variable properties and
+finite-difference operator actions for a RANS closure. The named thesis source
+mentions channel and Poiseuille flows as stability benchmarks, but it does not
+provide a dedicated RANS-channel case section. Source for the method framing:
+thesis chapter 2, `Modal and non-modal linear stability`, and bibliography
+entries on channel/Poiseuille stability.
+
 ## Physics
 2D turbulent channel flow at Re = 100,000 using the k-tau RANS model (m_id = 4). Variable viscosity from the turbulence model, periodic boundary conditions in the streamwise direction, no-slip at top and bottom walls.
 
