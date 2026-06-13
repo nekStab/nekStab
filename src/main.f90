@@ -77,7 +77,9 @@
          yck = 0.0d0
          zck = 0.0d0
 
-      ! Sponge zone parameters (modified from KTH Toolbox)
+      ! Sponge zone parameters.  This fringe/sponge method follows the
+      ! Nordstrom, Nordin & Henningson (1999) and Lundbladh et al. (1999)
+      ! smooth-mask formulation used by the original fringe setup.
          xLspg = 0.0d0 ! x left
          xRspg = 0.0d0 ! x right
          yLspg = 0.0d0
