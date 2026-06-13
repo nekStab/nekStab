@@ -337,6 +337,7 @@ subroutine otd_outpost_OTD_modes
    ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §3.3.
    ! docs/otd-spec.md §3.4: OTDm* fields are NEKSTAB.inc common-block
    ! storage; keep the public handoff and field-prefix layout unchanged.
+   ! These M* snapshots are diagnostic OTD modes, not restart fields.
    call otd_compute_OTD_modes
    do mode = 1, npert
       if (lpert >= 10) then
@@ -366,6 +367,8 @@ subroutine otd_outpost_orthonormal_basis
    ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §3.3.
    ! Force the same orthonormalization path used by the time-step driver, then
    ! write restart-compatible rNN fields from the shared perturbation basis.
+   ! A later OTD run discovers these rNN files during initialization and uses
+   ! them as the perturbation restart basis after the white-noise fallback.
    gsstep_override = .true.
    call otd_orthonormalize_basis
 
@@ -399,6 +402,8 @@ subroutine otd_white_noise
    ! The mode-dependent sin(mode)^2 factor scales the frequency coefficients
    ! before each mth_rand call, so every perturbation mode gets a distinct
    ! deterministic hash field while keeping restart/IC common-block layout.
+   ! Scaling before hashing matters: changing the frequency tuple changes the
+   ! hash trajectory itself, instead of merely rescaling one shared noise field.
    nv = nx1*ny1*nz1*nelv
 
    do mode = 1, npert
@@ -506,6 +511,8 @@ end subroutine otd_orthonormalize_basis
 subroutine otd_zero_FTLE
 
    ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.6.
+   ! This clears the running integral behind
+   !   lambda_i(T) = (1/T) integral_0^T Lr(i,i) dt.
    call rzero(FTLEv, lpert)
    call rzero(LEintegral, lpert)
 
@@ -526,6 +533,8 @@ subroutine otd_compute_FTLE
    ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.6.
    ! Accumulate finite-time Lyapunov exponents by trapezoidal integration of
    ! diag(Lr), using the exact period-boundary split-step order in the spec.
+   ! The exposed value is lambda_i(T) = (1/T) integral_0^T Lr(i,i) dt,
+   ! where T is either the configured FTLE period or elapsed time since reset.
    if (otd_FTLEPeriod > 0.0d0) then
       period = otd_FTLEPeriod
       pfrac = mod(time, period)
@@ -551,6 +560,9 @@ subroutine otd_compute_FTLE
    if (pfrac < dt) then
       ! docs/otd-spec.md §1.6: split a boundary-crossing step and linearly
       ! interpolate Lr at the period boundary before resetting the integral.
+      ! First integrate the tail of the old period, print/reset at the
+      ! boundary, then integrate the head of the new period with the same
+      ! trapezoid rule.  This preserves the boundary value in both halves.
       ftledt = dt - pfrac
       call copy(Lrc, Lrp, lpert*lpert)
       fact = ftledt/dt
@@ -610,6 +622,8 @@ contains
 
       ! docs/otd-spec.md §1.6: use only diagonal entries and update FTLEv
       ! immediately from the current averaging horizon.
+      ! Trapezoid update for lambda_i:
+      !   integral_i += h/2 * (Lrprev(i,i) + Lrcurr(i,i)).
       do mode = 1, npert
          LEintegral(mode) = LEintegral(mode) &
             + 0.50d0*hstep*(Lrprev(mode, mode) + Lrcurr(mode, mode))
@@ -629,6 +643,7 @@ contains
 
       ! docs/otd-spec.md §3.4: residuals compare against the NEKSTAB.inc
       ! FTLEv_prev common-block handoff, then refresh it.
+      ! The convergence diagnostic is max_i |lambda_i^n - lambda_i^{n-1}|.
       rmax = 0.0d0
       do mode = 1, npert
          resid(mode) = abs(FTLEv(mode) - FTLEv_prev(mode))
@@ -1009,6 +1024,9 @@ subroutine otd_compute_orthonormality_measures( &
    ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.4.
    ! Reuse diff* as mass-weighted workspace, then form the shared Gram matrix
    ! so normality and orthogonality use the same global reduction as the core.
+   ! With G_ij = <u_i,u_j>, the diagnostics are
+   !   normality = sqrt(sum_i G_ii^2 / npert)
+   !   orthogonality = sqrt(2 sum_{i<j} G_ij^2) / (npert*(npert - 1)).
    nv = lx1*ly1*lz1*nelv
    ldv = lx1*ly1*lz1*lelv
 
