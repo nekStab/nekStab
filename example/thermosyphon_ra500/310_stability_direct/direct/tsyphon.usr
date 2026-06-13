@@ -118,14 +118,14 @@ c       coefficient as base-flow case, keep norm scaling consistent.
       include 'SIZE'
       include 'TOTAL'
 
-      parameter (npts = 101)
+      parameter (nprobe = 101)
 
 !     --> Array to store the data points.
-      real xyz(ldim, npts)
+      real xyz(ldim, nprobe)
       save xyz
 
 !     --> Array to store the interpolated velocities.
-      real uvw(ldim, npts)
+      real uvw(ldim, nprobe)
 
 !     --> Flow rate.
       real flow_rate
@@ -139,14 +139,14 @@ c       coefficient as base-flow case, keep norm scaling consistent.
          xyz(2, :) = 0.0D+00
          if (if3D) xyz(3, :) = 0.0D+00
 
-         do i = 1,npts
+         do i = 1,nprobe
             xyz(2, i) = 1.0D+00 + (i-1)*0.01
          enddo
 
       endif
 
 !     --> Get the velocities at the points locations.
-      call interp_v(uvw, xyz, npts)
+      call interp_v(uvw, xyz, nprobe)
 
 !     --> Use simple integration.
       flow_rate = sum(uvw(1, :)) * 0.01

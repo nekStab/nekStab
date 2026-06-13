@@ -207,30 +207,30 @@ contains
   !   complex coefficients and frequency array.
   !
   ! Arguments:
-  !   npts     [in]    — number of spatial points (lv)
+  !   nv       [in]    — number of velocity spatial points (lv)
   !   nsnap    [in]    — number of time snapshots
-  !   vx,vy,vz [inout] — velocity components (npts x nsnap)
+  !   vx,vy,vz [inout] — velocity components (nv x nsnap)
   !   time     [in]    — time array (nsnap)
-  !   bm1      [in]    — mass matrix for energy weighting (npts)
+  !   bm1      [in]    — mass matrix for energy weighting (nv)
   !   nfreq    [out]   — number of positive frequencies (nsnap/2+1)
   !   freq     [out]   — frequency array (nfreq)
-  !   vx_hat   [out]   — FFT of vx (npts x nfreq), complex
-  !   vy_hat   [out]   — FFT of vy (npts x nfreq), complex
-  !   vz_hat   [out]   — FFT of vz (npts x nfreq), complex
+  !   vx_hat   [out]   — FFT of vx (nv x nfreq), complex
+  !   vy_hat   [out]   — FFT of vy (nv x nfreq), complex
+  !   vz_hat   [out]   — FFT of vz (nv x nfreq), complex
   !-----------------------------------------------------------------------
-  subroutine fourier_decomposition(npts, nsnap, vx, vy, vz, time, bm1, &
+  subroutine fourier_decomposition(nv, nsnap, vx, vy, vz, time, bm1, &
                                     nfreq, freq, vx_hat, vy_hat, vz_hat)
-    integer, intent(in) :: npts, nsnap
-    real(C_DOUBLE), intent(inout) :: vx(npts, nsnap)
-    real(C_DOUBLE), intent(inout) :: vy(npts, nsnap)
-    real(C_DOUBLE), intent(inout) :: vz(npts, nsnap)
+    integer, intent(in) :: nv, nsnap
+    real(C_DOUBLE), intent(inout) :: vx(nv, nsnap)
+    real(C_DOUBLE), intent(inout) :: vy(nv, nsnap)
+    real(C_DOUBLE), intent(inout) :: vz(nv, nsnap)
     real(C_DOUBLE), intent(in) :: time(nsnap)
-    real(C_DOUBLE), intent(in) :: bm1(npts)
+    real(C_DOUBLE), intent(in) :: bm1(nv)
     integer, intent(out) :: nfreq
     real(C_DOUBLE), intent(out) :: freq(nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX), intent(out) :: vx_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX), intent(out) :: vy_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX), intent(out) :: vz_hat(npts, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX), intent(out) :: vx_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX), intent(out) :: vy_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX), intent(out) :: vz_hat(nv, nsnap/2+1)
 
     integer :: i, k
     real(C_DOUBLE) :: dt, norm_factor
@@ -251,7 +251,7 @@ contains
     norm_factor = 1.0d0 / nsnap
 
     ! FFT each spatial point
-    do i = 1, npts
+    do i = 1, nv
       ! vx component
       signal(:) = vx(i, :)
       call fft_r2c(nsnap, signal, spectrum)
@@ -278,25 +278,25 @@ contains
   !   Nyquist frequency for even-length transforms.
   !
   ! Arguments:
-  !   npts     [in]  — number of spatial points
+  !   nv       [in]  — number of velocity spatial points
   !   nfreq    [in]  — number of frequencies
   !   nsnap    [in]  — original number of snapshots (even/odd check)
   !   freq     [in]  — frequency array (Hz)
-  !   vx_hat   [in]  — FFT coefficients for vx (npts x nfreq)
-  !   vy_hat   [in]  — FFT coefficients for vy (npts x nfreq)
-  !   vz_hat   [in]  — FFT coefficients for vz (npts x nfreq)
+  !   vx_hat   [in]  — FFT coefficients for vx (nv x nfreq)
+  !   vy_hat   [in]  — FFT coefficients for vy (nv x nfreq)
+  !   vz_hat   [in]  — FFT coefficients for vz (nv x nfreq)
   !   t        [in]  — time at which to reconstruct
-  !   vx,vy,vz [out] — reconstructed velocity (npts)
+  !   vx,vy,vz [out] — reconstructed velocity (nv)
   !-----------------------------------------------------------------------
-  subroutine fourier_reconstruction(npts, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
+  subroutine fourier_reconstruction(nv, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
                                      t, vx, vy, vz)
-    integer, intent(in) :: npts, nfreq, nsnap
+    integer, intent(in) :: nv, nfreq, nsnap
     real(C_DOUBLE), intent(in) :: freq(nfreq)
-    complex(C_DOUBLE_COMPLEX), intent(in) :: vx_hat(npts, nfreq)
-    complex(C_DOUBLE_COMPLEX), intent(in) :: vy_hat(npts, nfreq)
-    complex(C_DOUBLE_COMPLEX), intent(in) :: vz_hat(npts, nfreq)
+    complex(C_DOUBLE_COMPLEX), intent(in) :: vx_hat(nv, nfreq)
+    complex(C_DOUBLE_COMPLEX), intent(in) :: vy_hat(nv, nfreq)
+    complex(C_DOUBLE_COMPLEX), intent(in) :: vz_hat(nv, nfreq)
     real(C_DOUBLE), intent(in) :: t
-    real(C_DOUBLE), intent(out) :: vx(npts), vy(npts), vz(npts)
+    real(C_DOUBLE), intent(out) :: vx(nv), vy(nv), vz(nv)
 
     integer :: i, k
     real(C_DOUBLE) :: omega, cos_wt, sin_wt, factor
@@ -328,7 +328,7 @@ contains
         factor = 2.0d0
       end if
 
-      do i = 1, npts
+      do i = 1, nv
         vx(i) = vx(i) + factor * (real(vx_hat(i,k)) * cos_wt - aimag(vx_hat(i,k)) * sin_wt)
         vy(i) = vy(i) + factor * (real(vy_hat(i,k)) * cos_wt - aimag(vy_hat(i,k)) * sin_wt)
         vz(i) = vz(i) + factor * (real(vz_hat(i,k)) * cos_wt - aimag(vz_hat(i,k)) * sin_wt)

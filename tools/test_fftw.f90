@@ -295,14 +295,14 @@ contains
 
   !-------------------------------------------------------------------
   subroutine test_high_level_api()
-    integer, parameter :: npts = 10, nsnap = 64
-    real(C_DOUBLE) :: vx(npts, nsnap), vy(npts, nsnap), vz(npts, nsnap)
-    real(C_DOUBLE) :: time(nsnap), bm1(npts)
+    integer, parameter :: nv = 10, nsnap = 64
+    real(C_DOUBLE) :: vx(nv, nsnap), vy(nv, nsnap), vz(nv, nsnap)
+    real(C_DOUBLE) :: time(nsnap), bm1(nv)
     real(C_DOUBLE) :: freq(nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX) :: vx_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX) :: vy_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX) :: vz_hat(npts, nsnap/2+1)
-    real(C_DOUBLE) :: vx_rec(npts), vy_rec(npts), vz_rec(npts)
+    complex(C_DOUBLE_COMPLEX) :: vx_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX) :: vy_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX) :: vz_hat(nv, nsnap/2+1)
+    real(C_DOUBLE) :: vx_rec(nv), vy_rec(nv), vz_rec(nv)
     real(C_DOUBLE) :: dt, df, t_test, max_error
     real(C_DOUBLE) :: f1, f2, f3  ! Bin-aligned frequencies
     integer :: nfreq, i, j
@@ -323,7 +323,7 @@ contains
     bm1 = 1.0d0  ! Uniform mass matrix
 
     ! Create velocity field: bin-aligned frequencies at each point
-    do i = 1, npts
+    do i = 1, nv
       do j = 1, nsnap
         vx(i, j) = 2.0d0 * cos(2.0d0 * PI * f1 * time(j) + 0.1d0*i)
         vy(i, j) = 1.5d0 * sin(2.0d0 * PI * f2 * time(j) + 0.2d0*i)
@@ -332,18 +332,18 @@ contains
     end do
 
     ! Decompose
-    call fourier_decomposition(npts, nsnap, vx, vy, vz, time, bm1, &
+    call fourier_decomposition(nv, nsnap, vx, vy, vz, time, bm1, &
                                nfreq, freq, vx_hat, vy_hat, vz_hat)
     call report('Decomposition: nfreq = ' // trim(itoa(nfreq)), nfreq == nsnap/2+1)
 
     ! Reconstruct at a sample point in time array (exact match)
     t_test = time(17)  ! Use exact sample point
-    call fourier_reconstruction(npts, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
+    call fourier_reconstruction(nv, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
                                  t_test, vx_rec, vy_rec, vz_rec)
 
     ! Compare with expected values
     max_error = 0.0d0
-    do i = 1, npts
+    do i = 1, nv
       max_error = max(max_error, abs(vx_rec(i) - 2.0d0 * cos(2.0d0*PI*f1*t_test + 0.1d0*i)))
       max_error = max(max_error, abs(vy_rec(i) - 1.5d0 * sin(2.0d0*PI*f2*t_test + 0.2d0*i)))
       max_error = max(max_error, abs(vz_rec(i) - 1.0d0 * cos(2.0d0*PI*f3*t_test + 0.3d0*i)))

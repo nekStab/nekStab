@@ -57,15 +57,15 @@ def read_field(fname):
     field = readnek(fname)
     nel = field.nel
     nx, ny, nz = field.lr1
-    npts = nx * ny * max(nz, 1)
-    ntotal = nel * npts
+    npe = nx * ny * max(nz, 1)
+    ntotal = nel * npe
 
     x = np.empty(ntotal)
     y = np.empty(ntotal)
     fields = {}
 
     for ie, elem in enumerate(field.elem):
-        s = slice(ie * npts, (ie + 1) * npts)
+        s = slice(ie * npe, (ie + 1) * npe)
         x[s] = elem.pos[0].ravel()
         y[s] = elem.pos[1].ravel()
 
@@ -77,7 +77,7 @@ def read_field(fname):
                 break
             arr = np.empty(ntotal)
             for ie, elem in enumerate(field.elem):
-                s = slice(ie * npts, (ie + 1) * npts)
+                s = slice(ie * npe, (ie + 1) * npe)
                 arr[s] = elem.vel[comp].ravel()
             fields[key] = arr
 
@@ -87,7 +87,7 @@ def read_field(fname):
     if has_pres:
         arr = np.empty(ntotal)
         for ie, elem in enumerate(field.elem):
-            s = slice(ie * npts, (ie + 1) * npts)
+            s = slice(ie * npe, (ie + 1) * npe)
             arr[s] = elem.pres[0].ravel()
         fields['p'] = arr
 
@@ -100,7 +100,7 @@ def read_field(fname):
             if has_s:
                 arr = np.empty(ntotal)
                 for ie, elem in enumerate(field.elem):
-                    s = slice(ie * npts, (ie + 1) * npts)
+                    s = slice(ie * npe, (ie + 1) * npe)
                     arr[s] = elem.temp[iscalar].ravel()
                 if iscalar == 0:
                     fields['t'] = arr

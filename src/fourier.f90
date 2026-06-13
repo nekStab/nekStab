@@ -37,33 +37,33 @@ contains
   !   Performs FFT, computes energy per mode, sorts by energy descending.
   !
   ! Arguments:
-  !   npts     [in]    — number of spatial points
+  !   nv       [in]    — number of velocity spatial points
   !   nsnap    [in]    — number of time snapshots
-  !   vx,vy,vz [inout] — velocity components (npts x nsnap)
+  !   vx,vy,vz [inout] — velocity components (nv x nsnap)
   !   time     [in]    — time array (nsnap)
-  !   bm1      [in]    — mass matrix for energy weighting (npts)
+  !   bm1      [in]    — mass matrix for energy weighting (nv)
   !   nmodes   [out]   — number of modes (nsnap/2+1)
   !   freq_out [out]   — frequencies sorted by energy (nmodes)
   !   energy   [out]   — energy of each mode, sorted (nmodes)
-  !   vx_hat   [out]   — FFT coefficients sorted by energy (npts x nmodes)
-  !   vy_hat   [out]   — FFT coefficients sorted by energy (npts x nmodes)
-  !   vz_hat   [out]   — FFT coefficients sorted by energy (npts x nmodes)
+  !   vx_hat   [out]   — FFT coefficients sorted by energy (nv x nmodes)
+  !   vy_hat   [out]   — FFT coefficients sorted by energy (nv x nmodes)
+  !   vz_hat   [out]   — FFT coefficients sorted by energy (nv x nmodes)
   !-----------------------------------------------------------------------
-  subroutine nek_fourier_decomposition(npts, nsnap, vx, vy, vz, time, bm1, &
+  subroutine nek_fourier_decomposition(nv, nsnap, vx, vy, vz, time, bm1, &
                                         nmodes, freq_out, energy, &
                                         vx_hat, vy_hat, vz_hat)
-    integer, intent(in) :: npts, nsnap
-    real(C_DOUBLE), intent(inout) :: vx(npts, nsnap)
-    real(C_DOUBLE), intent(inout) :: vy(npts, nsnap)
-    real(C_DOUBLE), intent(inout) :: vz(npts, nsnap)
+    integer, intent(in) :: nv, nsnap
+    real(C_DOUBLE), intent(inout) :: vx(nv, nsnap)
+    real(C_DOUBLE), intent(inout) :: vy(nv, nsnap)
+    real(C_DOUBLE), intent(inout) :: vz(nv, nsnap)
     real(C_DOUBLE), intent(in) :: time(nsnap)
-    real(C_DOUBLE), intent(in) :: bm1(npts)
+    real(C_DOUBLE), intent(in) :: bm1(nv)
     integer, intent(out) :: nmodes
     real(C_DOUBLE), intent(out) :: freq_out(nsnap/2+1)
     real(C_DOUBLE), intent(out) :: energy(nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX), intent(out) :: vx_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX), intent(out) :: vy_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX), intent(out) :: vz_hat(npts, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX), intent(out) :: vx_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX), intent(out) :: vy_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX), intent(out) :: vz_hat(nv, nsnap/2+1)
 
     integer :: i, k, nfreq
     real(C_DOUBLE) :: freq(nsnap/2+1)
@@ -72,18 +72,18 @@ contains
     ! Use allocatable for large arrays to avoid stack overflow
     complex(C_DOUBLE_COMPLEX), allocatable :: vx_tmp(:,:), vy_tmp(:,:), vz_tmp(:,:)
 
-    allocate(vx_tmp(npts, nsnap/2+1))
-    allocate(vy_tmp(npts, nsnap/2+1))
-    allocate(vz_tmp(npts, nsnap/2+1))
+    allocate(vx_tmp(nv, nsnap/2+1))
+    allocate(vy_tmp(nv, nsnap/2+1))
+    allocate(vz_tmp(nv, nsnap/2+1))
 
     ! Perform FFT decomposition
-    call fourier_decomposition(npts, nsnap, vx, vy, vz, time, bm1, &
+    call fourier_decomposition(nv, nsnap, vx, vy, vz, time, bm1, &
                                 nfreq, freq, vx_tmp, vy_tmp, vz_tmp)
 
     ! Compute energy per mode: E_k = sum_i bm1(i) * |v_hat(i,k)|^2
     do k = 1, nfreq
       mode_energy(k) = 0.0d0
-      do i = 1, npts
+      do i = 1, nv
         mode_energy(k) = mode_energy(k) + bm1(i) * ( &
           abs(vx_tmp(i,k))**2 + abs(vy_tmp(i,k))**2 + abs(vz_tmp(i,k))**2)
       end do

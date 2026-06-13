@@ -27,7 +27,7 @@ program benchmark_fftw
   ! Test 1: Single FFT at various sizes
   call benchmark_single_fft()
 
-  ! Test 2: Batch FFT (simulating npts spatial points)
+  ! Test 2: Batch FFT (simulating nv spatial points)
   call benchmark_batch_fft()
 
   ! Test 3: Full decomposition/reconstruction cycle
@@ -101,8 +101,8 @@ contains
 
   !-------------------------------------------------------------------
   subroutine benchmark_batch_fft()
-    integer :: npts_list(4), nsnap_list(3)
-    integer :: npts, nsnap, j, k, m
+    integer :: nv_list(4), nsnap_list(3)
+    integer :: nv, nsnap, j, k, m
     real(C_DOUBLE), allocatable :: vx(:,:), vy(:,:), vz(:,:)
     real(C_DOUBLE), allocatable :: time_arr(:), bm1(:), freq(:)
     complex(C_DOUBLE_COMPLEX), allocatable :: vx_hat(:,:), vy_hat(:,:), vz_hat(:,:)
@@ -113,22 +113,22 @@ contains
     print '(A)', 'Test 2: Batch FFT Performance (simulating nekStab workflow)'
     print '(A)', '-----------------------------------------------------------'
     print '(A)', ''
-    print '(A)', '  npts      nsnap     Time(ms)    Rate(pts*snaps/s)'
-    print '(A)', '  -----     -----     --------    ------------------'
+    print '(A)', '  nv        nsnap     Time(ms)    Rate(nv*snaps/s)'
+    print '(A)', '  --        -----     --------    ----------------'
 
-    npts_list = [1000, 10000, 50000, 100000]
+    nv_list = [1000, 10000, 50000, 100000]
     nsnap_list = [64, 128, 256]
 
-    do j = 1, size(npts_list)
+    do j = 1, size(nv_list)
       do m = 1, size(nsnap_list)
-        npts = npts_list(j)
+        nv = nv_list(j)
         nsnap = nsnap_list(m)
 
-        allocate(vx(npts, nsnap), vy(npts, nsnap), vz(npts, nsnap))
-        allocate(time_arr(nsnap), bm1(npts), freq(nsnap/2+1))
-        allocate(vx_hat(npts, nsnap/2+1))
-        allocate(vy_hat(npts, nsnap/2+1))
-        allocate(vz_hat(npts, nsnap/2+1))
+        allocate(vx(nv, nsnap), vy(nv, nsnap), vz(nv, nsnap))
+        allocate(time_arr(nsnap), bm1(nv), freq(nsnap/2+1))
+        allocate(vx_hat(nv, nsnap/2+1))
+        allocate(vy_hat(nv, nsnap/2+1))
+        allocate(vz_hat(nv, nsnap/2+1))
 
         ! Initialize
         dt = 0.01d0
@@ -138,7 +138,7 @@ contains
         bm1 = 1.0d0
 
         ! Random-ish velocity field
-        do i = 1, npts
+        do i = 1, nv
           do k = 1, nsnap
             vx(i,k) = sin(0.1d0*i + 0.2d0*k)
             vy(i,k) = cos(0.15d0*i + 0.25d0*k)
@@ -147,11 +147,11 @@ contains
         end do
 
         ! Warmup
-        call fourier_decomposition(npts, nsnap, vx, vy, vz, time_arr, bm1, &
+        call fourier_decomposition(nv, nsnap, vx, vy, vz, time_arr, bm1, &
                                     nfreq, freq, vx_hat, vy_hat, vz_hat)
 
         ! Re-initialize (decomposition modifies input)
-        do i = 1, npts
+        do i = 1, nv
           do k = 1, nsnap
             vx(i,k) = sin(0.1d0*i + 0.2d0*k)
             vy(i,k) = cos(0.15d0*i + 0.25d0*k)
@@ -161,13 +161,13 @@ contains
 
         ! Benchmark
         call cpu_time(t_start)
-        call fourier_decomposition(npts, nsnap, vx, vy, vz, time_arr, bm1, &
+        call fourier_decomposition(nv, nsnap, vx, vy, vz, time_arr, bm1, &
                                     nfreq, freq, vx_hat, vy_hat, vz_hat)
         call cpu_time(t_end)
         t_decomp = (t_end - t_start) * 1.0d3  ! milliseconds
 
         print '(I7, 4X, I5, 5X, F8.2, 6X, ES12.2)', &
-              npts, nsnap, t_decomp, real(npts,8)*nsnap/((t_end-t_start))
+              nv, nsnap, t_decomp, real(nv,8)*nsnap/((t_end-t_start))
 
         call fft_cleanup()
         deallocate(vx, vy, vz, time_arr, bm1, freq, vx_hat, vy_hat, vz_hat)
@@ -178,21 +178,21 @@ contains
 
   !-------------------------------------------------------------------
   subroutine benchmark_decomposition()
-    integer, parameter :: npts = 10000
+    integer, parameter :: nv = 10000
     integer, parameter :: nsnap = 128
-    real(C_DOUBLE) :: vx(npts, nsnap), vy(npts, nsnap), vz(npts, nsnap)
-    real(C_DOUBLE) :: time_arr(nsnap), bm1(npts), freq(nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX) :: vx_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX) :: vy_hat(npts, nsnap/2+1)
-    complex(C_DOUBLE_COMPLEX) :: vz_hat(npts, nsnap/2+1)
-    real(C_DOUBLE) :: vx_rec(npts), vy_rec(npts), vz_rec(npts)
+    real(C_DOUBLE) :: vx(nv, nsnap), vy(nv, nsnap), vz(nv, nsnap)
+    real(C_DOUBLE) :: time_arr(nsnap), bm1(nv), freq(nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX) :: vx_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX) :: vy_hat(nv, nsnap/2+1)
+    complex(C_DOUBLE_COMPLEX) :: vz_hat(nv, nsnap/2+1)
+    real(C_DOUBLE) :: vx_rec(nv), vy_rec(nv), vz_rec(nv)
     real(C_DOUBLE) :: t_start, t_end, t_decomp, t_recon
     real(C_DOUBLE) :: dt, t_test
     integer :: nfreq, i, k
 
     print '(A)', 'Test 3: Full Decomposition/Reconstruction Cycle'
     print '(A)', '------------------------------------------------'
-    print '(A,I6,A,I4,A)', '  Configuration: npts=', npts, ', nsnap=', nsnap, ''
+    print '(A,I6,A,I4,A)', '  Configuration: nv=', nv, ', nsnap=', nsnap, ''
     print '(A)', ''
 
     ! Initialize
@@ -202,7 +202,7 @@ contains
     end do
     bm1 = 1.0d0
 
-    do i = 1, npts
+    do i = 1, nv
       do k = 1, nsnap
         vx(i,k) = sin(0.1d0*i + 0.2d0*k)
         vy(i,k) = cos(0.15d0*i + 0.25d0*k)
@@ -212,7 +212,7 @@ contains
 
     ! Benchmark decomposition
     call cpu_time(t_start)
-    call fourier_decomposition(npts, nsnap, vx, vy, vz, time_arr, bm1, &
+    call fourier_decomposition(nv, nsnap, vx, vy, vz, time_arr, bm1, &
                                 nfreq, freq, vx_hat, vy_hat, vz_hat)
     call cpu_time(t_end)
     t_decomp = (t_end - t_start) * 1.0d3
@@ -221,7 +221,7 @@ contains
     call cpu_time(t_start)
     do k = 1, 100
       t_test = time_arr(1) + (k-1) * dt * 0.5d0
-      call fourier_reconstruction(npts, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
+      call fourier_reconstruction(nv, nfreq, nsnap, freq, vx_hat, vy_hat, vz_hat, &
                                    t_test, vx_rec, vy_rec, vz_rec)
     end do
     call cpu_time(t_end)
@@ -230,7 +230,7 @@ contains
     print '(A,F10.2,A)', '  Decomposition time:      ', t_decomp, ' ms'
     print '(A,F10.2,A)', '  Reconstruction time:     ', t_recon, ' ms (per time point)'
     print '(A,F10.2,A)', '  Memory for coefficients: ', &
-          real(npts,8) * nfreq * 3 * 16 / 1024.0d0 / 1024.0d0, ' MB'
+          real(nv,8) * nfreq * 3 * 16 / 1024.0d0 / 1024.0d0, ' MB'
     print '(A)', ''
 
     call fft_cleanup()

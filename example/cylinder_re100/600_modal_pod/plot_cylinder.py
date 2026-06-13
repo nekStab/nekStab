@@ -41,8 +41,8 @@ def extract_raw(field):
     """Flatten element arrays into 1-D coordinate/velocity vectors."""
     nel = field.nel
     nx, ny, nz = field.lr1
-    npts = nx * ny * max(nz, 1)
-    ntotal = nel * npts
+    npe = nx * ny * max(nz, 1)
+    ntotal = nel * npe
 
     x  = np.empty(ntotal)
     y  = np.empty(ntotal)
@@ -50,7 +50,7 @@ def extract_raw(field):
     uy = np.empty(ntotal)
 
     for ie, elem in enumerate(field.elem):
-        s = slice(ie * npts, (ie + 1) * npts)
+        s = slice(ie * npe, (ie + 1) * npe)
         x[s]  = elem.pos[0].ravel()
         y[s]  = elem.pos[1].ravel()
         ux[s] = elem.vel[0].ravel()
