@@ -199,7 +199,11 @@ subroutine matvec(f, q)
    fintim = param(10)
 
 !     --> Direct solver only steady and periodic!
-   if (uparam(01) >= 3.0 .and. uparam(01) < 3.2) then
+!     Dispatch on the decoded mode flags (mode_config.f90 is the single
+!     source of truth) instead of re-decoding uparam(01). Direct covers
+!     both the steady (isDirect, 3.1) and Floquet (isFloquetDirect, 3.11)
+!     branches that the former >=3.0 .and. <3.2 range matched.
+   if (isDirect .or. isFloquetDirect) then
       evop = 'd'
       if (iffindiff) then
          if (nid == 0) write (*, *) "Using the finite-difference approximation of the Fréchet derivative."
@@ -210,24 +214,33 @@ subroutine matvec(f, q)
    end if
 
 !     --> Adjoint solver only steady and periodic!
-   if (uparam(01) >= 3.2 .and. uparam(01) < 3.3) then
+!     isAdjoint (3.2) + isFloquetAdjoint (3.21) == former >=3.2 .and. <3.3.
+   if (isAdjoint .or. isFloquetAdjoint) then
       evop = 'a'
       call adjoint_linearized_map(f, q)
    end if
 
 !     --> Direct-Adjoint for optimal transient growth.
-   if (uparam(01) >= 3.3 .and. uparam(01) < 3.4) then
+!     isTransientGrowth (3.3) + isFloquetTransientGrowth (3.31) ==
+!     former >=3.3 .and. <3.4.
+   if (isTransientGrowth .or. isFloquetTransientGrowth) then
       evop = "p"
       call transient_growth_map(f, q)
    end if
 
 !     --> Adjoint solver for the steady force sensitivity analysis.
-   if (floor(uparam(01)) == 4) then
+!     The former floor(uparam(01))==4 matched every Mode 4 (post-processing)
+!     value; the equivalent is the OR of all decoded Mode 4 flags.
+   if (ifEnergyBudget .or. ifWavemaker .or. ifBFSensitivity .or. &
+       ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing .or. &
+       ifAnimateMode .or. ifAnimateBFDeform .or. ifAnimateFloquet) then
       call ts_force_sensitivity_map(f, q)
    end if
 
 !     --> Linearized forward map for the Newton-Krylov solver.
-   if (floor(uparam(01)) == 2) then
+!     The former floor(uparam(01))==2 matched every Mode 2 (Newton) value;
+!     the equivalent is the OR of all decoded Newton flags.
+   if (isNewtonFP .or. isNewtonPO .or. isNewtonPO_T) then
       evop = 'n'
       call newton_linearized_map(f, q)
       !  When bvec is not cached (fixed-point Newton, or before the UPO
@@ -277,12 +290,14 @@ subroutine forward_linearized_map(f, q)
     !     CAUTION: do NOT clear ifbase unconditionally before the conditional
     !     below — that would make the allocate_orbit / first-store path dead.
     ifbase = .false.
-    if (uparam(01) == 3.11) ifbase = .true. ! activate Floquet
-    if (uparam(01) == 3.31) ifbase = .true. ! activate Floquet for intracycle transient growth
-    !  uparam==2.1/2.2 selects the UPO baseflow-evolution path specifically.
-    !  Do NOT replace with isNewtonPO: that flag only signals the period-
-    !  augmented inner product, while 2.1/2.2 identifies orbit storage needs.
-    if (uparam(01) == 2.1 .or. uparam(01) == 2.2) then
+    if (isFloquetDirect) ifbase = .true. ! activate Floquet (was 3.11)
+    if (isFloquetTransientGrowth) ifbase = .true. ! activate Floquet for intracycle transient growth (was 3.31)
+    !  The UPO baseflow-evolution path (formerly uparam==2.1/2.2) needs orbit
+    !  storage. isNewtonPO ALONE is NOT enough: that flag also only signals
+    !  the period-augmented inner product and would drop the forced-UPO 2.2
+    !  case. The exact equivalent of "uparam==2.1 .or. uparam==2.2" is the
+    !  union isNewtonPO .or. isNewtonPO_T (2.1 and 2.2 respectively).
+    if (isNewtonPO .or. isNewtonPO_T) then
        ifbase = .true. ! activate baseflow evolution for UPO
     end if
     if (ifstorebase) then
@@ -372,12 +387,13 @@ subroutine forward_finite_difference_map(f, q)
    ampls = ampls*epsilon0
 
 !  Turning-off the base flow side-by-side computation.
-!  uparam==2.1/2.2 identifies the UPO orbit-storage path (not isNewtonPO,
-!  which only controls the period-augmented inner product).
+!  The UPO orbit-storage path (formerly uparam==2.1/2.2) is the union
+!  isNewtonPO .or. isNewtonPO_T (2.1 + 2.2). isNewtonPO alone only controls
+!  the period-augmented inner product and would drop the forced-UPO 2.2 case.
    ifbase = .false.
-   if (uparam(01) == 3.11) ifbase = .true. ! activate Floquet
-   if (uparam(01) == 3.31) ifbase = .true. ! activate Floquet for intracycle transient growth
-   if (uparam(01) == 2.1 .or. uparam(01) == 2.2) then
+   if (isFloquetDirect) ifbase = .true. ! activate Floquet (was 3.11)
+   if (isFloquetTransientGrowth) ifbase = .true. ! activate Floquet for intracycle transient growth (was 3.31)
+   if (isNewtonPO .or. isNewtonPO_T) then
       init = .true. ! Use stored baseflow if ifstorebase.
       ifbase = .true. ! activate baseflow evolution for UPO.
    end if
@@ -484,11 +500,11 @@ subroutine adjoint_linearized_map(f, q)
 !     integrate the adjoint against forward-order base, i.e. a different
 !     operator than later matvecs, corrupting the Arnoldi subspace.)
    ifbase = .false.
-   if (uparam(01) == 3.21) ifbase = .true. ! activate floquet
+   if (isFloquetAdjoint) ifbase = .true. ! activate floquet (was 3.21)
 
    if (ifstorebase .and. init) ifbase = .false.
 
-   if (uparam(01) == 3.31) init = .true. ! intracycle transient growth: orbit already built by forward map
+   if (isFloquetTransientGrowth) init = .true. ! intracycle transient growth: orbit already built by forward map (was 3.31)
 
 !     --> Build the periodic base-flow orbit once (forward, base only).
    if (ifstorebase .and. ifbase .and. .not. init) then
