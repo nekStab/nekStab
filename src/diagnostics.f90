@@ -133,9 +133,9 @@ end subroutine norm_grad
 subroutine smooth_field(u)
    implicit none
    real, intent(inout), dimension(lx1, ly1, lz1, lelt) :: u
-   integer :: ifld, nv
+   integer :: ifld
 
-   nv = lx1*ly1*lz1*nelv
+   nv = nx1*ny1*nz1*nelv
 
    ! avg boundary - used in comp_vort3
    call col2(u, bm1, nv)
