@@ -93,12 +93,12 @@
 
       !     ----- Miscellaneous.
    real :: alpha, beta, glsc2
-   integer :: i, k, mode, n
+   integer :: i, k, mode
    character(len=80) :: filename
    character(len=6) :: mode_str
    character(len=3) :: mode_str2
 
-   n = nx1*ny1*nz1*nelv
+   nv = nx1*ny1*nz1*nelv
 
       !     --> Allocate local arrays.
    allocate(vx_dRe(lv), vy_dRe(lv), vz_dRe(lv), t_dRe(lt))
@@ -166,7 +166,7 @@
 
       !     --> Compute the integrals and the sum.
    do i = 1, 10
-   integrals(i) = glsc2(bm1, energy_budget(:, i), n)
+   integrals(i) = glsc2(bm1, energy_budget(:, i), nv)
    end do
 
    if (if3d) then
