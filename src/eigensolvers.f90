@@ -413,7 +413,7 @@
    type(krylov_vector) :: qq
    type(krylov_vector) :: ff
       ! Miscellaneous variables
-   integer :: i, m, n_press, n_temp, n_scalar
+   integer :: i, m, n_press, n_scalar
    real :: speriod, trim, spurious_tol
    real :: alpha, alpha_r, alpha_i, beta, omega
       ! File handling variables
@@ -425,7 +425,7 @@
 
    nv = nx1*ny1*nz1*nelv
    n_press = lx2*ly2*lz2*nelv
-   n_temp = nx1*ny1*nz1*nelt
+   nt = nx1*ny1*nz1*nelt
 
    call ensure_outpost_ks_workspace(k_dim)
    speriod = dt*nsteps ! sampling period
@@ -455,8 +455,8 @@
    if (ifpo) call copy(oks_qp_s(1, i), Q(i)%pr, n_press)
    !  Scalar fields can have different local lengths in CHT / passive-scalar
    !  cases (`nelfld`), so field 1 (temperature) and fields 2..ldimt must use
-   !  their own active extents rather than one shared `n_temp` length.
-   if (ifto) call copy(oks_qt_s(1, 1, i), Q(i)%t(1, 1), n_temp)
+   !  their own active extents rather than one shared `nt` length.
+   if (ifto) call copy(oks_qt_s(1, 1, i), Q(i)%t(1, 1), nt)
    if (ldimt > 1) then
    do m = 2, ldimt
    if (ifpsco(m - 1)) then
@@ -506,7 +506,7 @@
    if (if3D) oks_fp_cz_s(1:nv) = matmul(oks_qz_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
    if (ifpo) oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:k_dim), vecs(1:k_dim, i))
 
-   if (ifto) oks_fp_ct_s(1:n_temp, 1) = matmul(oks_qt_s(1:n_temp, 1, 1:k_dim), vecs(:, i))
+   if (ifto) oks_fp_ct_s(1:nt, 1) = matmul(oks_qt_s(1:nt, 1, 1:k_dim), vecs(:, i))
    if (ldimt > 1) then
    do m = 2, ldimt
    if (ifpsco(m - 1)) then
