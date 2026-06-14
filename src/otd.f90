@@ -406,7 +406,7 @@ end subroutine otd_outpost_orthonormal_basis
 subroutine otd_white_noise
    use nekstab_noise, only: mth_rand
 
-   integer :: mode, ix, iy, iz, ie, ieg, nv, ijke
+   integer :: mode, ix, iy, iz, ie, ieg, ijke
    real :: xl(ldim), fc(3), sin2
    real :: glmin, glmax, nmin, nmax
 
@@ -1030,7 +1030,7 @@ subroutine otd_compute_orthonormality_measures( &
    real, intent(out) :: normality, orthogonality
    logical, intent(in) :: flag
    character(len=6), intent(in) :: info
-   integer :: row, col, nv, ldv, mode
+   integer :: row, col, ldv, mode
    real :: G(lpert, lpert)
 
    ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.4.
@@ -1039,7 +1039,7 @@ subroutine otd_compute_orthonormality_measures( &
    ! With G_ij = <u_i,u_j>, the diagnostics are
    !   normality = sqrt(sum_i G_ii^2 / npert)
    !   orthogonality = sqrt(2 sum_{i<j} G_ij^2) / (npert*(npert - 1)).
-   nv = lx1*ly1*lz1*nelv
+   nv = nx1*ny1*nz1*nelv
    ldv = lx1*ly1*lz1*lelv
 
    do mode = 1, npert
