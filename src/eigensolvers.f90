@@ -313,6 +313,22 @@
 
    residual = abs(H(k_dim + 1, k_dim)*vecs(k_dim, :))
 
+      !     --> Floor the REPORTED residual at float64 relative precision.
+      !         The Arnoldi residual r_i = |beta * y_i(k)| is the product of two
+      !         independently tiny factors after Krylov-Schur deflation/locking:
+      !         beta = H(k+1,k) collapses as the subspace becomes invariant, and
+      !         y_i(k) (last component of a converged Ritz vector) -> 0. Their
+      !         product can underflow far below machine epsilon (e.g. ~1e-48),
+      !         which would write sub-epsilon "accuracy" into the spectrum file -
+      !         misleading, since float64 carries only ~16 significant digits.
+      !         Floor at eps*max(|lambda|,1) so a fully-locked mode reports
+      !         "~1e-16" (converged to machine precision) instead of fake digits.
+      !         Classification below is unaffected: the floor eps*max(|lambda|,1)
+      !         is many orders of magnitude tighter than eigen_tol*max(|lambda|,1),
+      !         so a floored residual still satisfies the convergence criterion
+      !         exactly when the raw one did.
+   residual = max(residual, epsilon(1.0d0)*max(abs(vals), 1.0d0))
+
       !     --> Count converged eigenvalues using combined absolute/relative criterion.
       !         We use: converged if residual < eigen_tol * max(|lambda|, 1)
       !         This ensures:
