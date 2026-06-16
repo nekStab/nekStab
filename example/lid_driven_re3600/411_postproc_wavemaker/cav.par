@@ -1,11 +1,11 @@
 [GENERAL]
 # TEMPLATE: converged baseflow
-startFrom = BF_cav0.f00001
+startFrom = 0  # wavemaker reads mode files directly
 
 stopAt = endTime
 endTime = 1.0
 
-userParam01 = 4.11       # 4.11 = energy budget / sensitivity (Floquet variant)
+userParam01 = 4.2        # 4.2 = wavemaker
 # Reads pre-existing direct + adjoint eigenmodes (dRe*, dIm*, aRe*, aIm*)
 # from the run directory and assembles wavemaker / production fields.
 
