@@ -1,0 +1,5 @@
+/home/rfrantz/nekStab/example/nekplot.py:450: UserWarning: genfromtxt: Empty input file: "/home/rfrantz/nekStab/example/back_fstep_re500/210_baseflow_newton/fp/residu_arnoldi.dat"
+  data = np.genfromtxt(str(arnoldi_file))
+Saved /home/rfrantz/nekStab/example/back_fstep_re500/210_baseflow_newton/fp/plot_ic.png
+Saved /home/rfrantz/nekStab/example/back_fstep_re500/210_baseflow_newton/fp/plot_residual.png
+Saved /home/rfrantz/nekStab/example/back_fstep_re500/210_baseflow_newton/fp/plot_bf.png

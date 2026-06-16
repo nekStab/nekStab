@@ -450,12 +450,16 @@ def plot_newton_convergence(ax, directory='.'):
         data = np.genfromtxt(str(arnoldi_file))
         if data.ndim == 1:
             data = data.reshape(1, -1)
-        # Columns: k(0), time(1), tol(2), beta2(3), dtol(4)
-        k = np.arange(len(data))
-        res_arn = data[:, 3]   # beta2 = Arnoldi residual
-        tol_arn = data[:, 2]   # solver tolerance
-        ax.semilogy(k, res_arn, 'k-', lw=0.6, label='Arnoldi', zorder=3)
-        ax.semilogy(k, tol_arn, 'b--', lw=0.5, label='tol', zorder=2)
+        # Skip if empty/short: some baseflow runs (e.g. GMRES-only) leave
+        # residu_arnoldi.dat present but with no/too-few columns -> the BF
+        # panel should still render, so don't let an absent residual crash it.
+        if data.size and data.shape[1] > 3:
+            # Columns: k(0), time(1), tol(2), beta2(3), dtol(4)
+            k = np.arange(len(data))
+            res_arn = data[:, 3]   # beta2 = Arnoldi residual
+            tol_arn = data[:, 2]   # solver tolerance
+            ax.semilogy(k, res_arn, 'k-', lw=0.6, label='Arnoldi', zorder=3)
+            ax.semilogy(k, tol_arn, 'b--', lw=0.5, label='tol', zorder=2)
 
     # Newton residuals (markers at k_sum positions)
     newton_file = d / 'residu_newton.dat'
@@ -463,13 +467,15 @@ def plot_newton_convergence(ax, directory='.'):
         data = np.genfromtxt(str(newton_file))
         if data.ndim == 1:
             data = data.reshape(1, -1)
-        # Columns: i, total_calls, iter_calls, k_sum, tottime, solver_tol, residual, dtol
-        k_sum = data[:, 3]
-        res_nwt = data[:, 6]
-        dtol = data[0, 7]
-        ax.semilogy(k_sum, res_nwt, 'bs', ms=4, mfc='none', lw=0.8,
-                    label='Newton', zorder=4)
-        ax.axhline(dtol, color='r', ls='--', lw=0.5, label='dtol', zorder=1)
+        # Same empty/short guard as the Arnoldi block above.
+        if data.size and data.shape[1] > 7:
+            # Columns: i, total_calls, iter_calls, k_sum, tottime, solver_tol, residual, dtol
+            k_sum = data[:, 3]
+            res_nwt = data[:, 6]
+            dtol = data[0, 7]
+            ax.semilogy(k_sum, res_nwt, 'bs', ms=4, mfc='none', lw=0.8,
+                        label='Newton', zorder=4)
+            ax.axhline(dtol, color='r', ls='--', lw=0.5, label='dtol', zorder=1)
 
     ax.set_xlabel('Arnoldi iterations')
     ax.set_ylabel(r'$\|r\|^2$')

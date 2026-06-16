@@ -1129,7 +1129,7 @@ CASES: dict[str, MethodCase] = {
     "thermosyphon/baseflow": MethodCase(
         case_id="thermosyphon/baseflow",
         flow_family="thermosyphon", method_lane="baseflow",
-        current_path="example/thermosyphon_ra500/baseflow",
+        current_path="example/thermosyphon_ra500/210_baseflow_newton/fp",
         proposed_folder="example/thermosyphon_ra500/210_thermosyphon_baseflow", sort_prefix="210",
         label="Thermosyphon Baseflow", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Thermosyphon natural-convection baseflow at Ra=500, Pr=5",
@@ -1176,7 +1176,7 @@ CASES: dict[str, MethodCase] = {
     "thermosyphon/stability/direct": MethodCase(
         case_id="thermosyphon/stability/direct",
         flow_family="thermosyphon", method_lane="direct",
-        current_path="example/thermosyphon_ra500/stability/direct",
+        current_path="example/thermosyphon_ra500/310_stability_direct/direct",
         proposed_folder="example/thermosyphon_ra500/310_thermosyphon_stability_direct", sort_prefix="310",
         label="Thermosyphon Direct Stability", mode_name="Direct LNSE", legacy_uparam01="3.1",
         expected_behavior="Direct stability of thermosyphon conductive base flow at Ra=500; buoyancy coupling Pr*Ra",
@@ -1219,7 +1219,7 @@ CASES: dict[str, MethodCase] = {
     "flip_flop/baseflow": MethodCase(
         case_id="flip_flop/baseflow",
         flow_family="flip_flop", method_lane="baseflow",
-        current_path="example/flip_flop_re62/baseflow",
+        current_path="example/flip_flop_re62/210_baseflow_newton/upo",
         proposed_folder="example/flip_flop_re62/210_flip_flop_baseflow", sort_prefix="210",
         label="Flip-Flop Jet Baseflow", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Flip-flop jet baseflow at Re=62",
@@ -1243,7 +1243,7 @@ CASES: dict[str, MethodCase] = {
     "flip_flop/stability/direct_Floquet": MethodCase(
         case_id="flip_flop/stability/direct_Floquet",
         flow_family="flip_flop", method_lane="floquet_direct",
-        current_path="example/flip_flop_re62/stability/direct_Floquet",
+        current_path="example/flip_flop_re62/311_stability_direct_floquet",
         proposed_folder="example/flip_flop_re62/311_flip_flop_stability_direct_floquet", sort_prefix="311",
         label="Flip-Flop Direct Floquet", mode_name="Direct Floquet", legacy_uparam01="3.11",
         expected_behavior="Floquet analysis of flip-flop orbit at Re=62; leading multiplier sigma=0.0079, omega=0.1408",
@@ -1270,7 +1270,7 @@ CASES: dict[str, MethodCase] = {
     "tpjet/baseflow/newton": MethodCase(
         case_id="tpjet/baseflow/newton",
         flow_family="tpjet", method_lane="baseflow",
-        current_path="example/tpjet_re2005/baseflow/newton",
+        current_path="example/tpjet_re2005/210_baseflow_newton/forced_po",
         proposed_folder="example/tpjet_re2005/210_tpjet_baseflow_newton", sort_prefix="210",
         label="Two-Phase Jet Baseflow Newton", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Two-phase jet Newton baseflow at Re=2000 (compute-heavy)",
@@ -1308,10 +1308,12 @@ CASES: dict[str, MethodCase] = {
     "tpjet/baseflow/tdf": MethodCase(
         case_id="tpjet/baseflow/tdf",
         flow_family="tpjet", method_lane="baseflow",
-        current_path="example/tpjet_re2005/baseflow/tdf",
+        current_path="",
         proposed_folder="example/tpjet_re2005/140_tpjet_baseflow_tdf", sort_prefix="140",
         label="Two-Phase Jet TDF", mode_name="TDF", legacy_uparam01="1.4",
         expected_behavior="TDF periodic base flow for tpjet at Re=2005, St=0.60 (deferred validation)",
+        # Stage not yet instantiated (proposed_folder 140_* does not exist yet);
+        # empty current_path = backlog, not a broken path. Set the real dir once created.
         status=CaseStatus.DEFERRED, compute_class=_LLR,
         target_parameters=TargetParameters(Re=2005.0, geometry="tpjet", motion="static", model="DNS"),
         evidence_requirements=(_REQ_IMG,),
@@ -1322,7 +1324,7 @@ CASES: dict[str, MethodCase] = {
     "tpjet/stability/direct_Floquet": MethodCase(
         case_id="tpjet/stability/direct_Floquet",
         flow_family="tpjet", method_lane="floquet_direct",
-        current_path="example/tpjet_re2005/stability/direct_Floquet",
+        current_path="example/tpjet_re2005/311_stability_direct_floquet",
         proposed_folder="example/tpjet_re2005/311_tpjet_stability_direct_floquet", sort_prefix="311",
         label="Two-Phase Jet Direct Floquet", mode_name="Direct Floquet", legacy_uparam01="3.11",
         expected_behavior="Floquet analysis of tpjet orbit at Re=1900; leading multiplier sigma=0.512, omega=1.237",
@@ -1331,8 +1333,9 @@ CASES: dict[str, MethodCase] = {
         seed_parameters=SeedParameters(seed_Re=1900.0, seed_path="BF_tpjet0.f00001", restart_source="from baseflow dir"),
         evidence_requirements=(_REQ_IMG, _REQ_SPEC),
         artifacts=(
-            _img("validation/figures/tpjet_baseflow_tdf_ic_Re2005.png"),
-            _img("validation/figures/tpjet_baseflow_tdf_bf_Re2005.png"),
+            _img("validation/figures/tpjet_stability_direct_Floquet_baseflow_Re2005.png"),
+            _img("validation/figures/tpjet_stability_direct_Floquet_spectrum_Re2005.png"),
+            _img("validation/figures/tpjet_stability_direct_Floquet_mode_Re2005.png"),
             _spectrum("example/tpjet_re2005/stability/direct_Floquet/Spectre_Hd.dat"),
             _log("example/tpjet_re2005/stability/direct_Floquet/logfile"),
             _checkpoint("example/tpjet_re2005/stability/direct_Floquet/dRetpjet0.f00001"),
@@ -1348,7 +1351,7 @@ CASES: dict[str, MethodCase] = {
     "back_fstep/baseflow": MethodCase(
         case_id="back_fstep/baseflow",
         flow_family="back_fstep", method_lane="baseflow",
-        current_path="example/back_fstep_re500/baseflow",
+        current_path="example/back_fstep_re500/210_baseflow_newton/fp",
         proposed_folder="example/back_fstep_re500/210_back_fstep_baseflow", sort_prefix="210",
         label="Backward-Facing Step Baseflow", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Newton-GMRES baseflow for backward-facing step at Re=500",
@@ -1373,7 +1376,7 @@ CASES: dict[str, MethodCase] = {
     "back_fstep/transient_growth": MethodCase(
         case_id="back_fstep/transient_growth",
         flow_family="back_fstep", method_lane="transient_growth",
-        current_path="example/back_fstep_re500/transient_growth",
+        current_path="example/back_fstep_re500/330_transient_growth",
         proposed_folder="example/back_fstep_re500/330_back_fstep_transient_growth", sort_prefix="330",
         label="Backward-Facing Step Transient Growth", mode_name="Transient Growth", legacy_uparam01="3.3",
         expected_behavior="Transient growth analysis for backward-facing step at Re=500",

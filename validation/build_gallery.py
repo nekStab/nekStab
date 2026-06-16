@@ -53,6 +53,8 @@ class Case:
     expected: str        # short physical expectation
     status: str          # 'validated' | 'deferred'
     fig_key: str         # case_id slug; canonical artifact filename prefix
+    flow_family: str = ''  # optional: overrides path.split('/')[0] for data-family
+    disc_lane: str = ''    # optional: overrides _classify lane for auto-discovered cases
 
 
 # Sections in display order. Each section has a heading + list[Case].
@@ -248,11 +250,169 @@ FAMILY_ORDER = [
     'back_fstep', 'lid_driven_cavity', 'naca0012', 'poiseuille',
     'moving_cylinder', 'cubic_cavity', 'slot_FST', 'blasius',
     'cylinder_re1m',
+    # auto-discovered families (may appear when no catalog entry exists)
+    'cubic_cavity_re1914', 'cubic_cavity_re1950', 'cylinder_re30_thermal',
 ]
 
 LANE_ORDER = ['dns', 'baseflow', 'transient_growth', 'stability_direct', 'direct',
                'stability_adjoint', 'animation', 'floquet_direct', 'floquet_adjoint',
                'wavemaker', 'otd', 'modal', 'rans']
+
+# ---------------------------------------------------------------------------
+# Auto-discovery: geometry dir -> catalog FlowFamily id
+# Fallback: the geometry dir string itself (creates a new section on first
+# discovery for families not in the catalog).
+# ---------------------------------------------------------------------------
+GEOM_FAMILY: dict[str, str] = {
+    # cubic_cavity variants
+    'cubic_cavity_re1914': 'cubic_cavity',
+    'cubic_cavity_re1950': 'cubic_cavity',
+    # lid-driven
+    'lid_driven_re3600': 'lid_driven_cavity',
+    # naca
+    'naca0012_re2000': 'naca0012',
+    # poiseuille
+    'poiseuille_re5k':  'poiseuille',
+    'poiseuille_re1e5': 'poiseuille',
+    # slot FST
+    'slot_fst_re495': 'slot_FST',
+    # flip-flop
+    'flip_flop_re62': 'flip_flop',
+    # thermosyphon
+    'thermosyphon_ra500': 'thermosyphon',
+    # tpjet
+    'tpjet_re2005': 'tpjet',
+    'tpjet':        'tpjet',
+    # backward-facing step
+    'back_fstep_re500': 'back_fstep',
+    # cylinder variants
+    'cylinder_re100':      'cylinder_re100',
+    'cylinder_re180':      'cylinder_re180',
+    'cylinder_re1m':       'cylinder_re1m',
+    'cylinder_re30_thermal': 'cylinder_re30_thermal',
+    # moving cylinder
+    'moving_cylinder_re100': 'moving_cylinder',
+}
+
+# NNN prefix -> discovery lane label (used for data-lane attribute)
+_STAGE_LANE: dict[str, str] = {
+    '0': 'dns',
+    '1': 'baseflow',
+    '2': 'baseflow',
+    '3': 'stability',
+    '4': 'postproc',
+    '5': 'otd',
+    '6': 'modal',
+}
+
+# Paths that must be excluded from auto-discovery (exact substrings)
+_DISCOVER_EXCLUDE = frozenset([
+    '_templates/', '/ref', '/obj', '.venv', 'ANIM', '.archive', 'site-packages',
+])
+
+
+def _discover_lane(rel_subpath: str) -> str:
+    """Return discovery lane from the deepest NNN_ prefix in the path."""
+    # Find all NNN_ segments; use the last/deepest one.
+    segments = re.findall(r'(?:^|/)(\d{3})_', rel_subpath)
+    if not segments:
+        return 'other'
+    nnn = segments[-1]          # deepest NNN
+    return _STAGE_LANE.get(nnn[0], 'other')
+
+
+def _discover_re_tag(geom_dir: str) -> str:
+    """Derive Re/Ra tag from a geometry directory name (case-insensitive)."""
+    m = re.search(r'[Rr][Aa](\d+)', geom_dir)
+    if m:
+        return f'Ra{m.group(1)}'
+    m = re.search(r'[Rr][Ee](\w+)', geom_dir)
+    if m:
+        return f'Re{m.group(1)}'
+    return 'Re0'
+
+
+def _panel_caption_from_stem(stem: str) -> str:
+    """Title-case panel caption from a plot file stem (strip leading 'plot_'/'plot')."""
+    s = stem
+    if s.startswith('plot_'):
+        s = s[5:]
+    elif s.startswith('plot'):
+        s = s[4:]
+    s = s.replace('_', ' ').strip()
+    return s.title() if s else ''
+
+
+def discover_stage_folders() -> list[tuple[str, str, str, list]]:
+    """Scan example/ for stage folders not in the catalog.
+
+    Returns list of (family_id, rel_subpath, lane, panels) where:
+      - family_id: from GEOM_FAMILY or the geom dir name itself
+      - rel_subpath: path relative to example/
+      - lane: discovery lane string
+      - panels: list of (None, png_path_or_None, caption)
+    """
+    # Build catalog path set for deduplication
+    catalog_known: set[str] = set()
+    for mc in catalog_all_cases():
+        catalog_known.add(_case_subpath(mc.current_path))
+
+    seen_folders: set[str] = set()
+    results: list[tuple[str, str, str, list]] = []
+
+    for par_file in sorted(EXAMPLE.rglob('*.par')):
+        folder = par_file.parent
+        try:
+            rel = folder.relative_to(EXAMPLE).as_posix()
+        except ValueError:
+            continue
+
+        # Skip excluded paths
+        if any(ex in rel for ex in _DISCOVER_EXCLUDE):
+            continue
+
+        # Must contain a numbered stage segment NNN_
+        if not re.search(r'(^|/)\d{3}_', rel):
+            continue
+
+        # Skip duplicates (multiple .par files in same folder)
+        if rel in seen_folders:
+            continue
+        seen_folders.add(rel)
+
+        # Skip folders already in the catalog
+        if rel in catalog_known:
+            continue
+
+        # Determine geometry dir (first path segment)
+        parts = rel.split('/')
+        geom_dir = parts[0]
+        family_id = GEOM_FAMILY.get(geom_dir, geom_dir)
+
+        lane = _discover_lane(rel)
+
+        # Build panel list from plot*.png files in the folder
+        png_files = sorted(folder.glob('plot*.png'), key=lambda p: p.name)
+        if png_files:
+            panels = [
+                (None, p, _panel_caption_from_stem(p.stem))
+                for p in png_files
+            ]
+        else:
+            # No images yet: emit one placeholder panel
+            panels = [(None, None, '')]
+
+        results.append((family_id, rel, lane, panels))
+
+    # Sort by (family_id, NNN prefix of deepest stage segment, rel)
+    def _sort_key(item):
+        fid, rel, lane, _ = item
+        segs = re.findall(r'(?:^|/)(\d{3})_', rel)
+        nnn = segs[-1] if segs else '000'
+        return (fid, nnn, rel)
+
+    results.sort(key=_sort_key)
+    return results
 
 BLOCKED_STATUSES = {
     CaseStatus.BLOCKED,
@@ -1553,8 +1713,19 @@ def main() -> None:
         if c.status != 'validated':
             card_classes += ' deferred'
         # Derive data attributes for filter chips
-        family_val = html.escape(mc.flow_family if mc is not None else c.path.split('/')[0])
-        lane_raw = mc.method_lane if mc is not None else _classify(c)[1]
+        if mc is not None:
+            _fam_fallback = mc.flow_family
+        elif c.flow_family:
+            _fam_fallback = c.flow_family
+        else:
+            _fam_fallback = c.path.split('/')[0]
+        family_val = html.escape(_fam_fallback)
+        if mc is not None:
+            lane_raw = mc.method_lane
+        elif c.disc_lane:
+            lane_raw = c.disc_lane
+        else:
+            lane_raw = _classify(c)[1]
         # Normalize method_lane values to display groups
         _lane_map = {
             'baseflow': 'baseflow', 'dns': 'dns', 'modal': 'modal',
@@ -1759,8 +1930,19 @@ def main() -> None:
         card_classes = 'card'
         if c.status != 'validated':
             card_classes += ' deferred'
-        family_val = html.escape(mc.flow_family if mc is not None else c.path.split('/')[0])
-        lane_raw = mc.method_lane if mc is not None else _classify(c)[1]
+        if mc is not None:
+            _fam_fallback2 = mc.flow_family
+        elif c.flow_family:
+            _fam_fallback2 = c.flow_family
+        else:
+            _fam_fallback2 = c.path.split('/')[0]
+        family_val = html.escape(_fam_fallback2)
+        if mc is not None:
+            lane_raw = mc.method_lane
+        elif c.disc_lane:
+            lane_raw = c.disc_lane
+        else:
+            lane_raw = _classify(c)[1]
         _lane_map_local = {
             'baseflow': 'baseflow', 'dns': 'dns', 'modal': 'modal',
             'otd': 'otd', 'rans': 'rans', 'wavemaker': 'postproc',
@@ -1932,6 +2114,15 @@ def main() -> None:
             result.append((art, png, panel))
         return result
 
+    # ---------------------------------------------------------------------------
+    # Auto-discovery: scan example/ and group by family_id
+    # ---------------------------------------------------------------------------
+    discovered_all = discover_stage_folders()
+    # Group: family_id -> list of (rel_subpath, lane, panels)
+    discovered_by_fam: dict[str, list[tuple[str, str, list]]] = {}
+    for fam_id, rel, lane, panels in discovered_all:
+        discovered_by_fam.setdefault(fam_id, []).append((rel, lane, panels))
+
     all_families = {f.family_id: f for f in catalog_families()}
     ordered_fids = [fid for fid in FAMILY_ORDER if fid in all_families] + [
         fid for fid in all_families if fid not in FAMILY_ORDER
@@ -2089,7 +2280,73 @@ def main() -> None:
                     c = catalog_to_case(mc)
                     parts.append(_render_card(c, mc, panel_index=0, panel_of=1))
             parts.append('</div></details>')
+
+        # ----- Auto-discovered stages for this family -----
+        disc_for_fam = discovered_by_fam.get(fid, [])
+        if disc_for_fam:
+            parts.append(
+                '<div class="mode-label" style="margin-top:1.2em">'
+                'Auto-discovered stages'
+                '</div>'
+            )
+            parts.append('<div class="grid">')
+            for rel, lane, panels in disc_for_fam:
+                geom_dir = rel.split('/')[0]
+                re_tag = _discover_re_tag(geom_dir)
+                has_png = any(p[1] is not None for p in panels)
+                disc_status = 'validated' if has_png else 'pending'
+                c = Case(
+                    path=rel,
+                    re_tag=re_tag,
+                    mode='',
+                    expected='auto-discovered stage',
+                    status=disc_status,
+                    fig_key=rel.replace('/', '_'),
+                    flow_family=fid,
+                    disc_lane=lane,
+                )
+                parts.append(_render_case_card(c, None, panels))
+            parts.append('</div>')
+
         parts.append('</section>')
+
+    # ----- Sections for discovered families with no catalog entries -----
+    pure_disc_fids = sorted(
+        fid for fid in discovered_by_fam if fid not in all_families
+    )
+    for fid in pure_disc_fids:
+        disc_entries = discovered_by_fam[fid]
+        label = fid.replace('_', ' ').title()
+        n_disc = len(disc_entries)
+        parts.append(
+            f'<section class="geom" id="family-{html.escape(fid)}" style="scroll-margin-top:4.5em">'
+            f'<h2>{html.escape(label)} '
+            f'<span class="counts"><span class="c-pending">{n_disc} auto-discovered</span></span>'
+            f'</h2>'
+        )
+        parts.append(
+            '<div class="mode-label" style="margin-top:0.4em">'
+            'Auto-discovered stages'
+            '</div>'
+        )
+        parts.append('<div class="grid">')
+        for rel, lane, panels in disc_entries:
+            geom_dir = rel.split('/')[0]
+            re_tag = _discover_re_tag(geom_dir)
+            has_png = any(p[1] is not None for p in panels)
+            disc_status = 'validated' if has_png else 'pending'
+            c = Case(
+                path=rel,
+                re_tag=re_tag,
+                mode='',
+                expected='auto-discovered stage',
+                status=disc_status,
+                fig_key=rel.replace('/', '_'),
+                flow_family=fid,
+                disc_lane=lane,
+            )
+            parts.append(_render_case_card(c, None, panels))
+        parts.append('</div></section>')
 
     parts.append(
         '<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Figure viewer">'
@@ -2638,9 +2895,12 @@ def main() -> None:
 </script>""")
     parts.append('</body></html>')
     OUT.write_text('\n'.join(parts), encoding='utf-8')
+    n_discovered = len(discovered_all)
+    n_pure_disc_fams = len(pure_disc_fids)
     print(f'Wrote {OUT}')
     print(f'  total cases: {n_total} ({n_validated} validated, {n_deferred} deferred, {n_blocked} blocked)')
-    print(f'  families: {len(ordered_fids)}')
+    print(f'  families: {len(ordered_fids)} catalog + {n_pure_disc_fams} auto-discovered-only')
+    print(f'  auto-discovered stage folders: {n_discovered}')
 
 
 if __name__ == '__main__':
