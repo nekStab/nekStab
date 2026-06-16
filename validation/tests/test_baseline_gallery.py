@@ -65,7 +65,8 @@ def test_gallery_baseline_assertions() -> None:
 
     validated_cards = re.findall(r'<div class="card"(?:\s|>)', html)
     deferred_cards = re.findall(r'<div class="card deferred"(?:\s|>)', html)
-    figure_images = re.findall(r'<img [^>]*src="figures/[^"]+"', html)
+    # Plots are read in place from example/*; src is relative to validation/index.html.
+    figure_images = re.findall(r'<img [^>]*src="\.\./example/[^"]+"', html)
     action_buttons = re.findall(
         r'data-action="(?:recompile|resubmit)"', html
     )

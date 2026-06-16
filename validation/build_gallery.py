@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """build_gallery.py - case-catalog-driven HTML gallery for nekStab validation.
 
-Defines the 24 validated v2.0 cases authoritatively and the 15 deferred
-ones, then walks validation/figures/ to attach a PNG to each. Result is
-a dashboard:
+Reads result plots DIRECTLY from each case's example/* folder (no copy or
+canonical-rename layer): a catalog artifact resolves to
+example/<current_path>/plot_<panel>.png in place. The gallery is therefore a
+live mask over the example tree:
 
-  - validated cases with a matching PNG  -> green check + thumbnail
-  - validated cases with stale Re/Ra     -> amber "stale" badge
-  - validated cases with no PNG          -> grey "pending" placeholder
+  - case folder holds the plot          -> live thumbnail
+  - plot absent (not run, or misnamed)  -> grey "hole" placeholder
   - deferred cases at the bottom (collapsed)
+
+Image src is emitted relative to validation/index.html (e.g.
+"../example/cylinder_re100/000_dns/plot_snapshot.png"), which also works under
+the Pages artifact when example/* ships alongside validation/.
 
 Run:  python validation/build_gallery.py
 Open: xdg-open validation/index.html
@@ -19,6 +23,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 import html
+import os
 import re
 import subprocess
 
@@ -36,7 +41,6 @@ except ModuleNotFoundError:
     )
 
 ROOT = Path(__file__).resolve().parent
-FIG_DIR = ROOT / 'figures'
 OUT = ROOT / 'index.html'
 EXAMPLE = ROOT.parent / 'example'
 
@@ -48,7 +52,7 @@ class Case:
     mode: str            # 'Newton-GMRES (2.0)'
     expected: str        # short physical expectation
     status: str          # 'validated' | 'deferred'
-    fig_key: str         # collect_plots.py filename prefix (without .png)
+    fig_key: str         # case_id slug; canonical artifact filename prefix
 
 
 # Sections in display order. Each section has a heading + list[Case].
@@ -363,29 +367,56 @@ def _git_version() -> str:
         return 'unknown'
 
 
-@lru_cache(maxsize=None)
+def _img_url(png: Path) -> str:
+    """URL for a resolved plot, relative to validation/index.html.
+    e.g. '../example/cylinder_re100/000_dns/plot_snapshot.png'. The same
+    relative path resolves under the Pages artifact (example/* ships next to
+    validation/) and from the repo working tree.
+    """
+    return Path(os.path.relpath(png, ROOT)).as_posix()
+
+
+def _panel_slug(art_path: str, case_id: str) -> str:
+    """Panel token for an artifact: the canonical stem with the _Re/_Ra tag and
+    the case_id-slug prefix stripped, lower-cased (e.g.
+    'cylinder_dns_snapshot_Re50' with case 'cylinder/dns' -> 'snapshot').
+    Empty string for single-panel cases (-> plot.png). Mirrors
+    _panel_caption_from_path but returns the raw underscore token, not a title.
+    """
+    stem = re.sub(r'_R[aAeE]\d+$', '', Path(art_path).stem)
+    stem_parts = stem.split('_')
+    slug_parts = case_id.replace('/', '_').split('_')
+    common = 0
+    for sp, cp in zip(stem_parts, slug_parts):
+        if sp == cp:
+            common += 1
+        else:
+            break
+    return '_'.join(stem_parts[common:]).lower()
+
+
 def _find_png(case: Case) -> Path | None:
-    """Best-fit PNG match in validation/figures/.
-    Returns the file that begins with the case's fig_key and (if possible)
-    also matches the expected Re/Ra tag. Falls back to any prefix match.
+    """Single-panel plot read in place: example/<case.path>/plot.png.
+    Returns None (-> grey hole) when the case has no such plot yet.
     """
-    exact = FIG_DIR / f'{case.fig_key}_{case.re_tag}.png'
-    if exact.exists():
-        return exact
-    prefix_match = sorted(FIG_DIR.glob(f'{case.fig_key}_*.png'))
-    if prefix_match:
-        return prefix_match[0]
-    return None
+    p = EXAMPLE / case.path / 'plot.png'
+    return p if p.exists() else None
 
 
-def _find_artifact_image(artifact) -> "Path | None":
-    """Resolve artifact.path (e.g. 'validation/figures/foo.png') to an absolute Path.
-    Supports .png and .gif. Returns None if the file does not exist.
+def _find_artifact_image(artifact, mc=None) -> "Path | None":
+    """Resolve a catalog artifact to its in-place plot under example/*.
+    The canonical artifact stem is '<fig_key>_<panel>_<ReNN>'; the plot lives
+    at '<current_path>/plot_<panel>.<ext>' (or 'plot.<ext>' single-panel).
+    Returns None (-> grey hole) when the plot is absent — not run yet, or the
+    plot filename / catalog current_path has drifted from the convention.
     """
-    p = ROOT.parent / artifact.path
-    if p.exists():
-        return p
-    return None
+    if mc is None:
+        return None
+    panel = _panel_slug(artifact.path, mc.case_id)
+    ext = Path(artifact.path).suffix or '.png'
+    fname = f'plot_{panel}{ext}' if panel else f'plot{ext}'
+    p = EXAMPLE / _case_subpath(mc.current_path) / fname
+    return p if p.exists() else None
 
 
 def _panel_caption_from_path(art_path: str, case_id: str) -> str:
@@ -1392,7 +1423,7 @@ def _render_ladder_group_multi(triples, label, _render_card_fn, step_offset=1):
     step = step_offset
     for i, (c, mc, art) in enumerate(triples):
         if art is not None:
-            png = _find_artifact_image(art)
+            png = _find_artifact_image(art, mc)
             panel = _panel_caption_from_path(art.path, mc.case_id)
         else:
             png = None
@@ -1417,7 +1448,6 @@ def _render_ladder_group_multi(triples, label, _render_card_fn, step_offset=1):
 
 
 def main() -> None:
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     version = _git_version()
 
@@ -1546,7 +1576,7 @@ def main() -> None:
         re_val = html.escape(c.re_tag)
         case_id_val = html.escape(mc.case_id if mc is not None else c.path)
         cap_text = f"{mc.case_id if mc is not None else c.path} · {panel_caption}" if panel_caption else (mc.case_id if mc is not None else c.path)
-        img_src_val = f"figures/{html.escape(png.name)}" if png is not None else ""
+        img_src_val = html.escape(_img_url(png)) if png is not None else ""
         chunks: list[str] = [
             f'<div class="{card_classes}"'
             f' data-case-id="{case_id_val}"'
@@ -1563,7 +1593,7 @@ def main() -> None:
         if png is not None:
             chunks.append(
                 f'<button class="img-wrap" aria-label="Open figure" '
-                f'data-img-src="figures/{html.escape(png.name)}" '
+                f'data-img-src="{html.escape(_img_url(png))}" '
                 f'data-caption="{html.escape(cap_text)}">'
             )
         else:
@@ -1576,7 +1606,7 @@ def main() -> None:
         if png is not None:
             chunks.append(
                 f'<img loading="lazy" decoding="async" '
-                f'src="figures/{html.escape(png.name)}" alt="{html.escape(caption)}">'
+                f'src="{html.escape(_img_url(png))}" alt="{html.escape(caption)}">'
             )
         else:
             msg = 'pending re-run' if c.status == 'validated' else c.status
@@ -1826,7 +1856,7 @@ def main() -> None:
         badge_label = {'ok': 'OK', 'stale': 'STALE', 'pending': 'PENDING'}[state]
         chunks.append(f'<div class="thumbs-strip"><span class="badge {state} strip-badge">{badge_label}</span>')
         for i, (art, png, panel_caption) in enumerate(panels):
-            thumb_src = f'figures/{html.escape(png.name)}' if png is not None else ''
+            thumb_src = html.escape(_img_url(png)) if png is not None else ''
             base_label = mc.case_id if mc is not None else c.path
             thumb_cap = f'{base_label} · {panel_caption}' if panel_caption else base_label
             chunks.append(
@@ -1897,7 +1927,7 @@ def main() -> None:
         for art in mc.artifacts:
             if art.role.value != 'reference_image':
                 continue
-            png = _find_artifact_image(art)
+            png = _find_artifact_image(art, mc)
             panel = _panel_caption_from_path(art.path, mc.case_id)
             result.append((art, png, panel))
         return result
@@ -2052,7 +2082,7 @@ def main() -> None:
                 if img_arts:
                     for i, art in enumerate(img_arts):
                         c = catalog_to_case(mc)
-                        png = _find_artifact_image(art)
+                        png = _find_artifact_image(art, mc)
                         panel = _panel_caption_from_path(art.path, mc.case_id)
                         parts.append(_render_card(c, mc, panel_caption=panel, png_override=png, panel_index=i, panel_of=len(img_arts)))
                 else:

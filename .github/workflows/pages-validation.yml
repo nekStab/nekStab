@@ -6,7 +6,7 @@ on:
     branches: [dev]
     paths:
       - validation/index.html
-      - validation/figures/**
+      - example/**/*.png
       - .github/workflows/pages-validation.yml
 
 permissions:
@@ -33,9 +33,14 @@ jobs:
       - name: Prepare Pages artifact
         run: |
           set -euo pipefail
-          mkdir -p _site/validation
+          mkdir -p _site/validation _site/example
           cp validation/index.html _site/validation/index.html
-          cp -a validation/figures _site/validation/figures
+          # Gallery reads plots in place: index.html emits "../example/.../plot_*.<ext>",
+          # so ship the example plot media (png/gif/mp4) alongside validation/.
+          rsync -am \
+            --include='*/' --include='*.png' --include='*.gif' --include='*.mp4' \
+            --exclude='*' \
+            example/ _site/example/
           touch _site/.nojekyll
 
       - name: Check static gallery references
