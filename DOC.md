@@ -1301,23 +1301,23 @@ The collector writes consolidated figures to `validation/figures/`.
 
 ### Automated Validation Suite
 
-The repository now ships with `validate.py`, which combines literature-facing validation checks with broad example coverage.
+The repository now ships with `validation/validate.py`, which combines literature-facing validation checks with broad example coverage.
 
 ```bash
-./validate.py
-./validate.py --short
-./validate.py --check-only
-./validate.py --dry-run
-./validate.py --list
-./validate.py --nprocs 8 cylinder
-./validate.py --compile-all
+./validation/validate.py
+./validation/validate.py --short
+./validation/validate.py --check-only
+./validation/validate.py --dry-run
+./validation/validate.py --list
+./validation/validate.py --nprocs 8 cylinder
+./validation/validate.py --compile-all
 ```
 
 Validation is split into two tiers:
 - **Short tier**: AMR-oriented literature checks for `cylinder`, `thermosyphon`, `flipflop_bf`, `flipflop_floquet`, `backstep`, `tpjet_bf`, and `tpjet_floquet`
-- **Full tier**: compile/run coverage across the cases currently listed in `validate.py`, spanning cylinder variants plus `back_fstep`, `thermosyphon`, `flip_flop`, `tpjet`, `lid_driven`, `cubic_cavity`, `naca0012`, `poiseuille_OTD`, and `slot_FST`
+- **Full tier**: compile/run coverage across the cases currently listed in `validation/validate.py`, spanning cylinder variants plus `back_fstep`, `thermosyphon`, `flip_flop`, `tpjet`, `lid_driven`, `cubic_cavity`, `naca0012`, `poiseuille_OTD`, and `slot_FST`
 
-Operational behavior of `validate.py`:
+Operational behavior of `validation/validate.py`:
 - Auto-detects CPU topology and prefers physical cores
 - Reads `SIZE` (`lelg`, `lpmin`) to choose a mesh-aware MPI rank count
 - Materializes missing prerequisites from `NEKSTAB_DATA_ROOT` when set, otherwise from the default `$HOME/.data_baptiste.nosync`, before deciding whether to skip a case

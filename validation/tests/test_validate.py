@@ -1,10 +1,17 @@
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-import validate
+# validate.py lives at validation/validate.py; expose the repo root so the
+# `validation` package (and src/ for the source-text checks below) resolve from
+# any CWD, matching the convention in the sibling validation/tests modules.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+
+from validation import validate  # noqa: E402
 
 
 class ValidateScriptTests(unittest.TestCase):
@@ -45,7 +52,8 @@ class ValidateScriptTests(unittest.TestCase):
                 "flipflop_bf", case, check_only=False, nprocs=1, cpu=self.cpu, dry_run=False
             )
 
-        self.assertEqual(result, "fail")
+        # validate_case returns (status, elapsed_seconds); assert on the status.
+        self.assertEqual(result[0], "fail")
 
     def test_discover_compilable_cases_ignores_hidden_placeholder_usr(self):
         case_dir = self.example_root / "cylinder" / "modal"
@@ -56,10 +64,12 @@ class ValidateScriptTests(unittest.TestCase):
 
         real_glob = Path.glob
 
-        def fake_glob(path_obj, pattern):
+        def fake_glob(path_obj, pattern, *args, **kwargs):
+            # Forward *args/**kwargs so rglob's internal case_sensitive= call
+            # (Python 3.13+) passes through to the real implementation.
             if path_obj == case_dir and pattern == "*.usr":
                 return [case_dir / ".usr", case_dir / "1cyl.usr"]
-            return real_glob(path_obj, pattern)
+            return real_glob(path_obj, pattern, *args, **kwargs)
 
         with mock.patch("pathlib.Path.glob", new=fake_glob):
             cases = validate.discover_compilable_cases(self.example_root)
@@ -90,11 +100,12 @@ class ValidateScriptTests(unittest.TestCase):
                 "cyl_dns", case, check_only=True, nprocs=1, cpu=self.cpu, dry_run=False
             )
 
-        self.assertEqual(result, "pass")
+        # validate_case returns (status, elapsed_seconds); assert on the status.
+        self.assertEqual(result[0], "pass")
         self.assertTrue((case_dir / "rst_1cyl0.f00001").exists())
 
     def test_outpost_ks_uses_per_scalar_extents_for_passive_scalars(self):
-        source = (Path(__file__).resolve().parent / "src" / "eigensolvers.f90").read_text()
+        source = (REPO_ROOT / "src" / "eigensolvers.f90").read_text()
 
         self.assertIn("n_scalar = nx1*ny1*nz1*nelfld(m + 1)", source)
         self.assertIn("oks_fp_ct_s(1:n_scalar, m) = matmul(", source)
