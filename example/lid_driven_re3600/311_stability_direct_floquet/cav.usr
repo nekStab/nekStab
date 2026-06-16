@@ -69,7 +69,7 @@ c       call bcast(ifvox,lsize)
 
       if (JP.eq.0) then         ! velocity
          e = gllel(ieg)
-         ux = 1.0d0
+         ux = (1.0d0 - (2.0d0*x)**2)**2 ! regularized lid (zero at corners -> valid adjoint)
          uy = 0.0d0
          uz = 0.0d0
          temp = 0.0d0
@@ -91,7 +91,7 @@ c       call bcast(ifvox,lsize)
 
       if (JP.eq.0) then         ! velocity
          e = gllel(ieg)
-         ux = 1.0d0
+         ux = (1.0d0 - (2.0d0*x)**2)**2 ! regularized lid (zero at corners -> valid adjoint)
          uy = 0.0d0
          uz = 0.0d0
          temp = 1.0d0
