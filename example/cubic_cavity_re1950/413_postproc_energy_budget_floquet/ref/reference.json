@@ -1,0 +1,19 @@
+{
+  "case": "example/cubic_cavity_re1950/413_postproc_energy_budget_floquet",
+  "produced": {
+    "date": "2026-06-16",
+    "commit": "current"
+  },
+  "quantities": {
+    "pke_floq_first": {
+      "value": 0.1120816,
+      "source": "PKE_floquet_cav0.f00002:col1:first",
+      "tol_abs": 1e-5
+    },
+    "pke_floq_recon": {
+      "value": 0.4696077e-02,
+      "source": "PKE_floquet_cav0.f00002:col1:last",
+      "tol_abs": 1e-5
+    }
+  }
+}
