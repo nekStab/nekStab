@@ -1,53 +1,52 @@
 !-----------------------------------------------------------------------
-! IO.f90 -- File I/O utilities for nekStab
+! IO.f90 — File I/O utilities for nekStab
 !
 ! Purpose:
 !   Provides routines for file numbering, loading eigenvalues,
 !   loading eigenmodes, and reading snapshot sequences from disk.
 !
 ! Public interface:
-!   whereyouwant    -- set file numbering suffix counter
-!   read_eigenvalue -- read leading eigenvalue from convergence file
-!   load_mode_pair  -- load real/imaginary eigenmode pair
-!   load_files      -- load a sequence of Krylov snapshots
-!   k_load          -- load a single field into a krylov_vector
+!   whereyouwant    — set file numbering suffix counter
+!   read_eigenvalue — read leading eigenvalue from convergence file
+!   load_mode_pair  — load real/imaginary eigenmode pair
+!   load_files      — load a sequence of Krylov snapshots
+!   k_load          — load a single field into a krylov_vector
 !
 ! Dependencies:
 !   krylov_subspace, SIZE, TOTAL, PARALLEL, TSTEP
 !-----------------------------------------------------------------------
 
 module nekstab_io
-    use nekstab_nek_bridge
-    use krylov_subspace
-    use nekstab_vectors
-    implicit none
-    private
-    public :: whereyouwant, read_eigenvalue, &
-              load_mode_pair, load_files, k_load
+   use nekstab_nek_bridge, only: nid, nekStab_error, NEKSTAB_UNIT_RESIDU, &
+                                 wdsize, SESSION, vx, vy, vz, pr, t
+   implicit none
+   private
+   public :: whereyouwant, read_eigenvalue, &
+             load_mode_pair, load_files, k_load
 contains
 
 !-----------------------------------------------------------------------
-! whereyouwant -- Set file numbering suffix counter
+! whereyouwant — Set file numbering suffix counter
 !
 ! Arguments:
 !   resnam [in] -- 3-character file prefix
 !   posfil [in] -- starting file number
 !-----------------------------------------------------------------------
-subroutine whereyouwant(resnam, posfil)
-    character(len=3), intent(in) :: resnam
-    integer, intent(in) :: posfil
-    integer :: iprefix
-    integer, external :: i_find_prefix
-    integer :: nopen(1000, 2)
-    common /nopenf2/ nopen
+   subroutine whereyouwant(resnam, posfil)
+      character(len=3), intent(in) :: resnam
+      integer, intent(in) :: posfil
+      integer :: iprefix
+      integer, external :: i_find_prefix
+      integer :: nopen(1000, 2)
+      common/nopenf2/nopen
 
-    iprefix = i_find_prefix(resnam, 99)
-    nopen(iprefix, 1) = posfil - 1
+      iprefix = i_find_prefix(resnam, 99)
+      nopen(iprefix, 1) = posfil - 1
 
-end subroutine whereyouwant
+   end subroutine whereyouwant
 
 !-----------------------------------------------------------------------
-! read_eigenvalue -- Read leading eigenvalue from convergence file
+! read_eigenvalue — Read leading eigenvalue from convergence file
 !
 ! Purpose:
 !   Reads (sigma, omega) from Spectre_NSd_conv.dat on rank 0
@@ -57,32 +56,31 @@ end subroutine whereyouwant
 !   sigma [out] -- real part (growth rate)
 !   omega [out] -- imaginary part (frequency), returned as abs
 !-----------------------------------------------------------------------
-subroutine read_eigenvalue(sigma, omega)
+   subroutine read_eigenvalue(sigma, omega)
 
-   real, intent(out) :: sigma, omega
+      real, intent(out) :: sigma, omega
 
-   integer :: ierr
+      integer :: ierr
 
-   if (nid == 0) then
-      open (unit=10, file='Spectre_NSd_conv.dat', &
-         status='old', action='read', iostat=ierr)
-      if (ierr /= 0) then
-         write(6, *) 'ABORT: Could not open Spectre_NSd_conv.dat'
-         call exitt
+      if (nid == 0) then
+         open (unit=NEKSTAB_UNIT_RESIDU, file='Spectre_NSd_conv.dat', &
+               status='old', action='read', iostat=ierr)
+         if (ierr /= 0) then
+            call nekStab_error('ABORT: Could not open Spectre_NSd_conv.dat')
+         end if
+         read (NEKSTAB_UNIT_RESIDU, '(2E15.7)') sigma, omega
+         close (NEKSTAB_UNIT_RESIDU)
+         omega = abs(omega)
+         write (6, *) 'read_eigenvalue: sigma =', sigma, &
+            ' omega =', omega
       end if
-      read (10, '(2E15.7)') sigma, omega
-      close (10)
-      omega = abs(omega)
-      write (6, *) 'read_eigenvalue: sigma =', sigma, &
-         ' omega =', omega
-   end if
-   call bcast(sigma, wdsize)
-   call bcast(omega, wdsize)
+      call bcast(sigma, wdsize)
+      call bcast(omega, wdsize)
 
-end subroutine read_eigenvalue
+   end subroutine read_eigenvalue
 
 !-----------------------------------------------------------------------
-! load_mode_pair -- Load real/imaginary eigenmode pair from disk
+! load_mode_pair — Load real/imaginary eigenmode pair from disk
 !
 ! Purpose:
 !   Loads the real and imaginary parts of a direct ('d') or
@@ -93,24 +91,24 @@ end subroutine read_eigenvalue
 !   Re   [out] -- real part of the eigenmode
 !   Im   [out] -- imaginary part of the eigenmode
 !-----------------------------------------------------------------------
-subroutine load_mode_pair(mode, Re, Im)
-   use krylov_subspace
+   subroutine load_mode_pair(mode, Re, Im)
+      use nekstab_krylov_subspace, only: krylov_vector
 
-   character(len=*), intent(in) :: mode
-   type(krylov_vector), intent(out) :: Re, Im
+      character(len=*), intent(in) :: mode
+      type(krylov_vector), intent(out) :: Re, Im
 
-   if (mode == 'd') then
-      call k_load(Re, 'dRe')
-      call k_load(Im, 'dIm')
-   else if (mode == 'a') then
-      call k_load(Re, 'aRe')
-      call k_load(Im, 'aIm')
-   end if
+      if (mode == 'd') then
+         call k_load(Re, 'dRe')
+         call k_load(Im, 'dIm')
+      else if (mode == 'a') then
+         call k_load(Re, 'aRe')
+         call k_load(Im, 'aIm')
+      end if
 
-end subroutine load_mode_pair
+   end subroutine load_mode_pair
 
 !-----------------------------------------------------------------------
-! load_files -- Load a sequence of snapshots into Krylov vectors
+! load_files — Load a sequence of snapshots into Krylov vectors
 !
 ! Arguments:
 !   Q      [out]   -- array of krylov_vectors to fill
@@ -118,54 +116,57 @@ end subroutine load_mode_pair
 !   kd     [in]    -- declared dimension of Q
 !   fname  [in]    -- 3-character file prefix
 !-----------------------------------------------------------------------
-subroutine load_files(Q, mstart, kd, fname)
-   use krylov_subspace
+   subroutine load_files(Q, mstart, kd, fname)
+      use nekstab_krylov_subspace, only: krylov_vector
+      use nekstab_vectors, only: nopcopy
 
-   integer, intent(in) :: mstart, kd
-   !  intent(out) is safe here: krylov_vector has fixed-size (non-allocatable)
-   !  components, so no deallocation on entry.  Only Q(1:mstart) is filled;
-   !  slots mstart+1:kd remain undefined, which is correct — callers either
-   !  pass kd==mstart (modal_analysis) or fill the rest via Arnoldi (eigensolvers).
-   type(krylov_vector), dimension(kd), intent(out) :: Q
-   character(len=3), intent(in) :: fname
+      integer, intent(in) :: mstart, kd
+      !  intent(out) is safe here: krylov_vector has fixed-size (non-allocatable)
+      !  components, so no deallocation on entry.  Only Q(1:mstart) is filled;
+      !  slots mstart+1:kd remain undefined, which is correct — callers either
+      !  pass kd==mstart (modal_analysis) or fill the rest via Arnoldi (eigensolvers).
+      type(krylov_vector), dimension(kd), intent(out) :: Q
+      character(len=3), intent(in) :: fname
 
-   integer :: i
-   character(len=132) filename
+      integer :: i
+      character(len=132) filename
 
-   do i = 1, mstart
-      write (filename, '(A,A,"0.f",I5.5)') trim(fname), trim(SESSION), i
-      call load_fld(filename)
-      call nopcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, Q(i)%pr, Q(i)%t, &
-                   vx, vy, vz, pr, t)
-   end do
-end subroutine load_files
+      do i = 1, mstart
+         write (filename, '(A,A,"0.f",I5.5)') trim(fname), trim(SESSION), i
+         call load_fld(filename)
+         call nopcopy(Q(i)%vx, Q(i)%vy, Q(i)%vz, Q(i)%pr, Q(i)%t, &
+                      vx, vy, vz, pr, t)
+      end do
+
+   end subroutine load_files
 
 !-----------------------------------------------------------------------
-! k_load -- Load a single field file into a krylov_vector
+! k_load — Load a single field file into a krylov_vector
 !
 ! Arguments:
 !   Q     [out] -- krylov_vector to fill
 !   fname [in]  -- file prefix or full filename
 !-----------------------------------------------------------------------
-subroutine k_load(Q, fname)
-   use krylov_subspace
+   subroutine k_load(Q, fname)
+      use nekstab_krylov_subspace, only: krylov_vector
+      use nekstab_vectors, only: nopcopy
 
-   type(krylov_vector), intent(out) :: Q
-   character(len=*), intent(in) :: fname
-   character(len=256) :: fname_local
-   character(len=132) :: filename
+      type(krylov_vector), intent(out) :: Q
+      character(len=*), intent(in) :: fname
+      character(len=256) :: fname_local
+      character(len=132) :: filename
 
-   fname_local = fname
+      fname_local = fname
 
-   if (index(fname_local, '.f') == 0) then
-      write (filename, '(2A)') trim(fname_local), trim(SESSION)//'0.f00001'
-   else
-      filename = fname_local
-   end if
+      if (index(fname_local, '.f') == 0) then
+         write (filename, '(2A)') trim(fname_local), trim(SESSION)//'0.f00001'
+      else
+         filename = fname_local
+      end if
 
-   call load_fld(filename)
-   call nopcopy(Q%vx, Q%vy, Q%vz, Q%pr, Q%t, vx, vy, vz, pr, t)
+      call load_fld(filename)
+      call nopcopy(Q%vx, Q%vy, Q%vz, Q%pr, Q%t, vx, vy, vz, pr, t)
 
-end subroutine k_load
+   end subroutine k_load
 
 end module nekstab_io

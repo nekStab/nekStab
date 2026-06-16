@@ -30,7 +30,7 @@
       !   to ensure MPI consistency.
       !-----------------------------------------------------------------------
       subroutine nekStab_setDefault
-         use krylov_subspace, only: TN_MANUAL
+         use nekstab_krylov_subspace, only: TN_MANUAL
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -46,6 +46,10 @@
 
          bst_skp = 10 ! boostconv skip iterations
          bst_snp = 10 ! bootsconv residual subspace matrix size
+
+      !  Note: k_dim, schur_*, maxmodes, bst_* are the original v1.0
+      !  solver sizing defaults; small to start and users grow them in
+      !  the .usr for production (historical sizing behavior preserved).
 
          ifres = .false. ! outpost restart files (KRY*, HES*)
          ifvor = .false. ! outpost vorticity (vor* omega_x,omega_y,omega_z components)
@@ -70,7 +74,8 @@
          ifseed_nois = .true. ! noise as initial seed
          ifseed_symm = .false. ! symmetry initial seed
          ifseed_load = .false. ! loading initial seed (e.g. Re_ )
-      !  Note: if ifseed_* all are false, 'useric' subroutine prescribes the initial seed
+      !  Note: if ifseed_* all are false, the 'useric' subroutine in the .usr
+      !  prescribes the initial seed. This preserves the historical path.
 
       !  Define here the probe position for zero-crossing vertical velocity analysis !
          xck = 2.0d0
@@ -92,7 +97,7 @@
          ifotd = .false.
          otd_printStep = 100
          otd_gsStep = 10
-         otd_FTLEPeriod = 0.0
+         otd_FTLEPeriod = 0.0d0
          otd_convTol = 1.0d-6
          otd_minSteps = 200
          call rzero(FTLEv_prev, lpert)
@@ -120,7 +125,9 @@
          isNewtonPO = .false.   ! Newton for periodic orbits
          isNewtonPO_T = .false. ! Newton for forced periodic orbits
          ifnewton_backtrack = .true.  ! Optional residual backtracking
-         ! WHY: robust default; clean-converging cases accept alpha=1 on trial 0 and stay bit-identical to old full-step.
+         ! WHY: robust default; clean-converging cases accept alpha=1 on trial 0
+         ! and stay bit-identical to the old full-step path. This is the rc4
+         ! stabilization choice.
 
       !  Mode 3: Stability analysis
          isDirect = .false.           ! Direct eigenmodes
@@ -157,6 +164,10 @@
          spod_nfft = 64       ! SPOD FFT block size
          spod_noverlap = 32   ! SPOD block overlap (50%)
 
+      !  Note: the modal defaults (nsnap=100, nsave=10, dt=0.1) are the
+      !  historical v1 values used in the original POD/DMD examples; they
+      !  keep old cases bit-identical when not overridden in the .usr.
+
       !  Broadcast all defaults to ensure MPI consistency
          call bcast_nStab_defaults()
 
@@ -175,7 +186,7 @@
          include 'SIZE'
          include 'TOTAL'
 
-c        nStab_real (tolerances, domain bounds)
+!        nStab_real (tolerances, domain bounds)
          call bcast(eigen_tol, wdsize)
          call bcast(schur_del, wdsize)
          call bcast(epsilon_base, wdsize)
@@ -186,7 +197,7 @@ c        nStab_real (tolerances, domain bounds)
          call bcast(thermal_norm_min, wdsize)
          call bcast(thermal_norm_max, wdsize)
 
-c        nStab_sponge
+!        nStab_sponge
          call bcast(xLspg, wdsize)
          call bcast(xRspg, wdsize)
          call bcast(yLspg, wdsize)
@@ -196,24 +207,24 @@ c        nStab_sponge
          call bcast(acc_spg, wdsize)
          call bcast(spng_st, wdsize)
 
-c        nStab_fd (probe position, finite difference)
+!        nStab_fd (probe position, finite difference)
          call bcast(xck, wdsize)
          call bcast(yck, wdsize)
          call bcast(zck, wdsize)
          call bcast(findiff_order, isize)
 
-c        nStab_int
+!        nStab_int
          call bcast(schur_tgt, isize)
          call bcast(maxmodes, isize)
          call bcast(glob_skip, isize)
          call bcast(thermal_norm_mode, isize)
 
-c        nStab_boostconv
+!        nStab_boostconv
          call bcast(k_dim, isize)
          call bcast(bst_skp, isize)
          call bcast(bst_snp, isize)
 
-c        nStab_logical
+!        nStab_logical
          call bcast(ifres, lsize)
          call bcast(ifvor, lsize)
          call bcast(ifvox, lsize)
@@ -228,7 +239,7 @@ c        nStab_logical
          call bcast(ifbuoyancy, lsize)
          call bcast(buoyancy_qvol_wired, lsize)
 
-c        nStab_mode_flags
+!        nStab_mode_flags
          call bcast(ifDNS, lsize)
          call bcast(ifLinDNS, lsize)
          call bcast(ifSFD, lsize)
@@ -261,7 +272,7 @@ c        nStab_mode_flags
          call bcast(ifwinamp, lsize)
          call bcast(use_cgs, lsize)
 
-c        nStab_mode_int / nStab_mode_real / nStab_mode_char
+!        nStab_mode_int / nStab_mode_real / nStab_mode_char
          call bcast(animate_mode_num, isize)
          call bcast(modal_nsnap, isize)
          call bcast(modal_nsave, isize)
@@ -270,7 +281,7 @@ c        nStab_mode_int / nStab_mode_real / nStab_mode_char
          call bcast(spod_nfft, isize)
          call bcast(spod_noverlap, isize)
 
-c        OTD_params
+!        OTD_params
          call bcast(otd_printStep, isize)
          call bcast(otd_gsStep, isize)
          call bcast(otd_FTLEPeriod, wdsize)
@@ -278,7 +289,6 @@ c        OTD_params
          call bcast(otd_minSteps, isize)
 
       end subroutine bcast_nStab_defaults
-      !-----------------------------------------------------------------------
 
       !-----------------------------------------------------------------------
       ! nekStab_init — Framework initialization
@@ -290,10 +300,10 @@ c        OTD_params
       !   once at istep=0.
       !-----------------------------------------------------------------------
       subroutine nekStab_init
-         use krylov_subspace
-         use nekstab_mode_config
-         use nekstab_diagnostics
-         use nekstab_forcing_mod
+         use nekstab_krylov_subspace, only: configure_thermal_norm_weight, nv, nt
+         use nekstab_mode_config, only: nekStab_resolve_mode
+         use nekstab_diagnostics, only: nekStab_printNEKParams
+         use nekstab_forcing_mod, only: activate_sponge
          use nekstab_vectors, only: zero_forcing
          implicit none
          include 'SIZE'
@@ -343,7 +353,7 @@ c        OTD_params
                end if
             end do
             if (ifto .or. scal) then
-               if (nid == 0) write (6, *) 'Scalars found:'
+               if (nid == 0) write (6, *) 'nekStab: Scalars found:'
                if (nid == 0) write (6, *) ' ifto=', ifto
                if (nid == 0) write (6, *) ' ifpsco=', ifpsco
                 if (ifto) nof = nof + 1
@@ -361,7 +371,6 @@ c        OTD_params
          end if
 
       end subroutine nekStab_init
-      !-----------------------------------------------------------------------
 
       !-----------------------------------------------------------------------
       ! nekStab — Main mode dispatcher
@@ -372,16 +381,20 @@ c        OTD_params
       !   Nek5000's userchk.
       !-----------------------------------------------------------------------
       subroutine nekStab
-         use nekstab_diagnostics
-         use nekstab_noise
-         use nekstab_fixedpoint
-         use nekstab_newton
-         use nekstab_eigensolvers
-         use nekstab_energy_budget
-         use nekstab_sensitivity
+         use nekstab_diagnostics, only: nekStab_outpost, nekStab_comment,
+     &      nekStab_energy, nekStab_enstrophy
+         use nekstab_noise, only: op_add_noise
+         use nekstab_fixedpoint, only: SFD, BoostConv, tdf
+         use nekstab_newton, only: newton_krylov
+         use nekstab_eigensolvers, only: krylov_schur
+         use nekstab_energy_budget, only: stability_energy_budget,
+     &      stability_energy_budget_floquet
+         use nekstab_sensitivity, only: wave_maker, bf_sensitivity,
+     &      ts_steady_force_sensitivity, delta_forcing, animate_mode_only,
+     &      animate_mode
          use nekstab_otd, only: otd
          use nekstab_dmt, only: dmt
-         use nekstab_modal_analysis
+         use nekstab_modal_analysis, only: modal_analysis
          use nekstab_vectors, only: zero_forcing
          implicit none
          include 'SIZE'
@@ -440,13 +453,13 @@ c        OTD_params
                if (uparam(5) == 0) call nekStab_energy(vx, vy, vz, t,
      &              'total_energy.dat', glob_skip)
             elseif (ifBoostConv) then
-               if (nid == 0) write (6, *) 'BOOSTCONV'
+               if (nid == 0) write (6, *) 'nekStab: BOOSTCONV'
                call BoostConv
             elseif (ifTDF) then
-               if (nid == 0) write (6, *) 'TDF'
+               if (nid == 0) write (6, *) 'nekStab: TDF'
                call TDF
             elseif (ifDMT) then
-               if (nid == 0) write (6, *) 'DMT'
+               if (nid == 0) write (6, *) 'nekStab: DMT'
                call dmt
             end if
 

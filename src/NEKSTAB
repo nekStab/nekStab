@@ -28,14 +28,14 @@
       ! See DOC.md for complete mode string table and examples.
       ! ═══════════════════════════════════════════════════════════════════
 
-        ! Parameters
-        integer, parameter :: ncoef = 4 ! Number of coefficients for finite difference
+      ! Parameters
+      integer, parameter :: ncoef = 4 ! Number of coefficients for finite difference
 
       ! Character variables
       character(len=1) :: evop
-      character(len=32) :: nekstab_mode  ! String mode selector (see table above)
+      character(len=32) :: nekstab_mode ! String mode selector (see table above)
       common/nStab_char/evop, nekstab_mode
-      
+
       ! Logical variables for various stability flags
       logical :: ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm
       logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol
@@ -43,8 +43,7 @@
       logical :: iffindiff, isNekStabinit
       logical :: isDirect, isAdjoint, isTransientGrowth
       logical :: isFloquetDirect, isFloquetAdjoint
-      logical :: isFloquetTransientGrowth, isNewtonFP,
-     $   isNewtonPO, isNewtonPO_T
+      logical :: isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
 
       ! ─────────────────────────────────────────────────────────────────
       ! USER-SETTABLE MODE FLAGS (alternative to uparam encoding)
@@ -52,58 +51,47 @@
       ! ─────────────────────────────────────────────────────────────────
 
       ! Mode 0: DNS flags
-      logical :: ifDNS       ! Direct Numerical Simulation (uparam=0)
-      logical :: ifLinDNS    ! Linearized DNS (uparam=0.1)
+      logical :: ifDNS ! Direct Numerical Simulation (uparam=0)
+      logical :: ifLinDNS ! Linearized DNS (uparam=0.1)
 
       ! Mode 1: Fixed point method flags
-      logical :: ifSFD       ! Selective Frequency Damping (uparam=1.1)
+      logical :: ifSFD ! Selective Frequency Damping (uparam=1.1)
       logical :: ifBoostConv ! BoostConv acceleration (uparam=1.2)
-      logical :: ifTDF       ! Time-Delayed Feedback (uparam=1.4)
-      logical :: ifDMT       ! Dynamic Mode Tracking (uparam=1.3)
+      logical :: ifTDF ! Time-Delayed Feedback (uparam=1.4)
+      logical :: ifDMT ! Dynamic Mode Tracking (uparam=1.3)
 
       ! Mode 3: Stability analysis modifier
-      logical :: ifFloquet   ! Floquet modifier (combines with isDirect/etc)
+      logical :: ifFloquet ! Floquet modifier (combines with isDirect/etc)
       logical :: ifnewton_backtrack ! Newton residual backtracking globalization
 
       ! Mode 4: Postprocessing flags
-      logical :: ifEnergyBudget    ! Stability energy budget (uparam=4.1)
-      logical :: ifWavemaker       ! Wavemaker computation (uparam=4.2)
-      logical :: ifBFSensitivity   ! Base flow sensitivity (uparam=4.3)
-      logical :: ifForceSensReal   ! Steady force sensitivity real (uparam=4.41)
-      logical :: ifForceSensImag   ! Steady force sensitivity imag (uparam=4.42)
-      logical :: ifDeltaForcing    ! Delta forcing (uparam=4.43)
-      logical :: ifAnimateMode     ! Animate mode only (uparam=4.50)
+      logical :: ifEnergyBudget ! Stability energy budget (uparam=4.1)
+      logical :: ifWavemaker ! Wavemaker computation (uparam=4.2)
+      logical :: ifBFSensitivity ! Base flow sensitivity (uparam=4.3)
+      logical :: ifForceSensReal ! Steady force sensitivity real (uparam=4.41)
+      logical :: ifForceSensImag ! Steady force sensitivity imag (uparam=4.42)
+      logical :: ifDeltaForcing ! Delta forcing (uparam=4.43)
+      logical :: ifAnimateMode ! Animate mode only (uparam=4.50)
       logical :: ifAnimateBFDeform ! Animate + base flow deform (uparam=4.51)
-      logical :: ifAnimateFloquet  ! Animate Floquet mode (uparam=4.52)
+      logical :: ifAnimateFloquet ! Animate Floquet mode (uparam=4.52)
 
       ! Mode 6: Modal analysis flags
-      logical :: ifpod       ! POD analysis (uparam=6.1)
-      logical :: ifdmd       ! DMD analysis (uparam=6.2)
-      logical :: ifspod      ! SPOD analysis (uparam=6.3)
-      logical :: ifwinamp    ! Window normalization: .true.=amplitude (PySPOD),
-                             !                       .false.=energy (Parseval)
+      logical :: ifpod ! POD analysis (uparam=6.1)
+      logical :: ifdmd ! DMD analysis (uparam=6.2)
+      logical :: ifspod ! SPOD analysis (uparam=6.3)
+      logical :: ifwinamp ! Window normalization: .true.=amplitude (PySPOD),
+      !                       .false.=energy (Parseval)
 
-      common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois,
-     $   ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol,
-     $   iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired,
-     $   isNekStabinit, isDirect, isAdjoint, isTransientGrowth,
-     $   isFloquetDirect, isFloquetAdjoint,
-     $   isFloquetTransientGrowth, isNewtonFP,
-     $   isNewtonPO, isNewtonPO_T
+      common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol, iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired, isNekStabinit, isDirect, isAdjoint, isTransientGrowth, isFloquetDirect, isFloquetAdjoint, isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
 
-      logical :: use_cgs    ! CGS2 orthogonalization (vs MGS)
+      logical :: use_cgs ! CGS2 orthogonalization (vs MGS)
 
-      common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv,
-     $   ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity,
-     $   ifForceSensReal, ifForceSensImag, ifDeltaForcing,
-     $   ifAnimateMode, ifAnimateBFDeform,
-     $   ifAnimateFloquet, ifpod, ifdmd, ifspod,
-     $   ifwinamp, use_cgs, ifnewton_backtrack
-      
+      common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv, ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity, ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode, ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod, ifwinamp, use_cgs, ifnewton_backtrack
+
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
       real :: xmn, xmx, ymn, ymx, zmn, zmx, epsilon_base
-      real :: ew_tol_cap  ! EW solver tolerance cap (0 = uncapped)
+      real :: ew_tol_cap ! EW solver tolerance cap (0 = uncapped)
       ! Thermal weighting of the Krylov/Newton inner product.
       ! Pressure is excluded from the norm by design (incompressible
       ! Lagrange multiplier). See configure_thermal_norm_weight and the
@@ -112,57 +100,52 @@
       real :: thermal_buoyancy_coeff
       real :: buoyancy_dir(3)
       real :: thermal_norm_min, thermal_norm_max
-      common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base,
-     $   dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap,
-     $   thermal_norm_weight, thermal_buoyancy_coeff,
-     $   buoyancy_dir, thermal_norm_min, thermal_norm_max
-      
+      common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base, dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap, thermal_norm_weight, thermal_buoyancy_coeff, buoyancy_dir, thermal_norm_min, thermal_norm_max
+
       ! Integer variables for boost convergence and spatial dimensions
       integer :: bst_skp, bst_snp, k_dim
       common/nStab_boostconv/bst_skp, bst_snp, k_dim
-      
+
       integer :: mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof
       integer :: thermal_norm_mode
-      common/nStab_int/mstep, schur_tgt, maxmodes, schur_cnt,
-     $   glob_skip, nof, thermal_norm_mode
+      common/nStab_int/mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof, thermal_norm_mode
 
       ! Mode configuration integers
-      integer :: animate_mode_num   ! Mode number for animation (default=1)
-      integer :: modal_nsnap        ! Number of snapshots for modal analysis
-      integer :: modal_nsave        ! Number of modes to save
-      integer :: dmd_rank           ! DMD truncation rank (0=auto)
-      integer :: spod_nfft          ! SPOD FFT block size
-      integer :: spod_noverlap      ! SPOD block overlap
-      real :: modal_dt              ! Time between snapshots
-      character(len=3) :: modal_prefix  ! File prefix for modal analysis
-      common/nStab_mode_int/animate_mode_num, modal_nsnap, modal_nsave,
-     $   dmd_rank, spod_nfft, spod_noverlap
+      integer :: animate_mode_num ! Mode number for animation (default=1)
+      integer :: modal_nsnap ! Number of snapshots for modal analysis
+      integer :: modal_nsave ! Number of modes to save
+      integer :: dmd_rank ! DMD truncation rank (0=auto)
+      integer :: spod_nfft ! SPOD FFT block size
+      integer :: spod_noverlap ! SPOD block overlap
+      real :: modal_dt ! Time between snapshots
+      character(len=3) :: modal_prefix ! File prefix for modal analysis
+      common/nStab_mode_int/animate_mode_num, modal_nsnap, modal_nsave, dmd_rank, spod_nfft, spod_noverlap
       common/nStab_mode_real/modal_dt
       common/nStab_mode_char/modal_prefix
-      
+
       ! Real variables for finite difference method
       real :: xck, yck, zck
       integer :: findiff_order
       real :: coefs(ncoef), ampls(ncoef)
       common/nStab_fd/xck, yck, zck, coefs, ampls, findiff_order
-      
+
       ! Arrays for base flow variables
       real :: ubase(lx1, ly1, lz1, lelv), vbase(lx1, ly1, lz1, lelv)
       real :: wbase(lx1, ly1, lz1, lelv), pbase(lx2, ly2, lz2, lelv)
       real :: tbase(lx1, ly1, lz1, lelt, ldimt)
       common/nStab_bflows/ubase, vbase, wbase, pbase, tbase
-      
+
       ! Arrays for boundary condition variables
       real :: ubb(lx1, ly1, lz1, lelv), vbb(lx1, ly1, lz1, lelv)
       real :: vjb(lx1, ly1, lz1, lelv)
       common/nStab_bcs/ubb, vbb, vjb
-      
+
       ! Arrays for general forcing variables
       real :: fcx(lx1, ly1, lz1, lelv), fcy(lx1, ly1, lz1, lelv)
       real :: fcz(lx1, ly1, lz1, lelv), fcp(lx2, ly2, lz2, lelv)
       real :: fct(lx1, ly1, lz1, lelt, ldimt)
       common/nStab_forces/fcx, fcy, fcz, fcp, fct
-      
+
       ! Arrays and variables for sponge function and related parameters
       real :: spng_fn(lx1*ly1*lz1*lelv)
       real :: spng_vr(lx1*ly1*lz1*lelv, ldim)
@@ -170,61 +153,39 @@
       real :: spng_st, spng_wl(ldim), spng_wr(ldim)
       real :: spng_dl(ldim), spng_dr(ldim), bm1s(lx1, ly1, lz1, lelt)
       real :: xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
-      common/nStab_sponge/spng_fn, spng_vr, spng_vt, spng_st, spng_wl,
-     $   spng_wr, spng_dl, spng_dr, bm1s, xLspg, xRspg, yLspg, yRspg,
-     $   zLspg, zRspg, acc_spg
+      common/nStab_sponge/spng_fn, spng_vr, spng_vt, spng_st, spng_wl, spng_wr, spng_dl, spng_dr, bm1s, xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
 
       ! OTD common blocks (used by otd.f90 via include 'SIZE')
-      real, dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $   OTDfx, OTDfy, OTDfz
-      real, dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $   OTDmrx, OTDmry, OTDmrz, OTDmix, OTDmiy, OTDmiz
-      common/OTD_modes/OTDfx, OTDfy, OTDfz,
-     $   OTDmrx, OTDmry, OTDmrz, OTDmix, OTDmiy, OTDmiz
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: OTDfx, OTDfy, OTDfz
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: OTDmrx, OTDmry, OTDmrz, OTDmix, OTDmiy, OTDmiz
+      common/OTD_modes/OTDfx, OTDfy, OTDfz, OTDmrx, OTDmry, OTDmrz, OTDmix, OTDmiy, OTDmiz
 
       real :: otd_FTLEPeriod, otd_convTol
       integer :: otd_printStep, otd_gsStep, otd_minSteps
       logical :: otd_computeFTLE, gsstep_override
       real, dimension(lpert) :: FTLEv_prev
-      common/OTD_params/otd_FTLEPeriod, otd_convTol,
-     $   otd_printStep, otd_gsStep, otd_minSteps,
-     $   otd_computeFTLE, gsstep_override, FTLEv_prev
+      common/OTD_params/otd_FTLEPeriod, otd_convTol, otd_printStep, otd_gsStep, otd_minSteps, otd_computeFTLE, gsstep_override, FTLEv_prev
 
-      real, dimension(lx1, ly1, lz1, lelv) ::
-     $   ubic, vbic, wbic
-      real, dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $   upic, vpic, wpic, vxpic, vypic, vzpic
-      real, dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $   convx, convy, convz,
-     $   gradpx, gradpy, gradpz,
-     $   diffx, diffy, diffz
-      common/OTD_oper/ubic, vbic, wbic,
-     $   upic, vpic, wpic, vxpic, vypic, vzpic
-      common/OTD_oper/convx, convy, convz,
-     $   gradpx, gradpy, gradpz,
-     $   diffx, diffy, diffz
+      real, dimension(lx1, ly1, lz1, lelv) :: ubic, vbic, wbic
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: upic, vpic, wpic, vxpic, vypic, vzpic
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: convx, convy, convz, gradpx, gradpy, gradpz, diffx, diffy, diffz
+      common/OTD_oper/ubic, vbic, wbic, upic, vpic, wpic, vxpic, vypic, vzpic
+      common/OTD_oper/convx, convy, convz, gradpx, gradpy, gradpz, diffx, diffy, diffz
 
-      real, dimension(lx1*ly1*lz1*lelv, lpert) ::
-     $   otd_Lux, otd_Luy, otd_Luz
+      real, dimension(lx1*ly1*lz1*lelv, lpert) :: otd_Lux, otd_Luy, otd_Luz
       real, dimension(lpert, lpert) :: phi_rot, otd_Lr
       integer, dimension(lpert) :: otd_idx
-      common/OTD_Lu/otd_Lux, otd_Luy, otd_Luz,
-     $   phi_rot, otd_Lr, otd_idx
+      common/OTD_Lu/otd_Lux, otd_Luy, otd_Luz, phi_rot, otd_Lr, otd_idx
 
       real, dimension(lpert) :: FTLEv, LEintegral
       common/OTD_FTLE/FTLEv, LEintegral
 
-
       real, dimension(lpert) :: EIGR, EIGI, OSIGMA, RCL, RCR
-      real, dimension(lpert, lpert) ::
-     $   EVR, EVRR, EVRI, EVL, VMATX, VMATXT
-      common/OTD_dgeev/EIGR, EIGI, EVR, EVL, EVRR, EVRI,
-     $   OSIGMA, VMATX, VMATXT, RCL, RCR
+      real, dimension(lpert, lpert) :: EVR, EVRR, EVRI, EVL, VMATX, VMATXT
+      common/OTD_dgeev/EIGR, EIGI, EVR, EVL, EVRR, EVRI, OSIGMA, VMATX, VMATXT, RCL, RCR
 
-      integer, parameter ::
-     $   LWORKR = 5*LPERT*LPERT + 4*LPERT + 3*LPERT
-      integer, parameter ::
-     $   LWORKI = 3*LPERT*2 + 11*LPERT
+      integer, parameter :: LWORKR = 5*LPERT*LPERT + 4*LPERT + 3*LPERT
+      integer, parameter :: LWORKI = 3*LPERT*2 + 11*LPERT
       integer, parameter :: LWORKC = 2*LPERT + LPERT
       real, dimension(LWORKR) :: RWORK
       integer, dimension(LWORKI) :: otd_IWORK
