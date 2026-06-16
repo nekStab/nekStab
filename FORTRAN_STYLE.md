@@ -9,6 +9,14 @@ This document is the reference for the coding style and conventions used in the 
 - No tabs. No trailing whitespace.
 - Free-form modules indent **3 spaces per level**. Continuation uses `&`; aligned continuation in `public ::` lists and long argument lists is the house style (see `energy_budget.f90`).
 
+### Formatting
+
+`bin/fprettify_src` is the canonical formatter and the mechanical arm of this spec. Run it on a file you are already editing (`bin/fprettify_src src/foo.f90`) or across all sources (`bin/fprettify_src`); it needs `fprettify` (`uv tool install fprettify`).
+
+- It enforces what a formatter safely can: indentation, keyword/intrinsic case, whitespace, symbolic relational operators, the 132-column limit, and legacy comment-marker hygiene (`c` / `C` / `*` → `!`).
+- It leaves the judgment rules to you: comment content and voice, the module-header contract, full-name close lines, and double-precision literals.
+- It respects the mixed build: free-form files are reflowed in place; the fixed-form interface files (`nekstab_nek_bridge.f90`, `main.f90`, `usr_wrappers.f90`, `NEKSTAB*`) get hygiene only, never reflow.
+
 ## Lexical Conventions
 
 - **Comments** use `!`. Legacy column-1 `c` / `C` / `*` comment markers are not used.
@@ -18,12 +26,14 @@ This document is the reference for the coding style and conventions used in the 
 
 ## Module Structure
 
-Free-form modules follow a fixed skeleton — the conventions below are already uniform across the sources, and keeping them explicit prevents the most common build breaks (a missing `public` line is a link failure, not a compile error).
+Every free-form module follows a fixed skeleton. These rules are mandatory: a missing `public` line is a link failure rather than a compile error, loose imports hide what a module actually depends on, and undeclared `intent` lets a routine silently mutate an argument it should only read.
 
 - Every module declares `implicit none`.
 - `private` by default; export the public API with an explicit `public ::` list (see the header template above, which mirrors that list in prose).
-- All dummy arguments carry an `intent(in)`, `intent(out)`, or `intent(inout)`.
+- Every dummy argument, in every routine, declares its `intent` — `intent(in)` for read-only, `intent(out)` for fully written, `intent(inout)` otherwise. No undeclared dummy arguments.
 - Watch for name collisions with `include 'TOTAL'`: it pulls in many short names (e.g. `fw`), so a local variable of the same name causes cascading declaration errors. Use a distinct name (`fwrk`, not `fw`).
+- Module names track the file basename and use the `nekstab_` prefix: `foo.f90` defines `module nekstab_foo`.
+- Every `use` is precise: import exactly the names needed with `use module, only: a, b, c`. A bare `use module` that pulls in a whole namespace is not allowed.
 
 ## Comment Style
 
@@ -142,5 +152,6 @@ TWOPI = 2.0d0 * PI
 - Chained expressions and comparisons must be explicit.
 - Keep genuine single-precision, uparam mode decimals (legacy single-float encoding for mode selection), format strings, and sentinels exactly as-is.
 - Preserve any existing comments around literals (e.g., "historical norm").
+- Declare variables as bare `real` / `complex`, not explicit kinds (`real(real64)`, `real(dp)`). Nek5000 builds with `-r8`, which promotes default reals to double; introducing explicit kinds fractures that convention and the Nek5000 interface. The literal rule above is what keeps bare-`real` code double-clean.
 
 This makes double intent explicit and prevents accidental single-precision promotion. The reason it matters here: Nek5000 compiles with `-r8`, so default `real` variables are already double, but a bare literal like `0.` is still a single-precision constant — it loses digits before being promoted. The explicit `d0` keeps the constant double from the start.
