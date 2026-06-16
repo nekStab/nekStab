@@ -1,9 +1,31 @@
-# naca0012/310_stability_direct
+# NACA 0012 direct global stability — Re=2000
 
-**Stage**: stability direct
-**Variants**: schur, findiff
+## Physics
+Direct global linear stability of the NACA 0012 steady base flow at Re = 2000
+via Krylov-Schur. The leading eigenvalue is stable (σ < 0); the direct mode
+localizes where a perturbation grows. Its adjoint counterpart
+(`../320_stability_adjoint`) shares the same eigenvalue and localizes the
+receptivity.
 
-This stage has multiple variants that share the same dispatch subroutine but
-use different parameter choices. Each variant lives in its own subdirectory.
+## nekStab Mode
+- `userParam01 = 3.1` — direct stability
+- `viscosity = -2000.0` — Re = 2000
 
-Cross-variant residual decay plot: `scripts/nstab_compare.py example/naca0012/310_stability_direct/`
+## Initial condition
+`startFrom = BF_naca00120.f00001` — the steady base flow from
+`../210_baseflow_newton/fp` (field files are gitignored; regenerate by running
+the 210 stage).
+
+## Run
+```bash
+mks naca0012
+sbatch run.local.slurm     # 8 ranks
+```
+
+## Latest Result
+- 8 ranks, `k_dim = 220`: σ = -0.0665382, ω = 8.00579 (`Spectre_NSd.dat` row 1).
+- Matches the adjoint eigenvalue (σ = -0.0665164, ω = 8.00577) to the
+  convergence tolerance, as expected for a direct/adjoint pair.
+
+Outputs: leading direct eigenmodes `dRenaca00120.f0000{1..6}` (written by the run;
+field files are gitignored, not tracked).

@@ -1,9 +1,11 @@
-# lid_driven/310_stability_direct
+# lid_driven_re3600 / 310_stability_direct
 
-**Stage**: stability direct
-**Variants**: schur, findiff
+**Stage**: 310_stability_direct
+**uparam01**: 3.1
+**Re**: 3600
+**Start from**: BF_cav0.f00001 (regularized-lid Newton baseflow from `../210_baseflow_newton/fp`)
+**Ranks**: 4
 
-This stage has multiple variants that share the same dispatch subroutine but
-use different parameter choices. Each variant lives in its own subdirectory.
-
-Cross-variant residual decay plot: `scripts/nstab_compare.py example/lid_driven/310_stability_direct/`
+Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
+`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
+applicable; tune endTime/k_dim for this operating point before the final run.

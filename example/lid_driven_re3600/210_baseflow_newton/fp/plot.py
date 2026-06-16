@@ -6,7 +6,7 @@ Panel sequence (canonical baseflow lane: IC -> RESIDUAL -> BF):
   plot_residual.png - Newton convergence history (renamed from plot_convergence)
   plot_bf.png       - converged base flow (renamed from plot_baseflow)
 
-Geometry: cavity, xlim=(0,1), ylim=(0,1), no geometry patches.
+Geometry: cavity x in [-0.5,0.5], y in [0,uparam10]; limits from field coords.
 
 OUTPUTS: plot_ic.png, plot_residual.png, plot_bf.png
 USAGE:   python plot.py
@@ -20,8 +20,6 @@ import numpy as np
 
 CASE_DIR = Path(__file__).resolve().parent
 
-XLIM = (0, 1)
-YLIM = (0, 1)
 
 
 def parse_startfrom(par_path):
@@ -71,8 +69,8 @@ def render_cavity_field(ax, field_path):
                       width='50%', height='5%', loc=9,
                       ticks=[0, vmax],
                       tick_labels=['0', f'{vmax}'])
-    ax.set_xlim(XLIM)
-    ax.set_ylim(YLIM)
+    ax.set_xlim(x.min(), x.max())   # domain x in [-0.5, 0.5], not [0, 1]
+    ax.set_ylim(y.min(), y.max())   # y rescaled to [0, uparam10]
     ax.set_aspect('equal')
     ax.set_xlabel(r'$x$', labelpad=-1)
     ax.set_ylabel(r'$y$', labelpad=1)

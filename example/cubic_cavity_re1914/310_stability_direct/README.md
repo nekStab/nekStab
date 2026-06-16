@@ -1,9 +1,11 @@
-# cubic_cavity/310_stability_direct
+# cubic_cavity_re1914 / 310_stability_direct
 
-**Stage**: stability direct
-**Variants**: schur, findiff
+**Stage**: 310_stability_direct
+**uparam01**: 3.1
+**Re**: 1914
+**Start from**: BF_cav0.f00001
+**Ranks**: 16
 
-This stage has multiple variants that share the same dispatch subroutine but
-use different parameter choices. Each variant lives in its own subdirectory.
-
-Cross-variant residual decay plot: `scripts/nstab_compare.py example/cubic_cavity/310_stability_direct/`
+Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
+`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
+applicable; tune endTime/k_dim for this operating point before the final run.
