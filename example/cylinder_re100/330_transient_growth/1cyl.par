@@ -13,7 +13,7 @@ userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
 userParam10 = 0   # Sponge strength
 
-dt = 0
+dt = 0.005  # explicit: auto-CFL gave dt=0.0101 -> adjoint NaN at t~46; 0.005 matches working back_fstep TG
 variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5

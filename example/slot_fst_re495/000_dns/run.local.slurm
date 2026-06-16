@@ -25,7 +25,6 @@ echo "workdir=$(pwd)"
 echo "started=$(date --iso-8601=seconds)"
 
 [[ -x "${EXE}" ]] || { echo "ERROR: missing executable ${EXE}" >&2; exit 1; }
-[[ -f SESSION.NAME ]] || { echo "ERROR: SESSION.NAME missing" >&2; exit 1; }
 [[ -f "${CASE}.par" ]] || { echo "ERROR: ${CASE}.par missing" >&2; exit 1; }
 
 printf "%s\n%s/\n" "${CASE}" "$(pwd)" > SESSION.NAME

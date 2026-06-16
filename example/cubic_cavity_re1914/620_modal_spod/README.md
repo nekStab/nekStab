@@ -18,3 +18,5 @@
 - [ ] sbatch run completes, produces expected artifacts
 - [ ] refs/cubic_cavity/620_modal_spod/ golden artifact captured
 
+
+**PARKED (Re=1914 steady)**: 620_modal_spod needs a periodic orbit / snapshot series that does not exist below the Hopf. N/A here; applies at re1950 (supercritical).

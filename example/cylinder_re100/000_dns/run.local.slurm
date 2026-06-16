@@ -40,11 +40,6 @@ if [[ ! -x "${EXE}" ]]; then
   exit 1
 fi
 
-if [[ ! -f SESSION.NAME ]]; then
-  echo "ERROR: SESSION.NAME not found in $(pwd)" >&2
-  exit 1
-fi
-
 if [[ ! -f "${CASE}.par" ]]; then
   echo "ERROR: ${CASE}.par not found in $(pwd)" >&2
   exit 1
