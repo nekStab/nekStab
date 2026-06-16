@@ -202,7 +202,10 @@ def _live_queue() -> dict:
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(ROOT), **kwargs)
+        # Serve the repo root so the gallery (validation/index.html) and the
+        # in-place plots it references ("../example/.../plot_*.png") both
+        # resolve under one root, matching the Pages artifact layout.
+        super().__init__(*args, directory=str(REPO), **kwargs)
 
     def log_message(self, format, *args):  # noqa: A002 - base API name
         sys.stderr.write(f'[{self.log_date_time_string()}] {format % args}\n')
@@ -319,6 +322,11 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         url = urlparse(self.path)
+        if url.path == '/':
+            self.send_response(302)
+            self.send_header('Location', '/validation/index.html')
+            self.end_headers()
+            return
         if url.path.startswith('/api/jobs/'):
             token = url.path[len('/api/jobs/'):]
             with JOBS_LOCK:
@@ -347,8 +355,8 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
     addr = ('127.0.0.1', port)
-    print(f'nekStab gallery server on http://{addr[0]}:{addr[1]}/')
-    print(f'  serving:        {ROOT}')
+    print(f'nekStab gallery on http://{addr[0]}:{addr[1]}/validation/index.html')
+    print(f'  serving:        {REPO}')
     print(f'  allowed cases:  {len(ALLOWED)}')
     print(f'  example root:   {EXAMPLE}')
     print(f'  PATH has mks:   {bool(_which("mks"))}')
