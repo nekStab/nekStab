@@ -64,10 +64,8 @@ vox*
 # Restart files in examples
 res*0.f*
 
-# -----------------------------------------------------------------------------
-# Generated plots and images
-# -----------------------------------------------------------------------------
-*.png
+# Tutorial figures stay out of the tree (kept with their .tex sources only).
+tutorials/**/*.png
 
 # -----------------------------------------------------------------------------
 # Core dumps
