@@ -1,15 +1,14 @@
 [GENERAL]
-# TEMPLATE: converged baseflow (output of SFD/Newton/BoostConv)
+# TEMPLATE: converged baseflow
 startFrom = BF_cav0.f00001
 
 stopAt = endTime
-endTime = 1.0            # TEMPLATE: integration time per Arnoldi step
+endTime = 1.0
 
-userParam01 = 3.1        # 3.1 = direct stability (Schur–Krylov / Arnoldi)
-userParam03 = 2          # schur_tgt — number of targeted eigenvalues
+userParam01 = 3.1        # 3.1 = direct stability
+userParam03 = 2          # schur_tgt
 userParam04 = 0          # maxmodes (0 = schur_tgt)
-userParam06 = 0          # 0 = isothermal; 1 = thermal coupling
-userParam07 = 50         # k_dim — Krylov subspace size (single-node viable)
+userParam07 = 120        # k_dim (bumped for non-normal lid)
 userParam08 = 0          # sponge left
 userParam09 = 0          # sponge right
 userParam10 = 1.5   # cavity aspect ratio (.usr rescales Y to [0,uparam10]; NOT sponge here)

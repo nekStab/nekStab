@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=naca-dir
+#SBATCH --job-name=naca-310dir
 #SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=8
