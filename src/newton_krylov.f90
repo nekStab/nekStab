@@ -20,7 +20,7 @@ module nekstab_newton
                                       k_add2s2, k_cmult, k_copy, k_dot, k_matmul, k_norm, &
                                       k_normalize, k_sub2, k_zero, krylov_vector, lt, lv, &
                                       norm, nt, tor, uor, vor, wor
-   use nekstab_nek_bridge, only: ifxyo, bm1s, dt, ew_tol_cap, if3D, if3d, ifdyntol, iffindiff, &
+   use nekstab_nek_bridge, only: bm1s, dt, ew_tol_cap, if3D, if3d, ifdyntol, iffindiff, &
                                  ifield, ifnewton_backtrack, ifpert, ifpsco, ifstorebase, &
                                  ifto, isNewtonFP, isNewtonPO, isNewtonPO_T, istep, k_dim, &
                                  ldimt, ldimt1, lsize, nekStab_error, &
@@ -185,7 +185,6 @@ contains
       integer :: accepted_residual_count
       integer :: accepted_residual_next
       real :: armijo_reference
-      logical :: lxyo_save
 
       !     ----- Call Counting -----
 ! total_calls  = cumulative time-steps (nonlinear + linear matvecs)
@@ -436,18 +435,7 @@ contains
       if (residual < dtol) then
          if (nid == 0) write (6, *) 'Outputting converged solution'
          param(63) = 1.0d0; call bcast(param(63), wdsize) ! Double precision
-         !  WHY: nekStab field files in XUP format embed mesh coordinates at
-         !  GLL points.  When such files are reloaded as seeds, Nek re-derives
-         !  geometry from those points; curved or stretched elements can become
-         !  inverted, yielding negative Jacobians, compute_cfl Infinity, and a
-         !  Helmholtz NaN at the first solve.  The .re2 file is the single
-         !  authoritative, full-precision, curve-aware geometry source.  Seeds
-         !  only need solution fields, so suppressing mesh output makes reloads
-         !  take geometry from .re2 and also shrinks the field files.
-         lxyo_save = ifxyo
-         ifxyo = .false. ! mesh-free seed: geometry comes from .re2
          call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, "BF_")
-         ifxyo = lxyo_save
          param(63) = 0.0d0; call bcast(param(63), wdsize) ! Single precision
          call outpost_vort(vx, vy, vz, 'BFV')
       end if

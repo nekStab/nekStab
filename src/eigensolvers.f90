@@ -26,7 +26,7 @@ module nekstab_eigensolvers
    use nekstab_krylov_subspace, only: inner_product, k_copy, k_dot, k_norm, k_normalize, &
                                       k_zero, krylov_vector, lp, lt, lv, n2, NEKSTAB_PI, norm, &
                                       nt, nv
-   use nekstab_nek_bridge, only: ifxyo, ctarg, dt, eigen_tol, evop, if3D, if3d, ifheat, ifldbf, &
+   use nekstab_nek_bridge, only: ctarg, dt, eigen_tol, evop, if3D, if3d, ifheat, ifldbf, &
                                  ifpo, ifpsco, ifres, ifseed_load, ifseed_nois, &
                                  ifseed_symm, ifto, isFloquetAdjoint, isFloquetDirect, &
                                  isFloquetTransientGrowth, isNewtonPO, istep, &
@@ -129,7 +129,6 @@ contains
       integer :: mstart, converged_eigenvalues, m, total_matvecs
       real :: alpha
       logical :: converged
-      logical :: lxyo_save
       integer :: i, j
       character(len=132) :: filename
 
@@ -239,10 +238,7 @@ contains
 
          if (ifres) then
             call whereyouwant('KRY', 1)
-            lxyo_save = ifxyo
-            ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
             call outpost2(Q(1)%vx, Q(1)%vy, Q(1)%vz, Q(1)%pr, Q(1)%t, nof, 'KRY')
-            ifxyo = lxyo_save
          end if
 
       elseif (uparam(2) > 0) then
@@ -458,7 +454,6 @@ contains
       character(len=3) nRe, nIm, nRv
       character(len=2) ci
       integer :: outp
-      logical :: lxyo_save
 
       ! nv, nt from globals; n_press local for pressure
       n_press = lx2*ly2*lz2*nelv
@@ -595,10 +590,7 @@ contains
                          real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), &
                          real(oks_fp_cp_s), real(oks_fp_ct_s))
             call nopcmult(vx, vy, vz, pr, t, beta)
-            lxyo_save = ifxyo
-            ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
             call outpost2(vx, vy, vz, pr, t, nof, nRe)
-            ifxyo = lxyo_save
             call outpost_vort(vx, vy, vz, nRv)
 
             !     ----- Output the imaginary part -----
@@ -606,10 +598,7 @@ contains
                          aimag(oks_fp_cx_s), aimag(oks_fp_cy_s), aimag(oks_fp_cz_s), &
                          aimag(oks_fp_cp_s), aimag(oks_fp_ct_s))
             call nopcmult(vx, vy, vz, pr, t, beta)
-            lxyo_save = ifxyo
-            ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
             call outpost2(vx, vy, vz, pr, t, nof, nIm)
-            ifxyo = lxyo_save
 
             !     computing and outposting optimal response from real part
             !     works with Floquet!
@@ -633,10 +622,7 @@ contains
                             real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), &
                             real(oks_fp_cp_s), real(oks_fp_ct_s))
                call matvec(qq, ff) ! baseflow already in ubase
-               lxyo_save = ifxyo
-               ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
                call outpost2(qq%vx, qq%vy, qq%vz, qq%pr, qq%t, nof, 'ore')
-               ifxyo = lxyo_save
                call outpost_vort(qq%vx, qq%vy, qq%vz, 'orv')
                if (isTransientGrowth) uparam(1) = 3.3d0
                if (isFloquetTransientGrowth) uparam(1) = 3.31d0

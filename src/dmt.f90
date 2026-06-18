@@ -41,7 +41,7 @@
 !-----------------------------------------------------------------------
 
 module nekstab_dmt
-   use nekstab_nek_bridge, only: ifxyo, uparam, lx1, ly1, lz1, lelt, nelt, nid, &
+   use nekstab_nek_bridge, only: uparam, lx1, ly1, lz1, lelt, nelt, nid, &
                                  nekStab_error, nekStab_log, &
                                  NEKSTAB_UNIT_DYNTOL, istep, time, dt, &
                                  nsteps, vx, vy, vz, pr, t, fcx, fcy, fcz, &
@@ -130,7 +130,6 @@ contains
       real :: dmt_ban, dmt_gan, dmt_skp, dmt_tol
       real :: h1, semi, l2, linf, residu, rate, dt2
       integer :: i
-      logical :: lxyo_save
 
       if (.not. dmt_initialized) call dmt_init
 
@@ -208,10 +207,7 @@ contains
 
       if (residu < dmt_tol) then
          if (nid == 0) write (6, *) ' Converged DMT base flow to:', residu
-         lxyo_save = ifxyo
-         ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
          call outpost(vx, vy, vz, pr, t, 'BF_')
-         ifxyo = lxyo_save
          ifbfcv = .true.
          lastep = 1
       end if
