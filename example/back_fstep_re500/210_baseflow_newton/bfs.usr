@@ -6,7 +6,7 @@
       ! if(istep.eq.0) call gfldr("1cyl0.fXXXXX")
       if (ifDNS.and.istep.eq.0)t = 0.0d0
       call nekStab
-      call hpts
+      ! call hpts   ! needs a bfs.his probe-list file; none shipped -> aborts the run
 
       ! call stat_avg
       ! call stats_3d_full

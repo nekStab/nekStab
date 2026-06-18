@@ -13,8 +13,11 @@ Main `S5_examples.tex`, subsection `Backward-facing step`.
 
 ## Stages
 
-- `000_dns/` stores the nonlinear DNS scaffold.
-- `210_baseflow_newton/` computes the fixed point used by stability analysis.
+- `210_baseflow_newton/` computes the steady fixed point used by stability
+  analysis. Two-phase recipe (see its README): a short DNS settles the steady
+  recirculation on the actual mesh (`bfs_dns.par`), then Newton-GMRES polishes
+  that native seed to machine zero (`bfs_newton.par`). DNS seed generation is
+  folded into this stage — there is no separate `000_dns/`.
 - `330_transient_growth/` computes optimal perturbation and response over a
   finite horizon.
 
