@@ -22,7 +22,7 @@ module nekstab_sensitivity
    use nekstab_krylov_subspace, only: inner_product, k_add2, k_axpby, k_cmult, k_copy, &
                                       k_normalize, k_zero, krylov_vector, lp, lt, lv, &
                                       NEKSTAB_PI, norm, nv
-   use nekstab_nek_bridge, only: ctarg, dt, fcx, fcy, fcz, fintim, ifadj, ifbase, &
+   use nekstab_nek_bridge, only: ifxyo, ctarg, dt, fcx, fcy, fcz, fintim, ifadj, ifbase, &
                                  ifoutfld, ifpert, ifpo, ifto, ifvo, istep, k_dim, lastep, &
                                  ldim, ldimt, lelt, lelv, lsize, lx1, ly1, lz1, ndim, &
                                  nekStab_log, nelv, nid, nof, nsteps, param, pbase, pi, pr, &
@@ -655,6 +655,7 @@ contains
       character(len=32) :: mode_local ! ifx: trim() on assumed-length args can segfault
       real :: frequency, omega, sigma, u_max, A0
       integer :: i
+      logical :: lxyo_save
 
       mode_local = mode ! copy to local before trim() for ifx compatibility
 
@@ -672,7 +673,10 @@ contains
       call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
       call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
       ifto = .true.
+      lxyo_save = ifxyo
+      ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
       call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
+      ifxyo = lxyo_save
 
       A0 = 1.0d-3
       sigma = 1.0d-1 ! force a value of sigma
@@ -807,6 +811,7 @@ contains
       real :: amplitude, period
       integer :: i, iosteps, nfiles
       integer, save :: counter = 1
+      logical :: lxyo_save
 
       mode_local = mode ! copy to local before trim() for ifx compatibility
 
@@ -922,7 +927,10 @@ contains
          call k_load(BF, 'BF_'//trim(SESSION)//'0.f00001')
          call compute_omegaR(BF%vx, BF%vy, BF%vz, BF%t(:, 1))
          ifto = .true.
+         lxyo_save = ifxyo
+         ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
          call outpost(BF%vx, BF%vy, BF%vz, BF%pr, BF%t, 'BF_')
+         ifxyo = lxyo_save
 
          A0 = 1.0d-3
          sigma = 1.0d-1 ! force a value of sigma

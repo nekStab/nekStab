@@ -20,7 +20,7 @@
 !-----------------------------------------------------------------------
 
 module nekstab_fixedpoint
-   use nekstab_nek_bridge, only: nekStab_error, nid, uparam, param, ctarg, &
+   use nekstab_nek_bridge, only: ifxyo, nekStab_error, nid, uparam, param, ctarg, &
                                  vx, vy, vz, pr, t, dt, time, istep, nsteps, &
                                  if3d, ifto, ifpsco, ldimt, bm1, fcx, fcy, fcz, &
                                  vxlag, vylag, vzlag, ifbfcv, ifdyntol, lsize, &
@@ -105,6 +105,7 @@ contains
       real, save :: residu0, gain, porbit
       integer, save :: i, norbit, m, ibuf
       integer :: alloc_stat
+      logical :: lxyo_save
 
       if (.not. tdf_init) then
 
@@ -215,7 +216,10 @@ contains
                call bcast(ifbfcv, lsize)
                param(63) = 1.0d0 ! Enforce 64-bit output
                call bcast(param(63), wdsize)
+               lxyo_save = ifxyo
+               ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
                call outpost2(vx, vy, vz, pr, t, nof, 'BF_')
+               ifxyo = lxyo_save
                param(63) = 0.0d0 ! Reset to 32-bit output
                call bcast(param(63), wdsize)
                call outpost_vort(vx, vy, vz, 'BFV')
@@ -241,6 +245,7 @@ contains
       type(krylov_vector) :: tempD, tempM
       real adt, bdt, cdt, cutoff, gain, res, h1, l2, semi, linf, frq, sig, rate
       real :: current_solver_tol, tol_delta, tol_scale
+      logical :: lxyo_save
 
       frq = abs(uparam(04))*2.0d0*NEKSTAB_PI ! St to omega
       sig = abs(uparam(05))
@@ -357,7 +362,10 @@ contains
             call bcast(ifbfcv, lsize)
             param(63) = 1.0d0 ! Enforce 64-bit output
             call bcast(param(63), wdsize)
+            lxyo_save = ifxyo
+            ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
             call outpost2(vx, vy, vz, pr, t, nof, 'BF_')
+            ifxyo = lxyo_save
             param(63) = 0.0d0 ! Reset to 32-bit output
             call bcast(param(63), wdsize)
             call outpost_vort(vx, vy, vz, 'BFV')
@@ -385,6 +393,7 @@ contains
       real, allocatable, save, dimension(:) :: dvx, dvy, dvz
       real :: residu, h1, semi, linf, rate, tol
       real, save :: residu0
+      logical :: lxyo_save
       if (mod(istep, bst_skp) == 0) then
 
          if (.not. boostconv_init) then
@@ -413,7 +422,10 @@ contains
             call bcast(ifbfcv, lsize)
             param(63) = 1.0d0 ! Enforce 64-bit output
             call bcast(param(63), wdsize)
+            lxyo_save = ifxyo
+            ifxyo = .false. ! mesh-free seed -- see WHY in newton_krylov.f90
             call outpost2(vx, vy, vz, pr, t, nof, 'BF_')
+            ifxyo = lxyo_save
             param(63) = 0.0d0 ! Reset to 32-bit output
             call bcast(param(63), wdsize)
          end if
