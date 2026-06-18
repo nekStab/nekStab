@@ -5,7 +5,7 @@ endTime = 1.666666666667  # 1/St period (St=0.6)
 
 userParam01 = 3.11  # Direct Floquet analysis
 userParam05 = 0.600000  # Forcing frequency (St_D)
-userParam07 = 50  # k_dim (Krylov subspace dimension)
+userParam07 = 100  # k_dim (Krylov subspace dimension)
 
 dt = 0
 variableDt = no

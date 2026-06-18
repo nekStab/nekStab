@@ -9,7 +9,7 @@ userParam01 = 3.1        # 3.1 = direct stability (Schur–Krylov / Arnoldi)
 userParam03 = 2          # schur_tgt — number of targeted eigenvalues
 userParam04 = 0          # maxmodes (0 = schur_tgt)
 userParam06 = 0          # 0 = isothermal; 1 = thermal coupling
-userParam07 = 50         # k_dim — Krylov subspace size (single-node viable)
+userParam07 = 100         # k_dim — Krylov subspace size (single-node viable)
 userParam08 = 5          # sponge left
 userParam09 = 5          # sponge right
 userParam10 = 1.7        # sponge strength (0 disables)

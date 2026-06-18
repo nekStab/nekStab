@@ -6,7 +6,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3.2        # 3.2 = adjoint stability
-userParam07 = 50         # k_dim
+userParam07 = 100         # k_dim
 userParam08 = 0          # sponge left
 userParam09 = 0          # sponge right
 userParam10 = 0          # sponge strength

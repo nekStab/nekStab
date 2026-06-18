@@ -5,7 +5,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3.2  # Adjoint
-userParam07 = 50 # k_dim (Arnoldi subspace)
+userParam07 = 50 # k_dim: DELIBERATELY 50 — forces exactly 1 Schur restart so the restart/condensation path is validated here (the exemplar). ~90+ skips the restart. Do NOT bump.
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
 userParam10 = 1.7 # Sponge streght

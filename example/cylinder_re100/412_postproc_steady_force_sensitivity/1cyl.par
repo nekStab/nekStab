@@ -4,7 +4,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 4.41  # Sensitivity to steady forcing
-userParam07 = 50 # k_dim
+userParam07 = 50 # k_dim: DELIBERATELY 50 — forces exactly 1 Schur restart so the restart/condensation path is validated here (the exemplar). ~90+ skips the restart. Do NOT bump.
 
 dt = 0
 variableDt = no

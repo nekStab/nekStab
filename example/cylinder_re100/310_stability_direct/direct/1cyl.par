@@ -8,7 +8,7 @@ userParam01 = 3.1 # Direct eigensolver (Schur-Krylov)
 userParam03 = 2   # schur_tgt -- target eigenvalues to converge
 userParam04 = 0   # maxmodes  (0 = schur_tgt)
 userParam06 = 0   # isothermal (no buoyancy coupling)
-userParam07 = 50  # k_dim -- single-node-viable Krylov subspace size
+userParam07 = 50 # k_dim: DELIBERATELY 50 — forces exactly 1 Schur restart so the restart/condensation path is validated here (the exemplar). ~90+ skips the restart. Do NOT bump.
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
 userParam10 = 0   # Sponge strength

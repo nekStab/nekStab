@@ -6,7 +6,7 @@ endTime = 1.666666666667
 
 userParam01 = 2.2  # Newton-GMRES forced periodic orbits
 userParam05 = 0.600000  #forced frequency (St_D)
-userParam07 = 30 # k_dim (GMRES subspace for Newton linear solve)
+userParam07 = 100 # k_dim (GMRES subspace for Newton linear solve)
 
 dt = 0
 variableDt = no
