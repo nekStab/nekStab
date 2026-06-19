@@ -22,6 +22,10 @@ filtering = explicit
 filterWeight = 0.01
 filterCutoffRatio = 0.84
 
+[MESH]
+# velocity-only .re2 -> read 1 BC field; temperature BCs derived in usrdat2.
+numberOfBCFields = 1
+
 [PRESSURE]
 preconditioner = semg_xxt
 residualTol = 1.0E-7

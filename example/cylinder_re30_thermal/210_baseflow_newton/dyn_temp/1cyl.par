@@ -22,6 +22,16 @@ filtering = explicit
 filterWeight = 0.01
 filterCutoffRatio = 0.84
 
+[MESH]
+# BY DESIGN: the .re2 mesh carries ONLY velocity BCs (the common real-world case
+# -- you inherit a velocity mesh). numberOfBCFields=1 tells the .re2 reader to
+# read just that one field; the temperature BCs are then derived from the
+# velocity BCs in usrdat2 (cbc(:,:,2) from cbc(:,:,1): walls->'t ', inflow->'t ').
+# Without this, ifheat makes the reader look for a 2nd (temperature) BC block
+# that the velocity-only mesh does not contain -> "Error reading .re2 boundary
+# data ierr=8". This case demonstrates specifying temperature BCs via usrdat2.
+numberOfBCFields = 1
+
 [PRESSURE]
 preconditioner = semg_xxt
 residualTol = 1.0E-8
