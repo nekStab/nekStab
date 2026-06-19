@@ -1,0 +1,39 @@
+[GENERAL]
+# Re=175 long DNS to extract a SHARP shedding period for the Re=180 Newton UPO.
+# Warm-start from the Re=180 on-orbit snapshot (ic_orbit.f00001), relax onto the
+# Re=175 limit cycle, then log a long wake-probe time series (1cyl.his) for a
+# high-resolution FFT. Period guess for the UPO = 1/f_peak of the PSD.
+# Re=175 is close to the Re=180 target (St varies slowly) but gives a clean,
+# single-frequency limit cycle.
+startFrom = ic_orbit.f00001
+
+stopAt = endTime
+endTime = 2700.0   # from t=1500: ~1200 t.u. ~= 228 shedding periods -> Df~8e-4 (sharp peak)
+
+userParam01 = 0    # plain DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 5.25   # ~1 field per period -> on-orbit snapshot candidates for the UPO seed
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -175.0   # Re=175

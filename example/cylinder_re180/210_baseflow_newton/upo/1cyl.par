@@ -2,7 +2,7 @@
 startFrom = rstcyl0.f00001
 
 stopAt = endTime
-endTime = 5.251 # Re=170 FFT period (St=0.190); good guess for Re=180 orbit
+endTime = 5.22130 # period guess from a long Re=175 DNS: 172-cycle count + PSD peak (St=0.1915, Q~100) agree to 5 sig figs. Far sharper than the old Re=170 5.251.
 userParam01 = 2.1 # Newton-GMRES for UPOs
 userParam07 = 100 # k_dim
 

@@ -128,19 +128,46 @@ target, safely below Re_A≈188 so it stays 2D):
    small Re=170→180 gap keeps the first Newton residual small, so ΔT
    stays O(1) and the period converges instead of exploding.
 
-## Status
+## Status — Newton-UPO does NOT converge at Re=180 (2D-stiffness limit); orbit taken from DNS
 
-**SEED + PERIOD APPLIED — Newton converging.** The Re=170 DNS
-(`../../000_dns_seed_re170/`) produced the on-orbit seed
-(`rstcyl0.f00001` = latest Re=170 limit-cycle frame) and the period
-(`.par` `endTime = 5.251`, St=0.190 from a ~95-period FFT). With this
-seed + accurate period and auto dt at CFL 0.5, the Newton-UPO drops
-straight into the convergence basin — **first Newton residual ≈ 3.9e-3**
-(vs 0.24 then T-explosion with the old Re=150 seed). No period runaway.
+We pushed the seed + period as far as possible (2026-06-18):
 
-Once it reaches `|F| < 1e-8`, `BF_1cyl0.f00001` becomes the Floquet base
-flow for the three downstream cases (`311_stability_direct_floquet`,
-`321_stability_adjoint_floquet`, `410_postproc_animate_modes/upo`).
+1. **Sharp period from a long Re=175 DNS.** A ~228-period Re=175 run
+   (`../../000_dns_seed_re175/`, `hpts` wake probe at (5,0,0)) gives a
+   very sharp spectral peak (Q≈100). PSD-peak and 172-cycle counting
+   agree to 5 sig figs: **St = 0.1915, T = 5.22130** (vs the older,
+   coarser Re=170 value 5.251). Re=175 is close to Re=180 (St varies
+   slowly) yet gives a clean single-frequency limit cycle.
+
+2. **On-orbit seed.** Newton-UPO was seeded from a saturated on-orbit
+   snapshot (constant amplitude over 10 periods). The improved seed +
+   sharp period cut the **initial** Newton defect ~7× (1.26e-2 vs the
+   earlier 9.27e-2) and activated a sane period correction (ΔT≈−1.9e-3).
+
+3. **But the Newton LINEAR solve diverges.** The GMRES on the
+   monodromy-like operator `M−I` (with the phase/period constraints)
+   blows up: residual 3.3e-2 → **9.88** → 1.6e-1, never descending,
+   each Newton step burning a full k_dim=100 Arnoldi restart (~25 min)
+   to no avail. At Re=180 (Mode-A threshold) the 2D orbit is too stiff
+   for clean Newton-UPO refinement. This is the **2D-proxy limit**, not
+   a fixable setup issue.
+
+**Resolution — use the DNS limit cycle directly as the Floquet base
+flow.** The periodic orbit *physically exists* (the DNS settled onto it:
+constant amplitude, Q≈100 single-frequency spectrum). Newton would only
+refine it to machine precision, which is not required to demonstrate the
+Floquet machinery. So `BF_1cyl0.f00001` is a **Re=180 DNS on-orbit
+snapshot**, with its field **time stamp set to the period T = 5.22130**
+(nekStab reads the Floquet period from the base-flow file's time —
+`matvec.f90:686 param(10)=qbase%time`). This feeds the downstream
+`311_stability_direct_floquet`, `321_stability_adjoint_floquet`, and
+`410_postproc_animate_modes/upo`.
+
+**Caveat (honest):** the orbit field is Re=180 but the period (5.22130)
+was measured at Re=175, so over one period the orbit closes to ~0.3–0.5%,
+not exactly. For this 2D **proxy** (already non-physical for Mode A/B)
+that is acceptable for a machinery demonstration. For a precise Re=180
+period, run the same long-DNS+FFT at Re=180 and re-stamp the orbit time.
 
 ## Prerequisites
 
