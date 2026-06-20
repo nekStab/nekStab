@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=cav-pkeflq
+#SBATCH --job-name=cav-dns
 #SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
-#SBATCH --mem-per-cpu=3800
+#SBATCH --mem-per-cpu=3000
 #SBATCH --time=06:00:00
 #SBATCH --output=logfile
 #SBATCH --error=logfile

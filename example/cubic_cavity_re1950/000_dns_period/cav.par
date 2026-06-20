@@ -1,0 +1,31 @@
+[GENERAL]
+# Re=1950 period-extraction DNS: warm-start from the saturated 3D limit cycle
+# (ic_orbit.f00001 = cav0.f00179, t=100), continue with a fine hpts probe at the
+# cavity centre to get a SHARP shedding period via FFT. The period (1/f_peak) +
+# an on-orbit snapshot become the Floquet base flow for 311/413, replacing the
+# stale orphan BF_cav0 file. Same recipe as cylinder_re180/000_dns_seed_re175.
+startFrom = ic_orbit.f00001
+stopAt = endTime
+endTime = 800.0          # from t=100: 700 t.u. ~= 65 periods (T~10.77) for a sharp FFT
+userParam01 = 0          # DNS
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+writeControl = runTime
+writeInterval = 10.77    # ~1 field/period -> on-orbit snapshot candidates
+writeDoublePrecision = no
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = no
+density = 1.0
+viscosity = -1950.0

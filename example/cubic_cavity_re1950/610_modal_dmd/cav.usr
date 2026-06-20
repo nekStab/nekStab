@@ -1,0 +1,133 @@
+! --------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab
+      call hpts
+
+      end
+! --------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if (istep.eq.0) then !change defaults
+
+!       MODAL ANALYSIS CONFIGURATION (Mode 6)
+
+!       Snapshot source (prefix of DNS output files)
+!       Empty prefix means use SESSION name directly (cav0.f*)
+        modal_prefix = '   '
+        call bcast(modal_prefix, 3)
+
+!       Number of snapshots to load
+!       writeInterval = 0.5, snapshots 80..179 -> 100 snapshots
+        modal_nsnap = 100
+        call bcast(modal_nsnap, isize)
+
+!       Time between snapshots (must match writeInterval)
+        modal_dt = 0.5d0
+        call bcast(modal_dt, wdsize)
+
+!       Number of modes to save
+        modal_nsave = 1
+        call bcast(modal_nsave, isize)
+
+!       Which methods to run
+        ifpod = .false.; call bcast(ifpod, lsize)
+        ifdmd = .true.;  call bcast(ifdmd, lsize)
+        ifspod = .false.; call bcast(ifspod, lsize)
+
+!       Window normalization: .true. = PySPOD compatible (amplitude)
+!                            .false. = Parseval (energy-preserving)
+        ifwinamp = .true.; call bcast(ifwinamp, lsize)
+
+!       DMD: fixed rank for better dynamics capture
+!       (auto-rank 0 gives r = 3, missing oscillations)
+        dmd_rank = 20
+        call bcast(dmd_rank, isize)
+
+!       POD-FFT/SPOD: FFT block size and overlap
+!       nfft = 64 with dt = 0.5 gives df = 1/(64*0.5) = 0.03125 St
+!       With 100 snaps, noverlap = 48: nblk = 3 blocks
+        spod_nfft = 64
+        call bcast(spod_nfft, isize)
+        spod_noverlap = 48
+        call bcast(spod_noverlap, isize)
+
+!       Stability analysis settings (if running Mode 3)
+        k_dim = int(uparam(7)); call bcast(k_dim, isize)
+        schur_tgt = 4; call bcast(schur_tgt, isize)
+        maxmodes = 2; call bcast(maxmodes, isize)
+        ifres = .false.; call bcast(ifres, lsize)
+        ifvor = .false.; call bcast(ifvor, lsize)
+        ifvox = .false.; call bcast(ifvox, lsize)
+        ifdyntol = .true.; call bcast(ifdyntol, lsize)
+      endif
+
+      end
+! --------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer ip, iel
+      real rtmp
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+! --------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = (1.0d0-(2.0d0*x)**2)**2
+     $      *(1.0d0-(2.0d0*z)**2)**2
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+! --------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = (1.0d0-(2.0d0*x)**2)**2
+     $      *(1.0d0-(2.0d0*z)**2)**2
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 1.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+! --------------------------------------------------------------------
+      subroutine usrdat
+      end
+! --------------------------------------------------------------------
+      subroutine usrdat2
+      end

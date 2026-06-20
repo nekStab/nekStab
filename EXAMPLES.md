@@ -85,7 +85,7 @@ single steady or periodic operator.
 | `example/thermosyphon_ra500/` | Buoyancy-driven thermosyphon, Ra = 500 | DNS, Newton thermal baseflow, direct/adjoint stability, wavemaker |
 | `example/lid_driven_re3600/` | Lid-driven cavity, Re = 3600 | SFD, Newton, direct/adjoint stability, transient growth, wavemaker, OTD, POD/DMD/SPOD |
 | `example/cubic_cavity_re1914/` | 3D cubic cavity, Re = 1914 | SFD, Newton, direct/adjoint stability, Floquet, transient growth, wavemaker, OTD, POD/DMD/SPOD, energy_budget |
-| `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, direct Floquet stability, energy_budget_floquet |
+| `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, direct Floquet stability (stable limit cycle), POD/DMD |
 | `example/naca0012_re2000/` | NACA 0012 airfoil, Re = 2000 | DNS, SFD, Newton, direct/adjoint stability, Floquet, transient growth, wavemaker, OTD, POD/DMD/SPOD |
 | `example/poiseuille_re5k/` | Channel flow, Re = 5000 | OTD |
 | `example/poiseuille_re1e5/` | Channel flow, Re = 100000 | Poiseuille reference case |
@@ -126,7 +126,7 @@ this repository.
 | `example/tpjet_re2005/210_baseflow_newton/forced_po/` | 1900 | Forced UPO (2.2) | converged forced UPO |
 | `example/tpjet_re2005/311_stability_direct_floquet/` | 1900 | Floquet direct (3.11) | leading multiplier above unit circle |
 | `example/cubic_cavity_re1914/413_postproc_energy_budget/` | 1914 | Energy budget (4.1) | PKE integrals + K fields; budget closure matches eigenvalue |
-| `example/cubic_cavity_re1950/413_postproc_energy_budget_floquet/` | 1950 | Energy budget Floquet (4.11) | orbit-averaged PKE; closure test on periodic orbit |
+| `example/cubic_cavity_re1950/311_stability_direct_floquet/` | 1950 | Floquet direct (3.11) | stable limit cycle: trivial multiplier = 1 to 1e-13; all others inside unit circle |
 
 ### Reproducing
 

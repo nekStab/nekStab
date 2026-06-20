@@ -20,12 +20,6 @@
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
         ifdyntol = .true. ; call bcast(ifdyntol,lsize)
-!       Re=1950 cavity Floquet: multipliers cluster near unit circle
-!       (UPO is marginally stable). Default eigen_tol=1e-6 was too strict
-!       and prevented Schur condensation from firing within 92 Arnoldi
-!       iters. Relax to 1e-4 to let select_eigenvalues lock multipliers
-!       slightly off the unit circle.
-        eigen_tol = 1.0d-4 ; call bcast(eigen_tol,wdsize)
       endif
 
       end

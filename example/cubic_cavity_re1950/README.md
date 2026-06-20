@@ -1,35 +1,55 @@
-# Cubic Cavity UPO — Unstable periodic orbit
+# Cubic Cavity Re=1950 — periodic limit cycle: Floquet + modal analysis
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 
 ## Case note
 
-This case targets the periodic regime of the cubic lid-driven cavity after the
-primary Hopf bifurcation discussed for confined lid-driven cavities. It is the
-periodic-orbit companion to `cubic_cavity_re1914`, intended for DNS, Floquet,
-and snapshot-modal analyses of the post-critical dynamics. Thesis source:
-chapter 4, `cavsubsec:Non-linearEvolution`, with the problem definition in
-`cav:sec:problem_formulation`.
+3D lid-driven cubic cavity just above the primary Hopf bifurcation
+(`Re_c ≈ 1916`), so the flow settles onto a **stable periodic limit cycle**
+(period `T ≈ 10.79`). This is the time-periodic companion to
+`cubic_cavity_re1914` (the steady-base case that runs the full SFD / Newton /
+stability / OTD pipeline). Here the orbit comes directly from DNS — no
+Newton-UPO — and feeds a Floquet stability analysis and snapshot-modal
+decompositions. Thesis source: chapter 4, `cavsubsec:Non-linearEvolution`,
+problem definition in `cav:sec:problem_formulation`.
 
 ## Physics
-3D lid-driven cubic cavity at Re = 1950. Computes an unstable periodic orbit using Newton-GMRES for time-periodic solutions (T ~ 10.77).
+3D lid-driven cubic cavity at Re = 1950 (`viscosity = -1950`). The post-Hopf
+state is a stable limit cycle; the DNS converges to it at constant amplitude.
 
-## nekStab Mode
-`userParam01 = 2.1` — Newton-GMRES for UPOs
-- `userParam07 = 200` — Krylov subspace dimension
-- `endTime = 10.7738` — approximate orbit period
+## Workflow (DNS-orbit Floquet — no Newton)
+1. **`000_dns/`** — settle onto the limit cycle from a near-periodic start.
+2. **`000_dns_period/`** — long DNS + centre probe + FFT for a sharp period
+   `T = 10.789`; stamp an on-orbit snapshot as the Floquet base flow.
+3. **`311_stability_direct_floquet/`** — direct Floquet (`userParam01 = 3.11`)
+   over one period `T`.
+4. **`600_modal_pod/`**, **`610_modal_dmd/`** — POD / DMD of the cycle.
 
-## Prerequisites
-- Initial guess: `1960_PO_cav0.f00001` (near-periodic solution at Re = 1960)
+Why DNS-orbit instead of Newton-UPO: the DNS settles directly onto the
+*stable* cycle, so Newton refinement is unnecessary; and a 3D Newton-UPO at a
+near-marginal Re is stiff (cf. the `cylinder_re180` 2D-stiffness lesson). The
+period stamp is what closes the loop — see `000_dns_period/README.md`.
+
+## Result — the limit cycle is STABLE
+Direct Floquet (k_dim = 192, 170/192 modes converged):
+- **Trivial multiplier `μ = 1.000000` recovered to 1e-13** (`σ ≈ 0`) — the
+  phase/time-shift mode along the orbit. Its exactness validates `T = 10.789`.
+- **Every other `|μ| < 1`** (spectrum decays to `|μ| ≈ 3e-4`): no Floquet mode
+  outside the unit circle, consistent with the DNS settling onto the cycle.
+
+There is therefore **no unstable mode to budget**, so this case has no
+energy-budget (4.11) stage — that diagnostic is exercised by `flip_flop_re62`
+and `tpjet_re2005`, whose cycles are genuinely unstable.
+
+POD: leading real+imag pair holds ≈ 94 % of the energy. DMD: leading
+eigenvalues on the unit circle (`|μ| ≈ 1.00`) — both the expected limit-cycle
+signatures.
 
 ## Run
 ```bash
-mks cav        # Compile
-nekbmpi cav N  # Run on N MPI ranks
+mks cav        # compile
+sbatch run.local.slurm   # per stage
 ```
 
-## Expected Output
-Converged 3D periodic orbit at Re = 1950 (Re_c ~ 1916).
-
 ## Reference
-Standard 3D lid-driven cavity benchmark.
+Standard 3D lid-driven cubic cavity benchmark; first Hopf near Re ≈ 1916.
