@@ -41,9 +41,12 @@ There is therefore **no unstable mode to budget**, so this case has no
 energy-budget (4.11) stage — that diagnostic is exercised by `flip_flop_re62`
 and `tpjet_re2005`, whose cycles are genuinely unstable.
 
-POD: leading real+imag pair holds ≈ 94 % of the energy. DMD: leading
-eigenvalues on the unit circle (`|μ| ≈ 1.00`) — both the expected limit-cycle
-signatures.
+POD: leading real+imag pair holds ≈ 86–94 % of the energy. DMD: eigenvalues lie
+near the unit circle and the St = 0.0927 fundamental (matching the Floquet
+period) is present — but because Re = 1950 is only just supercritical
+(Re_c ≈ 1916) the cycle saturates very slowly, and a weak residual transient
+outranks the fundamental in the DMD norm ordering. This is a near-critical-flow
+property, not a solver error — see [`610_modal_dmd/README.md`](610_modal_dmd/README.md).
 
 ## Run
 ```bash
