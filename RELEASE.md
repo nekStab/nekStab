@@ -33,9 +33,8 @@ for:
   be included in the linearized state vector.  Since the analytical
   Jacobian for RANS source terms is not available, the linearized
   operator is approximated via **finite differences** (`iffindiff =
-  .true.`).  Two RANS examples are included:
-  - `example/poiseuille_RANS/` — turbulent channel at Re = 100,000
-  - `example/cylinder/RANS/` — cylinder at Re = 40,000
+  .true.`).  Example:
+  - `example/cylinder_re1m/` — high-Reynolds cylinder wake, finite-difference direct stability
 - **Conjugate heat transfer (CHT)** — temperature lives on `lelt`
   elements while velocity lives on `lelv` elements (`lelt > lelv`),
   so `lt != lv`.  The old code used `lv` for temperature arrays,
