@@ -170,7 +170,7 @@ ulimit -c unlimited   # Enable core dumps for debugging
 ### Basic Usage
 
 ```bash
-cd example/cylinder/dns
+cd example/cylinder_re100/000_dns
 mks 1cyl
 ```
 
@@ -240,7 +240,7 @@ NEKSTAB_EXTRA_FFLAGS="-O3 -march=native" mks 1cyl
 ### 1. DNS Simulation
 
 ```bash
-cd example/cylinder/dns
+cd example/cylinder_re100/000_dns
 mks 1cyl                    # Compile
 nekbmpi 1cyl 4              # Run on 4 MPI ranks
 tail -f logfile             # Monitor output
@@ -250,7 +250,7 @@ killall nek5000             # Stop if needed
 ### 2. Base Flow (Newton-Krylov)
 
 ```bash
-cd example/cylinder/baseflow/newton
+cd example/cylinder_re100/210_baseflow_newton
 # Ensure userParam01 = 2.0 in 1cyl.par
 mks 1cyl && nekbmpi 1cyl 4
 # Output: BF_1cyl0.f00001 (converged base flow)
@@ -259,7 +259,7 @@ mks 1cyl && nekbmpi 1cyl 4
 ### 3. Direct Stability Analysis
 
 ```bash
-cd example/cylinder/stability/direct
+cd example/cylinder_re100/310_stability_direct
 # Ensure userParam01 = 3.1 in 1cyl.par
 # Ensure base flow file exists: BF_1cyl0.f00001
 mks 1cyl && nekbmpi 1cyl 4
@@ -269,7 +269,7 @@ mks 1cyl && nekbmpi 1cyl 4
 ### 4. Adjoint Analysis
 
 ```bash
-cd example/cylinder/stability/adjoint
+cd example/cylinder_re100/320_stability_adjoint
 # Ensure userParam01 = 3.2 in 1cyl.par
 mks 1cyl && nekbmpi 1cyl 4
 # Output: aRe*, aIm* (adjoint eigenmodes)
@@ -278,7 +278,7 @@ mks 1cyl && nekbmpi 1cyl 4
 ### 5. Wavemaker Computation
 
 ```bash
-cd example/cylinder/postproc
+cd example/cylinder_re100/410_postproc_animate_modes
 # Ensure userParam01 = 4.2 in 1cyl.par
 # Requires both direct and adjoint modes
 mks 1cyl && nekbmpi 1cyl 4
@@ -583,7 +583,7 @@ Example: `1cyl0.f00001` through `1cyl0.f00100` for 100 snapshots.
 Use the provided Python script:
 
 ```bash
-cd example/cylinder/modal
+cd example/cylinder_re100/600_modal_pod
 python plot_modal.py           # Auto-detect and plot all
 python plot_modal.py --pod     # POD only
 python plot_modal.py --dmd     # DMD only
@@ -631,7 +631,7 @@ SPOD reduces to POD for a single block and to DMD for broadband-limited signals.
 
 ```bash
 # 1. Generate DNS snapshots (run DNS, save every 0.5 time units)
-cd example/cylinder/dns
+cd example/cylinder_re100/000_dns
 # Edit 1cyl.par: writeInterval = 0.5, endTime = 50
 mks 1cyl && nekbmpi 1cyl 4
 
@@ -1249,7 +1249,7 @@ example/cylinder/
 
 ```bash
 # 1. DNS verification
-cd example/cylinder/dns
+cd example/cylinder_re100/000_dns
 mks 1cyl && nekbmpi 1cyl 4
 # Check: flow develops vortex shedding
 
@@ -1560,7 +1560,7 @@ nekStab uses GitHub Actions to automatically test compilation and execution acro
 
 ### What the CI Tests
 
-1. **Compilation** — Builds the `example/cylinder/ci_test` case with each compiler/MPI combination
+1. **Compilation** — Builds the `example/cylinder_re100/000_dns/ci_test` case with each compiler/MPI combination
 2. **Smoke Test** — Runs 10 DNS timesteps with 2 MPI ranks to verify basic functionality
 3. **Output Verification** — Confirms the logfile contains successful completion markers
 
@@ -1569,7 +1569,7 @@ nekStab uses GitHub Actions to automatically test compilation and execution acro
 To replicate CI tests locally:
 
 ```bash
-cd example/cylinder/ci_test
+cd example/cylinder_re100/000_dns/ci_test
 mks 1cyl                           # Compile
 echo "1cyl" > SESSION.NAME
 pwd >> SESSION.NAME                # Create session file
