@@ -11,7 +11,7 @@ real, steady (ω = 0) monotonically growing mode.
 
 ## Initial condition
 `startFrom = BF_tsyphon0.f00001` — the steady base flow from
-`../../210_baseflow_newton/fp` (shipped here).
+`../../210_baseflow_newton` (shipped here).
 
 ## Run
 ```bash

@@ -14,7 +14,7 @@ leading multiplier is just above the imaginary axis.
 
 ## Initial condition
 `startFrom = BF_2cyl0.f00001` — the converged UPO base flow from
-`../210_baseflow_newton/upo` (shipped here).
+`../210_baseflow_newton` (shipped here).
 
 ## Run
 ```bash

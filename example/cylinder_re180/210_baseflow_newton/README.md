@@ -88,7 +88,7 @@ must be **near** the Re=180 orbit, and the **period guess must be
 accurate**. Both come from a short DNS at **Re=170** (close to the
 target, safely below Re_A≈188 so it stays 2D):
 
-1. **DNS at Re=170.** Use `../../000_dns_seed_re170/` (copy of the
+1. **DNS at Re=170.** Use `../000_dns_seed_re170/` (copy of the
    canonical 2128/lx1=8 case with `viscosity = -170.0`). Seed it from
    any nearby saturated limit cycle (a Re=150 field re-saturates to the
    Re=170 orbit in ~50 t_c) and run **≥ 100 shedding periods** of clean
@@ -133,7 +133,7 @@ target, safely below Re_A≈188 so it stays 2D):
 We pushed the seed + period as far as possible (2026-06-18):
 
 1. **Sharp period from a long Re=175 DNS.** A ~228-period Re=175 run
-   (`../../000_dns_seed_re175/`, `hpts` wake probe at (5,0,0)) gives a
+   (`../000_dns_seed_re175/`, `hpts` wake probe at (5,0,0)) gives a
    very sharp spectral peak (Q≈100). PSD-peak and 172-cycle counting
    agree to 5 sig figs: **St = 0.1915, T = 5.22130** (vs the older,
    coarser Re=170 value 5.251). Re=175 is close to Re=180 (St varies

@@ -1,7 +1,7 @@
 # Re=170 DNS — on-orbit seed + period source for the Re=180 UPO
 
 Purpose: produce (a) a saturated **Re=170** limit-cycle field to seed the
-Re=180 Newton-UPO (`../210_baseflow_newton/upo/`), and (b) the **shedding
+Re=180 Newton-UPO (`../210_baseflow_newton/`), and (b) the **shedding
 period T** by FFT of a wake probe, used as the UPO `endTime`.
 
 Why Re=170 (not 150, not 180): close enough to Re=180 that the UPO's
@@ -27,12 +27,12 @@ diverge (T explodes 5.5→538→…). See the UPO README for the full failure.
 
 FFT the transverse velocity `v` (column 3 of `1cyl.his`) over the
 saturated window (drop the re-saturation transient), parabolic-interpolate
-the peak — see the snippet in `../210_baseflow_newton/upo/README.md`.
+the peak — see the snippet in `../210_baseflow_newton/README.md`.
 
 Result: **St = 0.1904, T = 5.251** (86-period FFT window).
 
 ## Outputs consumed downstream
 
 - Latest saturated snapshot `1cyl0.f0000N` → copy to
-  `../210_baseflow_newton/upo/rstcyl0.f00001` (the UPO seed).
+  `../210_baseflow_newton/rstcyl0.f00001` (the UPO seed).
 - `T = 5.251` → set as `endTime` in the UPO `.par`.

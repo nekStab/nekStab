@@ -1,7 +1,7 @@
 # Triple-port jet — forced periodic orbit (Newton-GMRES), Re=1900
 
 > **Operating point: Re = 1900** (`viscosity = -1900`). See the family-level
-> note in `../../README.md` about the `_re2005` directory naming.
+> note in `../README.md` about the `_re2005` directory naming.
 
 ## Physics
 Axisymmetric triple-port jet at Re = 1900 (above the critical Re_c ≈ 1371).
@@ -26,7 +26,7 @@ sbatch run.local.slurm     # 8 ranks
 ## Reference (ref/)
 - `reference.json` — converged Newton residual (`residu_newton.dat` col 6 → 1e-8).
   Verify with
-  `scripts/check_against_ref.py example/tpjet_re2005/210_baseflow_newton/forced_po`.
+  `scripts/check_against_ref.py example/tpjet_re2005/210_baseflow_newton`.
 - `ref/bf.png`, `ref/ic.png`, `ref/residual.png`.
 
-The orbit `BF_tpjet0.f00001` feeds `../../311_stability_direct_floquet`.
+The orbit `BF_tpjet0.f00001` feeds `../311_stability_direct_floquet`.

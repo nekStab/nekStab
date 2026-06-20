@@ -14,7 +14,7 @@ setting: chapter 2, `sec:ex:1cyl`; scalar-convection context:
 ## Stages
 
 - `000_dns_seed/` provides the DNS seed.
-- `210_baseflow_newton/dyn_temp/` computes the coupled fixed point.
+- `210_baseflow_newton/` computes the coupled fixed point.
 
 ## Temperature BCs from a velocity-only mesh (by design)
 

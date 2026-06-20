@@ -1,5 +1,5 @@
 {
-  "case": "thermosyphon_ra500/210_baseflow_newton/fp",
+  "case": "thermosyphon_ra500/210_baseflow_newton",
   "description": "Thermosyphon steady base flow at Ra=500 via Newton-GMRES",
   "produced": {"ranks": "8", "nekstab_mode": "2.0 (Newton-GMRES fixed point)"},
   "quantities": {

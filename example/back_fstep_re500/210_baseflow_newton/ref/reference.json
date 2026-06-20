@@ -1,5 +1,5 @@
 {
-  "case": "back_fstep_re500/210_baseflow_newton/fp",
+  "case": "back_fstep_re500/210_baseflow_newton",
   "description": "Backward-facing step steady base flow at Re=500 via Newton-GMRES",
   "produced": {"ranks": "8", "nekstab_mode": "2.0 (Newton-GMRES fixed point)"},
   "note": "Figure/IC reference only — the shipped residual files were empty/corrupt, so no numeric scalar is asserted. A fresh run regenerates residu_newton.dat (target 1e-8); compare visually against ref/bf.png.",

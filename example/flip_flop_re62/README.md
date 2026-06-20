@@ -13,7 +13,7 @@ associated with the flip-flop dynamics. Thesis source: chapter 2,
 ## Stages
 
 - `000_dns/` supplies the nonlinear trajectory.
-- `210_baseflow_newton/upo/` computes the periodic orbit.
+- `210_baseflow_newton/` computes the periodic orbit.
 - `311_stability_direct_floquet/` and `321_stability_adjoint_floquet/` analyze
   the Floquet instability.
 - `411_postproc_wavemaker/` localizes the coupled direct/adjoint sensitivity.

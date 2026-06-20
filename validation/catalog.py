@@ -785,7 +785,7 @@ CASES: dict[str, MethodCase] = {
         # Thermal exception: target Re=30 with scalar coupling — not Re=100 drift
         case_id="cylinder/baseflow/newton_dyn_temp",
         flow_family="cylinder_re100", method_lane="baseflow",
-        current_path="example/cylinder_re30_thermal/210_baseflow_newton/dyn_temp",
+        current_path="example/cylinder_re30_thermal/210_baseflow_newton",
         proposed_folder="example/cylinder_re100/210_baseflow_newton/fp_dyn_temp", sort_prefix="210",
         label="Cylinder Baseflow Newton Dynamic Thermal", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Thermal Newton-GMRES baseflow at Re=30 (thermal exception, not Re=100 target)",
@@ -814,8 +814,8 @@ CASES: dict[str, MethodCase] = {
     "cylinder/baseflow/newton_upo": MethodCase(
         case_id="cylinder/baseflow/newton_upo",
         flow_family="cylinder_re180", method_lane="baseflow",
-        current_path="example/cylinder_re180/210_baseflow_newton/upo",
-        proposed_folder="example/cylinder_re180/210_baseflow_newton/upo", sort_prefix="210",
+        current_path="example/cylinder_re180/210_baseflow_newton",
+        proposed_folder="example/cylinder_re180/210_baseflow_newton", sort_prefix="210",
         label="Cylinder Newton UPO at Re=180", mode_name="Newton-GMRES UPO", legacy_uparam01="2.1",
         expected_behavior="Newton UPO at Re=180 (St~0.18, T~5.5); base flow for the Floquet 311/321/410 chain",
         status=CaseStatus.NEEDS_DNS_SEED, compute_class=_LLR,
@@ -842,7 +842,7 @@ CASES: dict[str, MethodCase] = {
             " period guess T~5.5. The Re=100 historical snapshot at t=500"
             " was archived 2026-05-21 and is for the wrong Re.",
         ),
-        why_note="Re=180 UPO at the Barkley-Henderson Mode A threshold; base flow for the Floquet 311/321/410 chain. See cylinder_re180/210_baseflow_newton/upo/README.md for the Re=150-seed workflow.",
+        why_note="Re=180 UPO at the Barkley-Henderson Mode A threshold; base flow for the Floquet 311/321/410 chain. See cylinder_re180/210_baseflow_newton/README.md for the Re=150-seed workflow.",
     ),
     # ------------------------------------------------------------------
     # Cylinder stability
@@ -1129,7 +1129,7 @@ CASES: dict[str, MethodCase] = {
     "thermosyphon/baseflow": MethodCase(
         case_id="thermosyphon/baseflow",
         flow_family="thermosyphon", method_lane="baseflow",
-        current_path="example/thermosyphon_ra500/210_baseflow_newton/fp",
+        current_path="example/thermosyphon_ra500/210_baseflow_newton",
         proposed_folder="example/thermosyphon_ra500/210_thermosyphon_baseflow", sort_prefix="210",
         label="Thermosyphon Baseflow", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Thermosyphon natural-convection baseflow at Ra=500, Pr=5",
@@ -1219,7 +1219,7 @@ CASES: dict[str, MethodCase] = {
     "flip_flop/baseflow": MethodCase(
         case_id="flip_flop/baseflow",
         flow_family="flip_flop", method_lane="baseflow",
-        current_path="example/flip_flop_re62/210_baseflow_newton/upo",
+        current_path="example/flip_flop_re62/210_baseflow_newton",
         proposed_folder="example/flip_flop_re62/210_flip_flop_baseflow", sort_prefix="210",
         label="Flip-Flop Jet Baseflow", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Flip-flop jet baseflow at Re=62",
@@ -1270,7 +1270,7 @@ CASES: dict[str, MethodCase] = {
     "tpjet/baseflow/newton": MethodCase(
         case_id="tpjet/baseflow/newton",
         flow_family="tpjet", method_lane="baseflow",
-        current_path="example/tpjet_re2005/210_baseflow_newton/forced_po",
+        current_path="example/tpjet_re2005/210_baseflow_newton",
         proposed_folder="example/tpjet_re2005/210_tpjet_baseflow_newton", sort_prefix="210",
         label="Two-Phase Jet Baseflow Newton", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Two-phase jet Newton baseflow at Re=2000 (compute-heavy)",
@@ -1351,7 +1351,7 @@ CASES: dict[str, MethodCase] = {
     "back_fstep/baseflow": MethodCase(
         case_id="back_fstep/baseflow",
         flow_family="back_fstep", method_lane="baseflow",
-        current_path="example/back_fstep_re500/210_baseflow_newton/fp",
+        current_path="example/back_fstep_re500/210_baseflow_newton",
         proposed_folder="example/back_fstep_re500/210_back_fstep_baseflow", sort_prefix="210",
         label="Backward-Facing Step Baseflow", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Newton-GMRES baseflow for backward-facing step at Re=500",

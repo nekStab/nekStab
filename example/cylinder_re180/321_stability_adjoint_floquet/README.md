@@ -6,7 +6,7 @@ modes of the 2D periodic wake. This case runs the adjoint-Floquet
 machinery in **2D only** (β = 0), so it **cannot reproduce Mode A/B**
 receptivity — a cost-reduced **proxy** exercising the nekStab pipeline at
 the Barkley parameters, not a physical result. For real Mode A/B, redo in
-3D. Full explanation: `../210_baseflow_newton/upo/README.md`.
+3D. Full explanation: `../210_baseflow_newton/README.md`.
 
 ## Physics
 2D flow around a circular cylinder at **Re = 180** (matches the Barkley

@@ -5,7 +5,7 @@ The Floquet mode animated here is from a **2D** run (β = 0). Barkley &
 Henderson (1996) Mode A/B are **3D** (spanwise-periodic) and are NOT what
 this 2D pipeline produces — this is a cost-reduced **proxy/demonstrator**
 of the famous case, not a physical secondary-instability animation. Full
-explanation: `../../210_baseflow_newton/upo/README.md`.
+explanation: `../../210_baseflow_newton/README.md`.
 
 ## Two kinds of mode animation (and why this case only does one)
 For a periodic base flow there are, in general, **two** videos one might want:
@@ -69,13 +69,13 @@ a frame sequence of the evolving flow.
 - The routine reads `(σ, ω)` from row 1 of `Spectre_NSd_conv.dat` and sets
   the animation duration to **one period = 2π/ω**. Here ω is set to the
   **base-flow frequency** `ω_base = 2π/T = 1.21049` (T = 5.1906, the
-  converged UPO period from `../../210_baseflow_newton/upo/`) so the DNS
+  converged UPO period from `../../210_baseflow_newton/`) so the DNS
   runs exactly one shedding period. (The *physical* direct-Floquet spectrum
   in `../../311_stability_direct_floquet/` keeps the true μ=+1 row with
   ω = 0; this case's copy overrides ω only to set the animation period.)
 
 ## Prerequisites (copy from upstream stages)
-- `BF_1cyl0.f00001` — on-orbit UPO state (from `../../210_baseflow_newton/upo/`).
+- `BF_1cyl0.f00001` — on-orbit UPO state (from `../../210_baseflow_newton/`).
 - `dRe1cyl0.f00001`, `dIm1cyl0.f00001` — leading Floquet eigenvector pair
   (from `../../311_stability_direct_floquet/`). Loaded by the routine even
   though the μ=+1 reconstruction is static; only the evolving base flow is

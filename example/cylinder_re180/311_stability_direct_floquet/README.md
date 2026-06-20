@@ -9,7 +9,7 @@ sees only the trivial unit multiplier (phase mode). This is a
 **cost-reduced proxy** that exercises the nekStab pipeline at the famous
 Barkley parameters, **not** a physical secondary-instability result. For
 real Mode A/B, redo base flow + Floquet in 3D. Full explanation:
-`../210_baseflow_newton/upo/README.md`.
+`../210_baseflow_newton/README.md`.
 
 ## Physics
 2D flow around a circular cylinder at **Re = 180** (matches the Barkley

@@ -118,12 +118,12 @@ this repository.
 | `example/moving_cylinder_re100/000_dns/` | 100 | DNS forced osc (0.0) | DNS subcase |
 | `example/lid_driven_re3600/210_baseflow_newton/fp/` | 3600 | Newton (2.0) | converged steady state |
 | `example/poiseuille_re5k/500_otd/` | 5000 | OTD smoke | builds and runs |
-| `example/thermosyphon_ra500/210_baseflow_newton/fp/` | Ra = 500 | Newton + thermal (2.0) | converged thermal steady state |
+| `example/thermosyphon_ra500/210_baseflow_newton/` | Ra = 500 | Newton + thermal (2.0) | converged thermal steady state |
 | `example/thermosyphon_ra500/310_stability_direct/direct/` | Ra = 500 | Direct + thermal (3.1) | leading real eigenvalue (pitchfork) |
 | `example/naca0012_re2000/210_baseflow_newton/fp/` | 2000 | Newton (2.0) | converged steady state |
-| `example/flip_flop_re62/210_baseflow_newton/upo/` | 62 | Newton-UPO (2.1) | converged UPO |
+| `example/flip_flop_re62/210_baseflow_newton/` | 62 | Newton-UPO (2.1) | converged UPO |
 | `example/flip_flop_re62/311_stability_direct_floquet/` | 62 | Floquet direct (3.11) | leading multiplier just above unit circle |
-| `example/tpjet_re2005/210_baseflow_newton/forced_po/` | 1900 | Forced UPO (2.2) | converged forced UPO |
+| `example/tpjet_re2005/210_baseflow_newton/` | 1900 | Forced UPO (2.2) | converged forced UPO |
 | `example/tpjet_re2005/311_stability_direct_floquet/` | 1900 | Floquet direct (3.11) | leading multiplier above unit circle |
 | `example/cubic_cavity_re1914/413_postproc_energy_budget/` | 1914 | Energy budget (4.1) | PKE integrals + K fields; budget closure matches eigenvalue |
 | `example/cubic_cavity_re1950/311_stability_direct_floquet/` | 1950 | Floquet direct (3.11) | stable limit cycle: trivial multiplier = 1 to 1e-13; all others inside unit circle |
@@ -146,12 +146,12 @@ python3 plot.py            # regenerate the evidence figure
 The following cases ship with their source and parameters but were not part of
 the v2.0 verification sweep:
 
-- `example/cylinder_re180/210_baseflow_newton/upo/`
+- `example/cylinder_re180/210_baseflow_newton/`
 - `example/cylinder_re180/311_stability_direct_floquet/`
 - `example/cylinder_re180/321_stability_adjoint_floquet/`
 - `example/cylinder_re180/410_postproc_animate_modes/upo/`
 - `example/cylinder_re180/500_otd/`
-- `example/cylinder_re30_thermal/210_baseflow_newton/dyn_temp/`
+- `example/cylinder_re30_thermal/210_baseflow_newton/`
 - `example/cylinder_re1m/`
 - `example/back_fstep_re500/`
 - `example/cubic_cavity_re1914/`

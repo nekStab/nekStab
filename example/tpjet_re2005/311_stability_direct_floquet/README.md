@@ -16,7 +16,7 @@ period-doubling bifurcation.
 
 ## Initial condition
 `startFrom = BF_tpjet0.f00001` — the forced orbit from
-`../210_baseflow_newton/forced_po` (shipped here).
+`../210_baseflow_newton` (shipped here).
 
 ## Run
 ```bash
