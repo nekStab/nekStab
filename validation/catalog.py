@@ -1069,17 +1069,21 @@ CASES: dict[str, MethodCase] = {
         proposed_folder="example/cylinder_re100/500_otd", sort_prefix="500",
         label="Cylinder OTD", mode_name="OTD", legacy_uparam01="5.0",
         expected_behavior="Optimally Time-Dependent modes for cylinder at Re=180",
-        status=CaseStatus.NEEDS_DNS_SEED, compute_class=_MLO,
+        status=CaseStatus.VALIDATED, compute_class=_MLO,
         target_parameters=TargetParameters(Re=180.0, geometry="cylinder_re100", motion="static", model="DNS"),
         evidence_requirements=(_REQ_IMG,),
+        # artifact resolves to <current_path>/plot.png (refreshed 2026-06-20 from
+        # the fresh Lyapunov-exponent figure); full panel set: plot_lyapunov_exponents,
+        # plot_otd_residuals, plot_otd_mode1/2.
         artifacts=(_img("validation/figures/cylinder_otd_Re180.png"),),
         prerequisites=("cylinder/dns",),
-        blockers=(
-            "OTD baseflow (BF_1cyl0.f00001) and perturbation set (bf0/ip0/r0 series)"
-            " were 1996-element; archived 2026-05-21. OTD warm-start needs fresh"
-            " baseflow + perturbation set on the 2128 mesh.",
+        why_note=(
+            "Ran 2026-06-20 on the unified 2128 mesh, seeded from the Re=180 UPO"
+            " base flow (BF_1cyl0.f00001 from 210_baseflow_newton): 34475 steps to"
+            " t=100, FTLE + growth-rate + mode shapes produced. Machinery"
+            " validation only -- Re=180 is a 2D proxy, so the OTD spectrum is not"
+            " a physical Mode A/B reference."
         ),
-        why_note="mesh-unified 2026-05-21; OTD evidence archived",
     ),
     "cylinder/modal": MethodCase(
         case_id="cylinder/modal",
@@ -1133,7 +1137,10 @@ CASES: dict[str, MethodCase] = {
         proposed_folder="example/thermosyphon_ra500/210_thermosyphon_baseflow", sort_prefix="210",
         label="Thermosyphon Baseflow", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Thermosyphon natural-convection baseflow at Ra=500, Pr=5",
-        status=CaseStatus.NEEDS_SCALAR_CHECKPOINT, compute_class=_BLV,
+        # Scalar checkpoint satisfied 2026-06-20: BF_tsyphon0.f00001 temperature
+        # t in [-1.2e-4, 1.0001], norm 64.69 (populated hot/cold range);
+        # convection vx,vy ~ +/-0.3 confirms active buoyancy coupling.
+        status=CaseStatus.VALIDATED, compute_class=_BLV,
         target_parameters=TargetParameters(geometry="thermosyphon", motion="static", model="DNS"),
         seed_parameters=SeedParameters(
             seed_path="BF_Ra400_tsyphon0.f00001",
@@ -1180,7 +1187,8 @@ CASES: dict[str, MethodCase] = {
         proposed_folder="example/thermosyphon_ra500/310_thermosyphon_stability_direct", sort_prefix="310",
         label="Thermosyphon Direct Stability", mode_name="Direct LNSE", legacy_uparam01="3.1",
         expected_behavior="Direct stability of thermosyphon conductive base flow at Ra=500; buoyancy coupling Pr*Ra",
-        status=CaseStatus.NEEDS_SCALAR_CHECKPOINT, compute_class=_BLV,
+        # Base-flow scalar checkpoint satisfied 2026-06-20 (see thermosyphon/baseflow).
+        status=CaseStatus.VALIDATED, compute_class=_BLV,
         target_parameters=TargetParameters(Re=None, geometry="thermosyphon", motion="static", model="DNS"),
         evidence_requirements=(
             _REQ_IMG,
@@ -1407,7 +1415,9 @@ CASES: dict[str, MethodCase] = {
         proposed_folder="example/cubic_cavity_re1914/210_cubic_cavity_baseflow", sort_prefix="210",
         label="Cubic Cavity Baseflow at Re=1914 (Hopf criticality)", mode_name="Newton-GMRES", legacy_uparam01="2.0",
         expected_behavior="Newton solves the unstable steady 3D base flow at the primary Hopf criticality; eigenvalue pair sigma~0 by construction",
-        status=CaseStatus.NEEDS_DNS_SEED, compute_class=ComputeClass.REMOTE_JZ_CANDIDATE,
+        # Local-only per project directive (no Jean Zay); genuinely blocked on a
+        # Re=1914 Newton re-converge from the stale Re=2500 seed (not a JZ candidate).
+        status=CaseStatus.NEEDS_DNS_SEED, compute_class=ComputeClass.LOCAL_LONG_RUN,
         target_parameters=TargetParameters(Re=1914.0, geometry="cubic_cavity", motion="static", model="DNS"),
         seed_parameters=SeedParameters(
             seed_Re=2500.0,
@@ -1434,6 +1444,23 @@ CASES: dict[str, MethodCase] = {
             " baseflow was deep in the chaotic regime, not a bifurcation"
             " reference."
         ),
+    ),
+    "cubic_cavity/stability/direct_Floquet": MethodCase(
+        case_id="cubic_cavity/stability/direct_Floquet",
+        flow_family="cubic_cavity", method_lane="floquet_direct",
+        current_path="example/cubic_cavity_re1950/311_stability_direct_floquet",
+        proposed_folder="example/cubic_cavity_re1950/311_cubic_cavity_stability_direct_floquet", sort_prefix="311",
+        label="Cubic Cavity Direct Floquet (Re=1950)", mode_name="Direct Floquet", legacy_uparam01="3.11",
+        expected_behavior="Floquet of the DNS-orbit limit cycle at Re=1950; STABLE: trivial multiplier mu=1 to 1e-13, all others inside the unit circle",
+        status=CaseStatus.VALIDATED, compute_class=ComputeClass.LOCAL_LONG_RUN,
+        target_parameters=TargetParameters(Re=1950.0, geometry="cubic_cavity", motion="static", model="DNS"),
+        seed_parameters=SeedParameters(seed_Re=1950.0, seed_path="on-orbit DNS snapshot (period-stamped)", restart_source="from 000_dns_period"),
+        evidence_requirements=(_REQ_IMG, _REQ_SPEC),
+        artifacts=(
+            _spectrum("example/cubic_cavity_re1950/311_stability_direct_floquet/Spectre_Hd.dat"),
+            _log("example/cubic_cavity_re1950/311_stability_direct_floquet/logfile"),
+        ),
+        why_note="verified 2026-06-20; stable limit cycle just above Re_c~1916, period T=10.789 (centre-probe FFT). Pairs with cubic_cavity_re1914 (steady Hopf reference).",
     ),
     "lid_driven/baseflow": MethodCase(
         case_id="lid_driven/baseflow",
@@ -1526,7 +1553,8 @@ CASES: dict[str, MethodCase] = {
         proposed_folder="example/slot_fst_re495/000_slot_fst_dns", sort_prefix="000",
         label="Slot FST DNS", mode_name="DNS", legacy_uparam01=None,
         expected_behavior="Slot FST DNS at Re=495 (partial, no local run script)",
-        status=CaseStatus.PARTIAL, compute_class=ComputeClass.REMOTE_JZ_CANDIDATE,
+        # Local-only per project directive (no Jean Zay).
+        status=CaseStatus.PARTIAL, compute_class=ComputeClass.LOCAL_LONG_RUN,
         target_parameters=TargetParameters(Re=495.0, geometry="slot_FST", motion="static", model="DNS"),
         evidence_requirements=(_REQ_IMG, EvidenceRequirement(role=EvidenceRole.DNS_TIME_HISTORY, required=False)),
         artifacts=(_img("validation/figures/slot_FST_Re495.png"),),
