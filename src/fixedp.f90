@@ -23,6 +23,7 @@ module nekstab_fixedpoint
    use nekstab_nek_bridge, only: nekStab_error, nid, uparam, param, ctarg, &
                                  vx, vy, vz, pr, t, dt, time, istep, nsteps, &
                                  if3d, ifto, ifpsco, ldimt, bm1, fcx, fcy, fcz, &
+                                 fct, nx1, ny1, nz1, nelv, nelt, nfield, &
                                  vxlag, vylag, vzlag, ifbfcv, ifdyntol, lsize, &
                                  wdsize, nof, ew_tol_cap, bst_snp, bst_skp, &
                                  NEKSTAB_UNIT_RESIDU, NEKSTAB_UNIT_DYNTOL
@@ -61,6 +62,30 @@ contains
 
    end subroutine configure_sfd_dynamic_tolerance
 
+   !-----------------------------------------------------------------------
+   ! apply_feedback_forcing — add gain*d to the global forcing arrays for
+   ! ALL fields: velocity (fcx/fcy/fcz) and every scalar (fct(:,m),
+   ! m=1..nfield-1: temperature + passive scalars such as RANS tke/tau).
+   ! Shared by SFD/TDF/BoostConv so every feedback method drives the full
+   ! state, not just velocity.  No-op on scalars for velocity-only cases
+   ! (nfield==1).  fct is zeroed each step by zero_forcing, so this adds
+   ! cleanly without accumulating.
+   !-----------------------------------------------------------------------
+   subroutine apply_feedback_forcing(d, gain)
+      use nekstab_krylov_subspace, only: krylov_vector
+      type(krylov_vector), intent(in) :: d
+      real, intent(in) :: gain
+      integer :: m, ntotv, ntott
+      ntotv = nx1*ny1*nz1*nelv
+      ntott = nx1*ny1*nz1*nelt
+      call add2s2(fcx, d%vx, gain, ntotv)
+      call add2s2(fcy, d%vy, gain, ntotv)
+      if (if3d) call add2s2(fcz, d%vz, gain, ntotv)
+      do m = 1, nfield - 1
+         call add2s2(fct(1, 1, 1, 1, m), d%t(1, m), gain, ntott)
+      end do
+   end subroutine apply_feedback_forcing
+
    !  Safely close a Fortran unit if it is open.
    !  Called from residual/scheduler cleanup paths so repeated close
    !  attempts remain harmless.
@@ -97,7 +122,8 @@ contains
    !   state and the state one period earlier.
    !-----------------------------------------------------------------------
    subroutine tdf
-      use nekstab_krylov_subspace, only: lv, lt, nv, nt, uor, vor, wor, tor, NEKSTAB_PI
+      use nekstab_krylov_subspace, only: lv, lt, nv, nt, uor, vor, wor, tor, NEKSTAB_PI, &
+                                         krylov_vector, k_zero, k_norm
 
       real, allocatable, save :: do1(:), do2(:), do3(:)
       real :: h1, semi, l2, linf, rate, tol
@@ -105,6 +131,7 @@ contains
       real, save :: residu0, gain, porbit
       integer, save :: i, norbit, m, ibuf
       integer :: alloc_stat
+      type(krylov_vector) :: tdfD
 
       if (.not. tdf_init) then
 
@@ -185,13 +212,24 @@ contains
             !  the snapshot from exactly T seconds ago (the oldest in the ring).
             ibuf = mod(ibuf, norbit) + 1
             if (.not. allocated(do1)) allocate (do1(lv), do2(lv), do3(lv))
+            !  TDF feedback on the FULL state  f = gain*(q(t) - q(t-T)):
+            !  build the current-minus-orbit difference for velocity AND every
+            !  stored scalar (temperature + passive scalars), take the
+            !  multi-field residual, and force all fields via the shared helper.
+            !  k_zero leaves non-stored fields at 0 -> helper adds nothing there.
             call opsub3(do1, do2, do3, vx, vy, vz, uor(:, ibuf), vor(:, ibuf), wor(:, ibuf))
-            call normvc(h1, semi, l2, linf, do1, do2, do3)
+            call k_zero(tdfD)
+            call opcopy(tdfD%vx, tdfD%vy, tdfD%vz, do1, do2, do3)
+            if (ifto) call sub3(tdfD%t(1, 1), t(1, 1, 1, 1, 1), tor(1, ibuf, 1), nt)
+            if (ldimt > 1) then
+               do m = 2, ldimt
+                  if (ifpsco(m - 1)) call sub3(tdfD%t(1, m), t(1, 1, 1, 1, m), tor(1, ibuf, m), nt)
+               end do
+            end if
+            call k_norm(l2, tdfD)
             rate = (l2 - residu0)
             residu0 = l2
-
-            call opcmult(do1, do2, do3, gain)
-            call opadd2(fcx, fcy, fcz, do1, do2, do3)
+            call apply_feedback_forcing(tdfD, gain)
 
             call opcopy(uor(1, ibuf), vor(1, ibuf), wor(1, ibuf), vx, vy, vz)
             if (ifto) call copy(tor(1, ibuf, 1), t(:, :, :, :, 1), nt)
@@ -236,7 +274,7 @@ contains
    !-----------------------------------------------------------------------
    subroutine SFD
       use nekstab_krylov_subspace, only: krylov_vector, k_zero, k_copy, k_cmult, k_add2, &
-                                         k_sub3, NEKSTAB_PI
+                                         k_sub3, k_norm, NEKSTAB_PI
       type(krylov_vector), save :: oldQ, oldV, qa, qb, qc
       type(krylov_vector) :: tempD, tempM
       real adt, bdt, cdt, cutoff, gain, res, h1, l2, semi, linf, frq, sig, rate
@@ -290,12 +328,15 @@ contains
             call k_add2(oldQ, tempM)
          end if
 
-         !  SFD forcing is velocity-only: opadd2 (not nopadd2) to avoid polluting
-         !  temperature/pressure forcing.  The residual uses current vx (not oldV)
-         !  to avoid a one-timestep lag in the feedback signal.
-         call opsub3(tempD%vx, tempD%vy, tempD%vz, vx, vy, vz, oldQ%vx, oldQ%vy, oldQ%vz)
-         call opcmult(tempD%vx, tempD%vy, tempD%vz, gain)
-         call opadd2(fcx, fcy, fcz, tempD%vx, tempD%vy, tempD%vz)
+         !  SFD feedback forcing on the FULL state  f = gain*(q - q_filtered):
+         !  velocity -> fcx/fcy/fcz and every scalar (temperature + passive
+         !  scalars such as the RANS tke/tau) -> fct, via apply_feedback_forcing.
+         !  A RANS fixed point needs the scalars damped too; otherwise tke/tau
+         !  keep drifting while only the velocity has converged and the result
+         !  is not a true fixed point of the full operator.
+         call nopcopy(tempM%vx, tempM%vy, tempM%vz, tempM%pr, tempM%t, vx, vy, vz, pr, t)
+         call k_sub3(tempD, tempM, oldQ)        ! tempD = current - filtered state
+         call apply_feedback_forcing(tempD, gain)
 
       elseif (.not. sfd_init) then
 
@@ -313,10 +354,15 @@ contains
       end if
 
       if (istep >= 1) then
-         call nopsub2(oldV%vx, oldV%vy, oldV%vz, oldV%pr, oldV%t, vx, vy, vz, pr, t)
-         call normvc(h1, semi, l2, linf, oldV%vx, oldV%vy, oldV%vz)
-         res = l2; rate = (res - SFD_oldRes)/dt; SFD_oldRes = res
-         call nopcopy(oldV%vx, oldV%vy, oldV%vz, oldV%pr, oldV%t, vx, vy, vz, pr, t)
+         !  Convergence residual on the FULL state (multi-field, thermal-weighted
+         !  k_norm): SFD only declares convergence once velocity AND every scalar
+         !  have stopped changing.  Velocity-only normvc would call a still-
+         !  drifting RANS scalar field "converged".
+         call nopcopy(tempM%vx, tempM%vy, tempM%vz, tempM%pr, tempM%t, vx, vy, vz, pr, t)
+         call k_sub3(tempD, tempM, oldV)        ! tempD = current - previous step
+         call k_norm(res, tempD)
+         rate = (res - SFD_oldRes)/dt; SFD_oldRes = res
+         call k_copy(oldV, tempM)               ! oldV = current state (next step)
          if (nid == 0) then
             write (NEKSTAB_UNIT_RESIDU, "(4E15.7)") time, res, rate, param(21)
             write (6, "(A,3E15.7)") '  SFD residual, rate:', res, rate
@@ -391,6 +437,17 @@ contains
             allocate (dvx(lv), dvy(lv), dvz(lv))
             residu = 0.0d0; rate = 0.0d0; residu0 = 0.0d0
             open (unit=NEKSTAB_UNIT_RESIDU, file='residu.dat')
+            !  BoostConv accelerates the VELOCITY update only: its QR residual
+            !  subspace (q_x/q_y/q_z) carries no scalar components, so for a
+            !  multi-field state (RANS tke/tau, thermal) the scalars are NOT
+            !  accelerated and the converged result is not a simultaneous fixed
+            !  point of the full operator.  Warn loudly rather than silently
+            !  return a velocity-only base flow; use SFD for multi-field cases.
+            if (nfield > 1 .and. nid == 0) then
+               write (6, *) 'nekStab WARNING: BoostConv is velocity-only;'
+               write (6, *) '  scalar fields (temperature / tke / tau) are NOT'
+               write (6, *) '  accelerated. Use SFD for multi-field base flows.'
+            end if
             boostconv_init = .true.
          end if
 

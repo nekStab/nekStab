@@ -27,7 +27,8 @@ module nekstab_forcing_mod
                                  spng_dl, spng_dr, acc_spg, xLspg, yLspg, zLspg, &
                                  xRspg, yRspg, zRspg, ifotd, otdfx, otdfy, otdfz, &
                                  lx1, ly1, lz1, lelv, xm1, ym1, zm1, fct, nid, bm1s, &
-                                 ifto, ifpo, ldim, ndim, xmn, xmx, ymn, ymx, zmn, zmx
+                                 ifto, ifpo, ldim, ndim, xmn, xmx, ymn, ymx, zmn, zmx, &
+                                 nfield
    implicit none
    private
    public :: nekStab_forcing, nekStab_forcing_temp, &
@@ -232,6 +233,7 @@ contains
 !-----------------------------------------------------------------------
    subroutine spng_init
       use nekstab_krylov_subspace, only: nv
+      integer :: m
 
       acc_spg = abs(acc_spg)
 
@@ -260,7 +262,12 @@ contains
 
       !     save reference field -> sponge value reference
       call opcopy(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, NDIM), vx, vy, vz) !only DNS
-      if (ifto) call copy(spng_vt(:, 1), t(1, 1, 1, 1, 1), nv) !only DNS - temperature
+      !  Sponge reference for EVERY scalar field (temperature + passive scalars
+      !  such as RANS tke/tau).  Without this, spng_vt(:,m>1) stays 0 and the
+      !  sponge would damp those scalars toward 0 instead of the inflow/base value.
+      do m = 1, nfield - 1
+         call copy(spng_vt(1, m), t(1, 1, 1, 1, m), nv)
+      end do
       call spng_set ! -> compute spng_fn
 
    end subroutine spng_init
