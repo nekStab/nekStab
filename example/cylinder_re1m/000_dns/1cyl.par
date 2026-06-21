@@ -1,34 +1,61 @@
 [GENERAL]
-# TEMPLATE: set restart source or leave blank for cold start
-# startFrom =   # cold start (DNS from rest)
+# Cold start from useric (ux=1, tke=0.01, tau=0.20). Proven k-tau RANS
+# operating point is Re=40000 on this 3D (11840-elem) mesh; the dir targets
+# Re=1e6, reached by continuation once the Re=40000 base flow is converged.
+# startFrom =            # cold start (RANS relaxes from inflow IC)
 
+# Relax the nonlinear RANS to a settled base flow (k-tau damps the wake).
+# Convergence is monitored on the wake probe (1cyl.his) + velocity residual;
+# stop early once steady. endTime is a cap, not a target.
 stopAt = endTime
-endTime = 100.0          # TEMPLATE: total integration time
+endTime = 100.0
 
-userParam01 = 0          # 0 = DNS (direct numerical simulation)
+userParam01 = 0          # 0 = nonlinear RANS forward solve (relax to steady)
+userParam07 = 200        # k_dim (consumed by 310 findiff stability stage)
 
-dt = 0
+dt = 0.2
 variableDt = yes
 timeStepper = bdf3
-targetCFL = 0.5
+targetCFL = 2.5
+extrapolation = OIFS
 
 writeControl = runTime
-writeInterval = 10.0     # TEMPLATE: snapshot interval
+writeInterval = 5.0       # snapshot every 5 t.u. to capture the settling base flow
 writeDoublePrecision = no
 
 dealiasing = yes
-filtering = explicit
-filterWeight = 0.01
-filterCutoffRatio = 0.84
+filtering = hpfrt
+filterModes = 2
+filterWeight = 5.0
+
+[PROBLEMTYPE]
+variableProperties = yes   # eddy viscosity (uservp) varies the diffusivity
+stressFormulation = yes    # required for variable-property RANS momentum
+
+[MESH]
+numberOfBCFields = 1       # .re2 stores velocity BCs only; t/scalar BCs derived in usrdat2
 
 [PRESSURE]
-preconditioner = semg_xxt
-residualTol = 1.0E-9
+residualTol = 1.0e-5
 residualProj = yes
-writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-9
-residualProj = no
 density = 1.0
-viscosity = -1000000.0   # Re=1000000
+viscosity = -40000.0       # Re = 40000 (proven RANS point)
+residualTol = 1.0e-6
+
+[TEMPERATURE]              # kept on as the RANS scalar carrier; not solved
+solver = none
+rhoCp = 1.0
+conductivity = -1
+residualTol = 1.0e-6
+
+[SCALAR01]                # tke (k)
+density = 1.0
+diffusivity = -40000.0
+residualTol = 1.0e-6
+
+[SCALAR02]                # tau
+density = 1.0
+diffusivity = -40000.0
+residualTol = 1.0e-6
