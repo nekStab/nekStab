@@ -121,6 +121,3 @@ example/cylinder/dns/benchmark_results
 
 docs/
 node_modules/
-
-# bv (beads viewer) local config and caches
-.bv/
