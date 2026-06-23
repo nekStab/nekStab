@@ -17,7 +17,7 @@
 !-----------------------------------------------------------------------
 
 module nekstab_matvec
-   use nekstab_krylov_subspace, only: krylov_vector
+   use nekstab_krylov_subspace, only: krylov_vector, nt
    use nekstab_vectors, only: nopcopy, nopadd2
    use nekstab_nek_bridge, only: nekStab_log, nid, nio, param, npert, time, dt, &
                                  nsteps, ctarg, vx, vy, vz, pr, t, lastep, fintim, &
@@ -32,7 +32,8 @@ module nekstab_matvec
                                  lsize, ifbase, ifstorebase, mstep, k_dim, schur_cnt, &
                                  istep, vxp, vyp, vzp, prp, tp, findiff_order, ampls, &
                                  coefs, ifheat, dTdx, dTdy, dTdz, ifbuoyancy, &
-                                 buoyancy_qvol_wired
+                                 buoyancy_qvol_wired,&
+                                 iffrozenEV, ifKEnorm, ldimt
    implicit none
    private
 
@@ -423,6 +424,12 @@ contains
 !     Scale the perturbation.
          call k_copy(pert, q)
          call k_cmult(pert, ampls(i))
+         ! School B: velocity-only KE norm (frozen eddy viscosity)
+         if (iffrozenEV) then
+            do m = 1, ldimt
+               call rzero(pert%t(1, m), nt)
+            end do
+         end if
 
 !     Initial condition for the each evaluation.
          call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)

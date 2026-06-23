@@ -156,6 +156,8 @@
          ifspod = .false.     ! SPOD analysis
          ifwinamp = .true.    ! Amplitude normalization (PySPOD compatible)
          use_cgs = .true.     ! CGS2 orthogonalization (2 gop calls vs 2k for MGS)
+         iffrozenEV = .false.  ! School B: frozen eddy viscosity
+         ifKEnorm = .false.    ! School B: velocity-only KE norm
          modal_nsnap = 100    ! Default snapshot count
          modal_nsave = 10     ! Default number of modes to save
          modal_dt = 0.1d0     ! Default time between snapshots
@@ -271,6 +273,8 @@
          call bcast(ifspod, lsize)
          call bcast(ifwinamp, lsize)
          call bcast(use_cgs, lsize)
+         call bcast(iffrozenEV, lsize)
+         call bcast(ifKEnorm, lsize)
 
 !        nStab_mode_int / nStab_mode_real / nStab_mode_char
          call bcast(animate_mode_num, isize)

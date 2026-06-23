@@ -85,8 +85,10 @@
       common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol, iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired, isNekStabinit, isDirect, isAdjoint, isTransientGrowth, isFloquetDirect, isFloquetAdjoint, isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
 
       logical :: use_cgs ! CGS2 orthogonalization (vs MGS)
+      logical :: iffrozenEV ! School B: frozen eddy viscosity
+      logical :: ifKEnorm ! School B: velocity-only KE norm
 
-      common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv, ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity, ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode, ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod, ifwinamp, use_cgs, ifnewton_backtrack
+      common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv, ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity, ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode, ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod, ifwinamp, use_cgs, ifnewton_backtrack, iffrozenEV, ifKEnorm
 
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx

@@ -437,6 +437,7 @@ USR+=" modal_spod.o"
 USR+=" modal_spod_streaming.o"
 USR+=" modal_analysis.o"
 USR+=" fst.o"
+USR+=" frozen_mut.o"
 USR+=" usr_wrappers.o"
 USR+=" nekstab_nek_bridge.o"
 

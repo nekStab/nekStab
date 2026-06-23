@@ -63,7 +63,7 @@
 module nekstab_krylov_inner_products
    use nekstab_krylov_subspace, only: lv, lt, nv, nt, krylov_vector
    use nekstab_nek_bridge, only: bm1s, if3d, ifto, ldimt, ifpsco, isNewtonPO, &
-                                 nekStab_dp
+                                 nekStab_dp, ifKEnorm
    implicit none
    private
 
@@ -337,7 +337,7 @@ contains
 !  (not lv) because lelt may differ from lelv in CHT setups.
 !  ifto: temperature is active.  ldimt>1: additional passive scalars
 !  are present; ifpsco(mm-1) checks if scalar mm is solved.
-      if (ifto .or. (ldimt > 1)) then
+      if ((ifto .or. (ldimt > 1)) .and. .not. ifKEnorm) then  ! School B
          call ensure_gram_temperature_workspace(m, n)
 
          if (ifto) then
@@ -449,7 +449,7 @@ contains
       end if
 
 !  ── Temperature / passive scalars (LDA=lt, M=nt) ──
-      if (ifto .or. (ldimt > 1)) then
+      if ((ifto .or. (ldimt > 1)) .and. .not. ifKEnorm) then  ! School B
          call ensure_project_temperature_workspace(k)
 
          if (ifto) then
@@ -540,7 +540,7 @@ contains
       end if
 
 !  ── Temperature / passive scalars ──
-      if (ifto .or. (ldimt > 1)) then
+      if ((ifto .or. (ldimt > 1)) .and. .not. ifKEnorm) then  ! School B
          call ensure_complex_temperature_workspace(nblk)
 
          if (ifto) then

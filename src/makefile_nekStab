@@ -35,6 +35,10 @@ $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o 
 $(O)/mode_codes.o:        $(NS)/mode_codes.f90                                   ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/mode_config.o:       $(NS)/mode_config.f90       $(O)/nekstab_nek_bridge.o $(O)/mode_codes.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+# frozen_mut: base eddy-viscosity snapshot for School-B RANS stability.
+# Called only from the case .usr (receives rans_mut as a procedure arg), so
+# it carries no RANS dependency and is a pure leaf on the bridge.
+$(O)/frozen_mut.o:        $(NS)/frozen_mut.f90        $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 1: krylov_subspace (depends on nekstab_vectors)
@@ -109,7 +113,7 @@ $(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
 # .usr compilation needs .mod files from nekStab modules.
 # GNU Make merges prerequisites from multiple rules for the same target.
 # ─────────────────────────────────────────────────────────────────────
-$(USRF): SIZE NEKSTAB.inc $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o
+$(USRF): SIZE NEKSTAB.inc $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o $(O)/frozen_mut.o
 
 # ─────────────────────────────────────────────────────────────────────
 # Catch-all for case-local .f90 files (e.g., torus_utils.f90)
