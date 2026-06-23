@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=re180-dfloq
 #SBATCH --partition=local
 #SBATCH --nodes=1

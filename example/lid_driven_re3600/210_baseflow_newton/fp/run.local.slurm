@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=lid_driven_re3600-210_baseflow_newton
 #SBATCH --partition=local
 #SBATCH --nodes=1

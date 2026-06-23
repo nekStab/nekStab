@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=cylinder_re1m-dns
 #SBATCH --partition=local
 #SBATCH --nodes=1

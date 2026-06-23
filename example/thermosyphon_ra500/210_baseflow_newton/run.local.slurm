@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=tsyphon_bf-D5
 #SBATCH --partition=local
 #SBATCH --nodes=1

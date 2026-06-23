@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=animate_modes-D2
 #SBATCH --partition=local
 #SBATCH --nodes=1

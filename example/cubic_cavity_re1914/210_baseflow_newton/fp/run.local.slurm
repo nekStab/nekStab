@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=cav1914-nwtfp
 #SBATCH --partition=local
 #SBATCH --nodes=1

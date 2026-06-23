@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=slot-dns
 #SBATCH --partition=local
 #SBATCH --nodes=1

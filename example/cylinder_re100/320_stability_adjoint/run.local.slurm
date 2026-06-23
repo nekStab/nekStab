@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=adjoint-D2-mesh
 #SBATCH --partition=local
 #SBATCH --nodes=1

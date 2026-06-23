@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=lid_driven_re3600-310_stability_direct
 #SBATCH --partition=local
 #SBATCH --nodes=1

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=sensitivity_budget_wavemaker-D3
 #SBATCH --partition=local
 #SBATCH --nodes=1

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=cubic_cavity_re1914-310_stability_direct
 #SBATCH --partition=local
 #SBATCH --nodes=1

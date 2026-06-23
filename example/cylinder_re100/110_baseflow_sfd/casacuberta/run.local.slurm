@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=sfd-mesh
 #SBATCH --partition=local
 #SBATCH --nodes=1

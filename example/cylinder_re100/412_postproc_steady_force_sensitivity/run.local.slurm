@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=steady_force_sensitivity-D3
 #SBATCH --partition=local
 #SBATCH --nodes=1

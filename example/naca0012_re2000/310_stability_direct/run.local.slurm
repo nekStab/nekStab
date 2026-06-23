@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=naca-310dir
 #SBATCH --partition=local
 #SBATCH --nodes=1

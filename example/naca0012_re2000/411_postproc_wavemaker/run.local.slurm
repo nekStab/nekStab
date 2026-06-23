@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=naca-wm
 #SBATCH --partition=local
 #SBATCH --nodes=1

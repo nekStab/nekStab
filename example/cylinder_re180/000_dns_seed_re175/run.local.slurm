@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=newton_dyn_upo-smoke
 #SBATCH --partition=local
 #SBATCH --nodes=1

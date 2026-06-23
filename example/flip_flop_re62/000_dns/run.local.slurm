@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #SBATCH --job-name=flip_flop_re62-dns
 #SBATCH --partition=local
 #SBATCH --nodes=1
