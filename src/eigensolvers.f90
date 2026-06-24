@@ -148,7 +148,7 @@ contains
 
       if (ifldbf) then !skip loading if single run
          if (nid == 0) write (*, *) 'Loading base flow from disk:'
-         write (filename, '(a,a,a)') 'BF_', trim(SESSION), '0.f00001 U P'
+         write (filename, '(a,a,a)') 'BF_', trim(SESSION), '0.f00001'
          call load_fld(filename)
          if (nid == 0) write (*, *) ' Number os scalars found (npscal): ', npscal
          if (nid == 0) write (*, *) ' ifldbf done.'
