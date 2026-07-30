@@ -82,13 +82,19 @@
       logical :: ifwinamp ! Window normalization: .true.=amplitude (PySPOD),
       !                       .false.=energy (Parseval)
 
-      common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm, ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol, iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired, isNekStabinit, isDirect, isAdjoint, isTransientGrowth, isFloquetDirect, isFloquetAdjoint, isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
+      common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm, ifseed_load, ifvor, ifvox
+      common/nStab_logical/ifstorebase, ifdyntol, iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired, isNekStabinit
+      common/nStab_logical/isDirect, isAdjoint, isTransientGrowth, isFloquetDirect, isFloquetAdjoint
+      common/nStab_logical/isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
 
       logical :: use_cgs ! CGS2 orthogonalization (vs MGS)
       logical :: iffrozenEV ! School B: frozen eddy viscosity
       logical :: ifKEnorm ! School B: velocity-only KE norm
 
-      common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv, ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker, ifBFSensitivity, ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode, ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod, ifwinamp, use_cgs, ifnewton_backtrack, iffrozenEV, ifKEnorm
+      common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv, ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker
+      common/nStab_mode_flags/ifBFSensitivity, ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode
+      common/nStab_mode_flags/ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod, ifwinamp, use_cgs
+      common/nStab_mode_flags/ifnewton_backtrack, iffrozenEV, ifKEnorm
 
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx
@@ -102,7 +108,8 @@
       real :: thermal_buoyancy_coeff
       real :: buoyancy_dir(3)
       real :: thermal_norm_min, thermal_norm_max
-      common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base, dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap, thermal_norm_weight, thermal_buoyancy_coeff, buoyancy_dir, thermal_norm_min, thermal_norm_max
+      common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base, dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap
+      common/nStab_real/thermal_norm_weight, thermal_buoyancy_coeff, buoyancy_dir, thermal_norm_min, thermal_norm_max
 
       ! Integer variables for boost convergence and spatial dimensions
       integer :: bst_skp, bst_snp, k_dim
@@ -155,7 +162,8 @@
       real :: spng_st, spng_wl(ldim), spng_wr(ldim)
       real :: spng_dl(ldim), spng_dr(ldim), bm1s(lx1, ly1, lz1, lelt)
       real :: xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
-      common/nStab_sponge/spng_fn, spng_vr, spng_vt, spng_st, spng_wl, spng_wr, spng_dl, spng_dr, bm1s, xLspg, xRspg, yLspg, yRspg, zLspg, zRspg, acc_spg
+      common/nStab_sponge/spng_fn, spng_vr, spng_vt, spng_st, spng_wl, spng_wr, spng_dl, spng_dr, bm1s, xLspg, xRspg
+      common/nStab_sponge/yLspg, yRspg, zLspg, zRspg, acc_spg
 
       ! OTD common blocks (used by otd.f90 via include 'SIZE')
       real, dimension(lx1*ly1*lz1*lelv, lpert) :: OTDfx, OTDfy, OTDfz
@@ -166,7 +174,8 @@
       integer :: otd_printStep, otd_gsStep, otd_minSteps
       logical :: otd_computeFTLE, gsstep_override
       real, dimension(lpert) :: FTLEv_prev
-      common/OTD_params/otd_FTLEPeriod, otd_convTol, otd_printStep, otd_gsStep, otd_minSteps, otd_computeFTLE, gsstep_override, FTLEv_prev
+      common/OTD_params/otd_FTLEPeriod, otd_convTol, otd_printStep, otd_gsStep, otd_minSteps, otd_computeFTLE
+      common/OTD_params/gsstep_override, FTLEv_prev
 
       real, dimension(lx1, ly1, lz1, lelv) :: ubic, vbic, wbic
       real, dimension(lx1*ly1*lz1*lelv, lpert) :: upic, vpic, wpic, vxpic, vypic, vzpic
