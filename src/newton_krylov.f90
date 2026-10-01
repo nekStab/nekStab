@@ -167,7 +167,8 @@ contains
       type(krylov_vector) :: dq ! Newton correction obtained from GMRES
 
       !     ----- Iteration parameters
-      integer :: i, j, maxiter_newton, maxiter_gmres, calls
+      integer :: i, j, maxiter_newton, maxiter_gmres, calls, nnewton
+      logical :: newton_open
       real :: residual, tol, tottime = 0.0d0
       real :: prev_residual = 0.0d0 ! Previous iteration residual for scheduling + stagnation
       real :: initial_residual = 0.0d0 ! For divergence guard
@@ -229,7 +230,10 @@ contains
       accepted_residual_count = 0
       accepted_residual_next = 1
 
+      nnewton = 0
+      newton_open = .true.
       newton: do i = 1, maxiter_newton
+         nnewton = i
          if (nid == 0) write (6, *) '------------------------------------------------'
          newton_start_time = dnekclock()
          total_gmres_calls = 0
@@ -358,6 +362,7 @@ contains
          end if
          if (residual < dtol) then
             if (nid == 0) write (6, *) '  Converged. Exiting Newton loop...'
+            newton_open = .false.
             exit newton
          end if
 
@@ -366,6 +371,7 @@ contains
          if (stagnation_count >= 3) then
             if (nid == 0) write (6, *) 'WARNING: Newton stagnation', &
                ' (3 iterations without progress); exiting Newton loop'
+            newton_open = .false.
             exit newton
          end if
 
@@ -374,6 +380,7 @@ contains
             if (nid == 0) write (6, *) &
                'NEWTON: DIVERGENCE — residual exceeds', &
                ' 1e8 × initial. Aborting.'
+            newton_open = .false.
             exit newton
          end if
 
@@ -423,16 +430,16 @@ contains
       call bcast(param(21:22), 2*wdsize)
 
       if (nid == 0) then
-         if (i > maxiter_newton) then
+         if (newton_open) then
             write (6, *) 'Reached maxiter_newton. STOPPING! (verify convergence)'
          else
             if (isNewtonFP) then
-               write (6, *) 'NEWTON finished successfully after', i, 'iterations.'
+               write (6, *) 'NEWTON finished successfully after', nnewton, 'iterations.'
             elseif (isNewtonPO) then
-               write (6, *) 'NEWTON UPO finished successfully', i, 'iterations.'
+               write (6, *) 'NEWTON UPO finished successfully', nnewton, 'iterations.'
                write (6, *) ' period found:', time, 1.0d0/time
             elseif (isNewtonPO_T) then
-               write (6, *) 'NEWTON for forced UPO finished successfully', i, 'iterations.'
+               write (6, *) 'NEWTON for forced UPO finished successfully', nnewton, 'iterations.'
                write (6, *) ' period found:', time, 1.0d0/time
             end if
             write (6, *) 'Calls to the linearized solver: ', total_calls

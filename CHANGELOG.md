@@ -50,8 +50,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
   The old length-`lv` arrays were short by `ldimt` on every RANS
   `SIZE`, so ifx rejected the build (error #7983) before it could
   link.
-
-
+- The Newton closing message no longer reads the DO index. A finished
+  loop leaves that index undefined. The count is stored in the loop,
+  and a run that hits the iteration cap is flagged before the loop
+  ends.
 - Krylov normalization rejects a non-finite norm (NaN or Inf) before
   scaling. An infinite norm used to pass the NaN test, become a zero
   scale factor, and write NaN into the next Krylov vector.
