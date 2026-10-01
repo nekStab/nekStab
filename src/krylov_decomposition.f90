@@ -84,7 +84,9 @@ contains
       type(krylov_vector), dimension(ksize + 1), intent(inout) :: Q
 
       !     ----- Upper Hessenberg matrix -----
-      real, dimension(ksize + 1, ksize), intent(out) :: H
+      !     Krylov-Schur and GMRES resume with columns 1:mstart-1 already filled;
+      !     intent(out) would undefine them. Only the new columns are written.
+      real, dimension(ksize + 1, ksize), intent(inout) :: H
 
       !     ----- Check k_dim -----
       if (ksize == 0) then

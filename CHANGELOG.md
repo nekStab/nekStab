@@ -39,6 +39,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
   `arnoldi_factorization` had the same pattern on `mstep`, which is
   why the residual matvec logged `from 101/100`; `mstep` now stays on
   the column just built.
+- Arnoldi keeps the Hessenberg columns already built. `H` was
+  `intent(out)`, so a Krylov-Schur restart formally discarded the
+  Schur block it had just condensed. The factorization only writes
+  the new columns.
 - Krylov normalization rejects a non-finite norm (NaN or Inf) before
   scaling. An infinite norm used to pass the NaN test, become a zero
   scale factor, and write NaN into the next Krylov vector.
