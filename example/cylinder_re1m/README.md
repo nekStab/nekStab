@@ -18,4 +18,4 @@ chapter 2, `Large-scale eigensolvers`.
 - `310_stability_direct/coupled/` is the coupled operator (full RANS Fréchet).
 - `310_stability_direct/quasilaminar/` is the quasilaminar operator (base eddy viscosity prescribed).
 
-The run mesh is each stage's `1cyl.re2` (1480 elements). It has the same domain as the 1464-element generator `310_stability_direct/quasilaminar/mesh/1cyl2d.re2`. Only the Cartesian patch around the cylinder differs: the 4 inner blocks (centroid r = 0.21) were replaced, and 20 neighbouring 0.3-wide blocks were each split in two. Net +16. Regenerating from that generator does not reproduce the run mesh.
+The run mesh is each stage's `1cyl.re2` (1480 elements, body-fitted, closest node at r = 0.5). The generator `310_stability_direct/quasilaminar/mesh/1cyl2d.re2` (1464 elements) is Cartesian through the disk, with nodes at r = 0 and a 0.3 pitch. Same outer domain. Regenerating from that generator does not reproduce the run mesh.
