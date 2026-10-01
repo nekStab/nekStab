@@ -16,15 +16,15 @@ et al. 2024).
   from the base flow (the frozen-eddy-viscosity / quasi-laminar linearisation;
   Mettot & Sipp 2014; Pickering et al. 2021).
 
-Run both from the *same* base flow to compare them: the leading eigenvalue
-typically agrees to a few percent, while the structural sensitivity /
-wavemaker and the predicted onset differ.
+This run does not show that agreement. The coupled leading eigenfunctions,
+including the St = 0.216 eigenvalue, sit on the cylinder. The quasilaminar
+leading velocity field is the wake.
 
 ## Status
 
-Run on the SFD steady RANS field `base_converged.f00001`. Documented
-**negative result**: the coupled operator's leading cluster sits at
-sigma ~ 3.9 and its near-wall k-tau continuum floors at sigma ~ 2.27 even at
-k_dim=200, burying the physical wake mode — see `../coupled_continuum.py`.
-The physical leading mode is recovered by the quasilaminar operator in
-`../quasilaminar` (sigma = 0.395 at St = 0.206, vs observed St = 0.192).
+Run on the SFD field `base_converged.f00001`. Leading cluster sigma = 3.920
+at St = 0, floor 2.27 at k_dim=200 (`Spectre_NSd.dat`). The eigenfunctions
+are not a buried wake roller: in `dRe1cyl0.f00001` and `f00002`, all of
+v'^2 is inside r < 1.5 and the centroid is on the body. Velocity is 83% of
+the mean square, k 15%, tau 2%. The wake mode is the quasilaminar result
+(sigma = 0.395 at St = 0.206, vs observed St = 0.192).

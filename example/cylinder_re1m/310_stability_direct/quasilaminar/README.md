@@ -16,9 +16,8 @@ quasi-laminar linearisation). Sibling of `../coupled` (the full RANS Frechet).
   eddy viscosity is held at its base value — the hydrodynamic-only operator
   (Mettot & Sipp 2014; Meliga et al. 2012; Pickering et al. 2021).
 
-Run both from the *same* base flow to compare them: the leading eigenvalue
-typically agrees to a few percent, while the structural sensitivity /
-wavemaker and the predicted onset differ.
+This run does not show that agreement. The coupled leading eigenfunctions
+sit on the cylinder. The quasilaminar leading velocity field is the wake.
 
 ## How this case selects the quasilaminar operator
 
@@ -41,6 +40,8 @@ wavemaker and the predicted onset differ.
 
 ## Result
 
-Run on the SFD steady RANS field `base_converged.f00001`. Leading mode
-sigma = 0.395 at St = 0.206 — the von Karman wake mode, against the observed
-St = 0.192.
+Run on the SFD field `base_converged.f00001`. Leading mode sigma = 0.395
+at St = 0.206, against the observed St = 0.192. In `dRe1cyl0.f00001`,
+84% of v'^2 is downstream of x = 2 and the centroid is at x = 5.78.
+The tau stored in that file matches `base_converged.f00001` (correlation
+1.0); it is the base scalar, not the perturbation.
