@@ -24,8 +24,11 @@ description for the 2.0 series; entries here are the per-tag deltas.
   `base_mut.o`). The "School A"/"School B" names are retired; no aliases or
   compatibility shims are kept.
 
-
 ### Fixed
+- Eigenmode outpost no longer writes leftover base scalars into slots
+  the Krylov product did not solve. Unsolved scalar slots are zeroed
+  before the active ones are filled. A quasilaminar run had been
+  writing the base tau into every mode file.
 - GMRES no longer reads one past `yvec` when Arnoldi uses every
   column without reaching its tolerance. The column count is stored
   inside the loop and is what `k_matmul` uses. A finished DO index is

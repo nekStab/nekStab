@@ -44,4 +44,6 @@ Run on the SFD field `base_converged.f00001`. Leading mode sigma = 0.395
 at St = 0.206, against the observed St = 0.192. In `dRe1cyl0.f00001`,
 84% of v'^2 is downstream of x = 2 and the centroid is at x = 5.78.
 The tau stored in that file matches `base_converged.f00001` (correlation
-1.0); it is the base scalar, not the perturbation.
+1.0). It is not the perturbation: unsolved scalar slots were left untouched
+and the base values were written out. Outpost now zeros those slots before
+filling the ones the Krylov product solved.

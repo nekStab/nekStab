@@ -537,6 +537,10 @@ contains
             if (if3D) oks_fp_cz_s(1:nv) = matmul(oks_qz_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
             if (ifpo) oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:k_dim), vecs(1:k_dim, i))
 
+            ! Unsolved scalar slots are not in the Krylov product. Leaving
+            ! them untouched writes leftover base scalars into the eigenmode
+            ! file. Zero first, then fill the slots that were actually solved.
+            oks_fp_ct_s = (0.0d0, 0.0d0)
             if (ifto) oks_fp_ct_s(1:nt, 1) = matmul(oks_qt_s(1:nt, 1, 1:k_dim), vecs(:, i))
             if (ldimt > 1) then
                do m = 2, ldimt
