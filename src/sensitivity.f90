@@ -487,40 +487,41 @@ contains
       vx_aIm, vy_aIm, vz_aIm, pr_aIm, t_aIm)
 
       !     ----- Real part of the direct mode.
-      !     TODO(CHT): t_dRe etc. are dimension(lv) but norm/inner_product
-      !     expect (lt, ldimt). For CHT (lelt > lelv, lt > lv) this is a
-      !     stride mismatch that would corrupt inner products. Safe only
-      !     when lelt == lelv (no conjugate heat transfer).
+      !     Scalar slots are (lt, ldimt), the shape norm, inner_product,
+      !     and nopcopy require. A length-lv vector is short by ldimt
+      !     when ldimt > 1 (every RANS SIZE). ifx rejects that as #7983.
       real, dimension(lv), intent(inout) :: vx_dRe, vy_dRe, vz_dRe
-      real, dimension(lv), intent(inout) :: t_dRe
+      real, dimension(lt, ldimt), intent(inout) :: t_dRe
       real, dimension(lp), intent(inout) :: pr_dRe
 
       !     ----- Imaginary part of the direct mode.
       real, dimension(lv), intent(inout) :: vx_dIm, vy_dIm, vz_dIm
-      real, dimension(lv), intent(inout) :: t_dIm
+      real, dimension(lt, ldimt), intent(inout) :: t_dIm
       real, dimension(lp), intent(inout) :: pr_dIm
 
       !     ----- Real part of the adjoint mode.
       real, dimension(lv), intent(inout) :: vx_aRe, vy_aRe, vz_aRe
-      real, dimension(lv), intent(inout) :: t_aRe
+      real, dimension(lt, ldimt), intent(inout) :: t_aRe
       real, dimension(lp), intent(inout) :: pr_aRe
 
       !     ----- Imaginary part of the adjoint mode.
       real, dimension(lv), intent(inout) :: vx_aIm, vy_aIm, vz_aIm
-      real, dimension(lv), intent(inout) :: t_aIm
+      real, dimension(lt, ldimt), intent(inout) :: t_aIm
       real, dimension(lp), intent(inout) :: pr_aIm
 
       !     ----- Temporary arrays (allocatable to avoid stack overflow).
-      real, allocatable, dimension(:) :: wk1_vx, wk1_vy, wk1_vz, wk1_t
+      real, allocatable, dimension(:) :: wk1_vx, wk1_vy, wk1_vz
       real, allocatable, dimension(:) :: wk1_pr
 
-      real, allocatable, dimension(:) :: wk2_vx, wk2_vy, wk2_vz, wk2_t
+      real, allocatable, dimension(:) :: wk2_vx, wk2_vy, wk2_vz
       real, allocatable, dimension(:) :: wk2_pr
+      real, allocatable, dimension(:, :) :: wk1_t, wk2_t
 
       real :: alpha, beta, gamma, delta
 
-      allocate (wk1_vx(lv), wk1_vy(lv), wk1_vz(lv), wk1_t(lv), wk1_pr(lp))
-      allocate (wk2_vx(lv), wk2_vy(lv), wk2_vz(lv), wk2_t(lv), wk2_pr(lp))
+      allocate (wk1_vx(lv), wk1_vy(lv), wk1_vz(lv), wk1_pr(lp))
+      allocate (wk2_vx(lv), wk2_vy(lv), wk2_vz(lv), wk2_pr(lp))
+      allocate (wk1_t(lt, ldimt), wk2_t(lt, ldimt))
 
       !     --> Ensure that the direct mode is normalize to || u || = 1
       call norm(vx_dRe, vy_dRe, vz_dRe, pr_dRe, t_dRe, alpha)

@@ -46,6 +46,11 @@ description for the 2.0 series; entries here are the per-tag deltas.
 - The Newton residual log starts `k_sum` at 0. `k_out` is a saved
   count of the previous GMRES columns and is added before GMRES runs;
   without an initial value the first row was undefined.
+- Biorthogonalization passes scalar fields with shape `(lt, ldimt)`.
+  The old length-`lv` arrays were short by `ldimt` on every RANS
+  `SIZE`, so ifx rejected the build (error #7983) before it could
+  link.
+
 
 - Krylov normalization rejects a non-finite norm (NaN or Inf) before
   scaling. An infinite norm used to pass the NaN test, become a zero
