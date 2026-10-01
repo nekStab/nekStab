@@ -1611,7 +1611,7 @@ FLOW_FAMILIES["cylinder_re1m"] = FlowFamily(
     family_id="cylinder_re1m",
     label="Cylinder (High-Re RANS)",
     geometry_kind="2D-cylinder",
-    why_note="RANS high-Re cylinder; direct lane only via finite-difference/fyndiff; adjoint not promised",
+    why_note="RANS high-Re cylinder. Two direct operators on the same 2D mesh: coupled (full RANS Frechet) and quasilaminar (prescribed base eddy viscosity). Adjoint not promised",
 )
 
 FLOW_FAMILIES["cylinder_re180"] = FlowFamily(
@@ -1655,7 +1655,7 @@ CASES["cylinder/RANS/re1m"] = MethodCase(
 
 CAPABILITY_MATRIX.update({
     ("cylinder_re1m", "dns"):              CapabilityState.IMPLEMENTED,
-    ("cylinder_re1m", "baseflow"):         CapabilityState.NOT_APPLICABLE,
+    ("cylinder_re1m", "baseflow"):         CapabilityState.IMPLEMENTED,
     ("cylinder_re1m", "direct"):           CapabilityState.SPECIAL_DIRECT_ONLY,
     ("cylinder_re1m", "adjoint"):          CapabilityState.NOT_APPLICABLE,
     ("cylinder_re1m", "floquet"):          CapabilityState.NOT_APPLICABLE,
@@ -1665,7 +1665,7 @@ CAPABILITY_MATRIX.update({
     ("cylinder_re1m", "otd"):              CapabilityState.NOT_APPLICABLE,
     ("cylinder_re1m", "modal"):            CapabilityState.NOT_APPLICABLE,
     ("cylinder_re1m", "rans"):             CapabilityState.IMPLEMENTED,
-    ("cylinder_re1m", "sfd"):              CapabilityState.NOT_APPLICABLE,
+    ("cylinder_re1m", "sfd"):              CapabilityState.IMPLEMENTED,
     ("cylinder_re1m", "boostconv"):        CapabilityState.NOT_APPLICABLE,
     ("cylinder_re1m", "dmt"):              CapabilityState.NOT_APPLICABLE,
     ("cylinder_re1m", "tdf"):              CapabilityState.NOT_APPLICABLE,
