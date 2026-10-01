@@ -1,6 +1,6 @@
 [GENERAL]
 # Cold start from useric (ux=1, tke=0.01, tau=0.20). Proven k-tau RANS
-# operating point is Re=40000 on this 2D (1464-elem) mesh; the dir targets
+# operating point is Re=40000 on this 2D (1480-elem) mesh; the dir targets
 # Re=1e6, reached by continuation once the Re=40000 base flow is converged.
 # startFrom =            # cold start (RANS relaxes from inflow IC)
 
