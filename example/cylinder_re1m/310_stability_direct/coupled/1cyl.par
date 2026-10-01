@@ -1,7 +1,7 @@
 [GENERAL]
-startFrom = 0 # BF_1cyl0.f00001
+startFrom = base_converged.f00001 # converged steady RANS mean (SFD, residual ~5e-4)
 stopAt = endTime
-endTime = 200.0
+endTime = 1.0      # sampling period per Arnoldi vector (~1/5 leading-mode period at St=0.192); NOT a long DNS
 
 userParam01 = 3.1   # direct stability (FD-Frechet via iffindiff in .usr)
 userParam02 = 0     # krylov snapshot to load - output frequency for statistics
@@ -10,19 +10,22 @@ userParam03 = 0     # stabilization technique: 1:sfd - surface
 # userParam04 = 0.25   # freq (Strouhal leading mode)
 # userParam05 = 0.25   # gain (twice growth rate leading mode)
 # Casacuberta
-userParam04 = -0.133   # freq (Strouhal leading mode)
+userParam04 = -0.192   # freq (measured leading-mode St from the wake probe FFT)
 userParam05 = 0.147   # sigma
 userParam06 = 0     # AoA
-userParam07 = 200   # k_dim
+userParam07 = 100   # k_dim. The coupled operator is a documented NEGATIVE result:
+                    # its near-wall k-tau continuum (sigma~2.5-3.9) buries the
+                    # physical wake mode; doubling k_dim->200 only lowered the floor
+                    # 2.50->2.27 (see Spectre_NSd_kdim100.dat vs the kdim200 run).
 userParam08 = 0     # sponge lenght left
 userParam09 = 0     # sponge lenght right
 userParam10 = 0     # sponge strenght
 
-dt = 0.2 # St=1 -> dt=1/2*St_tar = 0.5
-variableDt = yes
+dt = 0.005 # constant dt for the linear operator; CFL~0.5 (no OIFS). Small because the
+           # k-tau source is stiff (a CFL=5 march blew up at t=8.5) and a small dt keeps
+           # the FD-Frechet integration clean. variableDt off = consistent Frechet operator.
+variableDt = no
 timeStepper = bdf3
-targetCFL = 2.5
-extrapolation = OIFS
 
 writeControl = runTime
 writeInterval = 10.0
@@ -41,6 +44,7 @@ stressFormulation = yes
 numberOfBCFields = 1
 
 [PRESSURE]
+preconditioner = semg_xxt
 residualTol = 1.0e-5
 residualProj = yes
 
@@ -57,10 +61,10 @@ residualTol = 1.0e-6
 
 [SCALAR01] #tke
 density = 1.0
-diffusivity = -40000.0
+diffusivity = -1000000.0
 residualTol = 1.0e-6
 
 [SCALAR02] #tau
 density = 1.0
-diffusivity = -40000.0
+diffusivity = -1000000.0
 residualTol = 1.0e-6
