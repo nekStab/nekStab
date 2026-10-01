@@ -176,7 +176,7 @@ contains
       integer :: total_gmres_calls ! Track GMRES calls per Newton iteration
       integer :: total_calls = 0, nonlin_calls = 0, lin_calls = 0 ! Call counters
       integer :: prev_total_calls = 0 ! Track calls from previous iteration
-      integer, save :: k_out ! Store k from GMRES
+      integer, save :: k_out = 0 ! Columns from the previous GMRES; 0 before the first
       integer, save :: k_sum = 0 ! Accumulator for total k values across Newton iterations
       integer :: alloc_stat
       real :: saved_tol21, saved_tol22 ! Save/restore param(21:22)

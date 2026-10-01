@@ -43,6 +43,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
   `intent(out)`, so a Krylov-Schur restart formally discarded the
   Schur block it had just condensed. The factorization only writes
   the new columns.
+- The Newton residual log starts `k_sum` at 0. `k_out` is a saved
+  count of the previous GMRES columns and is added before GMRES runs;
+  without an initial value the first row was undefined.
+
 - Krylov normalization rejects a non-finite norm (NaN or Inf) before
   scaling. An infinite norm used to pass the NaN test, become a zero
   scale factor, and write NaN into the next Krylov vector.
