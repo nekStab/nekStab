@@ -1639,8 +1639,8 @@ CASES["cylinder/RANS/re1m"] = MethodCase(
     mode_name="RANS",
     legacy_uparam01=None,
     expected_behavior=(
-        "RANS model for high-Re cylinder; direct lane only (finite-difference style); "
-        "adjoint not applicable"
+        "Coupled RANS Frechet at Re=1e6. Sibling quasilaminar/ prescribes the base eddy viscosity. "
+        "Adjoint not applicable"
     ),
     status=CaseStatus.PARTIAL,
     compute_class=ComputeClass.MANUAL_ONLY,
