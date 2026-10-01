@@ -430,9 +430,7 @@ contains
       call bcast(param(21:22), 2*wdsize)
 
       if (nid == 0) then
-         if (newton_open) then
-            write (6, *) 'Reached maxiter_newton. STOPPING! (verify convergence)'
-         else
+         if (residual < dtol) then
             if (isNewtonFP) then
                write (6, *) 'NEWTON finished successfully after', nnewton, 'iterations.'
             elseif (isNewtonPO) then
@@ -442,10 +440,15 @@ contains
                write (6, *) 'NEWTON for forced UPO finished successfully', nnewton, 'iterations.'
                write (6, *) ' period found:', time, 1.0d0/time
             end if
-            write (6, *) 'Calls to the linearized solver: ', total_calls
-            write (6, *) 'Total nondimensional time:', tottime
-            if (ifdyntol) write (6, *) 'ifdyntol active!'
+         else if (newton_open) then
+            write (6, *) 'Reached maxiter_newton. STOPPING! (verify convergence)'
+         else
+            write (6, *) 'NEWTON stopped after', nnewton, &
+               'iterations without reaching the target residual.'
          end if
+         write (6, *) 'Calls to the linearized solver: ', total_calls
+         write (6, *) 'Total nondimensional time:', tottime
+         if (ifdyntol) write (6, *) 'ifdyntol active!'
       end if
 
       !     Output converged solution (time = orbit period)
