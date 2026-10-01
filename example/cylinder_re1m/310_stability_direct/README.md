@@ -1,9 +1,19 @@
 # cylinder_re1m/310_stability_direct
 
 **Stage**: stability direct
-**Variants**: findiff
+**Variants**: coupled, quasilaminar
 
 This stage has multiple variants that share the same dispatch subroutine but
 use different parameter choices. Each variant lives in its own subdirectory.
+
+The two variants are the two RANS stability operators, run on the same SFD
+steady RANS base (`base_converged.f00001`):
+
+- `coupled/` — full RANS Frechet (`iffindiff` alone): velocity + k + tau
+  perturbed, eddy viscosity responds. Documented negative result: leading
+  cluster sigma ~ 3.9, continuum floor ~ 2.27 at k_dim=200.
+- `quasilaminar/` — hydrodynamic operator (`iffindiff` + `ifquasilaminar`):
+  velocity-only perturbation, base eddy viscosity prescribed. Leading mode
+  sigma = 0.395 at St = 0.206, vs observed St = 0.192.
 
 Cross-variant residual decay plot: `scripts/nstab_compare.py example/cylinder_re1m/310_stability_direct/`

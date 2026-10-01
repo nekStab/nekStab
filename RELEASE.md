@@ -35,6 +35,9 @@ for:
   operator is approximated via **finite differences** (`iffindiff =
   .true.`).  Example:
   - `example/cylinder_re1m/` — high-Reynolds cylinder wake, finite-difference direct stability
+    with both RANS operators as sibling stages: `310_stability_direct/coupled`
+    (full RANS Frechet) and `310_stability_direct/quasilaminar` (`ifquasilaminar`,
+    hydrodynamic operator with prescribed base eddy viscosity)
 - **Conjugate heat transfer (CHT)** — temperature lives on `lelt`
   elements while velocity lives on `lelv` elements (`lelt > lelv`),
   so `lt != lv`.  The old code used `lv` for temperature arrays,
@@ -429,7 +432,7 @@ whose reference runs are still pending.
       and validated (rc3)
 - [x] Tag `v2.0.0-rc3`
 - [ ] Finish the rerun campaign: `ref/` reference data for every remaining
-      stage (RANS findiff, cubic cavity, moving cylinder, thermal cylinder,
+      stage (RANS coupled/quasilaminar, cubic cavity, moving cylinder, thermal cylinder,
       wavemakers)
 - [ ] `check_against_ref.py` sweep across all migrated stages as the
       regression gate (replaces the old `validate.py` plan)

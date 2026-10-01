@@ -33,7 +33,7 @@ module nekstab_matvec
                                  istep, vxp, vyp, vzp, prp, tp, findiff_order, ampls, &
                                  coefs, ifheat, dTdx, dTdy, dTdz, ifbuoyancy, &
                                  buoyancy_qvol_wired,&
-                                 iffrozenEV, ifKEnorm, ldimt
+                                 ifquasilaminar, ifKEnorm, ldimt
    implicit none
    private
 
@@ -424,8 +424,8 @@ contains
 !     Scale the perturbation.
          call k_copy(pert, q)
          call k_cmult(pert, ampls(i))
-         ! School B: velocity-only KE norm (frozen eddy viscosity)
-         if (iffrozenEV) then
+         ! quasilaminar: velocity-only seed; k',tau' zeroed (mu_t prescribed)
+         if (ifquasilaminar) then
             do m = 1, ldimt
                call rzero(pert%t(1, m), nt)
             end do

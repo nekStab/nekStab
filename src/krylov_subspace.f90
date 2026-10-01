@@ -127,7 +127,7 @@ contains
 
       alpha = glsc3(px, qx, bm1s, nv) + glsc3(py, qy, bm1s, nv)
       if (if3D) alpha = alpha + glsc3(pz, qz, bm1s, nv)
-      if (ifto .and. .not. ifKEnorm) then  ! School B
+      if (ifto .and. .not. ifKEnorm) then  ! quasilaminar
          ! Temperature is scalar slot 1.
          !
          ! Keep the implementation local to the inner product so that:
@@ -142,7 +142,7 @@ contains
          temp_inner = glsc3(pt(:, 1), qt(:, 1), bm1s, nt)
          alpha = alpha + thermal_norm_weight*temp_inner
       end if
-      if (ldimt > 1 .and. .not. ifKEnorm) then  ! School B
+      if (ldimt > 1 .and. .not. ifKEnorm) then  ! quasilaminar
          do m = 2, ldimt
             ! Additional passive scalars currently keep unit weight.
             ! This preserves existing behavior while leaving a clean extension

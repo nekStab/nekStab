@@ -724,6 +724,9 @@ where L_x is the streamwise domain extent.
 | `epsilon_base` | 1e-6 | Perturbation scale ε for Jacobian approximation |
 | `ifdyntol` | .false. | Enable residual-proportional inner GMRES tolerances |
 | `ew_tol_cap` | 0.0 | Optional upper cap for dynamic tolerance (`0` = uncapped) |
+| `ifquasilaminar` | .false. | Quasilaminar RANS stability: velocity-only perturbation, base eddy viscosity prescribed (requires `iffindiff`; pair with `ifKEnorm`) |
+| `ifKEnorm` | .false. | Velocity-only kinetic-energy inner product (turbulence scalars excluded) |
+
 
 Newton iteration limits (30 Newton steps, 30 GMRES restarts) are hardcoded in `newton_krylov.f90`.
 

@@ -12,6 +12,18 @@ description for the 2.0 series; entries here are the per-tag deltas.
   outposts its best state instead of aborting: when no damped step can
   reduce the residual the current state is held, and three iterations
   without progress end the loop.
+- The two RANS stability operators in `example/cylinder_re1m/310_stability_direct/`
+  are renamed: `findiff/` becomes `coupled/` (the full RANS Frechet operator —
+  velocity, k and tau perturbed, eddy viscosity responding, still selected by
+  `iffindiff` alone) and `findiff_frozen/` becomes `quasilaminar/` (the
+  hydrodynamic operator — velocity-only perturbation, eddy viscosity
+  prescribed from the base flow). The `.usr` flag `iffrozenEV` is renamed to
+  `ifquasilaminar` in the same common-block slot, and `src/frozen_mut.f90`
+  becomes `src/base_mut.f90` (module `nekstab_base_mut`, procedures
+  `base_mut_capture`/`base_mut_get`/`base_mut_ready`/`base_mut_reset`, object
+  `base_mut.o`). The "School A"/"School B" names are retired; no aliases or
+  compatibility shims are kept.
+
 
 ### Fixed
 - GMRES no longer reads one past `yvec` when Arnoldi uses every

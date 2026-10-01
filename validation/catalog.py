@@ -1114,7 +1114,7 @@ CASES: dict[str, MethodCase] = {
     "cylinder/RANS": MethodCase(
         case_id="cylinder/RANS",
         flow_family="cylinder_re100", method_lane="rans",
-        current_path="example/cylinder_re1m/310_stability_direct/findiff",
+        current_path="example/cylinder_re1m/310_stability_direct/coupled",
         proposed_folder="example/cylinder_re100/700_rans", sort_prefix="700",
         label="Cylinder RANS", mode_name="RANS", legacy_uparam01=None,
         expected_behavior="RANS model for cylinder flow (partial, special direct-only lane)",
@@ -1123,7 +1123,7 @@ CASES: dict[str, MethodCase] = {
         evidence_requirements=(_REQ_IMG_OPT,),
         artifacts=(_img("validation/figures/cylinder_rans_Re100.png"),),
         why_note=(
-            "Shares example/cylinder_re1m/310_stability_direct/findiff/ with cylinder/RANS/re1m (different"
+            "Shares example/cylinder_re1m/310_stability_direct/coupled/ with cylinder/RANS/re1m (different"
             " target Re); both are valid catalog entries because target_Re differs"
         ),
     ),
@@ -1632,8 +1632,8 @@ CASES["cylinder/RANS/re1m"] = MethodCase(
     case_id="cylinder/RANS/re1m",
     flow_family="cylinder_re1m",
     method_lane="rans",
-    current_path="example/cylinder_re1m/310_stability_direct/findiff",
-    proposed_folder="example/cylinder_re1m/310_stability_direct_findiff",
+    current_path="example/cylinder_re1m/310_stability_direct/coupled",
+    proposed_folder="example/cylinder_re1m/310_stability_direct_coupled",
     sort_prefix="310",
     label="Cylinder High-Re RANS",
     mode_name="RANS",
@@ -1648,7 +1648,7 @@ CASES["cylinder/RANS/re1m"] = MethodCase(
         Re=1_000_000.0, geometry="cylinder_re100", motion="static", model="RANS"
     ),
     why_note=(
-        "Shares example/cylinder_re1m/310_stability_direct/findiff/ with cylinder/RANS (different target Re);"
+        "Shares example/cylinder_re1m/310_stability_direct/coupled/ with cylinder/RANS (different target Re);"
         " both are valid catalog entries because target_Re differs"
     ),
 )
