@@ -18,4 +18,4 @@ chapter 2, `Large-scale eigensolvers`.
 - `310_stability_direct/coupled/` is the coupled operator (full RANS Fréchet).
 - `310_stability_direct/quasilaminar/` is the quasilaminar operator (base eddy viscosity prescribed).
 
-The run mesh is each stage's `1cyl.re2`: 1480 elements, 2D. `310_stability_direct/quasilaminar/mesh/1cyl2d.re2` is an older 1464-element generator. It is not the mesh the spectra were computed on.
+The run mesh is each stage's `1cyl.re2`: 1480 elements. It has the same domain as the 1464-element generator `310_stability_direct/quasilaminar/mesh/1cyl2d.re2` (x in [-13.9, 48.1], y in [-13.5, 13.5]). The extra elements refine the cylinder neighbourhood (r < 1). Regenerating from that generator does not reproduce the run mesh.
