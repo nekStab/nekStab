@@ -118,6 +118,10 @@ jobs:
           fi
           # Set stack size (unlimited on Linux, skip on macOS)
           ulimit -s unlimited 2>/dev/null || true
+          # GitHub runners expose InfiniBand to UCX, then ibv_create_srq fails
+          # and MPICH aborts in MPI_Init. Stay on TCP and shared memory.
+          export UCX_TLS=tcp,self,sm
+          export FI_PROVIDER=tcp
           cd "$NEKSTAB_CI_CASE"
           echo "1cyl" > SESSION.NAME
           echo "$(pwd)/" >> SESSION.NAME
