@@ -13,9 +13,8 @@ chapter 2, `Large-scale eigensolvers`.
 
 ## Stages
 
-- `000_dns/` stores the nonlinear case scaffold.
-- `310_stability_direct/coupled/` is the coupled (full RANS Frechet)
-  direct-stability operator for this operating point;
-- `310_stability_direct/quasilaminar/` is the quasilaminar (hydrodynamic,
-  prescribed base eddy viscosity) direct-stability operator.
+- `000_dns/` is the nonlinear k-tau march on the 2D mesh (`lelg=1480`).
+- `110_baseflow_sfd/` builds the SFD mean the stability stages restart from.
+- `310_stability_direct/coupled/` is the coupled operator (full RANS Fréchet).
+- `310_stability_direct/quasilaminar/` is the quasilaminar operator (base eddy viscosity prescribed).
 

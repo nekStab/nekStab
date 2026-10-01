@@ -1,0 +1,77 @@
+[GENERAL]
+# SFD (Casacuberta) to converge the STEADY k-tau RANS mean at Re=1e6 (2D) -- the
+# base the 310 FD-Frechet stability stage needs. SFD is REQUIRED, not optional: the
+# steady solution is strongly unstable, so a bare forward march sheds at v~+/-0.87
+# (URANS), Newton diverges (k-tau non-smooth), and large dt blows up the stiff k-tau
+# source (CFL>10 at t=8.5). SFD adds temporal-filter feedback that pulls the flow
+# onto the unstable steady branch (it held the probe at v~+/-0.006). Small FIXED
+# dt=5e-3 (CFL~0.5, no OIFS) for a CLEAN converged solution + k-tau stability.
+# Restart continues the developed SFD field (sfdrst.f00001).
+startFrom = restart_t150.f00001 # continue from the developed t=150 field (job 868); SFD stays on to hold velocity steady while avg_all builds a long cumulative time-average of k,tau
+
+stopAt = endTime
+endTime = 200.0           # time resets to 0 on restart -> 200 t.u. CUMULATIVE average
+                          # (param68 huge = no mid-run reset). Stationarity already proven to
+                          # 0.07% over 1000 t.u., so 200 t.u. cumulative is well converged.
+                          # The clean averaged base is written as BFA1cyl0.f00001 at the last step.
+
+userParam01 = 1.1         # SFD baseflow (Casacuberta when uparam04 < 0). REQUIRED: the
+                          # steady RANS solution is strongly unstable (bare march = URANS).
+userParam04 = -0.192      # NEGATIVE -> Casacuberta; |val| = cutoff St. Set to the
+                          # MEASURED wake St=0.192 (FFT of mid-wake probe v over t>150);
+                          # the old 0.133 mistuned the filter -> residual limit-cycled ~0.08
+userParam05 = 0.5         # sigma (growth rate / gain knob): gain=-0.5(sqrt(w^2+s^2)+s).
+                          # Raised 0.147->0.5 (gain -0.68 -> -0.90): the cutoff fix alone
+                          # left a limit cycle, so test whether a stronger gain converges
+                          # the (apparently strongly unstable) RANS fixed point
+userParam07 = 200         # k_dim (unused by SFD; consumed by the 310 stage)
+
+dt = 0.001                # FIXED, CFL~0.1. Two reasons small: (1) the k-tau source is
+                          # stiff (a CFL=5 march blew up at t=8.5), (2) the SFD residual
+                          # floors at the time-discretization error -- dt=5e-3 plateaued at
+                          # ~5e-3, so dt=1e-3 lowers that floor for a CLEAR converged steady
+                          # RANS. No OIFS needed below CFL 1 (standard extrapolation).
+variableDt = no
+timeStepper = bdf3
+
+writeControl = runTime
+writeInterval = 20.0      # periodic base-flow checkpoints while SFD converges
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = hpfrt
+filterModes = 2
+filterWeight = 5.0
+
+[PROBLEMTYPE]
+variableProperties = yes
+stressFormulation = yes
+
+[MESH]
+numberOfBCFields = 1
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0e-5
+residualProj = yes
+
+[VELOCITY]
+density = 1.0
+viscosity = -1000000.0    # Re = 1e6
+residualTol = 1.0e-6
+
+[TEMPERATURE]
+solver = none
+rhoCp = 1.0
+conductivity = -1
+residualTol = 1.0e-6
+
+[SCALAR01]                # tke
+density = 1.0
+diffusivity = -1000000.0
+residualTol = 1.0e-6
+
+[SCALAR02]                # tau
+density = 1.0
+diffusivity = -1000000.0
+residualTol = 1.0e-6
