@@ -14,6 +14,24 @@ description for the 2.0 series; entries here are the per-tag deltas.
   without progress end the loop.
 
 ### Fixed
+- GMRES no longer reads one past `yvec` when Arnoldi uses every
+  column without reaching its tolerance. The column count is stored
+  inside the loop and is what `k_matmul` uses. A finished DO index is
+  not read: the standard leaves it undefined, and gfortran and ifort
+  set it one past the last column. `Q` is one longer than `yvec`, so
+  the illegal access was the coefficient, and the restart matvec then
+  died in `k_normalize`. An early exit still uses that column.
+  `arnoldi_factorization` had the same pattern on `mstep`, which is
+  why the residual matvec logged `from 101/100`; `mstep` now stays on
+  the column just built.
+- Krylov normalization rejects a non-finite norm (NaN or Inf) before
+  scaling. An infinite norm used to pass the NaN test, become a zero
+  scale factor, and write NaN into the next Krylov vector.
+- Newton aborts when the forward residual is not finite, at
+  `Computed residual:`, instead of falling through into GMRES. The
+  comparisons `residual < dtol` and `residual > 1e8 * initial` are both
+  false for NaN, so the failure was previously reported one step later
+  from `k_normalize`.
 - Newton backtracking with periodic-orbit modes evaluates each trial at
   its damped period: the time horizon (`nsteps`) is re-prepared per
   trial and the orbit storage grows when a trial orbit is longer than

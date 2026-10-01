@@ -291,10 +291,12 @@ contains
       !     --> Compute the user-defined norm.
       call k_norm(alpha, p)
 
-      if (alpha /= alpha) then
+      !     --> Reject NaN and Inf before scaling. Inf passes alpha /= alpha,
+      !         1/Inf is 0, and 0*Inf then writes NaN into the next vector.
+      if (.not. (alpha == alpha .and. abs(alpha) < huge(alpha))) then
          if (nid == 0) write (6, *) &
-            'ERROR [k_normalize]: NaN norm; refusing to zero Krylov vector.'
-         call exitti('k_normalize NaN norm$', 1)
+            'ERROR [k_normalize]: non-finite norm (NaN or Inf); refusing to scale Krylov vector.'
+         call exitti('k_normalize non-finite norm$', 1)
       end if
 
       !     --> Warn if norm is dangerously small (but don't modify alpha).

@@ -290,6 +290,16 @@ contains
 
          !     Check residual || f(q) ||! L2 norm: square root of dot product with weighted norms by bm1s
          call k_norm(residual, f) ! Computes ||f||
+         !     NaN and Inf fail both residual < dtol and the divergence guard,
+         !     so a blown-up forward map would otherwise die later in k_normalize.
+         if (.not. (residual == residual .and. abs(residual) < huge(residual))) then
+            if (nid == 0) then
+               write (6, *) '  Computed residual:', residual
+               write (6, *) &
+                  'ERROR: Newton forward residual is not finite; the time stepper returned a non-finite field.'
+            end if
+            call exitti('newton non-finite forward residual$', 1)
+         end if
          residual = residual**2 ! squared L2 norm for consistent convergence check with GMRES
          if (nid == 0) write (6, *) '  Computed residual:', residual
 
@@ -681,7 +691,7 @@ contains
       real, dimension(:, :), allocatable :: H
       real, dimension(:), allocatable :: yvec, evec
       real :: beta, beta2
-      integer :: i, j, k ! Added m for orthogonalization loop
+      integer :: i, j, k, nbasis ! nbasis: columns actually built (not the DO index)
       real :: gmres_start_time, gmres_iter_time
       real :: prev_beta2 = 0.0d0
       real :: arnoldi_start_time, arnoldi_iter_time
@@ -714,6 +724,7 @@ contains
       call k_normalize(Q(1), beta)
       beta2 = beta**2 ! L2 norm squared for convergence check
 
+      nbasis = 0
       gmres: do i = 1, maxiter
          if (nid == 0) write (6, *) '  ------------------------------------'
          gmres_start_time = dnekclock()
@@ -730,7 +741,16 @@ contains
             call k_zero(Q(j))
          end do
 
-         arnoldi: do k = 1, k_dim
+         !     Bound the loop by ksize, the length of yvec and of H's
+         !     columns. k_dim is what callers pass, but the arrays in this
+         !     routine are allocated from ksize.
+         arnoldi: do k = 1, ksize
+
+            !     Count the column here. A finished DO leaves its index
+            !     undefined (gfortran and ifort set it to one past the
+            !     limit; an EXIT leaves the last column). The update below
+            !     must not read that index: yvec is only ksize long.
+            nbasis = k
 
             if (nid == 0) write (6, "('    ARNOLDI [GMRES ',I3,'/',I3,'] Starting iteration ', I3, '/', I3) ") &
                i, maxiter, k, ksize
@@ -794,8 +814,11 @@ contains
             end if
          end do arnoldi
 
-         !     Update solution using Krylov basis and coefficients
-         call k_matmul(dq, Q(1:k), yvec(1:k), k)
+         !     Update solution using Krylov basis and coefficients.
+         !     nbasis is the last column whose least-squares solve filled
+         !     yvec. It is ksize when the subspace is full, and the exit
+         !     column when the residual test fires first.
+         call k_matmul(dq, Q(1:nbasis), yvec(1:nbasis), nbasis)
          call k_add2(sol, dq)
 
          !     Verify residual and prepare for next restart if needed
@@ -808,13 +831,13 @@ contains
             write (6, "('  GMRES   - Finished iteration:',I3,'/',I3, ' residual:', 1PE15.6) ") i, maxiter, beta2
             if (i > 1) then ! Only show rate after first iteration
                write (6, "('           Rate:',1PE15.6,' Time:',1PE15.6, &
-            &      's  Arnoldi steps:', I4) ") beta2/prev_beta2, gmres_iter_time, k
+            &      's  Arnoldi steps:', I4) ") beta2/prev_beta2, gmres_iter_time, nbasis
             else
                write (6, "('           Time:',1PE15.6,'s  Arnoldi steps:', I4) ") &
-                  gmres_iter_time, k
+                  gmres_iter_time, nbasis
             end if
-            gmres_k_sum = gmres_k_sum + k ! Update accumulator after writing
-            write (gmres_log_unit, "(4I9,3(1PE15.6))") newton_iter, i, k, gmres_k_sum, tol, beta2, dtol
+            gmres_k_sum = gmres_k_sum + nbasis ! Update accumulator after writing
+            write (gmres_log_unit, "(4I9,3(1PE15.6))") newton_iter, i, nbasis, gmres_k_sum, tol, beta2, dtol
 
             prev_beta2 = beta2
             write (6, *) '  ------------------------------------'
@@ -831,7 +854,7 @@ contains
       !     ----- Deallocate arrays -----
       deallocate (Q, H, yvec, evec)
 
-      k_out = k ! Save final k value
+      k_out = nbasis ! Save final column count
 
       if (opened_local_logs) call close_gmres_log_units()
 

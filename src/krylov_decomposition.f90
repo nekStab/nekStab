@@ -73,6 +73,7 @@ contains
       !     ----- Miscellaneous -----
       real :: alpha
       integer, intent(in) :: mstart, mend, ksize
+      integer :: step
 
       !     ----- Timer -----
       real :: eetime0, eetime1, telapsed, tmiss, avg_time
@@ -96,7 +97,12 @@ contains
 
       !     --> Arnoldi factorization.
       eetime0 = dnekclock() ! Start time for entire process
-      do mstep = mstart, mend
+      !     Drive the loop with a local index and copy it into mstep.
+      !     mstep is what matvec prints. A completed DO would leave it
+      !     one past mend, so the residual matvec after a full subspace
+      !     logged "from <k_dim+1>/<k_dim>".
+      do step = mstart, mend
+         mstep = step
 
          if (mstart < mend) then
             if (nid == 0) write (6, "('        ARNOLDI - Starting iteration ',I3,'/',I3)") mstep, mend
