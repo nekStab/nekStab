@@ -98,24 +98,42 @@ def main():
         print(f'Saved {CASE_DIR / "plot_spectrum.png"}')
         plt.close(fig)
 
-    # PANEL 3 — MODE (direct Floquet vy, RdBu)
-    mode = find_mode(CASE_DIR)
-    if mode:
+    # PANEL 3 — μ=+1 phase mode, which is ∂t of the periodic base flow.
+    # The stored dRe files from the 23 June run are outlet waves, not this.
+    orbit = CASE_DIR.parents[0] / '410_postproc_animate_modes' / 'upo'
+    f0 = orbit / '1cyl0.f00001'
+    f1 = orbit / '1cyl0.f00002'
+    if f0.is_file() and f1.is_file():
+        x0, y0, a, t0 = nk.read_field(str(f0))
+        x1, y1, b, t1 = nk.read_field(str(f1))
+        dt = t1 - t0
+        q = (b['vy'] - a['vy']) / dt
+        xlim, ylim = (-2.0, 20.0), (-4.0, 4.0)
+        inside = ((x0 >= xlim[0]) & (x0 <= xlim[1])
+                  & (y0 >= ylim[0]) & (y0 <= ylim[1]))
+        bd = float(np.nanpercentile(np.abs(q[inside]), 99))
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.4))
-        cf = render_cyl_field(ax, mode, what='vy', cmap='RdBu',
-                              symmetric=True)
-        if cf is not None:
-            bd = float(max(abs(cf.get_clim()[0]), abs(cf.get_clim()[1])))
-            bdr = round(bd, 2)
-            nk.inset_colorbar(ax, cf, orientation='horizontal',
-                              width='50%', height='5%', loc=9,
-                              ticks=[-bdr, bdr],
-                              tick_labels=[f'{-bdr}', f'{bdr}'])
-        fig.savefig(CASE_DIR / 'plot_mode.png', dpi=600, bbox_inches='tight')
-        print(f'Saved {CASE_DIR / "plot_mode.png"}')
+        triang = nk.make_triangulation(x0, y0)
+        cf = nk.tricontourf(ax, triang, q, levels=257, cmap='RdBu_r',
+                            vmin=-bd, vmax=bd, extend='both')
+        nk.add_cylinder_patches(ax)
+        ax.set_xlim(*xlim)
+        ax.set_ylim(*ylim)
+        ax.set_aspect('equal')
+        ax.set_xlabel(r'$x$', labelpad=-1)
+        ax.set_ylabel(r'$y$', labelpad=1)
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        bdr = round(bd, 2)
+        nk.inset_colorbar(ax, cf, orientation='horizontal',
+                          width='50%', height='5%', loc=9,
+                          ticks=[-bdr, bdr],
+                          tick_labels=[f'{-bdr}', f'{bdr}'])
+        fig.savefig(CASE_DIR / 'plot_mode.png', dpi=160, bbox_inches='tight')
+        print(f'Saved phase mode d(v)/dt, dt={dt:.4f}, window p99={bd:.3f}')
         plt.close(fig)
     else:
-        print('INFO: no direct Floquet mode file found — plot_mode.png skipped')
+        print('INFO: no orbit frames for the phase mode — plot_mode.png skipped')
 
 
 if __name__ == '__main__':
