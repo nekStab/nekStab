@@ -309,6 +309,7 @@
          use nekstab_diagnostics, only: nekStab_printNEKParams
          use nekstab_forcing_mod, only: activate_sponge
          use nekstab_vectors, only: zero_forcing
+         use nekstab_reynolds, only: reynolds_enabled, reynolds_load
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -368,6 +369,10 @@
              if (ifheat) call configure_thermal_norm_weight()
 
              call zero_forcing
+      ! Reynolds-stress force: enabled by reynolds_enable in usrchk, loaded
+      ! once here while the restart still sits in vx,vy,vz, then kept for
+      ! the run. zero_forcing clears only fcx/fcy/fcz, not this field.
+             if (reynolds_enabled()) call reynolds_load
 
              isNekStabinit = .true.
          elseif (nid == 0) then

@@ -15,7 +15,7 @@
 !   fringe_step          — smooth step function for fringe profiles
 !
 ! Dependencies:
-!   nekstab_nek_bridge, krylov_subspace
+!   nekstab_nek_bridge, krylov_subspace, nekstab_reynolds
 !-----------------------------------------------------------------------
 
 module nekstab_forcing_mod
@@ -29,6 +29,7 @@ module nekstab_forcing_mod
                                  lx1, ly1, lz1, lelv, xm1, ym1, zm1, fct, nid, bm1s, &
                                  ifto, ifpo, ldim, ndim, xmn, xmx, ymn, ymx, zmn, zmx, &
                                  nfield
+   use nekstab_reynolds, only: reynolds_add
    implicit none
    private
    public :: nekStab_forcing, nekStab_forcing_temp, &
@@ -125,6 +126,12 @@ contains
          ffy = ffy - otdfy(ip, jp)
          if (if3D) ffz = ffz - otdfz(ip, jp)
       end if
+
+      ! Frozen Reynolds-stress force: state-independent, so only on the
+      ! jp == 0 residual. It is present in every finite-difference
+      ! evaluation and cancels in the difference; an analytic
+      ! perturbation equation does not gain a constant source.
+      if (jp == 0) call reynolds_add(ffx, ffy, ffz, ix, iy, iz, iel)
 
    end subroutine nekStab_forcing
 

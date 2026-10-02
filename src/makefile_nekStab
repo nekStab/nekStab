@@ -39,6 +39,7 @@ $(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      $(O)/nekstab_nek_bridge.o 
 # Called only from the case .usr (receives rans_mut as a procedure arg), so
 # it carries no RANS dependency and is a pure leaf on the bridge.
 $(O)/base_mut.o:          $(NS)/base_mut.f90          $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/reynolds_force.o: $(NS)/reynolds_force.f90 $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 1: krylov_subspace (depends on nekstab_vectors)
@@ -59,7 +60,7 @@ $(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O
 $(O)/noise.o:             $(NS)/noise.f90             $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/statistics.o:        $(NS)/statistics.f90        $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o $(O)/otd.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o $(O)/otd.o $(O)/reynolds_force.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/diagnostics.o:       $(NS)/diagnostics.f90       $(O)/krylov_subspace.o $(O)/vortex.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o $(O)/noise.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/fst.o:               $(NS)/fst.f90               $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
@@ -103,7 +104,7 @@ $(O)/main.o: $(NS)/main.f90 NEKSTAB.inc SIZE \
    $(O)/otd.o $(O)/fst.o $(O)/forcing.o $(O)/diagnostics.o \
    $(O)/energy_budget.o $(O)/IO.o $(O)/modal_analysis.o \
    $(O)/statistics.o $(O)/noise.o $(O)/probes.o $(O)/torque.o \
-   $(O)/vortex.o $(O)/matvec.o \
+   $(O)/vortex.o $(O)/matvec.o $(O)/reynolds_force.o \
    ;$(FC) -c $(FL2) $< -o $@
 
 $(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
@@ -113,7 +114,7 @@ $(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
 # .usr compilation needs .mod files from nekStab modules.
 # GNU Make merges prerequisites from multiple rules for the same target.
 # ─────────────────────────────────────────────────────────────────────
-$(USRF): SIZE NEKSTAB.inc $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o $(O)/base_mut.o
+$(USRF): SIZE NEKSTAB.inc $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o $(O)/base_mut.o $(O)/reynolds_force.o
 
 # ─────────────────────────────────────────────────────────────────────
 # Catch-all for case-local .f90 files (e.g., torus_utils.f90)

@@ -78,7 +78,7 @@ single steady or periodic operator.
 | `example/cylinder_re100/` | 2D cylinder wake, Re = 50-100 | DNS, SFD, BoostConv, Newton, direct/adjoint stability, mode animation, wavemaker, steady force sensitivity, OTD, POD/DMD/SPOD |
 | `example/cylinder_re180/` | 2D cylinder wake, Re = 180 | Newton UPO, direct/adjoint Floquet stability, Floquet mode animation, OTD |
 | `example/cylinder_re30_thermal/` | Thermally coupled cylinder wake, Re = 30 | Newton thermal baseflow |
-| `example/cylinder_re1m/` | Cylinder wake, Re = 1e6 | DNS, RANS direct stability (coupled and quasilaminar operators) |
+| `example/cylinder_re1m/` | Cylinder wake, Re = 1e6 | SFD base, direct stability of that imperfect base (coupled and quasilaminar). Mean-flow stability not run. |
 | `example/back_fstep_re500/` | Backward-facing step, Re = 500 | Newton baseflow, transient growth |
 | `example/flip_flop_re62/` | Side-by-side cylinders, Re = 62 | DNS, Newton UPO, direct/adjoint Floquet stability, wavemaker |
 | `example/tpjet_re2005/` | Triple-port jet, mixed Re = 1900/2005 | DMT baseflow, forced periodic orbit, direct Floquet stability |

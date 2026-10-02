@@ -413,6 +413,7 @@ USR+=" lapack_wrapper.o"
 USR+=" fixedp.o"
 USR+=" dmt.o"
 USR+=" otd.o"
+USR+=" reynolds_force.o"
 USR+=" forcing.o"
 USR+=" main.o"
 # mode_codes.o: MODE_* integer parameters used by mode_config.o

@@ -5,6 +5,16 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [Unreleased]
 
+### Added
+- Resolved Reynolds stress can be formed from the `avg_all` moments and
+  applied as a frozen momentum force. `reynolds_commit` writes `RS1`,
+  `RS2`, and `FRS` (`f = -div(R)`) and does not arm them. The force is
+  off unless the case calls `reynolds_enable` from `nekStab_usrchk`;
+  `nekStab_init` then loads `FRS<session>0.f00001` once, and the stored
+  force is kept for the run and added in `userf` when `jp == 0`, so a
+  finite-difference spectrum about the mean does not differentiate it.
+  This is the fluctuation correlation, not the k-tau closure.
+
 ### Changed
 - Newton residual backtracking is now enabled by default; a case can
   still disable it by setting `ifnewton_backtrack = .false.` in the
@@ -29,6 +39,7 @@ description for the 2.0 series; entries here are the per-tag deltas.
   the Krylov product did not solve. Unsolved scalar slots are zeroed
   before the active ones are filled. A quasilaminar run had been
   writing the base tau into every mode file.
+
 - GMRES no longer reads one past `yvec` when Arnoldi uses every
   column without reaching its tolerance. The column count is stored
   inside the loop and is what `k_matmul` uses. A finished DO index is

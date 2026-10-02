@@ -943,6 +943,7 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `nekstab_diagnostics` | `diagnostics.f90` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort`, `norm_grad`, `smooth_field`, `nekStab_outpost`, `nekStab_comment`, `nekStab_printNEKParams` |
 | `nekstab_vortex` | `vortex.f90` | `vortex_core`, `compute_omega_jc`, `compute_omega`, `compute_q`, `compute_delta`, `compute_swirling` |
 | `nekstab_statistics` | `statistics.f90` | `nekStab_avg` |
+| `nekstab_reynolds` | `reynolds_force.f90` | `reynolds_commit`, `reynolds_load`, `reynolds_add`, `reynolds_enable`, `reynolds_enabled`, `reynolds_armed` |
 | `nekstab_noise` | `noise.f90` | `add_noise_scal`, `op_add_noise`, `add_symmetric_seed`, `mth_rand` |
 | `nekstab_probes` | `probes.f90` | `pointcheck`, `zero_crossing` |
 | `nekstab_torque_mod` | `torque.f90` | `nekStab_torque`, `nekStab_define_obj` |
