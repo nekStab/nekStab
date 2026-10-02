@@ -163,8 +163,9 @@ def test_index_has_cards() -> None:
     assert soup().select(".card")
 
 
-def test_index_has_zoom_links() -> None:
-    assert soup().select("a.zoom")
+def test_index_has_thumb_buttons() -> None:
+    thumbs = soup().select("button.thumb")
+    assert any(t.get("data-img-src") for t in thumbs)
 
 
 def test_index_has_copyable() -> None:

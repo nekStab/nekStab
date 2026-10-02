@@ -92,20 +92,20 @@ test('copy action fires on .copyable click', async ({ page, context }) => {
     await expect(page.locator('.card').first()).toBeVisible();
 });
 
-test('lightbox opens on a.zoom click', async ({ page }) => {
+test('lightbox opens on a thumb click', async ({ page }) => {
     await openGallery(page);
 
-    const zoomLink = page.locator('a.zoom').first();
-    await expect(zoomLink).toBeVisible();
-    await zoomLink.click();
+    const thumb = page.locator('button.thumb[data-img-src]').first();
+    await expect(thumb).toBeVisible();
+    await thumb.click();
 
     // Lightbox must become visible within 3 s
-    await expect(page.locator('.lightbox.open')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#lightbox')).toBeVisible({ timeout: 3000 });
 
     // Escape closes it
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
-    await expect(page.locator('.lightbox.open')).not.toBeVisible();
+    await expect(page.locator('#lightbox')).not.toBeVisible();
 });
 
 test('recompile and resubmit buttons exist on cards', async ({ page }) => {

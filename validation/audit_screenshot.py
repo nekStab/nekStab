@@ -110,10 +110,10 @@ def main() -> None:
         print('hover ✓', OUT / 'hover.png')
 
         # 5. lightbox open
-        # click an actual <a.zoom> (not just .card — some cards have no PNG)
-        zoom_link = page.locator('a.zoom').first
-        zoom_link.click()
-        page.wait_for_selector('.lightbox.open', timeout=2000)
+        # click a thumb that has an image (not just .card — some cards have no PNG)
+        thumb = page.locator('button.thumb[data-img-src]').first
+        thumb.click()
+        page.wait_for_selector('#lightbox:not([hidden])', timeout=2000)
         page.wait_for_timeout(400)  # fade-in settle
         page.screenshot(path=str(OUT / 'lightbox.png'), full_page=False)
         print('lightbox ✓', OUT / 'lightbox.png')

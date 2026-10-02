@@ -36,8 +36,8 @@ REQUIRED_CYLINDER_CASES = (
     "cylinder/dns",
     "cylinder/ci_test",
     "cylinder/baseflow/sfd",
-    "cylinder/baseflow/sfd_dyn",
-    "cylinder/baseflow/sfd_dyn_oifs",
+    "cylinder/baseflow/sfd_akervik_dyn",
+    "cylinder/baseflow/sfd_akervik_dyn_oifs",
     "cylinder/baseflow/boostconv",
     "cylinder/baseflow/newton",
     "cylinder/baseflow/newton_dyn",
@@ -56,13 +56,11 @@ REQUIRED_CYLINDER_CASES = (
     "cylinder/RANS",
 )
 
+# Floquet, Floquet animation and OTD at Re=180 left this list once they were
+# run on the DNS orbit (validated). The Newton stages still need their seed.
 POST_MESH_UNIFICATION_NEEDS_SEED = (
     "cylinder/baseflow/newton_dyn_temp",
     "cylinder/baseflow/newton_upo",
-    "cylinder/stability/direct_Floquet",
-    "cylinder/stability/adjoint_Floquet",
-    "cylinder/stability/animate_modes_with_UPO",
-    "cylinder/otd",
 )
 
 
