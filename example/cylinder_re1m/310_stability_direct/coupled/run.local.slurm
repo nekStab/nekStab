@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=re1m-coupled
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=2000

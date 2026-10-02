@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=cylinder_re1m-dns
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=8
 #SBATCH --mem-per-cpu=2000

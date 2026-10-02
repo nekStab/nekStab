@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=cav-dns
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=3000

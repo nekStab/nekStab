@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=cubic_cavity_re1914-320_stability_adjoint
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=3000

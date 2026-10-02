@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=flipflop_dF-D5
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=2000

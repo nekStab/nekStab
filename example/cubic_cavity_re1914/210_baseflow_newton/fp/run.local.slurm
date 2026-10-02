@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=cav1914-nwtfp
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=3000

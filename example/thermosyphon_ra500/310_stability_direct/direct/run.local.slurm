@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=tsyphon_dir-D5
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=4
 #SBATCH --mem-per-cpu=2000

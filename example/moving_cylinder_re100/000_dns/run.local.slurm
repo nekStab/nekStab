@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=movcyl-dns
-#SBATCH --partition=local
 #SBATCH --nodes=1
 #SBATCH --ntasks=8
 #SBATCH --mem-per-cpu=2000
