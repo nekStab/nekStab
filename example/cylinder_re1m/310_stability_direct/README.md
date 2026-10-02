@@ -6,15 +6,20 @@
 This stage has multiple variants that share the same dispatch subroutine but
 use different parameter choices. Each variant lives in its own subdirectory.
 
-The two variants are the two RANS stability operators, run on the same SFD
-steady RANS base (`base_converged.f00001`):
+The two variants are the two RANS stability operators, run on the same
+imperfect SFD field (`base_converged.f00001`). Both spectra are base-flow
+spectra of that field, not mean-flow spectra. Coupled versus quasilaminar is
+a choice about the closure linearization, not a Reynolds stress:
 
-- `coupled/` — full RANS Frechet (`iffindiff` alone). Leading cluster
-  sigma = 3.920 at St = 0, floor 2.27 at k_dim=200. The eigenfunctions
-  are on the cylinder: all of v'^2 is inside r < 1.5.
-- `quasilaminar/` — hydrodynamic operator (`iffindiff` + `ifquasilaminar`).
-  Leading mode sigma = 0.395 at St = 0.206, vs observed St = 0.192.
-  84% of v'^2 is downstream of x = 2 (centroid x = 5.78). The tau in the
-  eigenmode file is the base flow, not the perturbation.
+- `coupled/` — full RANS Frechet. Explicit-filter solve (`filterWeight = 1`,
+  `filterCutoffRatio = 0.67`): leading mode σ = 3.41 at St = 0.491, on the
+  cylinder. A converged mode sits at St = 0.193 with σ = 3.35.
+- `quasilaminar/` — hydrodynamic operator. Same explicit-filter solve:
+  leading mode σ = 1.15 at St = 0, a stationary ring on the cylinder.
+  A wake-frequency mode remains at St = 0.189, σ = 0.261, but it is not
+  leading and was not among the ten written fields.
+
+The hpfrt spectra (quasilaminar σ = 0.237 at St = 0.194) are in
+`spectre_hpfrt.tar` in each directory.
 
 Cross-variant residual decay plot: `scripts/nstab_compare.py example/cylinder_re1m/310_stability_direct/`

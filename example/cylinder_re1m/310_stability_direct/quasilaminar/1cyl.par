@@ -1,5 +1,5 @@
 [GENERAL]
-startFrom = base_converged.f00001 # converged steady RANS mean (SFD, residual ~5e-4)
+startFrom = base_converged.f00001 # imperfect SFD base, not a mean and not a fixed point (residual ~5e-4)
 stopAt = endTime
 endTime = 1.0      # sampling period per Arnoldi vector (~1/5 leading-mode period at St=0.192); NOT a long DNS
 
@@ -29,9 +29,9 @@ writeInterval = 10.0
 writeDoublePrecision = no
 
 dealiasing = yes
-filtering = hpfrt
-filtermodes = 2
-filterweight = 5.0
+filtering = explicit
+filterWeight = 1.0
+filterCutoffRatio = 0.67   # N=5, top 2 modes. This solve made a St=0 wall mode leading.
 
 [PROBLEMTYPE]
 variableProperties = yes

@@ -70,3 +70,17 @@ Not started. Requires a saturated periodic run, a phase average, and the phase-c
 ## Mesh
 
 The run mesh is each stage's `1cyl.re2` (1480 elements, body-fitted, closest node at r = 0.5). Its source is `310_stability_direct/quasilaminar/mesh/1cyl_bodyfitted.rea`. The older generator `1cyl2d.re2` (1464 elements) is Cartesian through the disk, with nodes at r = 0 and a 0.3 pitch. Same outer domain. Regenerating from `1cyl2d.re2` does not reproduce the run mesh.
+
+## Tests
+
+`120_urans/check_force.py` reads the 20-time-unit moments. Pass is `|R_uu|`, `|R_vv|`, and `|R_uv|` below `1e-2` in the box `1 < x < 12`, `|y| < 2`, and centerline `u` at `x = 5` in `[0.5, 0.75]`. A missing subtraction leaves `O(1)`. On the moments now on disk the check prints `|Ruu|=6.5e-4`, `|Rvv|=1.4e-4`, `|Ruv|=1.7e-4`, `u(5,0)=0.604`, and `PASS`. The same window is `120_urans/states.png` and `120_urans/stress.png`.
+
+```bash
+python3 example/cylinder_re1m/120_urans/check_force.py
+```
+
+`RS1` is `SKIP` until `120_urans` is rebuilt and run to the last step. After that the same script fails unless `RS11cyl0.f00001` matches `E(U^2)-E(U)^2`.
+
+The load test is a second run with `reynolds_enable` in `nekStab_usrchk` and `FRS1cyl0.f00001` present. Pass is the log line `loading frozen force FRS1cyl0.f00001` and a restart velocity that still matches the start file. A missing file must log `force not armed` and still finish. `310_stability_direct` is not this test.
+
+The base-flow spectrum in `310_stability_direct` is a test of the imperfect SFD field only. It is not a pass for a fixed point, and it is not a mean-flow test. The mean-flow spectrum is not started.

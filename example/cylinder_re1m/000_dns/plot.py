@@ -2,8 +2,8 @@
 """cylinder_re1m RANS (k-tau) forward-solve diagnostic.
 
 Reads the wake-probe history (1cyl.his) and plots the near-wake velocity and
-turbulent kinetic energy vs time, showing the relaxation from the inflow IC
-onto the (unsteady, shedding) RANS state. Saves plot.png (gallery figure).
+turbulent kinetic energy vs time. On this 2D mesh the unforced march settles.
+Saves plot.png.
 """
 import os
 os.environ.setdefault("MPLBACKEND", "Agg")

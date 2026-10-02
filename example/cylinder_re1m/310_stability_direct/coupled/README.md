@@ -22,9 +22,7 @@ leading velocity field is the wake.
 
 ## Status
 
-Run on the SFD field `base_converged.f00001`. Leading cluster sigma = 3.920
-at St = 0, floor 2.27 at k_dim=200 (`Spectre_NSd.dat`). The eigenfunctions
-are not a buried wake roller: in `dRe1cyl0.f00001` and `f00002`, all of
-v'^2 is inside r < 1.5 and the centroid is on the body. Velocity is 83% of
-the mean square, k 15%, tau 2%. The wake mode is the quasilaminar result
-(sigma = 0.395 at St = 0.206, vs observed St = 0.192).
+Run on the SFD field `base_converged.f00001`. Explicit-filter solve
+(`filterWeight = 1`, `filterCutoffRatio = 0.67`): leading mode σ = 3.41
+at St = 0.491, on the cylinder. A converged mode is at St = 0.193 with
+σ = 3.35. The hpfrt spectrum is in `spectre_hpfrt.tar`.

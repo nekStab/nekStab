@@ -40,10 +40,8 @@ sit on the cylinder. The quasilaminar leading velocity field is the wake.
 
 ## Result
 
-Run on the SFD field `base_converged.f00001`. Leading mode sigma = 0.395
-at St = 0.206, against the observed St = 0.192. In `dRe1cyl0.f00001`,
-84% of v'^2 is downstream of x = 2 and the centroid is at x = 5.78.
-The tau stored in that file matches `base_converged.f00001` (correlation
-1.0). It is not the perturbation: unsolved scalar slots were left untouched
-and the base values were written out. Outpost now zeros those slots before
-filling the ones the Krylov product solved.
+Explicit-filter solve (`filterWeight = 1`, `filterCutoffRatio = 0.67`)
+on `base_converged.f00001`. Leading mode σ = 1.15 at St = 0, a stationary
+ring on the cylinder. A wake-frequency mode remains at St = 0.189,
+σ = 0.261, but it is not leading and was not written out. The hpfrt
+result, σ = 0.237 at St = 0.194, is in `spectre_hpfrt.tar`.

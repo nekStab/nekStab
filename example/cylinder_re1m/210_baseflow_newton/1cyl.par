@@ -1,0 +1,56 @@
+[GENERAL]
+# Probe only. Start from the SFD field and ask whether Newton can
+# reduce its residual. Not a production base flow.
+startFrom = base_converged.f00001
+
+stopAt = endTime
+endTime = 1.0
+
+userParam01 = 2.0
+userParam07 = 5
+
+dt = 0.001
+variableDt = no
+timeStepper = bdf3
+
+writeControl = runTime
+writeInterval = 100.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = hpfrt
+filterModes = 2
+filterWeight = 5.0
+
+[PROBLEMTYPE]
+variableProperties = yes
+stressFormulation = yes
+
+[MESH]
+numberOfBCFields = 1
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0e-5
+residualProj = yes
+
+[VELOCITY]
+density = 1.0
+viscosity = -1000000.0
+residualTol = 1.0e-6
+
+[TEMPERATURE]
+solver = none
+rhoCp = 1.0
+conductivity = -1
+residualTol = 1.0e-6
+
+[SCALAR01]
+density = 1.0
+diffusivity = -1000000.0
+residualTol = 1.0e-6
+
+[SCALAR02]
+density = 1.0
+diffusivity = -1000000.0
+residualTol = 1.0e-6

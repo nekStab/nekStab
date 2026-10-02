@@ -3,8 +3,8 @@
 
 Panel 1: SFD residual vs time for dt=5e-3 (residu_dt5e3.dat) and dt=1e-3
 (residu.dat) -- the floor tracks dt (discretization-limited), 5e-3 -> 5e-4.
-Panel 2: mid-wake probe v vs time (dt=1e-3) -- v ~ 1e-4 == steady (bare-march
-shedding was +/-0.87 for scale).
+Panel 2: mid-wake probe v vs time (dt=1e-3) -- v ~ 1e-4 == steady.
+(The +/-0.87 bare-march scale was the 2026-06-24 run, not this mesh.)
 """
 import numpy as np
 import matplotlib
