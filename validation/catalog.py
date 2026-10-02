@@ -1064,9 +1064,9 @@ CASES: dict[str, MethodCase] = {
     # ------------------------------------------------------------------
     "cylinder/otd": MethodCase(
         case_id="cylinder/otd",
-        flow_family="cylinder_re100", method_lane="otd",
+        flow_family="cylinder_re180", method_lane="otd",
         current_path="example/cylinder_re180/500_otd",
-        proposed_folder="example/cylinder_re100/500_otd", sort_prefix="500",
+        proposed_folder="example/cylinder_re180/500_otd", sort_prefix="500",
         label="Cylinder OTD", mode_name="OTD", legacy_uparam01="5.0",
         expected_behavior="Optimally Time-Dependent modes for cylinder at Re=180",
         status=CaseStatus.VALIDATED, compute_class=_MLO,
@@ -1457,6 +1457,7 @@ CASES: dict[str, MethodCase] = {
         seed_parameters=SeedParameters(seed_Re=1950.0, seed_path="on-orbit DNS snapshot (period-stamped)", restart_source="from 000_dns_period"),
         evidence_requirements=(_REQ_IMG, _REQ_SPEC),
         artifacts=(
+            _img("example/cubic_cavity_re1950/311_stability_direct_floquet/plot_spectrum.png"),
             _spectrum("example/cubic_cavity_re1950/311_stability_direct_floquet/Spectre_Hd.dat"),
             _log("example/cubic_cavity_re1950/311_stability_direct_floquet/logfile"),
         ),
