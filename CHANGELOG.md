@@ -35,6 +35,12 @@ description for the 2.0 series; entries here are the per-tag deltas.
   compatibility shims are kept.
 
 ### Fixed
+- `nekStab_avg` now averages every scalar slot, not only the
+  temperature. The mean and the second moment loop over `i = 1..ldimt`,
+  so k and tau of a RANS model are averaged too. The scalar length is
+  `nelt`, as in Nek5000 `avg_all`. Before, slots 2 to `ldimt` stayed
+  zero.
+
 - Eigenmode outpost no longer writes leftover base scalars into slots
   the Krylov product did not solve. `solver = none` leaves `ifpsco`
   true, so a slot is copied only when `idpss` is not negative.

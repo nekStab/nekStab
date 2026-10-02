@@ -17,7 +17,7 @@ module nekstab_statistics
    use nekstab_nek_bridge, only: nekStab_log, nekStab_error, &
                                  ax1, ay1, az1, ax2, ay2, az2, &
                                  lx1, ly1, lz1, lx2, ly2, lz2, &
-                                 nelv, lelt, ldimt, istep, lastep, time, &
+                                 nelv, nelt, lelt, ldimt, istep, lastep, time, &
                                  param, vx, vy, vz, pr, t, ubase, vbase, wbase, &
                                  ifto, ifpo
    implicit none
@@ -44,7 +44,7 @@ contains
       real do1(lv), do2(lv), do3(lv)
 
       logical ifverbose
-      integer :: ntot, nto2, iastep
+      integer :: ntot, nto2, ntott, iastep, i
       real :: alpha, beta, dtime, dtmp, time_temp
 
       ! AVG common blocks (not in TOTAL)
@@ -71,6 +71,9 @@ contains
 
       ntot = lx1*ly1*lz1*nelv
       nto2 = lx2*ly2*lz2*nelv
+      ! Scalar fields live on nelt elements (nelt > nelv for conjugate heat
+      ! transfer), as in Nek5000 avg_all.
+      ntott = lx1*ly1*lz1*nelt
 
 !     initialization
       if (icalld == 0) then
@@ -105,7 +108,11 @@ contains
          call avg1(vavg, vy, alpha, beta, ntot, 'vm  ', ifverbose)
          call avg1(wavg, vz, alpha, beta, ntot, 'wm  ', ifverbose)
          call avg1(pavg, pr, alpha, beta, nto2, 'prm ', ifverbose)
-         call avg1(tavg, t(1, 1, 1, 1, 1), alpha, beta, ntot, 'tm ', ifverbose)
+         ! Average every scalar slot: temperature (i=1) and the passive
+         ! scalars (i=2..ldimt), e.g. k and tau of a RANS model.
+         do i = 1, ldimt
+            call avg1(tavg(1, 1, 1, 1, i), t(1, 1, 1, 1, i), alpha, beta, ntott, 'tm  ', ifverbose)
+         end do
 
          if (ifstatis) then !compute fluctuations
 !     compute averages E(X^2)
@@ -113,7 +120,9 @@ contains
             call avg2(vrms, vy, alpha, beta, ntot, 'vms ', ifverbose)
             call avg2(wrms, vz, alpha, beta, ntot, 'wms ', ifverbose)
             call avg2(prms, pr, alpha, beta, nto2, 'prms', ifverbose)
-            call avg2(trms, t(1, 1, 1, 1, 1), alpha, beta, ntot, 'trms', ifverbose)
+            do i = 1, ldimt
+               call avg2(trms(1, 1, 1, 1, i), t(1, 1, 1, 1, i), alpha, beta, ntott, 'trms', ifverbose)
+            end do
 
 !     compute averages E(X*Y)
             call avg3(uvms, vx, vy, alpha, beta, ntot, 'uvm ', ifverbose)
