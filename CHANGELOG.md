@@ -36,9 +36,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ### Fixed
 - Eigenmode outpost no longer writes leftover base scalars into slots
-  the Krylov product did not solve. Unsolved scalar slots are zeroed
-  before the active ones are filled. A quasilaminar run had been
-  writing the base tau into every mode file.
+  the Krylov product did not solve. `solver = none` leaves `ifpsco`
+  true, so a slot is copied only when `idpss` is not negative.
+  Unsolved slots stay zero. A quasilaminar run had been writing the
+  base tau into every mode file.
 
 - GMRES no longer reads one past `yvec` when Arnoldi uses every
   column without reaching its tolerance. The column count is stored

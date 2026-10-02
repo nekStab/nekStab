@@ -27,7 +27,7 @@ module nekstab_eigensolvers
                                       k_zero, krylov_vector, lp, lt, lv, n2, NEKSTAB_PI, norm, &
                                       nt, nv
    use nekstab_nek_bridge, only: ctarg, dt, eigen_tol, evop, if3D, if3d, ifheat, ifldbf, &
-                                 ifpo, ifpsco, ifres, ifseed_load, ifseed_nois, &
+                                 ifpo, ifpsco, idpss, ifres, ifseed_load, ifseed_nois, &
                                  ifseed_symm, ifto, isFloquetAdjoint, isFloquetDirect, &
                                  isFloquetTransientGrowth, isNewtonPO, istep, &
                                  isTransientGrowth, k_dim, ldim, ldimt, lelt, lelv, lx1, &
@@ -487,10 +487,10 @@ contains
          !  Scalar fields can have different local lengths in CHT / passive-scalar
          !  cases (`nelfld`), so field 1 (temperature) and fields 2..ldimt must use
          !  their own active extents rather than one shared `nt` length.
-         if (ifto) call copy(oks_qt_s(1, 1, i), Q(i)%t(1, 1), nt)
+         if (ifto .and. idpss(1) >= 0) call copy(oks_qt_s(1, 1, i), Q(i)%t(1, 1), nt)
          if (ldimt > 1) then
             do m = 2, ldimt
-               if (ifpsco(m - 1)) then
+               if (ifpsco(m - 1) .and. idpss(m) >= 0) then
                   n_scalar = nx1*ny1*nz1*nelfld(m + 1)
                   call copy(oks_qt_s(1, m, i), Q(i)%t(1, m), n_scalar)
                end if
@@ -537,14 +537,13 @@ contains
             if (if3D) oks_fp_cz_s(1:nv) = matmul(oks_qz_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
             if (ifpo) oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:k_dim), vecs(1:k_dim, i))
 
-            ! Unsolved scalar slots are not in the Krylov product. Leaving
-            ! them untouched writes leftover base scalars into the eigenmode
-            ! file. Zero first, then fill the slots that were actually solved.
+            ! solver=none leaves ifpsco true, so that flag is not enough.
+            ! idpss < 0 means the slot was not solved. Leave the zero.
             oks_fp_ct_s = (0.0d0, 0.0d0)
-            if (ifto) oks_fp_ct_s(1:nt, 1) = matmul(oks_qt_s(1:nt, 1, 1:k_dim), vecs(:, i))
+            if (ifto .and. idpss(1) >= 0) oks_fp_ct_s(1:nt, 1) = matmul(oks_qt_s(1:nt, 1, 1:k_dim), vecs(:, i))
             if (ldimt > 1) then
                do m = 2, ldimt
-                  if (ifpsco(m - 1)) then
+                  if (ifpsco(m - 1) .and. idpss(m) >= 0) then
                      n_scalar = nx1*ny1*nz1*nelfld(m + 1)
                      oks_fp_ct_s(1:n_scalar, m) = matmul(oks_qt_s(1:n_scalar, m, 1:k_dim), vecs(:, i))
                   end if
