@@ -73,22 +73,21 @@ single steady or periodic operator.
 
 ## Case catalog
 
-| Case | Physics | Demonstrated features |
-|------|---------|-----------------------|
-| `example/cylinder_re100/` | 2D cylinder wake, Re = 50-100 | DNS, SFD, BoostConv, Newton, direct/adjoint stability, mode animation, wavemaker, steady force sensitivity, OTD, POD/DMD/SPOD |
-| `example/cylinder_re180/` | 2D cylinder wake, Re = 180 | Newton UPO, direct/adjoint Floquet stability, Floquet mode animation, OTD |
-| `example/cylinder_re30_thermal/` | Thermally coupled cylinder wake, Re = 30 | Newton thermal baseflow |
-| `example/cylinder_re1m/` | Cylinder wake, Re = 1e6 | SFD base, direct stability of that imperfect base (coupled and quasilaminar). Mean-flow stability not run. |
+| Case | Physics | Stages in the repository |
+|------|---------|--------------------------|
+| `example/cylinder_re100/` | 2D cylinder wake, Re = 50-100 | DNS, SFD, BoostConv, Newton, direct (linear and finite-difference) and adjoint stability, transient growth, mode animation, wavemaker, steady force sensitivity, OTD, POD/DMD/SPOD |
+| `example/cylinder_re180/` | 2D cylinder wake, Re = 180 | DNS seeds, Newton UPO, direct/adjoint Floquet stability, Floquet mode animation, OTD |
+| `example/cylinder_re30_thermal/` | Thermally coupled cylinder wake, Re = 30 | DNS seed, Newton thermal baseflow |
+| `example/cylinder_re1m/` | 2D RANS cylinder wake, Re = 1e6 | DNS, SFD base, URANS, Newton, direct stability of the SFD base (coupled and quasilaminar). Mean-flow stability not run. |
 | `example/back_fstep_re500/` | Backward-facing step, Re = 500 | Newton baseflow, transient growth |
 | `example/flip_flop_re62/` | Side-by-side cylinders, Re = 62 | DNS, Newton UPO, direct/adjoint Floquet stability, wavemaker |
-| `example/tpjet_re2005/` | Triple-port jet, mixed Re = 1900/2005 | DMT baseflow, forced periodic orbit, direct Floquet stability |
-| `example/thermosyphon_ra500/` | Buoyancy-driven thermosyphon, Ra = 500 | DNS, Newton thermal baseflow, direct/adjoint stability, wavemaker |
-| `example/lid_driven_re3600/` | Lid-driven cavity, Re = 3600 | SFD, Newton, direct/adjoint stability, transient growth, wavemaker, OTD, POD/DMD/SPOD |
-| `example/cubic_cavity_re1914/` | 3D cubic cavity, Re = 1914 | SFD, Newton, direct/adjoint stability, Floquet, transient growth, wavemaker, OTD, POD/DMD/SPOD, energy_budget |
-| `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, direct Floquet stability (stable limit cycle), POD/DMD |
-| `example/naca0012_re2000/` | NACA 0012 airfoil, Re = 2000 | DNS, SFD, Newton, direct/adjoint stability, Floquet, transient growth, wavemaker, OTD, POD/DMD/SPOD |
+| `example/tpjet_re2005/` | Triple-port jet, mixed Re = 1900/2005 | DMT baseflow (configuration only), forced periodic orbit, direct Floquet stability |
+| `example/thermosyphon_ra500/` | Buoyancy-driven thermosyphon, Ra = 500 | DNS, Newton thermal baseflow, direct stability (linear and finite-difference) |
+| `example/lid_driven_re3600/` | 2D lid-driven cavity, Re = 3600 | DNS, Newton, direct/adjoint stability |
+| `example/cubic_cavity_re1914/` | 3D cubic cavity, Re = 1914 | DNS, Newton (steady and UPO), direct/adjoint stability, OTD |
+| `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, DNS period estimate, direct Floquet stability (stable limit cycle), POD/DMD |
+| `example/naca0012_re2000/` | NACA 0012 airfoil, Re = 2000 | DNS, Newton, direct/adjoint stability, wavemaker |
 | `example/poiseuille_re5k/` | Channel flow, Re = 5000 | OTD |
-| `example/poiseuille_re1e5/` | Channel flow, Re = 100000 | Poiseuille reference case |
 | `example/slot_fst_re495/` | Slot flow with free-stream turbulence | DNS, free-stream turbulence synthesis |
 | `example/moving_cylinder_re100/` | Forced oscillating cylinder, Re = 100 | DNS forced oscillation |
 
@@ -125,7 +124,6 @@ this repository.
 | `example/flip_flop_re62/311_stability_direct_floquet/` | 62 | Floquet direct (3.11) | leading multiplier just above unit circle |
 | `example/tpjet_re2005/210_baseflow_newton/` | 1900 | Forced UPO (2.2) | converged forced UPO |
 | `example/tpjet_re2005/311_stability_direct_floquet/` | 1900 | Floquet direct (3.11) | leading multiplier above unit circle |
-| `example/cubic_cavity_re1914/413_postproc_energy_budget/` | 1914 | Energy budget (4.1) | PKE integrals + K fields; budget closure matches eigenvalue |
 | `example/cubic_cavity_re1950/311_stability_direct_floquet/` | 1950 | Floquet direct (3.11) | stable limit cycle: trivial multiplier = 1 to 1e-13; all others inside unit circle |
 
 ### Reproducing
@@ -141,21 +139,14 @@ nekbmpi <casename> <N>     # or sbatch <case>.slurm on a cluster
 python3 plot.py            # regenerate the evidence figure
 ```
 
-### Deferred for v2.1
+### Not yet verified
 
-The following cases ship with their source and parameters but were not part of
-the v2.0 verification sweep:
+Stages not in the table above ship their inputs, and their `README.md` gives
+their state. Known gaps:
 
-- `example/cylinder_re180/210_baseflow_newton/`
-- `example/cylinder_re180/311_stability_direct_floquet/`
-- `example/cylinder_re180/321_stability_adjoint_floquet/`
-- `example/cylinder_re180/410_postproc_animate_modes/upo/`
-- `example/cylinder_re180/500_otd/`
-- `example/cylinder_re30_thermal/210_baseflow_newton/`
-- `example/cylinder_re1m/`
-- `example/back_fstep_re500/`
-- `example/cubic_cavity_re1914/`
-- `example/cubic_cavity_re1950/`
-- `example/tpjet_re2005/baseflow/tdf/`
-- `example/slot_fst_re495/`
-- `example/poiseuille_re1e5/`
+- `example/cylinder_re180/210_baseflow_newton/` — the period Newton does not
+  converge yet. The Floquet stages of this case use the DNS orbit.
+- `example/cylinder_re100/330_transient_growth/` — inputs only, not run.
+- `example/cylinder_re30_thermal/` — baseflow only, no stability stage yet.
+- `example/tpjet_re2005/130_baseflow_dmt/` — configuration only; the DMT
+  residual stalls near 0.7.
