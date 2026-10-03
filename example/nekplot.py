@@ -597,7 +597,7 @@ COL_WIDTH = 240.7103 / 72.27
 
 def discrete_cmap(N, base_cmap='RdBu'):
     """Create an N-bin discrete colormap from a base colormap (paper style)."""
-    base = plt.cm.get_cmap(base_cmap)
+    base = mpl.colormaps[base_cmap]  # plt.cm.get_cmap was removed in matplotlib 3.9
     colors = base(np.linspace(0, 1, N))
     return ListedColormap(colors, name=f'{base.name}{N}')
 
