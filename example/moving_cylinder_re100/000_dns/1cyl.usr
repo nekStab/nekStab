@@ -1,6 +1,6 @@
 c-----------------------------------------------------------------------
       subroutine userchk
-      use krylov_subspace
+      use nekstab_krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -124,7 +124,7 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine nekStab_usrchk
-      use krylov_subspace
+      use nekstab_krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -404,7 +404,7 @@ c        Set inhomogeneous Dirichlet data on cylinder
       end
 c-----------------------------------------------------------------------
       subroutine my_meshv
-      use krylov_subspace
+      use nekstab_krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -451,7 +451,7 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine calculate_torque(fname, skip)
-      use krylov_subspace
+      use nekstab_krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
@@ -615,7 +615,7 @@ c-----------------------------------------------------------------------
       end subroutine calculate_torque
 
       subroutine calculate_torque2(fname)
-      use krylov_subspace
+      use nekstab_krylov_subspace
       implicit none
       include 'SIZE'
       include 'TOTAL'
