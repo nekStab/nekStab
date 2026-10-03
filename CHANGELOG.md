@@ -35,6 +35,18 @@ description for the 2.0 series; entries here are the per-tag deltas.
   compatibility shims are kept.
 
 ### Fixed
+- Example plot scripts run again with matplotlib 3.9 and later.
+  `nekplot.discrete_cmap` looked up colormaps through `plt.cm.get_cmap`,
+  which matplotlib removed. Nine scripts also found `nekplot.py` through a
+  fixed folder depth that broke when the stage folders were flattened;
+  they now search the parent folders.
+
+- `moving_cylinder_re100/000_dns` compiles again. Its `.usr` used the old
+  module name `krylov_subspace` instead of `nekstab_krylov_subspace`.
+
+- Example run scripts no longer name the Slurm partition `local`. They
+  use the default partition of the queue they are submitted to.
+
 - `nekStab_avg` now averages every scalar slot, not only the
   temperature. The mean and the second moment loop over `i = 1..ldimt`,
   so k and tau of a RANS model are averaged too. The scalar length is

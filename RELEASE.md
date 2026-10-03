@@ -436,8 +436,8 @@ whose reference runs are still pending.
       wavemakers)
 - [ ] `check_against_ref.py` sweep across all migrated stages as the
       regression gate (replaces the old `validate.py` plan)
-- [ ] Update `DOC.md` with string-mode documentation — partial
-- [ ] Update copyright year (2020-2026) in `main.f90`
+- [x] Update `DOC.md` with string-mode documentation
+- [x] Update copyright year (2020-2026) in `main.f90`
 - [ ] Review SPOD streaming module status — deferred to v2.1
 - [ ] Tag `v2.0.0` and merge `dev` → `main`
 
