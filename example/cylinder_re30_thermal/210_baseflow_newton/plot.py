@@ -18,7 +18,7 @@ USAGE:   python plot.py
 """
 from pathlib import Path
 import sys, re
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(next(d for d in Path(__file__).resolve().parents if (d / 'nekplot.py').exists())))
 import nekplot as nk
 import matplotlib.pyplot as plt
 import numpy as np
