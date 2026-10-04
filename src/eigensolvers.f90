@@ -29,7 +29,7 @@ module nekstab_eigensolvers
    use nekstab_nek_bridge, only: ctarg, dt, eigen_tol, evop, if3D, if3d, ifheat, ifldbf, &
                                  ifpo, ifpsco, idpss, ifres, ifseed_load, ifseed_nois, &
                                  ifseed_symm, ifto, isFloquetAdjoint, isFloquetDirect, &
-                                 isFloquetTransientGrowth, isNewtonPO, istep, &
+                                 isFloquetTransientGrowth, isNewtonPO, istep, isDirect, &
                                  isTransientGrowth, k_dim, ldim, ldimt, lelt, lelv, lx1, &
                                  lx2, ly1, ly2, lz1, lz2, maxmodes, nekStab_dp, &
                                  nekStab_log, NEKSTAB_UNIT_EXPORT, NEKSTAB_UNIT_FICH1, &
@@ -448,6 +448,7 @@ contains
       integer :: i, m, n_press, n_scalar
       real :: speriod, trim, spurious_tol
       real :: alpha, alpha_r, alpha_i, beta, omega
+      logical :: tg_steady ! transient growth around a steady (not periodic) base flow
       ! File handling variables
       character(len=80) filename
       character(len=20) fich1, fich2, fich3, fich4, fmt2, fmt3, fmt4, fmt5, fmt6
@@ -606,30 +607,27 @@ contains
             !     computing and outposting optimal response from real part
             !     works with Floquet!
             !
-            !  Why we still mutate uparam(1) here even though we now gate on
-            !  boolean flags: the linearized solver downstream (matvec ->
-            !  Nek5000) still inspects uparam(1) to choose its linear branch
-            !  (3.1 = direct, 3.11 = Floquet direct). Until that downstream
-            !  inspection is also flag-based, we temporarily push the linearized
-            !  code, run matvec, and push back the optimal-perturbation code
-            !  (3.3 / 3.31). We no longer round-trip through a captured
-            !  `old_uparam1`: the flag (isTransientGrowth vs
-            !  isFloquetTransientGrowth) is the source of truth and tells us
-            !  which restore literal to use. A later cleanup will remove the
-            !  remaining uparam(1) writes once matvec gates on flags too.
+            !  The optimal response is exp(tau*L) applied to the optimal
+            !  perturbation: one forward linearized integration. matvec
+            !  dispatches on the mode flags (not on uparam(1)), so switch the
+            !  flags to direct (Floquet direct) for this one call. With the
+            !  transient-growth flag left on, matvec returns M^H M q = G q and
+            !  'ore' held G times the optimal perturbation, not the response.
+            !  Call matvec, not forward_linearized_map: matvec puts the base
+            !  flow back into vx (overwritten above by the outposted mode) and
+            !  resets lastep/fintim.
             if (isTransientGrowth .or. isFloquetTransientGrowth) then
-               if (isTransientGrowth) uparam(1) = 3.1d0 ! linearized solver
-               if (isFloquetTransientGrowth) uparam(1) = 3.11d0 ! Floquet linearized
-               call bcast(uparam(1), wdsize)
+               tg_steady = isTransientGrowth
+               isTransientGrowth = .false.; isFloquetTransientGrowth = .false.
+               isDirect = tg_steady; isFloquetDirect = .not. tg_steady
                call nopcopy(ff%vx, ff%vy, ff%vz, ff%pr, ff%t, &
                             real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), &
                             real(oks_fp_cp_s), real(oks_fp_ct_s))
                call matvec(qq, ff) ! baseflow already in ubase
                call outpost2(qq%vx, qq%vy, qq%vz, qq%pr, qq%t, nof, 'ore')
                call outpost_vort(qq%vx, qq%vy, qq%vz, 'orv')
-               if (isTransientGrowth) uparam(1) = 3.3d0
-               if (isFloquetTransientGrowth) uparam(1) = 3.31d0
-               call bcast(uparam(1), wdsize)
+               isDirect = .false.; isFloquetDirect = .false.
+               isTransientGrowth = tg_steady; isFloquetTransientGrowth = .not. tg_steady
             end if ! isTransientGrowth.or.isFloquetTransientGrowth
          end if
 
