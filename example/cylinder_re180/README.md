@@ -13,7 +13,7 @@ pitchfork-bifurcation subsection.
 
 ## Stages
 
-- `000_dns_seed*/` provide periodic-wake seeds.
+- `000_dns_seed/` runs a Re=180 DNS from rest: seed field and period guess for the orbit.
 - `210_baseflow_newton/` computes the periodic orbit.
 - `311_stability_direct_floquet/` and `321_stability_adjoint_floquet/` analyze
   perturbations over one shedding period.

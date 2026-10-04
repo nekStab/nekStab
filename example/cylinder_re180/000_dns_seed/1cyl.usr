@@ -4,6 +4,7 @@
       include 'TOTAL'
 
       call nekStab
+      call hpts   ! wake-probe time series -> 1cyl.his for FFT period
 
       return
       end

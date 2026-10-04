@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=cyl150-dns
+#SBATCH --job-name=cyl180-seed
 #SBATCH --nodes=1
 #SBATCH --ntasks=8
 #SBATCH --mem-per-cpu=2000

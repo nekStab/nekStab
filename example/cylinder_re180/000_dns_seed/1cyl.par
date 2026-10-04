@@ -1,9 +1,10 @@
 [GENERAL]
-# Side-DNS at Re=150 to produce rstcyl0.f00001 seed for Re=180 Newton UPO (#79 chain)
+# DNS at Re=180 from rest. The 2D wake settles on its stable limit cycle; the last
+# checkpoint seeds the Newton UPO (210) and the wake probe (1cyl.his) gives its period.
 startFrom = 0
 
 stopAt = endTime
-endTime = 500.0   # 500 T_c — well past the ~50 T_c needed to reach the limit cycle at Re=150
+endTime = 300.0   # from rest: the wake reaches the Re=180 limit cycle by t ~ 150; t = 150-300 gives ~29 periods for the period count
 
 userParam01 = 0    # plain DNS mode
 
@@ -13,7 +14,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 50.0   # snapshot every 50 T_c -> 10 frames; final = rstcyl0.f00001 seed
+writeInterval = 100.0   # checkpoints at t = 100, 200, 300; the last one (1cyl0.f00003) is the Newton seed
 writeDoublePrecision = no
 
 dealiasing = yes
@@ -31,4 +32,4 @@ writeToFieldFile = yes
 residualTol = 1.0E-9
 residualProj = no
 density = 1.0
-viscosity = -150.0   # Re=150 (lower than Re=180 target so transients wash before going to 180)
+viscosity = -180.0   # Re=180: the 2D limit cycle is stable here, so the DNS lands on the exact orbit the Newton stage refines

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract the Re=175 shedding period from the wake-probe time series (1cyl.his).
+"""Extract the Re=180 shedding period from the wake-probe time series (1cyl.his).
 PSD peak for f_peak + sharpness; cycle-counting over the long window for a
 sub-bin-precise period to seed the Re=180 Newton UPO."""
 import numpy as np
@@ -8,8 +8,8 @@ import numpy as np
 raw = np.loadtxt('1cyl.his', skiprows=2)
 t, u, v = raw[:, 0], raw[:, 1], raw[:, 2]
 
-# drop the Re180->Re175 relaxation transient (first 300 t.u.)
-t0 = t[0] + 300.0
+# drop the start-up transient: the wake reaches the limit cycle by t ~ 150
+t0 = t[0] + 150.0
 m = t >= t0
 t, v = t[m], v[m]
 print(f"window: t=[{t[0]:.1f}, {t[-1]:.1f}]  span={t[-1]-t[0]:.1f} t.u.  N={len(t)}")
