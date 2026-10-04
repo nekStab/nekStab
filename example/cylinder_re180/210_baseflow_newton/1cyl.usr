@@ -23,7 +23,11 @@
             ifres = .false. ; call bcast(ifres,lsize)
             ifvor = .false. ; call bcast(ifvor,lsize)
             ifvox = .false. ; call bcast(ifvox,lsize)
-            ifdyntol = .true. ; call bcast(ifdyntol,lsize)
+c           Fixed solver tolerances. Same seed, period guess and k_dim, two runs:
+c           with dynamic tolerances the Newton residual rose from 1.2e-2 to 3.0e-2
+c           at iteration 2; with fixed 1e-9 tolerances it fell
+c           to 3.0e-3 and reached 8.2e-10 in 5 iterations.
+            ifdyntol = .false. ; call bcast(ifdyntol,lsize)
          endif
 
          return

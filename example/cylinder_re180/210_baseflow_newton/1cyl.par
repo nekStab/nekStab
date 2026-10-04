@@ -1,10 +1,10 @@
 [GENERAL]
-startFrom = rstcyl0.f00001
+startFrom = rstcyl0.f00001 time=0
 
 stopAt = endTime
-endTime = 5.22130 # period guess from a long Re=175 DNS: 172-cycle count + PSD peak (St=0.1915, Q~100) agree to 5 sig figs. Far sharper than the old Re=170 5.251.
+endTime = 5.19022 # period of the Re=180 limit cycle from 000_dns_seed (fft_period.py, 28 cycles)
 userParam01 = 2.1 # Newton-GMRES for UPOs
-userParam07 = 100 # k_dim
+userParam07 = 200 # k_dim
 
 dt = 0
 variableDt = yes
