@@ -76,7 +76,7 @@ single steady or periodic operator.
 | Case | Physics | Stages in the repository |
 |------|---------|--------------------------|
 | `example/cylinder_re100/` | 2D cylinder wake, Re = 50-100 | DNS, SFD, BoostConv, Newton, direct (linear and finite-difference) and adjoint stability, transient growth, mode animation, wavemaker, steady force sensitivity, OTD, POD/DMD/SPOD |
-| `example/cylinder_re180/` | 2D cylinder wake, Re = 180 | DNS seeds, Newton UPO, direct/adjoint Floquet stability, Floquet mode animation, OTD |
+| `example/cylinder_re180/` | 2D cylinder wake, Re = 180 | DNS seed, Newton UPO, direct/adjoint Floquet stability, Floquet mode animation, OTD |
 | `example/cylinder_re30_thermal/` | Thermally coupled cylinder wake, Re = 30 | DNS seed, Newton thermal baseflow |
 | `example/cylinder_re1m/` | 2D RANS cylinder wake, Re = 1e6 | DNS, SFD base, URANS, Newton, direct stability of the SFD base (coupled and quasilaminar). Mean-flow stability not run. |
 | `example/back_fstep_re500/` | Backward-facing step, Re = 500 | Newton baseflow, transient growth |
@@ -124,7 +124,11 @@ this repository.
 | `example/flip_flop_re62/311_stability_direct_floquet/` | 62 | Floquet direct (3.11) | leading multiplier just above unit circle |
 | `example/tpjet_re2005/210_baseflow_newton/` | 1900 | Forced UPO (2.2) | converged forced UPO |
 | `example/tpjet_re2005/311_stability_direct_floquet/` | 1900 | Floquet direct (3.11) | leading multiplier above unit circle |
-| `example/cubic_cavity_re1950/311_stability_direct_floquet/` | 1950 | Floquet direct (3.11) | stable limit cycle: trivial multiplier = 1 to 1e-13; all others inside unit circle |
+| `example/cylinder_re100/330_transient_growth/` | 40 | Transient growth (3.3) | G(40) = 275; G(tau) peaks between tau = 60 and 80 |
+| `example/cylinder_re180/000_dns_seed/` | 180 | DNS (0.0) | limit cycle, T = 5.1901 from the wake probe |
+| `example/cylinder_re180/210_baseflow_newton/` | 180 | Newton-UPO (2.1) | converged UPO, T = 5.189628, residual 7.8e-10 |
+| `example/cylinder_re180/311_stability_direct_floquet/` | 180 | Floquet direct (3.11) | trivial multiplier 0.99956; next pair abs(mu) = 0.952 |
+| `example/cylinder_re180/321_stability_adjoint_floquet/` | 180 | Floquet adjoint (3.21) | trivial multiplier 1.0018; next pair matches direct |
 
 ### Reproducing
 
@@ -144,9 +148,9 @@ python3 plot.py            # regenerate the evidence figure
 Stages not in the table above ship their inputs, and their `README.md` gives
 their state. Known gaps:
 
-- `example/cylinder_re180/210_baseflow_newton/` — the period Newton does not
-  converge yet. The Floquet stages of this case use the DNS orbit.
-- `example/cylinder_re100/330_transient_growth/` — inputs only, not run.
 - `example/cylinder_re30_thermal/` — baseflow only, no stability stage yet.
+- `example/cubic_cavity_re1950/` — its lid profile `(1-(2x)^2)^2(1-(2z)^2)^2`
+  drives the cavity much more weakly than the lid of the cited references,
+  so its limit cycle is not the published LC1 cycle. To be redone in 2.1.
 - `example/tpjet_re2005/130_baseflow_dmt/` — configuration only; the DMT
   residual stalls near 0.7.

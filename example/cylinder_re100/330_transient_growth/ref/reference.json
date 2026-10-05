@@ -1,0 +1,12 @@
+{
+  "case": "cylinder_re100/330_transient_growth",
+  "description": "Optimal energy gain of the steady cylinder wake at Re=40, horizon tau=40",
+  "produced": {"ranks": "8", "nekstab_mode": "3.3 (transient growth)", "k_dim": "50"},
+  "quantities": {
+    "optimal_gain": {
+      "source": "Spectre_Hp_conv.dat:col1:first",
+      "value": 274.9732,
+      "tol_rel": 0.01
+    }
+  }
+}
