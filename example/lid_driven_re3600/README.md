@@ -13,6 +13,8 @@ Thesis source: chapter 4, `cav:sec:problem_formulation` and
 
 ## Physics
 2D lid-driven cavity at Re = 3600 with aspect ratio 1.5 (`userParam10 = 1.5`). Computes the steady base flow using Newton-GMRES.
+The lid velocity is the regularized profile u = (1-(2x)^2)^2 of Shen (1991):
+zero at the two lid corners, so the adjoint problem has no corner singularity.
 
 ## nekStab Mode
 `userParam01 = 2` — Newton-GMRES for fixed points
@@ -41,3 +43,5 @@ Verified 2026-05-17 on 8 ranks (Slurm):
 
 ## Reference
 Standard lid-driven cavity benchmark.
+- Shen, J. (1991). Hopf bifurcation of the unsteady regularized driven cavity
+  flow. *J. Comput. Phys.* 95, 228-245.
