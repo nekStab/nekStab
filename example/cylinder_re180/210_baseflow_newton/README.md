@@ -67,21 +67,30 @@ Five Newton iterations from the DNS seed (`residu_newton.dat`):
 
 | Newton iter | residual |
 |---|---|
-| 1 | 1.1e-2 |
-| 2 | 2.6e-3 |
-| 3 | 1.2e-5 |
-| 4 | 1.1e-9 |
+| 1 | 1.2e-2 |
+| 2 | 2.8e-3 |
+| 3 | 1.5e-5 |
+| 4 | 1.2e-9 |
 | 5 | 7.8e-10 |
 
-Period **T = 5.189628**, St = 0.192692. The DNS period (5.19012 by FFT)
-differs by 1e-4 relative. Wall time 4 h 33 min on 8 ranks (x2, 6 cores).
-A second run from an older seed converged to T = 5.189626.
+Period **T = 5.189628136**, St = 0.192692034. The DNS period (5.19012 by FFT)
+differs by 1e-4 relative. Wall time 54 min on 16 ranks (c8).
 
 `BF_1cyl0.f00001` (written by the run) is the converged orbit. Copy it into
-the downstream stages. Its time stamp is the period
-(nekStab reads the Floquet period from it), and it is the base flow of
-`../311_stability_direct_floquet/`, `../321_stability_adjoint_floquet/`
-and `../410_postproc_animate_modes/upo/`.
+the downstream stages. Its time stamp is the period (nekStab reads the
+Floquet period from it). It is the base flow of
+`../311_stability_direct_floquet/`, `../321_stability_adjoint_floquet/` and
+`../410_postproc_animate_modes/upo/`.
+
+**The downstream stages must use the same `SIZE` as this stage** (polynomial
+order 7, `lx1 = 8`, `lxd = 12`). The orbit file holds 8x8 points per
+element; at order 5 it is interpolated to a coarser mesh and no longer
+closes.
+
+No filter (`filtering = none`): the Floquet stages run without one, so the orbit
+comes from the same equations. A comparison with the filter on at order 7 was
+not run. (An order-5 comparison moved the multipliers by 1.5 %, but that run
+had the mesh mismatch described above.)
 
 Figures: `plot_ic.png` (seed), `plot_residual.png` (GMRES and Newton
 residuals), `plot_bf.png` (orbit at t = 0).

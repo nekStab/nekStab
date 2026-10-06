@@ -19,42 +19,37 @@ vortex-shedding limit cycle — 2D proxy (see caveat above).
 ## nekStab Mode
 `userParam01 = 3.11` — Direct Floquet
 - `userParam07 = 100` — Krylov subspace dimension
-- Sponge: left = 5, right = 5, strength = 1.7
+- Sponge off (`userParam10 = 0`). The sponge also forces the base flow, so
+  with it on the orbit the Floquet run integrates is not the Newton orbit.
+- Fixed `dt = 0.004` (1298 steps per period), pressure tolerance 1e-9, no filter.
 
 ## Prerequisites
-- UPO file: `BF_1cyl0.f00001` (periodic orbit, endTime adjusted from file)
+- Orbit `BF_1cyl0.f00001` from `../210_baseflow_newton/`. Its time stamp is the
+  period T = 5.189628.
+- **`SIZE` must equal the `SIZE` of `../210_baseflow_newton/` (polynomial
+  order 7).** With order 5 the orbit file is interpolated to a coarser mesh,
+  the orbit no longer closes, and the multiplier of the phase mode misses 1
+  by 6.8e-4 whatever the time step (measured at dt = 0.004, 0.002, 0.001).
+  At order 7 the miss is 1.8e-6.
 
 ## Run
 ```bash
 makeneks 1cyl                     # compile (links this case's .usr)
-mpirun -np 8 ./nek5000 > logfile  # direct Floquet (Arnoldi on the monodromy)
+mpiexec -np 16 ./nek5000 > logfile
 ```
+Wall time: 31 min on 16 ranks (c9).
 
 ## Results (this 2D run)
-`Spectre_NSd_conv.dat` — 9 converged exponents `(σ, ω)`; multipliers
-`μ = e^{(σ+iω)T}` with T = 5.1906:
-- **Leading: μ = +1** (σ = −1.4×10⁻⁵ ≈ 0, ω = 0) — the trivial
-  **synchronous phase mode**, exactly on the unit circle (rightmost point
-  in `plot_spectrum.png`). The only neutral mode a 2D Floquet of a limit
-  cycle can show.
-- All other modes are **damped** (|μ| ≈ 0.94 < 1), conjugate pairs in the
-  upper/lower-left of the unit disk.
+`Spectre_NSd.dat`, `Spectre_Hd_conv.dat` — multipliers `mu = exp((sigma + i omega) T)`:
+- **mu = 1.0000018** (sigma = 3.4e-6, omega = 0): the trivial **phase mode**
+  (time shift along the orbit). Its exact value is 1; it is the only neutral
+  mode a 2D Floquet of a limit cycle can show.
+- Two more converged multipliers, both real: **0.8804** and **0.8724**. The
+  other estimates (`Spectre_Hd.dat`) are not converged.
+- A Ritz run of 100 steps converged 3 multipliers.
 
-NOTE: Mode A (|μ|>1 near Re~189) and Mode B (~259) are **3D** and will
-**not** appear in this 2D run — see the caveat.
-
-## Latest Result
-
-Verified 2026-06-11 on 8 ranks (Slurm direct submission), with active sponge
-strength `userParam10 = 1.7`:
-
-- Leading direct Floquet exponent: sigma = -4.044230e-06, omega = 0.
-- Prior saved `run_floquet.log` leading value was sigma = -1.443211e-05,
-  omega = 0; the absolute shift is below the 1e-3 reference tolerance.
-- Wall time: 1053 s.
-- Outputs: `Spectre_NSd.dat`, `Spectre_Hd.dat`, `dRe1cyl0.f0000*`,
-  `dIm1cyl0.f0000*`, `dRv1cyl0.f0000*`, `plot_bf.png`,
-  `plot_spectrum.png`, `plot_mode.png`, and matching `ref/` copies.
+Mode A (|mu| > 1 near Re = 189) and Mode B (near 259) are **3D** and do not
+appear in this 2D run — see the caveat above.
 
 ## Plot
 ```bash

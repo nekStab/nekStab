@@ -2,7 +2,7 @@
 
 Extracts a **sharp shedding period** for the Re=1950 limit cycle so the
 downstream Floquet base flow integrates over the orbit's true period. Same
-recipe as `cylinder_re180/000_dns_seed_re175/`.
+recipe as `cylinder_re180/000_dns_seed/`.
 
 ## Why this stage
 A Floquet analysis needs the orbit period `T` to high accuracy: the trivial

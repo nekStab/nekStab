@@ -8,9 +8,9 @@ userParam01 = 3.21  # Adjoint Floquet
 userParam07 = 100 # k_dim
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
-userParam10 = 1.7 # Sponge streght
+userParam10 = 0   # sponge off: it also forces the base flow, so the orbit would differ from the Newton orbit (210)
 
-dt = 0.004   # fixed step, 1298 per period; the trivial multiplier changes by 7e-5 from 654 steps and by 1.5e-5 more at dt = 0.002
+dt = 0.004   # fixed step, 1298 per period (the Newton stage averages 4.4e-3)
 variableDt = no
 timeStepper = bdf3
 targetCFL = 0.5
@@ -26,7 +26,7 @@ dealiasing = yes
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-7
+residualTol = 1.0E-9
 residualProj = yes
 writeToFieldFile = yes
 

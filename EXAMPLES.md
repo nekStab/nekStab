@@ -130,9 +130,9 @@ this repository.
 | `example/cubic_cavity_re1914/320_stability_adjoint/` | 1914 | Adjoint LNSE (3.2) | matches direct spectrum to 5e-4 |
 | `example/cylinder_re100/330_transient_growth/` | 40 | Transient growth (3.3) | G(40) = 275; G(tau) peaks between tau = 60 and 80 |
 | `example/cylinder_re180/000_dns_seed/` | 180 | DNS (0.0) | limit cycle, T = 5.1901 from the wake probe |
-| `example/cylinder_re180/210_baseflow_newton/` | 180 | Newton-UPO (2.1) | converged UPO, T = 5.189628, residual 7.8e-10 |
-| `example/cylinder_re180/311_stability_direct_floquet/` | 180 | Floquet direct (3.11) | trivial multiplier 0.99956; next pair abs(mu) = 0.952 |
-| `example/cylinder_re180/321_stability_adjoint_floquet/` | 180 | Floquet adjoint (3.21) | trivial multiplier 1.0018; next pair matches direct |
+| `example/cylinder_re180/210_baseflow_newton/` | 180 | Newton-UPO (2.1) | converged UPO, T = 5.189628, residual 7.8e-10 (no filter) |
+| `example/cylinder_re180/311_stability_direct_floquet/` | 180 | Floquet direct (3.11) | trivial multiplier 1 + 1.8e-6; next multipliers 0.880, 0.872 (real) |
+| `example/cylinder_re180/321_stability_adjoint_floquet/` | 180 | Floquet adjoint (3.21) | trivial multiplier 1 + 1.9e-6; next multipliers 0.878, 0.871, 0.857, 0.845; first two match direct |
 
 ### Reproducing
 

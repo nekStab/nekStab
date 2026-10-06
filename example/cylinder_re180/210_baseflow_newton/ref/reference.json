@@ -1,12 +1,15 @@
 {
   "case": "cylinder_re180/210_baseflow_newton",
-  "description": "2D cylinder wake periodic orbit at Re=180 via Newton-GMRES (T = 5.189628, St = 0.192692)",
-  "produced": {"ranks": "8", "nekstab_mode": "2.1 (Newton-GMRES UPO)"},
+  "description": "2D cylinder wake periodic orbit at Re=180 via Newton-GMRES (T = 5.189628136, St = 0.192692034), no filter",
+  "produced": {
+    "ranks": "8",
+    "nekstab_mode": "2.1 (Newton-GMRES UPO)"
+  },
   "quantities": {
     "newton_final_residual": {
       "source": "residu_newton.dat:col7:last",
-      "value": 7.789531e-10,
-      "tol_abs": 1.0e-9
+      "value": 7.819336e-10,
+      "tol_abs": 1e-09
     },
     "newton_iterations": {
       "source": "residu_newton.dat:col1:last",

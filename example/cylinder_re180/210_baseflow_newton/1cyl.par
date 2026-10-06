@@ -16,7 +16,8 @@ writeInterval = 10.
 writeDoublePrecision = no
 
 dealiasing = yes
-filtering = explicit
+# No filter: the Floquet stages run without one, so the orbit comes from the same equations.
+filtering = none
 filterWeight = 0.01
 filterCutoffRatio = 0.84
 

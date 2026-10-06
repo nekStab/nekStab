@@ -10,7 +10,7 @@ two inputs of the Newton periodic-orbit stage `../210_baseflow_newton/`:
    appends `time u v p` at each step. `python fft_period.py` takes the
    transverse velocity on t = 150-300 and gives the period two ways:
    FFT peak T = 5.19012, and a count of 28 zero crossings T = 5.19022.
-   Newton converges to T = 5.189626 (St = 0.19269).
+   Newton converges to T = 5.189628 (St = 0.19269).
 
 Re=180 is below the 3D mode A threshold (Re = 188.5). In 2D the wake has
 no secondary instability, so the DNS settles on the same limit cycle that

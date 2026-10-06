@@ -68,7 +68,7 @@ a frame sequence of the evolving flow.
   routine; here dt ≈ 7.4×10⁻³, 700 steps, 100 frames).
 - The routine reads `(σ, ω)` from row 1 of `Spectre_NSd_conv.dat` and sets
   the animation duration to **one period = 2π/ω**. Here ω is set to the
-  **base-flow frequency** `ω_base = 2π/T = 1.21049` (T = 5.1906, the
+  **base-flow frequency** `ω_base = 2π/T = 1.21072` (T = 5.189628, the
   converged UPO period from `../../210_baseflow_newton/`) so the DNS
   runs exactly one shedding period. (The *physical* direct-Floquet spectrum
   in `../../311_stability_direct_floquet/` keeps the true μ=+1 row with

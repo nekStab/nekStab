@@ -2,7 +2,7 @@
 startFrom = BF_1cyl0.f00001
 
 stopAt = endTime
-endTime = 51.9 # 10 x UPO period T=5.1906 (Re=180)
+endTime = 51.89628 # 10 x the orbit period T = 5.189628
 
 userParam01 = 4.52 # animate_mode_Floquet: advance base-flow DNS one period, animate shedding
 

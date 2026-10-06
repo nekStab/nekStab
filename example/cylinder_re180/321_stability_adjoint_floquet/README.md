@@ -16,41 +16,36 @@ the periodic orbit for receptivity — 2D proxy (see caveat above).
 ## nekStab Mode
 `userParam01 = 3.21` — Adjoint Floquet
 - `userParam07 = 100` — Krylov subspace dimension
-- Sponge: left = 5, right = 5, strength = 1.7
+- Sponge off (`userParam10 = 0`). The sponge also forces the base flow, so
+  with it on the orbit the Floquet run integrates is not the Newton orbit.
+- Fixed `dt = 0.004` (1298 steps per period), pressure tolerance 1e-9, no filter.
 
 ## Prerequisites
-- UPO file: `BF_1cyl0.f00001` (periodic orbit, endTime adjusted from file)
+- Orbit `BF_1cyl0.f00001` from `../210_baseflow_newton/`. Its time stamp is the
+  period T = 5.189628.
+- **`SIZE` must equal the `SIZE` of `../210_baseflow_newton/` (polynomial
+  order 7).** With order 5 the orbit file is interpolated to a coarser mesh,
+  the orbit no longer closes, and the multiplier of the phase mode misses 1
+  by 6.8e-4 whatever the time step (measured at dt = 0.004, 0.002, 0.001).
+  At order 7 the miss is 1.8e-6.
 
 ## Run
 ```bash
 makeneks 1cyl                     # compile (links this case's .usr)
-mpirun -np 8 ./nek5000 > logfile  # adjoint Floquet (Arnoldi on the adjoint monodromy)
+mpiexec -np 16 ./nek5000 > logfile
 ```
+Wall time: 61 min on 16 ranks (c8).
 
 ## Results (this 2D run)
-`Spectre_NSa_conv.dat` — converged exponents `(sigma, omega)`. The adjoint
-spectrum should mirror the direct one (operator-transpose consistency). In the
-2026-06-11 rerun with the sponge-strength fix, the leading adjoint Floquet
-exponent is near neutral: sigma = 4.601637e-04, omega = 0. The prior saved
-`run_adj.log` leading value was sigma = -1.372756e-02, omega = 0, so this is
-a large shift relative to that stale output and should be treated as a real
-reference update.
+`Spectre_NSa.dat`, `Spectre_Ha_conv.dat` — multipliers `mu = exp((sigma + i omega) T)`:
+- **mu = 1.0000019** (sigma = 3.8e-6, omega = 0): the trivial phase mode, as in
+  the direct stage. The adjoint replays the stored orbit backwards in time.
+- Four more converged multipliers: **0.8780, 0.8706, 0.8570, 0.8447** (real).
+  The direct stage converged the first two as 0.8804 and 0.8724; direct and
+  adjoint agree to 2.7e-3 in mu.
 
-## Latest Result
-
-Verified 2026-06-11 on 8 ranks (Slurm direct submission), with active sponge
-strength `userParam10 = 1.7`:
-
-- Leading adjoint Floquet exponent: sigma = 4.601637e-04, omega = 0.
-  As in the direct stage, this is the trivial unit multiplier (phase
-  mode, mu = 1 exactly); its deviation from zero measures the
-  time-reversed orbit-replay error, larger than the direct stage's
-  (-4.0e-06) but well inside the 1e-3 reference tolerance.
-- Prior saved `run_adj.log` leading value: sigma = -1.372756e-02, omega = 0.
-- Wall time: 1103 s.
-- Outputs: `Spectre_NSa.dat`, `Spectre_Ha.dat`, `aRe1cyl0.f0000*`,
-  `aIm1cyl0.f0000*`, `aRv1cyl0.f0000*`, `plot_bf.png`,
-  `plot_spectrum.png`, `plot_mode.png`, and matching `ref/` copies.
+Mode A (|mu| > 1 near Re = 189) and Mode B (near 259) are **3D** and do not
+appear in this 2D run — see the caveat above.
 
 ## Plot
 ```bash
