@@ -14,8 +14,12 @@
 
       if (istep.eq.0) then !change defaults
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 4 ; call bcast(schur_tgt,isize)
-        maxmodes = 2 ; call bcast(maxmodes,isize)
+        schur_tgt = int(uparam(3))
+        if (schur_tgt.le.0) schur_tgt = 2
+        call bcast(schur_tgt,isize)
+        maxmodes = int(uparam(4))
+        if (maxmodes.le.0) maxmodes = schur_tgt
+        call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
@@ -47,7 +51,7 @@
 
       if (JP.eq.0) then         ! velocity
          e = gllel(ieg)
-         ux = (1.0d0-(2.0d0*x)**2)**2*(1.0d0-(2.0d0*z)**2)**2 ! regularized 3D lid (zero at edges)
+         ux = (1.0d0-(2.0d0*x)**18)**2*(1.0d0-(2.0d0*z)**18)**2 ! Leriche & Gavrilakis (2000) lid: 1 except within ~5% of the edges, zero at edges
          uy = 0.0d0
          uz = 0.0d0
          temp = 0.0d0
@@ -68,7 +72,7 @@
 
       if (JP.eq.0) then         ! velocity
          e = gllel(ieg)
-         ux = (1.0d0-(2.0d0*x)**2)**2*(1.0d0-(2.0d0*z)**2)**2 ! regularized 3D lid (zero at edges)
+         ux = (1.0d0-(2.0d0*x)**18)**2*(1.0d0-(2.0d0*z)**18)**2 ! Leriche & Gavrilakis (2000) lid: 1 except within ~5% of the edges, zero at edges
          uy = 0.0d0
          uz = 0.0d0
          temp = 1.0d0

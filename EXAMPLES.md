@@ -84,7 +84,7 @@ single steady or periodic operator.
 | `example/tpjet_re2005/` | Triple-port jet, mixed Re = 1900/2005 | DMT baseflow (configuration only), forced periodic orbit, direct Floquet stability |
 | `example/thermosyphon_ra500/` | Buoyancy-driven thermosyphon, Ra = 500 | DNS, Newton thermal baseflow, direct stability (linear and finite-difference) |
 | `example/lid_driven_re3600/` | 2D lid-driven cavity, Re = 3600 | DNS, Newton, direct/adjoint stability |
-| `example/cubic_cavity_re1914/` | 3D cubic cavity, Re = 1914 | DNS, Newton (steady and UPO), direct/adjoint stability, OTD |
+| `example/cubic_cavity_re1914/` | 3D cubic cavity, Re = 1914 | DNS, Newton (steady), direct/adjoint stability (stable flow), OTD |
 | `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, DNS period estimate, direct Floquet stability (stable limit cycle), POD/DMD |
 | `example/naca0012_re2000/` | NACA 0012 airfoil, Re = 2000 | DNS, Newton, direct/adjoint stability, wavemaker |
 | `example/poiseuille_re5k/` | Channel flow, Re = 5000 | OTD |
@@ -124,6 +124,10 @@ this repository.
 | `example/flip_flop_re62/311_stability_direct_floquet/` | 62 | Floquet direct (3.11) | leading multiplier just above unit circle |
 | `example/tpjet_re2005/210_baseflow_newton/` | 1900 | Forced UPO (2.2) | converged forced UPO |
 | `example/tpjet_re2005/311_stability_direct_floquet/` | 1900 | Floquet direct (3.11) | leading multiplier above unit circle |
+| `example/cubic_cavity_re1914/000_dns/` | 1914 | DNS (0.0) | steady state by t = 100 |
+| `example/cubic_cavity_re1914/210_baseflow_newton/fp/` | 1914 | Newton-GMRES (2.0) | converged steady state, residual 8e-11 |
+| `example/cubic_cavity_re1914/310_stability_direct/` | 1914 | Direct LNSE (3.1) | stable: leading sigma = -0.0170; no neutral pair (literature omega = 0.587 not reproduced) |
+| `example/cubic_cavity_re1914/320_stability_adjoint/` | 1914 | Adjoint LNSE (3.2) | matches direct spectrum to 5e-4 |
 | `example/cylinder_re100/330_transient_growth/` | 40 | Transient growth (3.3) | G(40) = 275; G(tau) peaks between tau = 60 and 80 |
 | `example/cylinder_re180/000_dns_seed/` | 180 | DNS (0.0) | limit cycle, T = 5.1901 from the wake probe |
 | `example/cylinder_re180/210_baseflow_newton/` | 180 | Newton-UPO (2.1) | converged UPO, T = 5.189628, residual 7.8e-10 |
@@ -149,6 +153,8 @@ Stages not in the table above ship their inputs, and their `README.md` gives
 their state. Known gaps:
 
 - `example/cylinder_re30_thermal/` — baseflow only, no stability stage yet.
+- `example/cubic_cavity_re1914/500_otd/` — figures predate the change of the
+  lid profile on 2026-10; not rerun.
 - `example/cubic_cavity_re1950/` — its lid profile `(1-(2x)^2)^2(1-(2z)^2)^2`
   drives the cavity much more weakly than the lid of the cited references,
   so its limit cycle is not the published LC1 cycle. To be redone in 2.1.

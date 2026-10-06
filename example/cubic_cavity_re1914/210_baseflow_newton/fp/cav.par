@@ -1,5 +1,5 @@
 [GENERAL]
-startFrom = BF_cav0.f00001
+startFrom = BF_cav0.f00001 time=0 # copy the last field of ../../000_dns here (see README)
 stopAt = endTime
 endTime = 1 # ~ (1/0.34)/6 according to Nyquist theorem
 

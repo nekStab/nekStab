@@ -3,10 +3,11 @@
 startFrom = BF_cav0.f00001
 
 stopAt = endTime
-endTime = 1.0
+endTime = 2.0          # Arnoldi window: the modes of interest have omega < 0.5, so omega*T < 1 < pi (no aliasing)
 
 userParam01 = 3.2        # 3.2 = adjoint stability
-userParam07 = 100         # k_dim
+userParam03 = 6          # schur_tgt: converge the 6 leading eigenvalues
+userParam07 = 120        # k_dim
 userParam08 = 0          # sponge left
 userParam09 = 0          # sponge right
 userParam10 = 0          # sponge strength

@@ -1,11 +1,9 @@
 # cubic_cavity_re1914 / 000_dns
 
-**Stage**: 000_dns
-**uparam01**: 0
-**Re**: 1914
-**Start from**: cold start (useric)
-**Ranks**: 16
+**uparam01**: 0 (DNS), cold start, Re = 1914, 16 ranks
 
-Stage rationale is shared in the repo-root `EXAMPLES.md`. Run with
-`sbatch run.local.slurm`. Sponge disabled (closed/internal geometry) where
-applicable; tune endTime/k_dim for this operating point before the final run.
+DNS of the cubic cavity from rest. The flow reaches a steady state by
+t = 100 (probe signal changes by 4e-8 per step; 14 min on 16 ranks). The last
+field, `cav0.f00010`, is the seed of `../210_baseflow_newton/fp/`.
+
+Run: `sbatch run.local.slurm`.

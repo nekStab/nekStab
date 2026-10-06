@@ -1,0 +1,12 @@
+{
+  "case": "cubic_cavity_re1914/320_stability_adjoint",
+  "description": "Leading real eigenvalue of the adjoint at Re=1914; equals the direct value",
+  "produced": {"ranks": "16", "nekstab_mode": "3.2 (adjoint)", "k_dim": "120"},
+  "quantities": {
+    "leading_sigma": {
+      "source": "Spectre_NSa_conv.dat:col1:first",
+      "value": -0.01707981,
+      "tol_abs": 1.0e-3
+    }
+  }
+}
