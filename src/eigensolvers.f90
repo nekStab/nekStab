@@ -628,6 +628,9 @@ contains
                call outpost_vort(qq%vx, qq%vy, qq%vz, 'orv')
                isDirect = .false.; isFloquetDirect = .false.
                isTransientGrowth = tg_steady; isFloquetTransientGrowth = .not. tg_steady
+               ! matvec set evop = 'd' for the call above; restore the transient-growth tag,
+               ! otherwise Spectre_d.info replaces Spectre_p.info below.
+               evop = 'p'
             end if ! isTransientGrowth.or.isFloquetTransientGrowth
          end if
 
