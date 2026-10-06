@@ -434,8 +434,8 @@ whose reference runs are still pending.
 - [ ] Finish the rerun campaign: `ref/` reference data for every remaining
       stage (RANS coupled/quasilaminar, cubic cavity, moving cylinder, thermal cylinder,
       wavemakers)
-- [ ] `check_against_ref.py` sweep across all migrated stages as the
-      regression gate (replaces the old `validate.py` plan)
+- [x] `check_against_ref.py` sweep across all migrated stages as the
+      regression gate (37 of 37 pass, 2026-10-06)
 - [x] Update `DOC.md` with string-mode documentation
 - [x] Update copyright year (2020-2026) in `main.f90`
 - [ ] Review SPOD streaming module status — deferred to v2.1

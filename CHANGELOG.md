@@ -34,7 +34,34 @@ description for the 2.0 series; entries here are the per-tag deltas.
   `base_mut.o`). The "School A"/"School B" names are retired; no aliases or
   compatibility shims are kept.
 
+- `example/cylinder_re180/000_dns_seed/` is one DNS at Re = 180 from rest.
+  It replaces the Re = 150, 170 and 175 seed folders. The DNS lands on the
+  limit cycle, so its last field and its wake-probe period start the Newton
+  stage directly. The Newton stage runs without the explicit filter.
+
 ### Fixed
+- Transient growth writes the true optimal response. The `ore` output was
+  the optimal perturbation multiplied by G, because the response call went
+  through `matvec`, which dispatches on the mode flags and so still applied
+  the direct-adjoint map. The call now switches to the direct map for that
+  one step and restores the flags and the `evop` tag. Check on the back
+  step: the mass-weighted energy ratio of response to perturbation equals G
+  (7.69523 against 7.695277). The gains were never affected.
+
+- `cylinder_re180` stages run at one mesh order. The Floquet stages were
+  compiled at polynomial order 5 and read the order-7 Newton orbit by
+  interpolation. The orbit then did not close, and the multiplier of the
+  phase mode missed 1 by 6.8e-4 whatever the time step. With the `SIZE` of
+  the Newton stage the miss is 1.8e-6. The Floquet stages run with the
+  sponge off, because the sponge also forces the base flow.
+
+- `cubic_cavity_re1914` uses the lid of Leriche and Gavrilakis,
+  `(1-(2x)^18)^2 (1-(2z)^18)^2`. The previous profile `(1-(2x)^2)^2
+  (1-(2z)^2)^2` drives the cavity much more weakly, and the flow at
+  Re = 1914 was strongly stable under it. With the new lid the flow is
+  still stable (leading sigma = -0.017, converged in the mesh), so the
+  neutral mode of the literature is not reproduced.
+
 - Example plot scripts run again with matplotlib 3.9 and later.
   `nekplot.discrete_cmap` looked up colormaps through `plt.cm.get_cmap`,
   which matplotlib removed. Nine scripts also found `nekplot.py` through a
