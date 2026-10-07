@@ -1,0 +1,20 @@
+{
+  "case": "cylinder_re30_thermal/210_baseflow_newton",
+  "description": "Regression value of this repository (not a literature value): Newton-GMRES for the heated-cylinder steady state at Re=30, Ri=0.2, cold start",
+  "produced": {
+    "ranks": "8",
+    "nekstab_mode": "2.0 (Newton-GMRES fixed point, dynamic tolerance)"
+  },
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 8.933011e-09,
+      "tol_abs": 1e-08
+    },
+    "newton_iterations": {
+      "source": "residu_newton.dat:col1:last",
+      "value": 14,
+      "tol_abs": 3
+    }
+  }
+}

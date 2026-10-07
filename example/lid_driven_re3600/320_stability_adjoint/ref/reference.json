@@ -1,0 +1,14 @@
+{
+  "case": "lid_driven_re3600/320_stability_adjoint",
+  "description": "Regression value of this repository (not a literature value): leading real eigenvalue of the adjoint, regularized lid, Re=3600",
+  "produced": {
+    "nekstab_mode": "3.2 (adjoint)"
+  },
+  "quantities": {
+    "leading_sigma": {
+      "source": "Spectre_NSa_conv.dat:col1:first",
+      "value": -0.01803158,
+      "tol_abs": 0.002
+    }
+  }
+}

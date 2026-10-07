@@ -1,0 +1,19 @@
+{
+  "case": "naca0012_re2000/310_stability_direct",
+  "description": "Regression value of this repository (not a literature value): leading pair of the NACA 0012 steady flow at Re=2000",
+  "produced": {
+    "nekstab_mode": "3.1 (direct)"
+  },
+  "quantities": {
+    "leading_sigma": {
+      "source": "Spectre_NSd_conv.dat:col1:first",
+      "value": -0.06653824,
+      "tol_abs": 0.005
+    },
+    "leading_omega": {
+      "source": "Spectre_NSd_conv.dat:col2:first",
+      "value": 8.005787,
+      "tol_rel": 0.01
+    }
+  }
+}
