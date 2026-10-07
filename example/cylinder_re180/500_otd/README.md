@@ -11,7 +11,9 @@
   from the Re=180 UPO base flow on the same unified 2128-element mesh:
   `cp ../210_baseflow_newton/BF_1cyl0.f00001 .` — without it the run aborts in
   `mfi_prepare` (missing restart). Field files are gitignored, so this copy is
-  required after a fresh checkout.
+  required after a fresh checkout. `SIZE` uses the same polynomial order as
+  `../210_baseflow_newton/` (`lx1 = 8`), so the orbit is read without
+  interpolation.
 
 ## Run
 ```bash
