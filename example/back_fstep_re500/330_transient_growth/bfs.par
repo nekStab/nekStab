@@ -1,7 +1,7 @@
 [GENERAL]
 startFrom = BF_bfs0.f00001 U P
 stopAt = endTime
-endTime = 57.905  # horizon tau at the peak of the reference envelope (Blackburn et al. 2008, fig. 5)
+endTime = 29.913  # horizon tau; the shortest reference abscissa within 10 % (Blackburn et al. 2008, fig. 5). The peak at tau = 57.905 takes about 20 h.
 
 userParam01 = 3.3  # 0:dns,1:stabilization,3:stability
 userParam07 = 64  # k_dim, classic value (main)

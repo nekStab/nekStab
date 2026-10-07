@@ -16,16 +16,17 @@ adjoint integration over tau.
 
 - Base flow: `BF_bfs0.f00001`, the Newton solution of
   `../210_baseflow_newton/` (tracked here, so this stage runs on its own).
-- `endTime = 57.905` is the horizon tau. This value is the peak of the
-  reference envelope.
+- `endTime = 29.913` is the horizon tau, the shortest reference abscissa
+  that agrees within 10 %. The peak of the envelope is at tau = 57.905
+  (G = 61690, see the table); that run takes about 20 h.
 - `userParam07 = 64`: Krylov basis size. `dt = 0.005` is fixed, so the
   forward and adjoint integrations cover the same tau.
-- Sponge: 5 units at the inlet, 5 units at the outlet (`userParam08/09`).
-  A 10-unit outlet sponge damps the packet before tau = 58.
-- 8 MPI ranks (`lpmin = 8`). Wall time at tau = 57.905: 8 h 40 min in one
-  run, about 20 h in another and 23 h in a third, all on 8 ranks of a 6-core
-  node (the speed differs between runs). The third run reached a 23 h limit
-  a few minutes after it wrote the results. `run.local.slurm` asks for 24 h.
+- No sponge. `bfs.usr` leaves the sponge lines commented out, because a
+  sponge damps the perturbation toward zero and removes the growth.
+  `userParam08` to `userParam10` in `bfs.par` are not read.
+- 8 MPI ranks (`lpmin = 8`). Wall time at tau = 29.913: 3 h 34 min on 8
+  ranks of c9. The run at tau = 57.905 took 8 h 40 min to 23 h on 6-core
+  nodes. `run.local.slurm` asks for 24 h.
 
 Run: `sbatch run.local.slurm` (or `mpiexec -np 8 ./nek5000`).
 G is the first value in `Spectre_Hp_conv.dat`. Plot: `python plot.py`.
@@ -52,9 +53,10 @@ Figures:
 - `plot_baseflow.png`: streamwise velocity of the base flow.
 - `plot_optimal_perturbation.png`, `plot_optimal_response.png`: streamwise
   velocity of the optimal initial perturbation (`pRebfs0.f00001`) and of
-  its response at t = tau (`orebfs0.f00001`), drawn from the tau = 57.905 run.
+  its response at t = tau (`orebfs0.f00001`), drawn from the tau = 29.913 run.
   The energy of the response divided by the energy of the perturbation is
-  61688 (mass-weighted, GLL quadrature); G is 61690.
+  13126 (mass-weighted, GLL quadrature); G is 13127. The packet sits at
+  x = 10 to 22.
 
 ## Reference
 

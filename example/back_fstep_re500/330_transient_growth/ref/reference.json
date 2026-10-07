@@ -1,11 +1,11 @@
 {
   "case": "back_fstep_re500/330_transient_growth",
-  "description": "Optimal energy gain at tau = 57.905, the peak of Blackburn, Barkley & Sherwin (2008) fig. 5 (G = 63152)",
+  "description": "Optimal energy gain at tau = 29.913, a reference abscissa of Blackburn, Barkley & Sherwin (2008) fig. 5 (G = 12273 read off the curve)",
   "produced": {"ranks": "8", "nekstab_mode": "3.3 (transient growth)", "k_dim": "64"},
   "quantities": {
     "optimal_gain": {
       "source": "Spectre_Hp_conv.dat:col1:first",
-      "value": 61689.59,
+      "value": 13126.59,
       "tol_rel": 0.01
     }
   }
