@@ -6,22 +6,15 @@ description for the 2.0 series; entries here are the per-tag deltas.
 ## [Unreleased]
 
 ### Added
-- Setup checks at start-up. A Floquet or periodic-orbit Newton run now
-  stops with a message when the restart file (the base flow or orbit) was
+- Setup checks at start-up. A Floquet run (direct, adjoint or transient
+  growth) now stops with a message when the restart file (the orbit) was
   written at another polynomial order than `lx1` in `SIZE`; Nek5000
   interpolates such a file, and the multiplier 1 of the phase mode is
-  lost. Other base-flow modes print a warning for the same mismatch. A
-  stability or Newton mode with an active sponge warns that the sponge
-  also forces the base flow. A Floquet run warns when no converged
+  lost. The steady stability modes print a warning for the same mismatch.
+  Newton runs are not checked: they may start from a seed of another
+  order. A stability mode with an active sponge prints a note that the
+  sponge also forces the base flow. A Floquet run warns when no converged
   multiplier lies within 1e-3 of 1.
-- Resolved Reynolds stress can be formed from the `avg_all` moments and
-  applied as a frozen momentum force. `reynolds_commit` writes `RS1`,
-  `RS2`, and `FRS` (`f = -div(R)`) and does not arm them. The force is
-  off unless the case calls `reynolds_enable` from `nekStab_usrchk`;
-  `nekStab_init` then loads `FRS<session>0.f00001` once, and the stored
-  force is kept for the run and added in `userf` when `jp == 0`, so a
-  finite-difference spectrum about the mean does not differentiate it.
-  This is the fluctuation correlation, not the k-tau closure.
 
 ### Changed
 - Newton residual backtracking is now enabled by default; a case can

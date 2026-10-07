@@ -33,8 +33,7 @@ module nekstab_diagnostics
                                  initc, spng_st, isize, &
                                  isDirect, isAdjoint, isTransientGrowth, &
                                  isFloquetDirect, isFloquetAdjoint, &
-                                 isFloquetTransientGrowth, isNewtonFP, &
-                                 isNewtonPO, isNewtonPO_T
+                                 isFloquetTransientGrowth
    use nekstab_vortex, only: vortex_core
    implicit none
    private
@@ -440,11 +439,11 @@ contains
 !      another order. The restart file of a stability or Newton mode is the
 !      base flow or the orbit. Its interpolation is not the steady state or
 !      the orbit of this discretization, so a Floquet multiplier of exactly 1
-!      is lost. The run stops for Floquet and periodic-orbit Newton modes.
-!      For the other base-flow modes it prints a warning.
+!      is lost. The run stops for the Floquet modes. For the steady
+!      stability modes it prints a warning.
 !   2. Sponge. nekStab_forcing applies the sponge to the base flow as well as
 !      to the perturbation. The base flow must come from a run with the same
-!      sponge. The run prints a warning, since this cannot be tested here.
+!      sponge. The run prints a note, since this cannot be tested here.
 !
 !   The header of the restart file is plain text. Only rank 0 reads it.
 !-----------------------------------------------------------------------
@@ -455,12 +454,14 @@ contains
       character(len=132) :: hdr
       integer :: i, u, ios, wdsz, nxr, nyr, nzr, iflag
 
+      !  Newton modes are not listed: a Newton run may start from a seed of
+      !  another order (a DNS at lower order), and its result is then at the
+      !  order of SIZE. The stability modes read that result.
       needs_base = isDirect .or. isAdjoint .or. isTransientGrowth .or. &
                    isFloquetDirect .or. isFloquetAdjoint .or. &
-                   isFloquetTransientGrowth .or. isNewtonFP .or. &
-                   isNewtonPO .or. isNewtonPO_T
+                   isFloquetTransientGrowth
       orbit_mode = isFloquetDirect .or. isFloquetAdjoint .or. &
-                   isFloquetTransientGrowth .or. isNewtonPO .or. isNewtonPO_T
+                   isFloquetTransientGrowth
       if (.not. needs_base) return
 
       iflag = 0 ! 0: fine, 1: order differs
@@ -503,9 +504,9 @@ contains
       end if
 
       if (nid == 0 .and. spng_st /= 0) then
-         write (6, *) 'nekStab: WARNING: the sponge is active in a base-flow mode.'
-         write (6, *) '  It also forces the base flow. Use a base flow that was'
-         write (6, *) '  computed with the same sponge (same spng_st, length, field).'
+         write (6, *) 'nekStab: NOTE: the sponge is active in a stability mode.'
+         write (6, *) '  It also forces the base flow. The base flow must come from'
+         write (6, *) '  a run with the same sponge (same strength, length, field).'
       end if
 
    end subroutine nekStab_check_setup
