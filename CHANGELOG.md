@@ -55,12 +55,11 @@ description for the 2.0 series; entries here are the per-tag deltas.
   the Newton stage the miss is 1.8e-6. The Floquet stages run with the
   sponge off, because the sponge also forces the base flow.
 
-- `cubic_cavity_re1914` uses the lid of Leriche and Gavrilakis,
-  `(1-(2x)^18)^2 (1-(2z)^18)^2`. The previous profile `(1-(2x)^2)^2
-  (1-(2z)^2)^2` drives the cavity much more weakly, and the flow at
-  Re = 1914 was strongly stable under it. With the new lid the flow is
-  still stable (leading sigma = -0.017, converged in the mesh), so the
-  neutral mode of the literature is not reproduced.
+- `cubic_cavity_re1914` runs with the uniform lid `u = 1`, as in the
+  thesis. Since 2026-06-16 the cases used a regularized lid, under which the
+  flow at Re = 1914 is more strongly stable and the Hopf pair is absent.
+  With the uniform lid the pair is back: sigma = -1.8e-4, omega = 0.5868
+  (St = 0.0934); direct and adjoint agree to 2e-4 in sigma.
 
 - Example plot scripts run again with matplotlib 3.9 and later.
   `nekplot.discrete_cmap` looked up colormaps through `plt.cm.get_cmap`,

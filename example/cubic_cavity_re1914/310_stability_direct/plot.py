@@ -31,7 +31,8 @@ def main() -> None:
     ax.set_xlabel(r"growth rate $\sigma$ ($U/L$)")
     ax.set_ylabel(r"frequency $\omega$ ($U/L$)")
     ax.set_title("(a) Spectrum at Re = 1914", loc="left", fontsize=8)
-    ax.legend(loc="lower right")
+    ax.set_xticks([-0.02, -0.01, 0.0])
+    ax.legend(loc="center")
     output = CASE_DIR / "plot_spectrum.png"
     fig.savefig(output, dpi=400, bbox_inches="tight")
     print(f"Saved {output}")

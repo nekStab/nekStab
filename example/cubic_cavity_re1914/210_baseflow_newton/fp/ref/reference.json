@@ -1,12 +1,20 @@
 {
   "case": "cubic_cavity_re1914/210_baseflow_newton/fp",
-  "description": "3D cubic cavity steady base flow at Re=1914 via Newton-GMRES from a DNS field",
-  "produced": {"ranks": "16", "nekstab_mode": "2.0 (Newton-GMRES fixed point)"},
+  "description": "3D cubic cavity steady base flow at Re=1914, uniform lid, Newton-GMRES from a DNS field",
+  "produced": {
+    "ranks": "16",
+    "nekstab_mode": "2.0 (Newton-GMRES fixed point)"
+  },
   "quantities": {
     "newton_final_residual": {
       "source": "residu_newton.dat:col7:last",
-      "value": 7.99e-11,
-      "tol_abs": 1.0e-10
+      "value": 8.357035e-11,
+      "tol_abs": 1e-10
+    },
+    "newton_iterations": {
+      "source": "residu_newton.dat:col1:last",
+      "value": 12,
+      "tol_abs": 2
     }
   }
 }

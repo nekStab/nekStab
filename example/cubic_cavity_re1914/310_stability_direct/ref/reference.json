@@ -1,12 +1,21 @@
 {
   "case": "cubic_cavity_re1914/310_stability_direct",
-  "description": "Leading real eigenvalue of the steady cavity flow at Re=1914 (stable); direct and adjoint agree to 5e-4",
-  "produced": {"ranks": "16", "nekstab_mode": "3.1 (direct)", "k_dim": "120"},
+  "description": "Leading pair (T1) of the steady cavity flow at Re=1914, uniform lid: sigma slightly negative, omega = 0.587 (St = 0.0934, thesis)",
+  "produced": {
+    "ranks": "16",
+    "nekstab_mode": "3.1 (direct)",
+    "k_dim": "120"
+  },
   "quantities": {
     "leading_sigma": {
       "source": "Spectre_NSd_conv.dat:col1:first",
-      "value": -0.01699535,
-      "tol_abs": 1.0e-3
+      "value": -0.0001829624,
+      "tol_abs": 0.001
+    },
+    "leading_omega": {
+      "source": "Spectre_NSd_conv.dat:col2:first",
+      "value": 0.5868358,
+      "tol_abs": 0.002
     }
   }
 }
