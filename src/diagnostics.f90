@@ -29,14 +29,20 @@ module nekstab_diagnostics
                                  vx, vy, vz, pr, t, bm1, bm1s, binvm1, ifield, &
                                  volvm1, ym1, &
                                  xmn, xmx, ymn, ymx, zmn, zmx, &
-                                 NEKSTAB_UNIT_ENERGY, NEKSTAB_UNIT_ENSTRO
+                                 NEKSTAB_UNIT_ENERGY, NEKSTAB_UNIT_ENSTRO, &
+                                 initc, spng_st, isize, &
+                                 isDirect, isAdjoint, isTransientGrowth, &
+                                 isFloquetDirect, isFloquetAdjoint, &
+                                 isFloquetTransientGrowth, isNewtonFP, &
+                                 isNewtonPO, isNewtonPO_T
    use nekstab_vortex, only: vortex_core
    implicit none
    private
    public :: outpost_vort, norm_grad, smooth_field, &
              nekStab_outpost, nekStab_comment, &
              nekStab_printNEKParams, nekStab_energy, &
-             nekStab_enstrophy, nekStab_error, nekStab_log
+             nekStab_enstrophy, nekStab_error, nekStab_log, &
+             nekStab_check_setup
 contains
 
 !-----------------------------------------------------------------------
@@ -421,5 +427,87 @@ contains
       end if
 
    end subroutine nekStab_enstrophy
+
+!-----------------------------------------------------------------------
+! nekStab_check_setup — Stop or warn when the setup can give a wrong answer
+!
+! Purpose:
+!   Runs once at istep = 0, after the mode flags are resolved. It covers
+!   the two setup errors that gave a plausible but wrong spectrum in the
+!   cylinder_re180 and cubic_cavity_re1914 examples.
+!
+!   1. Polynomial order. Nek5000 interpolates a restart file written at
+!      another order. The restart file of a stability or Newton mode is the
+!      base flow or the orbit. Its interpolation is not the steady state or
+!      the orbit of this discretization, so a Floquet multiplier of exactly 1
+!      is lost. The run stops for Floquet and periodic-orbit Newton modes.
+!      For the other base-flow modes it prints a warning.
+!   2. Sponge. nekStab_forcing applies the sponge to the base flow as well as
+!      to the perturbation. The base flow must come from a run with the same
+!      sponge. The run prints a warning, since this cannot be tested here.
+!
+!   The header of the restart file is plain text. Only rank 0 reads it.
+!-----------------------------------------------------------------------
+   subroutine nekStab_check_setup
+      implicit none
+      logical :: needs_base, orbit_mode
+      character(len=132) :: fname
+      character(len=132) :: hdr
+      integer :: i, u, ios, wdsz, nxr, nyr, nzr, iflag
+
+      needs_base = isDirect .or. isAdjoint .or. isTransientGrowth .or. &
+                   isFloquetDirect .or. isFloquetAdjoint .or. &
+                   isFloquetTransientGrowth .or. isNewtonFP .or. &
+                   isNewtonPO .or. isNewtonPO_T
+      orbit_mode = isFloquetDirect .or. isFloquetAdjoint .or. &
+                   isFloquetTransientGrowth .or. isNewtonPO .or. isNewtonPO_T
+      if (.not. needs_base) return
+
+      iflag = 0 ! 0: fine, 1: order differs
+      nxr = 0
+      if (nid == 0) then
+         fname = adjustl(initc(1))
+         i = index(fname, ' ')
+         if (i > 0) fname(i:) = ' ' ! first word only: the file name
+         if (len_trim(fname) > 0) then
+            open (newunit=u, file=trim(fname), access='stream', &
+                  form='unformatted', status='old', action='read', iostat=ios)
+            if (ios == 0) then
+               hdr = ' '
+               read (u, iostat=ios) hdr
+               close (u)
+               if (hdr(1:4) == '#std') then
+                  read (hdr, '(5x,i1,1x,i2,1x,i2,1x,i2)', iostat=ios) &
+                     wdsz, nxr, nyr, nzr
+                  if (ios == 0 .and. nxr /= lx1) iflag = 1
+               end if
+            end if
+         end if
+      end if
+      call bcast(iflag, isize)
+
+      if (iflag == 1) then
+         if (nid == 0) then
+            write (6, *) 'nekStab: the restart file ', trim(fname)
+            write (6, *) '  has lx1 =', nxr, ' but SIZE has lx1 =', lx1
+         end if
+         if (orbit_mode) then
+            call nekStab_error('Floquet and orbit modes need a base flow written at '// &
+                               'the same polynomial order as SIZE. Run the Newton '// &
+                               'stage and this stage with the same lx1.')
+         else if (nid == 0) then
+            write (6, *) 'nekStab: WARNING: the base flow is interpolated from another'
+            write (6, *) '  polynomial order. It is not a steady state of this'
+            write (6, *) '  discretization, so the eigenvalues carry that error.'
+         end if
+      end if
+
+      if (nid == 0 .and. spng_st /= 0) then
+         write (6, *) 'nekStab: WARNING: the sponge is active in a base-flow mode.'
+         write (6, *) '  It also forces the base flow. Use a base flow that was'
+         write (6, *) '  computed with the same sponge (same spng_st, length, field).'
+      end if
+
+   end subroutine nekStab_check_setup
 
 end module nekstab_diagnostics

@@ -131,6 +131,7 @@ contains
       logical :: converged
       integer :: i, j
       character(len=132) :: filename
+      real(nekStab_dp) :: orbit_gap ! smallest distance of a converged multiplier to 1
 
       !     ----- Allocate arrays -----
       allocate (Q(k_dim + 1))
@@ -400,6 +401,28 @@ contains
             converged_eigenvalues
          write (6, *) 'Total matrix-vector products: ', &
             total_matvecs
+      end if
+
+      !  An autonomous periodic orbit has the phase mode, a Floquet multiplier of
+      !  exactly 1. If no converged multiplier is near 1, the linearized map does
+      !  not belong to a closed orbit: wrong period in the base-flow time stamp,
+      !  another polynomial order than the Newton run, a sponge, or a base flow
+      !  that is not on the orbit. The threshold 1e-3 is 3 orders above the gap
+      !  of the validated examples (1e-6 to 1e-13).
+      if ((isFloquetDirect .or. isFloquetAdjoint) .and. converged_eigenvalues > 0) then
+         orbit_gap = huge(1.0d0)
+         do i = 1, k_dim
+            if (residual(i) < eigen_tol*max(abs(vals(i)), 1.0d0)) then
+               orbit_gap = min(orbit_gap, abs(vals(i) - cmplx(1.0d0, 0.0d0, kind=nekStab_dp)))
+            end if
+         end do
+         if (nid == 0) write (6, *) 'Floquet multiplier closest to 1: |mu-1| =', orbit_gap
+         if (nid == 0 .and. orbit_gap > 1.0d-3) then
+            write (6, *) 'nekStab: WARNING: no converged multiplier within 1e-3 of 1.'
+            write (6, *) '  An autonomous periodic orbit has one (the phase mode).'
+            write (6, *) '  Check the period, the polynomial order, the sponge and'
+            write (6, *) '  that the base flow is on the orbit. Ignore if the orbit is forced.'
+         end if
       end if
 
       if (converged_eigenvalues > 0) then

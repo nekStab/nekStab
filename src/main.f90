@@ -306,7 +306,8 @@
       subroutine nekStab_init
          use nekstab_krylov_subspace, only: configure_thermal_norm_weight, nv, nt
          use nekstab_mode_config, only: nekStab_resolve_mode
-         use nekstab_diagnostics, only: nekStab_printNEKParams
+         use nekstab_diagnostics, only: nekStab_printNEKParams,
+     &      nekStab_check_setup
          use nekstab_forcing_mod, only: activate_sponge
          use nekstab_vectors, only: zero_forcing
          use nekstab_reynolds, only: reynolds_enabled, reynolds_load
@@ -348,6 +349,7 @@
             ifbfcv = .false.
 
             if (spng_st > 0) call activate_sponge
+            call nekStab_check_setup
 
             nof = 0
             scal = .false.
