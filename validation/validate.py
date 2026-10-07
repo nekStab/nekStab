@@ -282,7 +282,7 @@ CASES = {
     },
     "backstep_bf": {
         "description": "Backward-facing step - Newton baseflow (Re=500)",
-        "dir": "back_fstep/baseflow",
+        "dir": "back_fstep_re500/210_baseflow_newton",
         "casename": "bfs",
         "tier": "short",
         "family": "back_fstep",
@@ -294,26 +294,26 @@ CASES = {
         "copies_to": [
             {
                 "file": "BF_bfs0.f00001",
-                "dest_dir": "back_fstep/transient_growth",
+                "dest_dir": "back_fstep_re500/330_transient_growth",
             },
         ],
     },
     "backstep_tg": {
-        "description": "Backward-facing step - Transient growth at tau=1 (Re=500)",
-        "dir": "back_fstep/transient_growth",
+        "description": "Backward-facing step - Transient growth at tau=57.905 (Re=500)",
+        "dir": "back_fstep_re500/330_transient_growth",
         "casename": "bfs",
         "tier": "short",
         "family": "back_fstep",
         "requires": ["BF_bfs0.f00001"],
-        "output": "Spectre_NSp.dat",
+        "output": "Spectre_Hp_conv.dat",
         "reference": "Blackburn et al. (2008), Barkley et al. (2002)",
         "checks": [
             {
                 "name": "transient_growth",
                 "metric": "sigma_real",
-                "expected": 1.17,
-                "tolerance": 0.05,
-                "description": "Leading singular value sigma=ln(G)/tau~1.17 at tau=1",
+                "expected": 63152.0,
+                "tolerance": 2500.0,
+                "description": "Optimal energy gain G at tau=57.905 (Blackburn et al. 2008 fig. 5: 63152)",
             },
         ],
     },

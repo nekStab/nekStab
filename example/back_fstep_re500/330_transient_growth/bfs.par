@@ -1,12 +1,12 @@
 [GENERAL]
 startFrom = BF_bfs0.f00001 U P
 stopAt = endTime
-endTime = 1.0  # classic base horizon (main: examples/back_fstep); sweep tau via t_* dirs
+endTime = 57.905  # horizon tau at the peak of the reference envelope (Blackburn et al. 2008, fig. 5)
 
 userParam01 = 3.3  # 0:dns,1:stabilization,3:stability
 userParam07 = 64  # k_dim, classic value (main)
 userParam08 = 5   # sponge lenght left
-userParam09 = 10  # sponge lenght right
+userParam09 = 5   # sponge right: last 5 units only, so long-horizon packets stay in the measured domain
 userParam10 = 2   # sponge strenght
 
 dt = 0.005  # explicit dt; default compute_cfl path returned Infinity here giving nsteps int32 overflow (task #70). 0.005 -> nsteps=10000 over endTime=50.

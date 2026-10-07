@@ -5,7 +5,8 @@ Matches AMR_Krylov_V5 paper style: stacked panels showing BF vx (cividis),
 optimal perturbation vx (RdBu), and optimal response vx (seismic),
 with step geometry patch. Double-column width for elongated domain.
 
-OUTPUTS: plot_baseflow.png, plot_optimal_perturbation.png, plot_optimal_response.png, plot_envelope.png
+OUTPUTS: plot_baseflow.png, plot_optimal_perturbation.png, plot_optimal_response.png,
+         plot_envelope.png (G(tau) from growth_sweep.csv against barkley2008_fig5.ref)
 USAGE:   python plot.py
 """
 from pathlib import Path
@@ -65,6 +66,24 @@ def _plot_field(kind, fpath, output):
     plt.close(fig)
 
 
+def _plot_envelope(output):
+    """G(tau): one nekStab run per horizon (growth_sweep.csv) on the reference curve."""
+    ref = np.loadtxt(CASE_DIR / 'barkley2008_fig5.ref')
+    tau, gain = np.loadtxt(CASE_DIR / 'growth_sweep.csv', delimiter=',',
+                           skiprows=3, usecols=(0, 1), unpack=True)
+    fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
+    ax.plot(ref[:, 0], ref[:, 1], '-o', c='0.6', lw=2.5, ms=2, markevery=3,
+            label='Blackburn et al. (2008)')
+    ax.plot(tau, gain, '-s', c='k', lw=0.8, ms=4, mfc='none', label='nekStab')
+    ax.set_yscale('log')
+    ax.set_xlabel(r'horizon $\tau$')
+    ax.set_ylabel(r'$G(\tau)$')
+    ax.legend(loc='lower right')
+    fig.savefig(output, dpi=400, bbox_inches='tight')
+    print(f'Saved {output}')
+    plt.close(fig)
+
+
 def main():
     nk.configure_style()
 
@@ -73,7 +92,7 @@ def main():
     if not bf_files:
         bf_files = nk.find_fields('BF_bfs0.f00001', CASE_DIR)
     pert_files = nk.find_fields('pRebfs0.f*', CASE_DIR)
-    resp_files = nk.find_fields('rRebfs0.f*', CASE_DIR)
+    resp_files = nk.find_fields('orebfs0.f*', CASE_DIR)  # optimal response, written by eigensolvers.f90
 
     panels = []
     if bf_files:
@@ -83,20 +102,9 @@ def main():
     if resp_files:
         panels.append(('resp', resp_files[0], CASE_DIR / 'plot_optimal_response.png'))
 
-    if not panels:
-        # Fall back to G(t) envelope only
-        fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        ref = CASE_DIR.parent / 'barkley2008_fig5.ref'
-        ref_path = str(ref) if ref.exists() else None
-        nk.plot_transient_growth(ax, CASE_DIR.parent, ref_file=ref_path)
-        output = CASE_DIR / 'plot_envelope.png'
-        fig.savefig(output, dpi=600, bbox_inches='tight')
-        print(f'Saved {output}')
-        plt.close(fig)
-        return
-
     for kind, fpath, output in panels:
         _plot_field(kind, fpath, output)
+    _plot_envelope(CASE_DIR / 'plot_envelope.png')
 
 
 if __name__ == '__main__':
