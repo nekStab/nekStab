@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=3000
-#SBATCH --time=06:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=logfile
 #SBATCH --error=logfile
 

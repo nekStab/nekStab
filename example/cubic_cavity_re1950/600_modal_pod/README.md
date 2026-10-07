@@ -15,8 +15,8 @@ stepping).
 ## Expected Output
 `pod_spectrum.dat` (eigenvalue / energy / cumulative), `pod_coefficients.dat`,
 and `pod*cav0.f*` mode fields. For a single-frequency limit cycle the energy
-concentrates in the **leading real+imag pair**: mode 1 ≈ 58 %, mode 2 ≈ 36 %
-(≈ 94 % cumulative by two modes) — the oscillation captured as one POD pair.
+concentrates in the **leading real+imag pair**: mode 1 = 57.6 %, mode 2 = 36.7 %
+(94.3 % cumulative by two modes) — the oscillation captured as one POD pair.
 
 ## Run
 ```bash

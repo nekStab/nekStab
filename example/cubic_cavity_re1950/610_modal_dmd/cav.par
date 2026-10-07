@@ -2,7 +2,7 @@
 startFrom = cav0.f00001
 
 stopAt = endTime
-endTime = 100  # ~9 cavity periods (T_UPO=10.77); for limit-cycle snapshots
+endTime = 100  # ~9 cavity periods (T=10.789); for limit-cycle snapshots
 
 userParam01 = 6  # modal mode
 

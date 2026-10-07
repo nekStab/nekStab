@@ -14,19 +14,15 @@ stepping).
 
 ## Expected Output
 `dmd_spectrum.dat` (`|μ|`, σ, ω, St, mode norms), `dmd_svd.dat`, and
-`dm*cav0.f*` mode fields. The limit-cycle fundamental appears at **St = 0.0927**
-(T = 10.785, matching the Floquet period) with `|μ| ≈ 1`, σ ≈ 0, plus harmonics
-at 2×, 3×, … near the unit circle.
+`dm*cav0.f*` mode fields. The snapshots lie on the saturated limit cycle, so
+every mode has `|μ| < 1` (σ between −4e-5 and −4.5e-3). The fundamental is at
+**St = 0.09271** (T = 10.786; Floquet period 10.789) with `|μ| = 0.99981`. Its
+harmonics at 2×, 3×, … are present with `|μ|` between 0.9998 and 0.9978. The
+SVD holds 94.3 % of the energy in the first pair and 99.6 % in four modes.
 
-**Weakly-supercritical caveat:** Re = 1950 is only just above Re_c ≈ 1916, so
-the cycle saturates very slowly (see [`../000_dns/README.md`](../000_dns/README.md)).
-A weak residual transient (σ ≈ +0.004, `|μ| ≈ 1.002`) survives in the snapshots,
-and because DMD ranks modes by norm, that transient mode is reported **above**
-the St = 0.0927 fundamental. This is a property of the near-critical flow, not a
-solver error — the fundamental and its harmonics are present lower in the
-spectrum (the centre-probe FFT confirms St = 0.0927 is the true dominant
-frequency). A textbook-clean ranking would need a much longer saturating DNS
-(~3000 t.u.).
+DMD ranks the modes by norm. The 3rd harmonic (St = 0.278) has the largest
+norm and ranks first; the fundamental ranks fifth. The centre-probe FFT gives
+the same fundamental (St = 0.09269).
 
 ## Run
 ```bash

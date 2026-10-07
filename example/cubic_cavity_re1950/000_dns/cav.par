@@ -1,13 +1,11 @@
 [GENERAL]
-# Warm-start from the SATURATED limit cycle (ic_sat.f00001 = 000_dns_period
-# cav0.f00066, t=800, on-orbit) so every modal snapshot is on the cycle. The
-# earlier rst_cav0 settle (t=0-100) was still growing (DMD sigma~+0.004), which
-# contaminated POD/DMD with transient linear-Hopf frequencies; sampling on the
-# saturated orbit gives the clean limit-cycle fundamental (St=0.0927) + harmonics.
+# Warm-start from the saturated limit cycle (ic_sat.f00001 = 000_dns_period
+# cav0.f00017, t = 1700, on the orbit: the centre-probe amplitude is flat from
+# t = 1000) so every modal snapshot is on the cycle.
 startFrom = ic_sat.f00001
 
 stopAt = endTime
-endTime = 900  # from t=800: 100 t.u. ~= 9.3 periods (T=10.789) at dt=0.5 -> ~200 saturated snapshots
+endTime = 1800  # from t=1700: 100 t.u. ~= 9.3 periods (T=10.789) at dt=0.5 -> ~200 saturated snapshots
 
 userParam01 = 0  # DNS mode
 

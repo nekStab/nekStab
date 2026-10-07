@@ -1,0 +1,20 @@
+{
+  "case": "cubic_cavity_re1950/610_modal_dmd",
+  "description": "Regression value of this repository (not a literature value): DMD of 100 saturated limit-cycle snapshots at Re=1950; no mode grows",
+  "produced": {
+    "ranks": "16",
+    "nekstab_mode": "6 (modal)"
+  },
+  "quantities": {
+    "max_abs_mu": {
+      "source": "dmd_spectrum.dat:col2:max",
+      "value": 0.999978,
+      "tol_abs": 5e-05
+    },
+    "svd_first_pair_energy_percent": {
+      "source": "dmd_svd.dat:col3:first",
+      "value": 57.119991,
+      "tol_abs": 2.0
+    }
+  }
+}

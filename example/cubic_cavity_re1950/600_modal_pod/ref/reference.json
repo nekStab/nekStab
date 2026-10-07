@@ -1,0 +1,15 @@
+{
+  "case": "cubic_cavity_re1950/600_modal_pod",
+  "description": "Regression value of this repository (not a literature value): POD of 100 saturated limit-cycle snapshots at Re=1950, uniform lid",
+  "produced": {
+    "ranks": "16",
+    "nekstab_mode": "6 (modal)"
+  },
+  "quantities": {
+    "energy_mode1_percent": {
+      "source": "pod_spectrum.dat:col3:first",
+      "value": 57.558034,
+      "tol_abs": 2.0
+    }
+  }
+}

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Extract the Re=175 shedding period from the wake-probe time series (1cyl.his).
-PSD peak for f_peak + sharpness; cycle-counting over the long window for a
-sub-bin-precise period to seed the Re=180 Newton UPO."""
+"""Extract the limit-cycle period of the Re=1950 cavity from the centre-probe
+time series (cav.his). PSD peak for f_peak + sharpness; cycle-counting over the
+long window for a sub-bin-precise period for the Floquet base flow."""
 import numpy as np
 
-# --- load .his: line1=npts, line2=coords, then rows: t, u, v, (w/p) ---
-raw = np.loadtxt('1cyl.his', skiprows=2)
+# --- load .his: line1=npts, line2=coords, then rows: t, u, v, w, p ---
+raw = np.loadtxt('cav.his', skiprows=2)
 t, u, v = raw[:, 0], raw[:, 1], raw[:, 2]
 
-# drop the Re180->Re175 relaxation transient (first 300 t.u.)
-t0 = t[0] + 300.0
+# drop the growth and saturation transient: the probe amplitude is flat from t = 1000
+t0 = 1000.0
 m = t >= t0
 t, v = t[m], v[m]
 print(f"window: t=[{t[0]:.1f}, {t[-1]:.1f}]  span={t[-1]-t[0]:.1f} t.u.  N={len(t)}")
@@ -48,4 +48,4 @@ tc = tu[up] - vu[up] * (tu[up+1]-tu[up]) / (vu[up+1]-vu[up])
 ncyc = len(tc) - 1
 T_cyc = (tc[-1] - tc[0]) / ncyc
 print(f"cycle-count: {ncyc} periods over {tc[-1]-tc[0]:.2f} t.u.  ->  T={T_cyc:.5f}  f={1/T_cyc:.6f}")
-print(f"\n==> PERIOD for Re=180 UPO seed: T = {T_cyc:.5f}  (St={1/T_cyc:.4f})")
+print(f"\n==> PERIOD of the Re=1950 limit cycle: T = {T_cyc:.5f}  (St={1/T_cyc:.4f})")

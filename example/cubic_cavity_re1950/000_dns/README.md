@@ -1,32 +1,30 @@
 # Cubic Cavity Re=1950 — DNS (limit-cycle modal snapshots)
 
-Generates the fine-sampled snapshot set consumed by POD (`600_modal_pod/`) and
-DMD (`610_modal_dmd/`). Case overview: [`../README.md`](../README.md).
+Generates the snapshot set consumed by POD (`600_modal_pod/`) and DMD
+(`610_modal_dmd/`): 200 snapshots, one every 0.5 time units, from t = 1700 to
+1800, in double precision. Case overview: [`../README.md`](../README.md).
 
 ## Configuration
-- `userParam01 = 0` (DNS), Re = 1950 (`viscosity = -1950`).
-- Warm-started from the saturated-mean orbit (`ic_sat.f00001` =
-  `../000_dns_period/cav0.f00066`, t = 800) so the mean flow is already settled,
-  then samples ~9 periods at `writeInterval = 0.5` (~200 snapshots, double
-  precision — single-precision 3D fields hang Nek MPI-IO on 16 ranks).
+- `userParam01 = 0` (DNS), Re = 1950 (`viscosity = -1950`), uniform lid.
+- Warm start `ic_sat.f00001`, a copy of `../000_dns_period/cav0.f00017`
+  (t = 1700), which lies on the saturated cycle.
+- Double precision: single-precision 3D snapshots hang Nek MPI-IO on 16 ranks.
 
-## Weakly-supercritical caveat (matters for DMD)
-Re = 1950 sits just above the cavity's first Hopf (Re_c ≈ 1916), so the limit
-cycle is very weak (centre-probe oscillation ~0.2 % of the lid speed) and
-saturates **extremely slowly** — the residual transient decays at only
-~7e-4 / t.u. Even by t ≈ 900 the oscillation amplitude is still drifting, so the
-snapshots are not perfectly on a saturated cycle. The dominant frequency is
-nonetheless sharp: the centre-probe FFT gives **St = 0.0927 (T = 10.785)**,
-matching the Floquet period. The slow residual surfaces in DMD ranking — see
-`../610_modal_dmd/README.md`.
+## Saturation
+Re = 1950 is 1.7 % above the first Hopf bifurcation (Re_c = 1916.6). The
+centre-probe signal in `../000_dns_period/` grows at about +3.7e-3 per time
+unit and saturates near t = 1000, at a standard deviation of 4.5e-4 (in units
+of the lid speed). From t = 1000 the amplitude stays within 5 %. The snapshots
+of this stage therefore lie on the cycle, with no growing transient.
 
 ## Reproduction order
-`rst_cav0` → `000_dns` (initial settle) → `000_dns_period` (saturate the mean +
-extract the period + Floquet orbit) → `000_dns` re-run warm from that orbit
-(this stage, for better-settled modal snapshots) → `600/610`.
+`../000_dns_period/` (seed DNS and period) → `000_dns` (this stage) →
+`../600_modal_pod/` and `../610_modal_dmd/` (they read snapshots 80 to 179
+through the links `cav0.f00001..100 -> ../000_dns/cav0.f00080..179`) →
+`../311_stability_direct_floquet/`.
 
 ## Run
 ```bash
 mks cav
-sbatch run.local.slurm
+sbatch run.local.slurm      # about 36 min on 16 ranks
 ```
