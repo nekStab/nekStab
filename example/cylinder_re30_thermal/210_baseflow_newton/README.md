@@ -72,9 +72,10 @@ Generated helper state:
 
 - `.state`
 
-The archived convergence figure is kept in the folder. The raw
-`residu_newton.dat`, `residu_gmres.dat`, and `residu_arnoldi.dat` files are
-not part of the current clean payload.
+The archived convergence figure is kept in the folder. A run writes
+`residu_newton.dat`, `residu_gmres.dat`, and `residu_arnoldi.dat`; they are
+not tracked in git. The cold-start run converges in 14 Newton iterations to a
+residual of 8.9e-9 (`ref/reference.json`).
 
 ## What `1cyl.usr` Is Testing
 
