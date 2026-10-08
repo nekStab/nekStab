@@ -6,7 +6,7 @@ startFrom = BF_cav0.f00001
 stopAt = endTime
 endTime = 10.78909  # one period T of the limit cycle (Floquet integrates over T)
 
-userParam01 = 3.11  # Direct Floquet stability around UPO
+userParam01 = 3.21  # Adjoint Floquet stability around the limit cycle
 userParam07 = 100   # k_dim; one matvec integrates one period (7500 steps, about 6 min on 16 ranks), so 192 would not fit in 24 h
 
 dt = 0

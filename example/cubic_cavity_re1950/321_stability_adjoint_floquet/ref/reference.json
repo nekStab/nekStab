@@ -1,0 +1,9 @@
+{
+  "case": "cubic_cavity_re1950/321_stability_adjoint_floquet",
+  "description": "Regression value of this repository (not a literature value): leading adjoint Floquet pair of the Re=1950 limit cycle with the uniform lid, T = 10.78909; equals the direct pair of 311 to 1 % in sigma.",
+  "produced": {"ranks": "16", "nekstab_mode": "3.21 (adjoint Floquet)", "k_dim": "100"},
+  "quantities": {
+    "leading_sigma": {"source": "Spectre_NSa_conv.dat:col1:first", "value": 2.880611e-3, "tol_abs": 5.0e-4},
+    "leading_omega": {"source": "Spectre_NSa_conv.dat:col2:first", "value": 0.1445734, "tol_rel": 0.02}
+  }
+}

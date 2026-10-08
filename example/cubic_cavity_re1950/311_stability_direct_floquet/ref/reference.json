@@ -1,0 +1,9 @@
+{
+  "case": "cubic_cavity_re1950/311_stability_direct_floquet",
+  "description": "Regression value of this repository (not a literature value): leading Floquet pair of the Re=1950 limit cycle with the uniform lid, T = 10.78909. The pair lies outside the unit circle (|mu| = 1.0319).",
+  "produced": {"ranks": "16", "nekstab_mode": "3.11 (direct Floquet)", "k_dim": "100"},
+  "quantities": {
+    "leading_sigma": {"source": "Spectre_NSd_conv.dat:col1:first", "value": 2.907858e-3, "tol_abs": 5.0e-4},
+    "leading_omega": {"source": "Spectre_NSd_conv.dat:col2:first", "value": 0.1445052, "tol_rel": 0.02}
+  }
+}
