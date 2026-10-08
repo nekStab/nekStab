@@ -143,6 +143,10 @@ def main(argv: list[str]) -> int:
               + ", ".join(f"{k}={v}" for k, v in prod.items()))
 
     all_ok = True
+    if not spec.get("quantities"):
+        # An empty list passes every run, so it is a missing reference, not a clean one.
+        print("  quantities               FAIL  reference lists no quantity; it checks nothing")
+        all_ok = False
     for name, q in spec.get("quantities", {}).items():
         try:
             actual = extract(stage, q["source"])
