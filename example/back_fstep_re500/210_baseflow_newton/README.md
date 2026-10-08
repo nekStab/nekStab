@@ -25,15 +25,16 @@ zero. Both phases run in this directory; only the `.par` differs.
 
 ```bash
 mks bfs                                  # build once
-
-# Phase 1 — DNS settle (uniform IC -> steady recirculation on THIS mesh)
-cp bfs_dns.par bfs.par
-sbatch run.local.slurm                   # 8 ranks, ~5 min -> bfs0.f00001..4
-
-# Phase 2 — Newton polish, seeded from the settled field
-cp bfs_newton.par bfs.par                # startFrom = bfs0.f00004
-sbatch run.local.slurm                   # converges in ~4 iters -> BF_bfs0.f00001
+sbatch run.local.slurm                   # 8 ranks, both phases in one job
 ```
+
+`run.local.slurm` runs the two phases in order and leaves `bfs.par` as the
+phase-1 file when it ends:
+
+1. Phase 1 (DNS settle): `bfs_dns.par` — uniform IC to steady recirculation on
+   this mesh, ~5 min, writes `bfs0.f00001..4`.
+2. Phase 2 (Newton polish): `bfs_newton.par` (`startFrom = bfs0.f00004`) —
+   converges in ~4 iterations and writes `BF_bfs0.f00001`.
 
 The converged steady base flow is written to `BF_bfs0.f00001`.
 

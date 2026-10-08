@@ -79,7 +79,7 @@ def extract(stage: Path, source: str) -> float:
     """Read a scalar from a fresh run output.
 
     Spec forms:
-      "<file>:col<N>:<reducer>"   reducer in {last,first,min,max}
+      "<file>:col<N>:<reducer>"   reducer in {last,first,min,max,mean,rms,std,row<K>}
       "<file>:strouhal:col<N>"    FFT dominant frequency of column N (probe vy)
       "<file>:field:<name>.<stat>" statistic (min, max, norm) of a field (vx, vy, vz, pr, t, s2, ...)
                                   in a Nek5000 field file; stat xpeak, ypeak, zpeak is the
@@ -122,8 +122,18 @@ def extract(stage: Path, source: str) -> float:
     values = _column(path, col)
     if not values:
         raise ValueError(f"no numeric data in column {col + 1} of {path}")
+    mean = sum(values) / len(values)
     reducers = {"last": values[-1], "first": values[0],
-                "min": min(values), "max": max(values)}
+                "min": min(values), "max": max(values),
+                "mean": mean,
+                "rms": math.sqrt(sum(v * v for v in values) / len(values)),
+                "std": math.sqrt(sum((v - mean) ** 2 for v in values) / len(values))}
+    if arg.startswith("row") and arg[3:].isdigit():
+        # "row<N>": the N-th numeric row of the file, counted from 1
+        n = int(arg[3:])
+        if not 1 <= n <= len(values):
+            raise ValueError(f"row {n} is outside the {len(values)} rows of {path}")
+        return values[n - 1]
     if arg not in reducers:
         raise ValueError(f"unknown reducer {arg!r} in {source!r}")
     return reducers[arg]

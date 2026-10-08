@@ -1,7 +1,31 @@
 {
   "case": "back_fstep_re500/210_baseflow_newton",
-  "description": "Backward-facing step steady base flow at Re=500 via Newton-GMRES",
-  "produced": {"ranks": "8", "nekstab_mode": "2.0 (Newton-GMRES fixed point)"},
-  "note": "Figure/IC reference only — the shipped residual files were empty/corrupt, so no numeric scalar is asserted. A fresh run regenerates residu_newton.dat (target 1e-8); compare visually against ref/bf.png.",
-  "quantities": {}
+  "description": "Backward-facing step steady base flow at Re=500 via DNS settle and Newton-GMRES (two phases in run.local.slurm). Regression values of this repository, reproduced on Jean Zay (ifort, 8 ranks) and in the June run.",
+  "produced": {
+    "ranks": "8",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "2.0 (Newton-GMRES fixed point), seeded by a DNS",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-09"
+  },
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 0.0,
+      "tol_abs": 1e-08,
+      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8)."
+    },
+    "newton_iterations": {
+      "source": "residu_newton.dat:col1:last",
+      "value": 4,
+      "tol_abs": 1,
+      "note": "Convergence takes 4 iterations from the DNS-settled seed."
+    },
+    "newton_first_residual": {
+      "source": "residu_newton.dat:col7:first",
+      "value": 7.03e-07,
+      "tol_rel": 0.05,
+      "note": "Residual of the DNS-settled seed (phase 1)."
+    }
+  }
 }
