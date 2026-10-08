@@ -11,6 +11,8 @@ if any quantity is outside tolerance. See example/REFERENCE_RESULTS.md.
 A quantity's "source" tells the extractor where to read the value from a fresh
 run, in the form "<file>:col<N>:<reducer>" with reducer in {last,first,min,max},
 e.g. "residu.dat:col2:last". Tolerance is "tol_rel" (relative) or "tol_abs".
+A "field" source reads a Nek5000 field file and needs pymech:
+uv run --with numpy --with pymech python scripts/check_against_ref.py <stage>
 """
 from __future__ import annotations
 import json
@@ -52,12 +54,37 @@ def _strouhal(path: Path, signal_col: int, time_col: int = 0,
     return float(freqs[sel][np.argmax(psd[sel])])
 
 
+def _field_peak(path: Path, name: str, axis: int) -> float:
+    """Coordinate `axis` (0, 1, 2) of the point where |field `name`| is largest."""
+    import pymech
+
+    ds = pymech.readnek(str(path))
+    best, where = -1.0, float("nan")
+    for el in ds.elem:
+        if name in ("vx", "vy", "vz"):
+            data = el.vel["xyz".index(name[1])]
+        elif name == "pr":
+            data = el.pres[0]
+        elif name == "t" or name[0] == "s":
+            data = el.temp[0 if name == "t" else int(name[1:]) - 1]
+        else:
+            raise ValueError(f"unknown field name {name!r}")
+        i = abs(data).argmax()
+        if abs(data).flat[i] > best:
+            best, where = float(abs(data).flat[i]), float(el.pos[axis].flat[i])
+    return where
+
+
 def extract(stage: Path, source: str) -> float:
     """Read a scalar from a fresh run output.
 
     Spec forms:
       "<file>:col<N>:<reducer>"   reducer in {last,first,min,max}
       "<file>:strouhal:col<N>"    FFT dominant frequency of column N (probe vy)
+      "<file>:field:<name>.<stat>" statistic (min, max, norm) of a field (vx, vy, vz, pr, t, s2, ...)
+                                  in a Nek5000 field file; stat xpeak, ypeak, zpeak is the
+                                  coordinate of the largest |field|;
+                                  "<file>:field:time" is the time stamp of the file
     """
     parts = source.split(":")
     if len(parts) != 3:
@@ -69,6 +96,25 @@ def extract(stage: Path, source: str) -> float:
 
     if op == "strouhal":
         return _strouhal(path, int(arg[3:]) - 1)
+
+    if op == "field":
+        # Statistic of one field in a Nek5000 field file, e.g. "wm_1cyl0.f00001:field:vx.max".
+        from inspect_nek_field import InspectError, inspect
+        name, _, stat = arg.partition(".")
+        if name == "time":
+            try:
+                return float(inspect(path)["time"])
+            except InspectError as exc:
+                raise ValueError(f"cannot read field file {path}: {exc}") from exc
+        if stat in ("xpeak", "ypeak", "zpeak"):
+            return _field_peak(path, name, "xyz".index(stat[0]))
+        try:
+            fields = inspect(path)["fields"]
+        except InspectError as exc:
+            raise ValueError(f"cannot read field file {path}: {exc}") from exc
+        if name not in fields or stat not in fields[name]:
+            raise ValueError(f"no {arg!r} in {path}; it has {sorted(fields)}")
+        return float(fields[name][stat])
 
     if not op.startswith("col"):
         raise ValueError(f"unsupported source spec: {source!r}")
