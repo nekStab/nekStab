@@ -14,6 +14,8 @@ e.g. "residu.dat:col2:last". Tolerance is "tol_rel" (relative) or "tol_abs".
 """
 from __future__ import annotations
 import json
+import math
+import re
 import sys
 from pathlib import Path
 
@@ -81,8 +83,31 @@ def extract(stage: Path, source: str) -> float:
     return reducers[arg]
 
 
+# Strings in a Nek5000 or nekStab log that mean the run did not finish cleanly.
+FAILED_RUN = re.compile(r"non-finite|\bNaN\b|\bInfinity\b|^\s*EXIT:|an error occured|forrtl: severe")
+
+
+def run_failed(stage: Path) -> str | None:
+    """Reason why the run in `stage` failed, from its DONE and logfile files; None if it looks clean.
+
+    A reference value can still match when a run stops early, for example when the
+    column that is read holds a tolerance. This gate fails such a run.
+    """
+    done = stage / "DONE"
+    if done.exists() and done.read_text().strip() not in ("", "0"):
+        return f"DONE holds exit code {done.read_text().strip()}"
+    log = stage / "logfile"
+    if log.exists():
+        for line in log.read_text(errors="replace").splitlines():
+            if FAILED_RUN.search(line):
+                return f"logfile: {line.strip()[:100]}"
+    return None
+
+
 def check_quantity(name: str, spec: dict, actual: float) -> tuple[bool, str]:
     expected = spec["value"]
+    if not math.isfinite(actual):
+        return False, f"{name:24s} FAIL  actual value is not finite: {actual}"
     if "tol_rel" in spec:
         denom = abs(expected) if expected != 0 else 1.0
         err = abs(actual - expected) / denom
@@ -128,6 +153,11 @@ def main(argv: list[str]) -> int:
         ok, line = check_quantity(name, q, actual)
         print("  " + line)
         all_ok = all_ok and ok
+
+    reason = run_failed(stage)
+    if reason:
+        print(f"  run gate                 FAIL  {reason}")
+        all_ok = False
 
     print("RESULT:", "PASS — matches reference" if all_ok
           else "FAIL — out of tolerance")
