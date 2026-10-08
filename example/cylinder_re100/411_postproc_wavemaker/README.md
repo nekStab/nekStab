@@ -52,4 +52,10 @@ Three-panel figure:
 - (c) Leading adjoint eigenmode (real part)
 
 ## Reference
-Giannetti & Luchini (2007), J. Fluid Mech. 581.
+Giannetti & Luchini (2007), J. Fluid Mech. 581 place the wavemaker inside the recirculation bubble. Here the
+maximum of the wavemaker field lies at x = 3.84 diameters from the cylinder centre, inside the bubble of the
+steady Re=100 base flow.
+
+`ref/reference.json` holds regression values of this repository: maximum and norm of the wavemaker field
+`wm_1cyl0.f00001` (stored in the temperature slot) and the streamwise position of its maximum. Check a run with
+`uv run --with numpy --with pymech python scripts/check_against_ref.py example/cylinder_re100/411_postproc_wavemaker`.

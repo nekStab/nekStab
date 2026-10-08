@@ -1,5 +1,28 @@
 {
   "case": "cylinder_re100/410_postproc_animate_modes",
-  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
-  "quantities": {}
+  "description": "Regression values of this repository (not literature values): the leading direct mode over one period T = 8.305, written as 92 snapshots; the amplitudes follow from the unit-norm eigenmode of ../310_stability_direct/direct",
+  "produced": {
+    "ranks": "8",
+    "nekstab": "v2.0.0",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-09"
+  },
+  "quantities": {
+    "last_snapshot_time": {
+      "source": "dQ_1cyl0.f00092:field:time",
+      "value": 8.305,
+      "tol_abs": 0.0001,
+      "note": "The last snapshot is at the end of one period; a stopped run has no such file or an earlier time."
+    },
+    "snapshot1_vx_max": {
+      "source": "dQ_1cyl0.f00001:field:vx.max",
+      "value": 0.1649991,
+      "tol_rel": 0.0001
+    },
+    "snapshot1_pr_norm": {
+      "source": "dQ_1cyl0.f00001:field:pr.norm",
+      "value": 1.84681,
+      "tol_rel": 0.0001
+    }
+  }
 }

@@ -24,14 +24,14 @@ python3 plot.py
 ```
 
 ## Outputs (regenerated per run)
-- `dQ_1cyl0.f00001` … `dQ_1cyl0.f00010` — eigenmode snapshots over one period
+- `dQ_1cyl0.f00001` … `dQ_1cyl0.f00092` — eigenmode snapshots over one period (spacing 0.0903)
 - `dQ_1cyl.nek5000` — collection file for ParaView
 
 ## Latest Result
 Verified 2026-05-16 on 8 ranks (Slurm):
 
 - Run completes in 0.77 s (pure field reconstruction)
-- 10 mode snapshots generated covering one full period
+- 92 mode snapshots generated covering one full period (last time stamp 8.305)
 
 ## Plot
 ```bash
@@ -42,4 +42,7 @@ Visualizes the period-animated mode for the canonical Re=100 von Kármán
 shedding instability.
 
 ## Reference
-Internal example.
+`ref/reference.json` holds regression values of this repository, not literature values: the time stamp
+of the last snapshot (8.305, one full period), and the maximum of `vx` and the norm of `pr` in the first
+snapshot. They follow from the unit-norm direct mode of `../310_stability_direct/direct`. Check a run with
+`uv run --with numpy --with pymech python scripts/check_against_ref.py example/cylinder_re100/410_postproc_animate_modes`.

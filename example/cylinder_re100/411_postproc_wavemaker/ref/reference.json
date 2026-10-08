@@ -1,5 +1,28 @@
 {
   "case": "cylinder_re100/411_postproc_wavemaker",
-  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
-  "quantities": {}
+  "description": "Regression values of this repository (not literature values): structural-sensitivity (wavemaker) field of the Re=100 cylinder from the direct and adjoint modes. Giannetti and Luchini (2007) place the wavemaker inside the recirculation bubble; here x_peak = 3.84 lies inside the bubble of the steady base flow.",
+  "produced": {
+    "ranks": "8",
+    "nekstab": "v2.0.0",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-09"
+  },
+  "quantities": {
+    "wavemaker_max": {
+      "source": "wm_1cyl0.f00001:field:t.max",
+      "value": 0.1709416,
+      "tol_rel": 0.0001
+    },
+    "wavemaker_norm": {
+      "source": "wm_1cyl0.f00001:field:t.norm",
+      "value": 6.006722,
+      "tol_rel": 0.0001
+    },
+    "wavemaker_xpeak": {
+      "source": "wm_1cyl0.f00001:field:t.xpeak",
+      "value": 3.836,
+      "tol_abs": 0.3,
+      "note": "Streamwise position of the wavemaker maximum, in cylinder diameters from the cylinder centre."
+    }
+  }
 }
