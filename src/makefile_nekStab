@@ -25,6 +25,8 @@ $(O)/nekstab_nek_bridge.o: $(NS)/nekstab_nek_bridge.f90 NEKSTAB.inc SIZE
 $(O)/nek_vectors.o:       $(NS)/nek_vectors.f90       $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/argsort.o:           $(NS)/argsort.f90           $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/lapack_wrapper.o:    $(NS)/lapack_wrapper.f90    $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+# ks_select: Ritz value selection of the Krylov-Schur restart; no Nek5000 dependency.
+$(O)/ks_select.o:         $(NS)/ks_select.f90         $(O)/argsort.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/vortex.o:            $(NS)/vortex.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 # mode_codes.f90 has no nekstab_nek_bridge dependency: it is a leaf
@@ -73,7 +75,7 @@ $(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace
 # ─────────────────────────────────────────────────────────────────────
 # Level 4: eigensolvers (depends on krylov_decomposition + many Level 0)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/argsort.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o $(O)/noise.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/ks_select.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o $(O)/noise.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 5: Modules that depend on eigensolvers

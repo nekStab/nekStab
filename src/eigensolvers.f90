@@ -13,12 +13,11 @@
 !   krylov_schur          — main Krylov-Schur eigensolver
 !   outpost_ks            — eigenmode output and spectrum files
 !   schur_condensation    — Krylov-Schur restart via Schur form
-!   select_eigenvalues    — adaptive eigenvalue selection
-!   ensure_conjugate_pairs — keep conjugate pairs together
+!   select_eigenvalues    — adaptive eigenvalue selection (see ks_select.f90)
 !
 ! Dependencies:
 !   krylov_subspace, nekstab_krylov_decomposition,
-!   nekstab_lapack, nekstab_argsort, nekstab_vectors,
+!   nekstab_lapack, nekstab_ks_select, nekstab_vectors,
 !   nekstab_matvec, nekstab_io, SIZE, TOTAL
 !-----------------------------------------------------------------------
 
@@ -41,7 +40,7 @@ module nekstab_eigensolvers
                                  wbase, wdsize
    use nekstab_krylov_decomposition, only: arnoldi_factorization, log_transform
    use nekstab_lapack, only: eig, ordschur, schur
-   use nekstab_argsort, only: argsort
+   use nekstab_ks_select, only: ks_select_eigenvalues
    use nekstab_vectors, only: nopcmult, nopcopy
    use nekstab_matvec, only: matvec
    use nekstab_io, only: load_files, whereyouwant
@@ -51,7 +50,7 @@ module nekstab_eigensolvers
    private
    public :: inner_product, norm, krylov_schur, &
              outpost_ks, schur_condensation, &
-             select_eigenvalues, ensure_conjugate_pairs
+             select_eigenvalues
 
    ! outpost_ks scratch (saved across calls to avoid allocator churn).
    ! Two groups: (1) kcols-dependent arrays (Krylov basis copies,
@@ -218,9 +217,9 @@ contains
                write (filename, '(a,a,a)') 'dRe', trim(SESSION), '0.f00001'
 
             elseif (isAdjoint .or. isFloquetAdjoint) then
+               write (filename, '(a,a,a)') 'aRe', trim(SESSION), '0.f00001'
             else
                call nekStab_error('ifseed_load needs a direct or adjoint mode')
-               write (filename, '(a,a,a)') 'aRe', trim(SESSION), '0.f00001'
             end if
 
             if (nid == 0) write (*, *) 'Load real part of mode 1 as seed: ', filename
@@ -830,6 +829,15 @@ contains
       if (nid == 0) write (6, *) nsel, &
          'Ritz eigenpairs have been selected.'
 
+      !     The restart must leave room for at least one Arnoldi step. With all
+      !     ksize Ritz pairs kept, no step follows, the coupling row stays a full
+      !     row, and the residual test of krylov_schur (which assumes beta*e_k^T)
+      !     reads the Schur form and reports ksize - 2 false convergences.
+      if (nsel >= ksize) then
+         call nekStab_error('Krylov-Schur restart kept all k_dim Ritz values; '// &
+                            'no Arnoldi step can follow. Lower schur_del or raise k_dim.')
+      end if
+
       !     =====================================================
       !     Step 3 : Reorder Schur form (LAPACK dtrsen)
       !     =====================================================
@@ -1086,25 +1094,9 @@ contains
    subroutine select_eigenvalues(selected, nsel, vals, &
                                  residuals, delta, nev, n)
 
-      !     Adaptive eigenvalue selection for Krylov-Schur restart.
-      !
-      !     Selects which eigenvalues to keep during Schur condensation
-      !     using three complementary criteria:
-      !
-      !     1. Near unit circle: |lambda| >= 1 - delta
-      !        These are the stability-relevant eigenvalues.
-      !
-      !     2. Partially converged: Schur residual < sqrt(eigen_tol)
-      !        If eigen_tol = 1e-6, this keeps eigenvalues with
-      !        residual < 1e-3.  Discarding these wastes ~100 matvecs
-      !        of convergence progress per eigenvalue.
-      !
-      !     3. Minimum guarantee: at least nev + 2 by magnitude
-      !        Ensures the target eigenvalues are always retained.
-      !
-      !     The selection is bounded:  nev+2 <= nsel <= n - nev
-      !     to leave room for Arnoldi to make progress each cycle.
-      !     Conjugate pairs are kept together (real Schur form).
+      !     Adaptive eigenvalue selection for the Krylov-Schur restart. The
+      !     selection itself is in ks_select.f90, which a stand-alone test
+      !     compiles. This routine adds the log output.
       !
       !     INPUTS
       !     ------
@@ -1117,9 +1109,8 @@ contains
       !     OUTPUTS
       !     -------
       !     selected  : logical(n)  — which eigenvalues to keep
-      !     nsel      : integer     — count of selected eigenvalues
+      !     nsel      : integer     — count of selected eigenvalues, at most n - nev
 
-      !     ----- Arguments -----
       integer, intent(in) :: nev, n
       complex(nekStab_dp), dimension(n), intent(in) :: vals
       real, dimension(n), intent(in) :: residuals
@@ -1127,70 +1118,10 @@ contains
       logical, dimension(n), intent(out) :: selected
       integer, intent(out) :: nsel
 
-      !     ----- Local variables -----
-      integer :: i, min_keep, max_keep
-      integer, dimension(n) :: idx
-      real, dimension(n) :: work_arr
-      real :: sqrt_tol
       integer :: n_circle, n_resid
 
-      sqrt_tol = sqrt(eigen_tol)
-      selected = .false.
-
-      !     --> Criterion 1: eigenvalues near the unit circle.
-      do i = 1, n
-         if (abs(vals(i)) >= (1.0d0 - delta)) &
-            selected(i) = .true.
-      end do
-      n_circle = count(selected)
-
-      !     --> Criterion 2: partially converged eigenvalues.
-      !         Residual < sqrt(tol) means close to convergence;
-      !         discarding these wastes the matvecs already invested.
-      do i = 1, n
-         if (residuals(i) < sqrt_tol) &
-            selected(i) = .true.
-      end do
-      n_resid = count(selected) - n_circle
-
-      !     --> Criterion 3: guarantee at least nev+2 by magnitude.
-      !         Use argsort (ascending) — largest magnitudes at end.
-      min_keep = nev + 2
-      if (count(selected) < min_keep) then
-         do i = 1, n
-            idx(i) = i
-         end do
-         !  argsort modifies arr in-place (insertion sort); always pass a COPY.
-         work_arr = abs(vals)
-         call argsort(n, work_arr, idx)
-         do i = n, 1, -1
-            if (count(selected) >= min_keep) exit
-            selected(idx(i)) = .true.
-         end do
-      end if
-
-      !     --> Ensure conjugate pairs are not split.
-      call ensure_conjugate_pairs(selected, vals, n)
-
-      !     --> Cap: keep at most n - nev to leave room for Arnoldi.
-      !         If over budget, drop eigenvalues with largest residual.
-      max_keep = n - nev
-      if (count(selected) > max_keep) then
-         do i = 1, n
-            idx(i) = i
-         end do
-         !  argsort modifies arr in-place; must copy to preserve residuals.
-         work_arr = residuals
-         call argsort(n, work_arr, idx)
-         !        Rebuild selection: keep max_keep with smallest residuals.
-         selected = .false.
-         do i = 1, max_keep
-            selected(idx(i)) = .true.
-         end do
-         call ensure_conjugate_pairs(selected, vals, n)
-      end if
-
-      nsel = count(selected)
+      call ks_select_eigenvalues(selected, nsel, vals, residuals, delta, nev, n, &
+                                 eigen_tol, n_circle, n_resid)
 
       if (nid == 0) then
          write (6, '(A,I4,A,I4,A)') &
@@ -1199,51 +1130,9 @@ contains
          write (6, '(A,I4,A,I4,A,I4)') &
             '   unit circle: ', n_circle, &
             ', near-converged: ', n_resid, &
-            ', floor: ', min_keep
+            ', floor: ', nev + 2
       end if
 
    end subroutine select_eigenvalues
-
-   !-----------------------------------------------------------------------
-
-   subroutine ensure_conjugate_pairs(selected, vals, n)
-
-      !     Ensure that if one eigenvalue of a complex conjugate pair
-      !     is selected, the other is also selected.  In the Schur
-      !     decomposition from dgees, conjugate pairs are consecutive:
-      !     vals(j) and vals(j+1) have equal real parts and opposite
-      !     imaginary parts.  We walk consecutive pairs and enforce
-      !     symmetric selection to preserve the real Schur form.
-
-      integer, intent(in) :: n
-      complex(nekStab_dp), dimension(n), intent(in) :: vals
-      logical, dimension(n), intent(inout) :: selected
-
-      integer :: i
-      real :: real_diff, imag_sum, scale, tol
-      real, parameter :: REL_TOL = 1.0d-10
-
-      i = 1
-      do while (i < n)
-         !     --> Check if vals(i) and vals(i+1) form a conjugate pair.
-         if (aimag(vals(i)) /= 0.0d0) then
-            scale = max(abs(vals(i)), 1.0d0)
-            tol = REL_TOL*scale
-            real_diff = abs(real(vals(i)) - real(vals(i + 1)))
-            imag_sum = abs(aimag(vals(i)) + aimag(vals(i + 1)))
-            if (real_diff < tol .and. imag_sum < tol) then
-               !           Conjugate pair: select both if either is selected.
-               if (selected(i) .or. selected(i + 1)) then
-                  selected(i) = .true.
-                  selected(i + 1) = .true.
-               end if
-               i = i + 2
-               cycle
-            end if
-         end if
-         i = i + 1
-      end do
-
-   end subroutine ensure_conjugate_pairs
 
 end module nekstab_eigensolvers
