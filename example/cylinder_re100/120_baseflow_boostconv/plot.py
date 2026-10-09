@@ -69,7 +69,8 @@ def find_ic(case_dir):
 
 
 def find_bf(case_dir):
-    for pat in ('BF_*0.f00001', 'BF*0.f00001', '1cyl0.f*'):
+    # BF_1cyl0.f00001 first: sorted() puts the seed BF_seed_1cyl0.f00001 after it and matches[-1] would plot the seed
+    for pat in ('BF_1cyl0.f00001', 'BF_*0.f00001', 'BF*0.f00001', '1cyl0.f*'):
         matches = sorted(case_dir.glob(pat))
         if matches:
             # final converged BF is the highest-index file
