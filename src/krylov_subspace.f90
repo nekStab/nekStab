@@ -277,7 +277,7 @@ contains
    subroutine k_normalize(p, alpha)
       type(krylov_vector), intent(inout) :: p
       real, intent(out) :: alpha
-      real :: inv_alpha
+      real :: inv_alpha, alpha_sq
 
       !     --> Minimum norm threshold for warning about potential breakdown.
       !         A very small norm indicates the Arnoldi process may have found an
@@ -288,14 +288,21 @@ contains
       !         3. The lucky breakdown detection in update_hessenberg_matrix handles this
       real, parameter :: NORM_WARN_TOL = 1.0d-14
 
-      !     --> Compute the user-defined norm.
-      call k_norm(alpha, p)
+      !     --> Compute the user-defined norm. The squared norm is kept: a
+      !         negative value (round-off in a vector of tiny norm, or a
+      !         weight with negative entries) gives a NaN after the square root,
+      !         and the message below must tell that case from NaN and Inf.
+      call k_dot(alpha_sq, p, p)
+      alpha = sqrt(alpha_sq)
 
       !     --> Reject NaN and Inf before scaling. Inf passes alpha /= alpha,
       !         1/Inf is 0, and 0*Inf then writes NaN into the next vector.
       if (.not. (alpha == alpha .and. abs(alpha) < huge(alpha))) then
-         if (nid == 0) write (6, *) &
-            'ERROR [k_normalize]: non-finite norm (NaN or Inf); refusing to scale Krylov vector.'
+         if (nid == 0) then
+            write (6, *) &
+               'ERROR [k_normalize]: non-finite norm (NaN or Inf); refusing to scale Krylov vector.'
+            write (6, *) '         squared norm =', alpha_sq
+         end if
          call exitti('k_normalize non-finite norm$', 1)
       end if
 
