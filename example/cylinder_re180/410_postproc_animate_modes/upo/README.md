@@ -108,7 +108,7 @@ and writes an H.264 MP4. Tune `--bbox xmin xmax ymin ymax`, `--nx/--ny`,
 non-cylinder geometries) per case.
 
 ## Expected Output
-`floquet_mode_animation.mp4` — one full period of the Re=180 von Kármán
+`plot.gif`, written by `plot.py` (`ref/plot.gif` holds a copy) — one full period of the Re=180 von Kármán
 street: vortices born in the near wake and advecting downstream, the
 pattern convecting ~one wavelength per period. This is the μ=+1 synchronous
 Floquet mode at the base-flow frequency.
