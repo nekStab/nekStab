@@ -21,9 +21,11 @@ sbatch run.local.slurm     # 8 ranks
 ```
 
 ## Reference (ref/)
-Figure/IC reference — the shipped `slot.his` is degenerate, so `reference.json`
-asserts no numeric scalar. Compare a fresh run's spectra visually against:
-- `ref/fft.png`, `ref/signal.png`, `ref/phase.png` (probe time-series spectra)
-- `ref/snapshot.png` (flow field)
+`reference.json` holds statistics of the t = 100 field `slot0.f00001`: the time stamp, the maxima, minima and
+L2 norms (sum over all nodes of the squares, square root) of vx and vy. They are regression values of this
+repository, not literature values. The FST inflow is the shipped binary, so the run is deterministic: the probe
+histories of a 16 and a 32 rank run agree to the seventh digit. Tolerance 1e-3 (relative). Verify with
+`scripts/check_against_ref.py example/slot_fst_re495/000_dns`.
 
-`slot0.f00001` is a representative DNS snapshot.
+The figures `ref/fft.png`, `ref/signal.png`, `ref/phase.png` (probe time series) and `ref/snapshot.png` (flow
+field) show the same run. `slot0.f00001` is shipped as a representative snapshot and a run overwrites it.

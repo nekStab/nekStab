@@ -1,7 +1,37 @@
 {
   "case": "slot_fst_re495/000_dns",
-  "description": "Slot jet with free-stream turbulence (FST) inflow, DNS at Re=495",
-  "produced": {"ranks": "8", "nekstab_mode": "0.0 (DNS)"},
-  "note": "Figure/IC reference — the shipped slot.his is degenerate, so no numeric scalar is asserted. Compare a fresh run's spectra visually against ref/. FST inflow shipped as FST_data/FST_inflow.bin.",
-  "quantities": {}
+  "description": "Slot jet with free-stream turbulence (FST) inflow, DNS at Re=495: statistics of the t=100 field",
+  "produced": {
+    "ranks": "16 and 32 (probe histories agree to 1e-7)",
+    "nekstab_mode": "0.0 (DNS)",
+    "date": "2026-10-09"
+  },
+  "note": "Regression values of this repository (not literature values). The FST inflow is the shipped FST_data/FST_inflow.bin, so the run is deterministic; the 16 and 32 rank runs agree to the seventh digit.",
+  "quantities": {
+    "last_snapshot_time": {
+      "source": "slot0.f00001:field:time",
+      "value": 100.0,
+      "tol_abs": 0.001
+    },
+    "snapshot_vx_max": {
+      "source": "slot0.f00001:field:vx.max",
+      "value": 1.272159,
+      "tol_rel": 0.001
+    },
+    "snapshot_vx_norm": {
+      "source": "slot0.f00001:field:vx.norm",
+      "value": 376.7898,
+      "tol_rel": 0.001
+    },
+    "snapshot_vy_min": {
+      "source": "slot0.f00001:field:vy.min",
+      "value": -0.3542492,
+      "tol_rel": 0.001
+    },
+    "snapshot_vy_norm": {
+      "source": "slot0.f00001:field:vy.norm",
+      "value": 49.68181,
+      "tol_rel": 0.001
+    }
+  }
 }
