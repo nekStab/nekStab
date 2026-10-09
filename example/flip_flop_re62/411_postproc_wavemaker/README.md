@@ -61,6 +61,9 @@ Wall time 79.5 s. The Floquet exponent of stage 311 is σ = 7.89623e-3 (ω = 0.1
 
 The terms are in the normalisation of the code, where σ = (P̄ − D̄ − S̄)/Ē. Modes 1 and 2 are the two members of one conjugate pair.
 
+The same stage on Jean Zay (`ifort`, 8 ranks, with the modes of the 311 and 321 runs of that day, wall time 128 s) gives P̄ = 3.3563e-2, Ē = 0.50233,
+σ from the budget 7.9926e-3 and σ from the energy 7.8874e-3. The two compilers agree to 5e-5 in relative terms.
+
 - The budget closes to 1.2 %. The exponent from the energy of the marched mode involves no space derivative and is within 0.11 %, so the mode,
   the period and the stored orbit agree. The outflow is not the cause: the largest |q| on the outflow face (x = 75) is at most 5e-4 of the
   largest |q| of the mode. The remaining 1.2 % comes from the space discretisation of the production and dissipation integrals. σ is the
