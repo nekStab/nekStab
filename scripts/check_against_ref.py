@@ -11,7 +11,9 @@ if any quantity is outside tolerance. See example/REFERENCE_RESULTS.md.
 A quantity's "source" tells the extractor where to read the value from a fresh
 run, in the form "<file>:col<N>:<reducer>" with reducer in {last,first,min,max},
 e.g. "residu.dat:col2:last". Tolerance is "tol_rel" (relative) or "tol_abs".
-A "field" source reads a Nek5000 field file and needs pymech:
+A "field" source reads a Nek5000 field file. The statistics min, max and norm are
+read with pymech when it is installed and with a plain reader otherwise; the
+location of a peak needs pymech:
 uv run --with numpy --with pymech python scripts/check_against_ref.py <stage>
 """
 from __future__ import annotations

@@ -277,6 +277,18 @@ description for the 2.0 series; entries here are the per-tag deltas.
   3.5e-4 for the complex mode; mode 2 gave an error of 324 % before. The log also
   prints `sigma_r (energy)`, the exponent from the energy of the marched mode
   after one period, which has no space derivative in it.
+- `scripts/inspect_nek_field.py`, the field reader behind the `field:` sources of
+  `check_against_ref.py`, read a Nek5000 file wrongly when pymech was not
+  installed. It skipped neither the byte-order test float nor the element map,
+  read the velocity component by component instead of element by element, and
+  expected three coordinates and three velocity components in 2D. A 2D file
+  raised "field data ended unexpectedly"; a 3D file gave minima, maxima and
+  norms of mixed components without a message (the same `vx`, `vy` and `vz`
+  range for the cavity). The plain reader now follows the file layout and gives
+  the same minimum, maximum and norm as pymech, to 4e-14, on ten field files of
+  the examples (2D and 3D, single and double precision, `XU`, `XUP`, `XUT`,
+  `XUPT`, `XT`). Its test wrote a file in the layout the old reader expected; it
+  now writes the Nek5000 layout, 2D in single and 3D in double precision.
 
 ## [2.0.0-rc4] - 2026-06-12
 

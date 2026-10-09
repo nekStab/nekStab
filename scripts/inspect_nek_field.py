@@ -176,53 +176,74 @@ def _parse_header(path: Path) -> Tuple[Dict[str, object], str]:
     return meta, text
 
 
-def _read_floats(fh: object, count: int, fmt: str) -> List[float]:
-    if count <= 0:
-        return []
-    size = struct.calcsize(fmt)
+def _byte_order(fh: object) -> str:
+    """Return the struct prefix of the file: "<" or ">" from the 4-byte test float after the header."""
+    tag = fh.read(4)  # type: ignore[attr-defined]
+    if len(tag) != 4:
+        raise InspectError("file ends after the header")
+    for prefix in ("<", ">"):
+        if abs(struct.unpack(f"{prefix}f", tag)[0] - 6.54321) < 1.0e-5:
+            return prefix
+    raise InspectError("cannot find the byte order: the test float is not 6.54321")
+
+
+def _block_stats(fh: object, prefix: str, code: str, nelt: int, nxyz: int, ncomp: int) -> List[Stats]:
+    """Read one data block and return the statistics of each of its ncomp components.
+
+    A Nek5000 file stores the velocity (and the coordinates) element by element: first
+    the ncomp components of element 1, then those of element 2. Pressure, temperature and
+    each scalar have one component.
+    """
+    count = nelt * ncomp * nxyz
+    size = struct.calcsize(code)
     data = fh.read(count * size)  # type: ignore[attr-defined]
     if len(data) != count * size:
         raise InspectError("field data ended unexpectedly")
-    return list(struct.unpack(f"{count}{fmt}", data))
+    values = struct.unpack(f"{prefix}{count}{code}", data)
+    result: List[Stats] = []
+    for comp in range(ncomp):
+        stats = _empty_stats()
+        total = 0.0
+        for elem in range(nelt):
+            start = (elem * ncomp + comp) * nxyz
+            segment = values[start:start + nxyz]
+            stats["min"] = min(stats["min"], min(segment))
+            stats["max"] = max(stats["max"], max(segment))
+            total += math.fsum(value * value for value in segment)
+        stats["norm"] = math.sqrt(total)
+        result.append(_finalize_stats(stats))
+    return result
 
 
 def _inspect_raw(path: Path) -> Dict[str, object]:
     meta, _ = _parse_header(path)
     wdsize = int(meta["wdsize"])
     if wdsize == 4:
-        fmt = "f"
+        code = "f"
     elif wdsize == 8:
-        fmt = "d"
+        code = "d"
     else:
         raise InspectError(f"unsupported wdsize={wdsize}")
 
     nelt = int(meta["nelt"])
     nxyz = int(meta["lx1"]) * int(meta["ly1"]) * int(meta["lz1"])
-    total_points = nelt * nxyz
+    ndim = 3 if int(meta["lz1"]) > 1 else 2
     rdcode = str(meta["rdcode"]).upper()
     fields: Dict[str, Stats] = {}
 
     with path.open("rb") as fh:
         fh.seek(HDR_BYTES)
+        prefix = _byte_order(fh)
+        fh.seek(4 * nelt, os.SEEK_CUR)  # element map
         if "X" in rdcode:
-            _read_floats(fh, total_points * 3, fmt)
+            fh.seek(ndim * nelt * nxyz * wdsize, os.SEEK_CUR)
         if "U" in rdcode:
-            for name in ("vx", "vy", "vz"):
-                fields[name] = _stats_from_array(_read_floats(fh, total_points, fmt))
+            for name, stats in zip(("vx", "vy", "vz"), _block_stats(fh, prefix, code, nelt, nxyz, ndim)):
+                fields[name] = stats
         if "P" in rdcode:
-            fields["pr"] = _stats_from_array(_read_floats(fh, total_points, fmt))
+            fields["pr"] = _block_stats(fh, prefix, code, nelt, nxyz, 1)[0]
         if "T" in rdcode:
-            scalar_index = 0
-            item_size = struct.calcsize(fmt)
-            while True:
-                chunk = fh.read(total_points * item_size)
-                if not chunk:
-                    break
-                if len(chunk) != total_points * item_size:
-                    raise InspectError("scalar data ended unexpectedly")
-                values = struct.unpack(f"{total_points}{fmt}", chunk)
-                fields["t" if scalar_index == 0 else f"s{scalar_index + 1}"] = _stats_from_array(values)
-                scalar_index += 1
+            fields["t"] = _block_stats(fh, prefix, code, nelt, nxyz, 1)[0]
 
     return {
         "path": str(path),
