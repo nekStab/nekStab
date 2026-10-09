@@ -3,9 +3,18 @@
   "description": "3D cubic cavity steady base flow at Re=1914, uniform lid, Newton-GMRES from a DNS field",
   "produced": {
     "ranks": "16",
-    "nekstab_mode": "2.0 (Newton-GMRES fixed point)"
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "2.0 (Newton-GMRES fixed point)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-09"
   },
   "quantities": {
+    "newton_first_residual": {
+      "source": "residu_newton.dat:col7:first",
+      "value": 8.98525e-06,
+      "tol_rel": 0.05,
+      "note": "Squared residual of the seed (the last field of 000_dns), column 7, first row. The tolerance of the run is 1e-10. A run that starts from a converged field fails this check."
+    },
     "newton_final_residual": {
       "source": "residu_newton.dat:col7:last",
       "value": 8.357035e-11,

@@ -40,11 +40,13 @@ lid to reproduce the thesis.
 
 ## Workflow
 
-1. `000_dns/`: DNS from rest at Re = 1914. The flow reaches a steady state
-   by t = 100 (27 min on 16 ranks, 69 571 steps).
+1. `000_dns/`: DNS from rest at Re = 1914 to t = 100 (25 min on 16 ranks,
+   69 571 steps). The flow is close to the steady state but not on it: the
+   least damped modes of the steady flow have sigma = -1.8e-4 (T1) and
+   -0.026, so the start-up oscillation is still present at t = 100.
 2. `210_baseflow_newton/fp/`: copy the last field of the DNS to
    `BF_cav0.f00001` and run Newton. It converges in 12 iterations to
-   8.4e-11 (76 min on 16 ranks). `time=0` in `startFrom` resets the time.
+   8.4e-11 (59 min on 16 ranks, Jean Zay). `time=0` in `startFrom` resets the time.
    Starting Newton from a field of a different lid fails: the fixed time
    step taken from that field is too large (CFL 9).
 3. `310_stability_direct/` and `320_stability_adjoint/`: copy the Newton
