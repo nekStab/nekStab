@@ -54,7 +54,7 @@ printf '1\n5 0 0\n' > ${CASE}.his
 # that the modal analysis of phase 2 reads. ${CASE}.par holds the modal-analysis
 # parameters; the DNS parameters are in dns.par.
 # The restart file and dns.par are kept in ../600_modal_pod.
-for f in rst_1cyl0.f00001 rst_1cyl0.f00001.nek5000 dns.par; do
+for f in rst_1cyl0.f00001 dns.par; do
   [[ -f "${f}" ]] || cp "../600_modal_pod/${f}" .
 done
 cp "${CASE}.par" modal.par
