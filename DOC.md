@@ -816,6 +816,8 @@ Newton-Krylov is particularly advantageous for:
 | `bst_skp` | 10 | Iterations between acceleration updates |
 | `bst_snp` | 10 | Size of residual subspace for extrapolation |
 
+BoostConv accelerates the velocity only. With a temperature or another scalar it prints a warning and leaves the scalar unaccelerated; use SFD for those cases. On the 2D cylinder (`example/cylinder_re100/120_baseflow_boostconv`) the defaults reach the gate 1e-6 at Re = 50 and not at Re = 100 within 500 time units. A subspace of 30 is not faster than the default there. The stage README has the table.
+
 #### Output Control
 
 | Parameter | Default | Description |

@@ -30,4 +30,4 @@ writeToFieldFile = yes
 residualTol = 1.0E-6
 residualProj = no
 density = 1.0
-viscosity = -50.0  ! Re=50: original BoostConv regime (main branch); was -100
+viscosity = -50.0  ! Re = 50; BoostConv does not reach the gate at Re = 100 (README)

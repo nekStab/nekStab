@@ -12,14 +12,12 @@
       include 'SIZE'
       include 'TOTAL'
 
-!     Re=100 cylinder: 2 complex-conjugate unstable modes (Karman pair).
-!     Default bst_snp=10 stalls at residu ~3e-4 (subspace too small to
-!     project the full Karman pair plus residual modes).  bst_snp=30
-!     breaks the plateau; bst_skp=5 tracks the shedding (T ~ 6) more
-!     tightly.  Defaults set in src/main.f90:47-48; override here runs
-!     right after nekStab_setDefault (src/main.f90:297-298).
-      bst_snp = 30   ! BoostConv Krylov subspace size
-      bst_skp = 5    ! BoostConv correction stride (steps between corrections)
+!     BoostConv runs here with the defaults of src/main.f90: a subspace of
+!     bst_snp = 10 residual samples, one sample every bst_skp = 10 time steps.
+!     At Re = 50 these values reach the gate 1e-6 at t = 159.  Other values
+!     did not help: bst_snp = 30 with bst_skp = 5 needs t = 168, and
+!     bst_snp = 30 with bst_skp = 10 does not reach the gate by t = 500
+!     (README, section Parameters).
 
       return
       end

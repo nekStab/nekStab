@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""plot.py: Cylinder SFD baseline (Akervik) — canonical baseflow panels.
+"""plot.py: Cylinder BoostConv base flow — canonical baseflow panels.
 
 Panel sequence (canonical baseflow lane: IC -> RESIDUAL -> BF):
   plot_ic.png       - initial condition (seed file from startFrom)
-  plot_residual.png - SFD residual history with target tol
+  plot_residual.png - BoostConv residual history with the stop gate
   plot_bf.png       - converged base flow (velocity magnitude)
 
 OUTPUTS: plot_ic.png, plot_residual.png, plot_bf.png
@@ -103,7 +103,7 @@ def main():
     fig = None
     if residu_sfd.exists():
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        nk.plot_residuals(ax, residu_sfd, label='SFD', color='C0')
+        nk.plot_residuals(ax, residu_sfd, label='BoostConv', color='C0')
         gate = residual_gate(CASE_DIR)
         if gate:
             ax.axhline(gate, color='k', ls=':', lw=0.5, label=f'gate {gate:.0e}')

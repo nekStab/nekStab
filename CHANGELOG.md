@@ -315,8 +315,11 @@ description for the 2.0 series; entries here are the per-tag deltas.
   the log and of `residu.dat` read `Infinity`; `check_against_ref.py` rightly
   fails a run with that word in its log. The first snapshot of the subspace was
   that difference as well. The cylinder stage (`cylinder_re100/120_baseflow_boostconv`,
-  Re = 50) meets its gate 1e-6 at t = 164.8 now, against 167.5 before, and its base
-  flow differs from the Newton solution at Re = 50 by 2.5e-5 in the extrema, as before.
+  Re = 50, the defaults `bst_snp = bst_skp = 10`) meets its gate 1e-6 at t = 159.4, and
+  its base flow differs from the Newton solution at Re = 50 by 2e-5 at most in the extrema
+  and 2.5e-4 in the norm. The stage ran with `bst_snp = 30` and `bst_skp = 5`, which needs
+  t = 168; 30 and 10 does not reach the gate by t = 500. At Re = 100 neither the defaults
+  nor 30 and 5 reach it by t = 500 (the stage README has the table).
 - `scripts/check_against_ref.py` no longer fails a clean run because of one log
   line. With a fixed time step Nek5000 prints `DTCFL` and `DTFS` unset in the line
   `DT/DTCFL/DTFS/DTINIT`, and some builds show `NaN` there (gfortran at `-O3` did).
