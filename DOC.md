@@ -311,6 +311,7 @@ end subroutine
 | `'linear_dns'` | Linearized DNS | 0.1 |
 | `'sfd'` | Selective Frequency Damping | 1.1 |
 | `'boostconv'` | BoostConv acceleration | 1.2 |
+| `'dmt'` | Dynamic Mode Tracking base flow | 1.3 |
 | `'tdf'` | Time-Delayed Feedback | 1.4 |
 | `'newton_fp'` | Newton for fixed points | 2.0 |
 | `'newton_po'` | Newton for periodic orbits | 2.1 |
@@ -399,6 +400,8 @@ userParam07 = 3       # Mode number for animation
 ```
 
 This method is ideal for **parametric studies** and **automation scripts** where you need to change modes without recompiling.
+
+Only the codes in the table above are accepted (the value times 100 is an integer code, so `3.11` and `3.110` are the same mode). Any other value, for example `3.15` or `7.3`, stops the run with `Unknown mode, userParam01 = ...`. Earlier versions ran a DNS with a warning.
 
 #### Priority Order
 

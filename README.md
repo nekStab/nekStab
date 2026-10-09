@@ -63,6 +63,7 @@
 | 0.1 | `'linear_dns'` | `'lindns'` | Linearized DNS (perturbation) |
 | 1.1 | `'sfd'` | | Selective Frequency Damping |
 | 1.2 | `'boostconv'` | `'boost'` | BoostConv acceleration |
+| 1.3 | `'dmt'` | | Dynamic Mode Tracking, base-flow stabilization (Queguineur et al. 2019) |
 | 1.4 | `'tdf'` | | Time-Delayed Feedback |
 | 2 | `'newton_fp'` | `'newton'` | Newton for fixed points |
 | 2.1 | `'newton_po'` | `'upo'` | Newton for periodic orbits (unknown period) |
@@ -234,13 +235,17 @@ For more information, see the [Documentation](DOC.md).
 
 ## Mode Selection
 
-Three equivalent ways to select operating mode:
+Three equivalent ways to select the operating mode. When more than one is set, the first row wins.
 
 | Method | Where | Example |
 |--------|-------|---------|
-| String | `.usr` | `nekstab_mode = 'floquet_adjoint'` |
+| String (preferred for new cases) | `.usr` | `nekstab_mode = 'floquet_adjoint'` |
 | Flags | `.usr` | `isAdjoint = .true.` + `ifFloquet = .true.` |
-| uparam | `.par` | `userParam01 = 3.21` |
+| uparam (legacy decimal code, kept for existing cases) | `.par` | `userParam01 = 3.21` |
+
+A `userParam01` that is not one of the codes in the table above, or an unknown
+`nekstab_mode` string, stops the run with an error that names the value. Earlier
+versions ran a DNS instead.
 
 ## Development
 
