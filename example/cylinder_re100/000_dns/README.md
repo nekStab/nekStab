@@ -34,14 +34,16 @@ sbatch --export=ALL,NEK_DRY_RUN=1 run.local.slurm
 ```
 
 ## Latest Result
-Verified 2026-05-17 on 8 ranks (Slurm):
+Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): the run starts from `rst_1cyl0.f00001` (t = 100) and ends at
+`endTime = 200` after 10 593 time steps. Wall time 158 s.
 
-- endTime = 100 reached
-- Wall time 76 s
-- Outputs: `1cyl0.f00001` (final state at t=100), `lift_drag.dat`
-
-The lift coefficient oscillation visible in `lift_drag.dat` shows the
-established vortex shedding signature.
+- Outputs: 20 snapshots `1cyl0.f00001` to `1cyl0.f00020` (one every 5 time units), `lift_drag.dat` and the probe
+  history `1cyl.his` (v_y at (5, 0)).
+- The lift coefficient oscillation in `lift_drag.dat` shows the established vortex shedding.
+- `ref/reference.json` checks the Strouhal number of the probe signal, 0.1714. It is the peak of an FFT over the last
+  70 time units, so its resolution is 1/70 = 0.014; the DMD stage `../610_modal_dmd` gives 0.1657 for the same flow.
+- `plot.py` writes `plot_signal.png`, `plot_fft.png`, `plot_phase.png`, `plot_snapshot.png` and the animation
+  `plot.gif`; `ref/` holds copies.
 
 ## Reference
 Barkley & Henderson (1996), J. Fluid Mech. 322.
