@@ -13,8 +13,9 @@ receptivity.
 
 ## Initial condition
 `startFrom = BF_naca00120.f00001` — the steady base flow from
-`../210_baseflow_newton/fp` (field files are gitignored; regenerate by running
-the 210 stage).
+`../210_baseflow_newton/fp`, shipped with this stage (it is the same file as in
+`../320_stability_adjoint`). To regenerate it, run the 210 stage and copy its
+`BF_naca00120.f00001` here.
 
 ## Run
 ```bash
