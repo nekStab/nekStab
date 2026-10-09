@@ -1,0 +1,40 @@
+{
+  "case": "cylinder_re100/210_baseflow_newton/fp",
+  "description": "Steady base flow of the Re = 100 cylinder wake by Newton-GMRES with fixed solver tolerances (userParam01 = 2). The residual must end at the Newton tolerance of 1e-9. The statistics of the converged field are algorithm-independent: 110_baseflow_sfd, which damps the shedding instead of solving for the fixed point, reaches the same steady flow (vx min -0.2001695, vx max 1.1560659, vx norm 264.3354 for the akervik variant), within 1.3e-6 of the dynamic-tolerance Newton run and 1e-5 of this one; the tolerance of 1e-4 covers that spread.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "8",
+    "mode": "userParam01=2 (Newton-GMRES fixed point), fixed solver tolerances",
+    "compiler": "gfortran on a server (x3)"
+  },
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 0.0,
+      "tol_abs": 1e-09,
+      "note": "Final Newton residual (column 7); it must not exceed the Newton tolerance (column 8, 1e-9)."
+    },
+    "bf_vx_min": {
+      "source": "BF_1cyl0.f00001:field:vx.min",
+      "value": -0.2001774,
+      "tol_rel": 0.0001,
+      "note": "Largest reverse velocity in the wake."
+    },
+    "bf_vx_max": {
+      "source": "BF_1cyl0.f00001:field:vx.max",
+      "value": 1.156073,
+      "tol_rel": 0.0001
+    },
+    "bf_vx_norm": {
+      "source": "BF_1cyl0.f00001:field:vx.norm",
+      "value": 264.3375,
+      "tol_rel": 0.0001
+    },
+    "bf_vy_max": {
+      "source": "BF_1cyl0.f00001:field:vy.max",
+      "value": 0.6032416,
+      "tol_rel": 0.0001
+    }
+  }
+}

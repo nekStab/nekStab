@@ -6,7 +6,7 @@ base flow using Newton-GMRES with Eisenstat-Walker dynamic solver tolerances
 (`ifdyntol = .true.`). Early Newton iterations use relaxed GMRES tolerances
 (since the outer residual is large), tightening as Newton converges. This
 reduces total linear solver calls relative to the fixed-tolerance Newton case
-in `../newton/`.
+in `../fp/`.
 
 ## nekStab Mode
 `userParam01 = 2` — Newton-GMRES for fixed points
@@ -28,16 +28,18 @@ python3 plot.py
 ```
 
 ## Latest Result
-Verified 2026-05-15 on 8 ranks (Slurm):
+Run on 2026-10-09 on 8 ranks of Jean Zay (`ifort`), 672 s:
 
-- 14 Newton outer iterations to |F| = 9.26e-10
-- 67357 total linear solver steps, 271 cumulative GMRES inner iters
-- Wall time 2510 s (≈ 42 min) -- **~2.6× faster than `../newton/` (108 min)**
-- Outputs: converged `BF_1cyl0.f00001` (5.3 MB), `residu_newton.dat`
+- 14 Newton outer iterations to |F| = 9.3e-10 (tolerance 1e-9)
+- 37413 time steps in all, 307 cumulative GMRES inner iterations
+- Outputs: converged `BF_1cyl0.f00001`, `residu_newton.dat`
 
-The dynamic-tolerance speedup is clearer at this mesh resolution: the relaxed
-early GMRES iterations skip most of the expensive linear solve work while the
-Newton outer residual is still well above 1e-3.
+The fixed-tolerance run in `../fp/` needs 93804 time steps for the same residual.
 
 ## Reference
+`ref/reference.json` compares the final Newton residual with the tolerance and four statistics of the
+converged field (`vx` minimum, maximum and norm, `vy` maximum, tolerance 1e-4). They are the statistics of
+the steady flow that `../../110_baseflow_sfd/` reaches by selective frequency damping, an independent
+method.
+
 Loiseau et al. (2019), *Computational Modelling of Bifurcations and Instabilities in Fluid Dynamics*.
