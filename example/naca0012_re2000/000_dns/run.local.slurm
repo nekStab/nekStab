@@ -28,5 +28,8 @@ echo "started=$(date --iso-8601=seconds)"
 [[ -f "${CASE}.par" ]] || { echo "ERROR: ${CASE}.par missing" >&2; exit 1; }
 
 printf "%s\n%s/\n" "${CASE}" "$(pwd)" > SESSION.NAME
+# hpts reads the probe list from the session .his file and writes the probe values after it, in the same file.
+# The file is gitignored, so each run writes it here.
+printf '1\n1 0 0\n' > ${CASE}.his
 mpiexec -np "${NPROCS}" "${EXE}"
 echo "finished=$(date --iso-8601=seconds)"

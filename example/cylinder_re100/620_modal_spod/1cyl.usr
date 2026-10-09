@@ -12,7 +12,7 @@
       call nekStab
 
       ! when in uparam(1) = 0 mode (dns) we have hpts at every iteration (meaning at dt)
-      call hpts  ! disabled - no history points file
+      call hpts  ! probe list: run.local.slurm writes 1cyl.his before the run
 
       call nekStab_torque('lift_drag.dat', 10)!here we save every 10
 
