@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """plot.py: NACA 0012 Re=2000 Newton base flow — canonical baseflow panels.
 
-Panel sequence (canonical baseflow lane: RESIDUAL -> BF):
+Panel sequence (canonical baseflow lane: IC -> RESIDUAL -> BF):
+  plot_ic.png       - initial condition (seed file named by startFrom, |u|, Blues)
   plot_residual.png - Newton convergence history
   plot_bf.png       - converged base flow (|u|, Blues)
-There is no IC panel: startFrom names BF_naca00120.f00001, the file that Newton overwrites with
-the converged field, and the shipped seed already is the converged base flow.
 
 Geometry: NACA 0012 airfoil, xlim=(-1,5), ylim=(-2,2).
 
-OUTPUTS: plot_residual.png, plot_bf.png
+OUTPUTS: plot_ic.png, plot_residual.png, plot_bf.png
 USAGE:   python plot.py
 """
 from pathlib import Path
+import re
 import sys
 sys.path.insert(0, str(next(d for d in Path(__file__).resolve().parents if (d / 'nekplot.py').exists())))
 import nekplot as nk
@@ -26,12 +26,20 @@ YLIM = (-2, 2)
 
 
 def find_snapshot(case_dir):
-    """Find best snapshot: BF first, then any .f00001."""
-    for pat in ('BF_naca00120.f00001', 'BF_naca00120.f*',
-                'BF_*naca*0.f00001', '*naca*0.f00001'):
+    """Return the base flow that Newton wrote. The seed BF_seed_* does not match these patterns."""
+    for pat in ('BF_naca00120.f00001', 'BF_naca00120.f*'):
         matches = sorted(case_dir.glob(pat))
         if matches:
             return matches[-1]
+    return None
+
+
+def find_seed(case_dir):
+    """Return the file named by startFrom in the .par file, or None."""
+    for par in sorted(case_dir.glob('*.par')):
+        found = re.search(r'^\s*startFrom\s*=\s*([^\s#]+)', par.read_text(), re.M)
+        if found and (case_dir / found.group(1)).exists():
+            return case_dir / found.group(1)
     return None
 
 
@@ -57,7 +65,16 @@ def render_naca_field(ax, field_path):
 def main():
     nk.configure_style()
 
-    # PANEL 1 — RESIDUAL (Newton convergence)
+    # PANEL 1 — IC (the DNS snapshot that Newton starts from)
+    seed = find_seed(CASE_DIR)
+    if seed:
+        fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.5))
+        render_naca_field(ax, seed)
+        fig.savefig(CASE_DIR / 'plot_ic.png', dpi=600, bbox_inches='tight')
+        print(f'Saved {CASE_DIR / "plot_ic.png"}')
+        plt.close(fig)
+
+    # PANEL 2 — RESIDUAL (Newton convergence)
     if (CASE_DIR / 'residu_newton.dat').exists() or (CASE_DIR / 'residu_arnoldi.dat').exists():
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
         nk.plot_newton_convergence(ax, CASE_DIR)
@@ -71,7 +88,7 @@ def main():
         print(f'Saved {CASE_DIR / "plot_residual.png"}')
         plt.close(fig)
 
-    # PANEL 2 — BF (converged base flow)
+    # PANEL 3 — BF (converged base flow)
     bf = find_snapshot(CASE_DIR)
     if bf:
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.5))

@@ -20,7 +20,7 @@ for the method framing: AMR_Krylov_V5/Main `S4_nekstab.tex` and thesis chapter
 - Sponge: left = 1, right = 5, strength = 1.7
 
 ## Prerequisites
-- Initial guess: `BF_naca00120.f00001`
+- Initial guess of the Newton stage: `BF_seed_naca00120.f00001`, the last snapshot (t = 70) of `000_dns`
 
 ## Run
 ```bash
@@ -40,12 +40,13 @@ python3 plot.py
 ```
 
 ## Latest Result
-Verified 2026-05-17 on 8 ranks (Slurm):
+Run of 2026-10-10 of `210_baseflow_newton/fp`, 8 ranks (Jean Zay, ifort 2021.9):
 
-- 10 Newton outer iterations to |F| = 9.4e-10
-- 27957 inner solver steps, 194 cumulative GMRES iters
-- Wall time 722 s (≈ 12 min)
-- Outputs: converged `BF_naca00120.f00001` (6.3 MB)
+- Newton from the DNS snapshot: 5 iterations, squared residual 6.08e-7 to 9.49e-10
+- 956 s on 8 ranks (220 s on 40 ranks, the same residuals and a base flow that agrees to 9e-12)
+- The base flow depends on the seed inside the sponge zone: a second pass seeded with the first output
+  moves the field by 3.5e-3, and the growth rate of the direct stage from -0.0643 to -0.0661
+  (see `210_baseflow_newton/fp/README.md`)
 
 ## References
 
