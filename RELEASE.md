@@ -188,7 +188,7 @@ wrong eigenvalues.
 | Mode | uparam(1) | String | Description |
 |------|-----------|--------|-------------|
 | Linearized DNS | 0.1 | `linear_dns` | Time-stepping of LNSE without eigensolver |
-| Dynamic Mode Tracking | 1.3 | `dmt` | UPO stabilization by band-pass filtering (Queguineur et al., 2019) |
+| Dynamic Mode Tracking | 1.3 | `dmt` | Steady base flow by band-pass filtering of the velocity (Queguineur et al., 2019) |
 | Floquet energy budget | 4.11 | `energy_budget_floquet` | PKE budget for time-periodic base flows |
 | Animate mode | 4.50 | `animate_mode` | Reconstruct eigenmode as time series |
 | Animate BF deform | 4.51 | `animate_bf_deform` | Base flow + eigenmode deformation |
@@ -250,11 +250,16 @@ time-periodic base flow in memory.
 
 #### Dynamic Mode Tracking (rc3)
 
-Base-flow stabilization of unstable periodic orbits by band-pass
-filtering the velocity field (Queguineur et al., Phys. Fluids 31,
-034101, 2019), ported from the legacy code into `dmt.f90`.  Target
-frequency, filter width, gain, start time, and tolerance map to
-`uparam(11..15)`.
+Base-flow stabilization by band-pass filtering the velocity field
+(Queguineur et al., Phys. Fluids 31, 034101, 2019), ported from the
+legacy code into `dmt.f90`.  Target frequency, filter width, gain,
+start time, and tolerance map to `uparam(11..15)`.  The force acts on the
+band around the target frequency and vanishes for a steady flow, so the
+run converges to a steady base flow: `cylinder_re100/130_baseflow_dmt`
+(Re = 100) reaches a residual of 1e-7 and agrees with the Newton solution
+to 4e-5.  A periodic orbit has content in the band at its own frequencies,
+the force does not vanish on it, and the residual does not reach zero
+(`tpjet_re2005/130_baseflow_dmt` stalls near 0.7).
 
 #### FST inflow module (rc3)
 
