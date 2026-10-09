@@ -1,7 +1,42 @@
 {
   "case": "cylinder_re100/000_dns",
-  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
+  "description": "Cylinder Re=100 DNS to t = 200. Regression values of this repository, not literature values. The run is deterministic: Jean Zay (ifort, 8 ranks), a workstation with gfortran (four optimisation levels, floating-point traps, signalling NaN) and ifx (three levels) agree to 5e-11 in the field norms and to all printed digits in the Strouhal number.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "ranks": "8",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-09"
+  },
   "quantities": {
-    "strouhal": {"value": 0.1714, "tol_rel": 5e-2, "source": "1cyl.his:strouhal:col3"}
+    "strouhal": {
+      "source": "1cyl.his:strouhal:col3",
+      "value": 0.1714,
+      "tol_rel": 5e-2,
+      "note": "Peak of an FFT of vy at the first probe over the last 70 time units, so the resolution is 1/70 = 0.014 and the value is limited by the FFT bin. The DMD stage 610_modal_dmd gives 0.1657 for the same flow."
+    },
+    "last_snapshot_time": {
+      "source": "1cyl0.f00020:field:time",
+      "value": 200.0,
+      "tol_abs": 1e-3,
+      "note": "The run reaches endTime = 200 and writes 20 snapshots."
+    },
+    "snapshot_vx_norm": {
+      "source": "1cyl0.f00020:field:vx.norm",
+      "value": 266.53597,
+      "tol_rel": 1e-6,
+      "note": "Norm of vx in the last snapshot."
+    },
+    "snapshot_vy_norm": {
+      "source": "1cyl0.f00020:field:vy.norm",
+      "value": 33.663917,
+      "tol_rel": 1e-6,
+      "note": "Norm of vy in the last snapshot."
+    },
+    "snapshot_vy_max": {
+      "source": "1cyl0.f00020:field:vy.max",
+      "value": 0.63645488,
+      "tol_rel": 1e-6,
+      "note": "Largest vy in the last snapshot."
+    }
   }
 }

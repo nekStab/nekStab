@@ -40,8 +40,11 @@ Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): the run starts from `rst_1c
 - Outputs: 20 snapshots `1cyl0.f00001` to `1cyl0.f00020` (one every 5 time units), `lift_drag.dat` and the probe
   history `1cyl.his` (v_y at (5, 0)).
 - The lift coefficient oscillation in `lift_drag.dat` shows the established vortex shedding.
-- `ref/reference.json` checks the Strouhal number of the probe signal, 0.1714. It is the peak of an FFT over the last
-  70 time units, so its resolution is 1/70 = 0.014; the DMD stage `../610_modal_dmd` gives 0.1657 for the same flow.
+- `ref/reference.json` checks five quantities. The Strouhal number of the probe signal, 0.1714, is the peak of an FFT
+  over the last 70 time units, so its resolution is 1/70 = 0.014 (tolerance 5 %); the DMD stage `../610_modal_dmd`
+  gives 0.1657 for the same flow. The time of the last snapshot and the norms of vx and vy and the largest vy in it
+  have a tolerance of 1e-6. Jean Zay (`ifort`), `gfortran` at four optimisation levels with and without floating-point
+  traps and signalling NaN, and `ifx` at three levels agree to 5e-11 on these norms (`scripts/compiler_battery.py`).
 - `plot.py` writes `plot_signal.png`, `plot_fft.png`, `plot_phase.png`, `plot_snapshot.png` and the animation
   `plot.gif`; `ref/` holds copies.
 
