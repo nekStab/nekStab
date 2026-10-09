@@ -190,6 +190,8 @@ subroutine spod_stream_init(nfft_in, noverlap_in, delta_t_in)
    use nekstab_spod_streaming_state, only: spod_s_init, spod_s_window, spod_s_win_weight
    use nekstab_modal_pod, only: hamming_window
 
+   implicit none
+
    integer, intent(in) :: nfft_in, noverlap_in
    real, intent(in) :: delta_t_in
 
@@ -235,9 +237,15 @@ subroutine spod_stream_update(snap, isnap)
                                       NEKSTAB_PI
    use nekstab_spod_streaming_state, only: spod_s_center, spod_s_dft_im, spod_s_dft_re, &
                                            spod_s_initialized, spod_s_mean, spod_s_n_snaps, &
-                                           spod_s_nblk, spod_s_nfft, spod_s_n_complete, &
+                                           spod_s_nblk, spod_s_nfft, spod_s_nfreq, spod_s_n_complete, &
                                            spod_s_t_idx, spod_s_window, spod_s_win_weight, &
                                            spod_s_work
+
+   ! This routine sits outside the module, so a name missing from the use list
+   ! above is an implicit real. spod_s_nfreq was missing: it read as 0.0, the
+   ! interior-frequency loop never ran, and the Nyquist index was negative
+   ! (SIGSEGV on the first snapshot).
+   implicit none
 
    type(krylov_vector), intent(in) :: snap
    integer, intent(in) :: isnap
@@ -352,6 +360,8 @@ subroutine spod_stream_finalize(nsave)
                                            spod_s_nblk, spod_s_nfft, spod_s_nfreq, &
                                            spod_s_noverlap, spod_s_n_complete, spod_s_n_snaps
    use nekstab_modal_spod, only: spod_save_modes
+
+   implicit none
 
    integer, intent(in) :: nsave
 
@@ -484,6 +494,8 @@ subroutine spod_stream_save_modes(ifreq, nfreq, freq, &
    use nekstab_nek_bridge, only: nekStab_dp
    use nekstab_spod_streaming_state, only: spod_s_dft_im, spod_s_dft_re, spod_s_nblk
    use nekstab_modal_spod, only: spod_save_modes
+
+   implicit none
 
    integer, intent(in) :: ifreq, nfreq, nblk, nsave
    real, intent(in) :: freq(nfreq), evals(nblk)
