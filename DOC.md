@@ -459,12 +459,19 @@ The following sections describe each mode in detail. The `userParam01` values ar
 |-------|--------|-------------|
 | `1.1` | SFD | Selective Frequency Damping |
 | `1.2` | BoostConv | Accelerating slow convergence |
-| `1.3` | DMT | Dynamic Mode Tracking (not yet ported) |
+| `1.3` | DMT | Dynamic Mode Tracking (Queguineur et al. 2019): band-pass filter around a target frequency |
 | `1.4` | TDF | Time-Delayed Feedback |
 
 **SFD Parameters** (`userParam01 = 1.1`):
-- `userParam04`: Frequency `f` (positive: Åkervik formulation, negative: Casacuberta formulation)
-- `userParam05`: Filter width `σ` (use `0` for continuation from previous run)
+- `userParam04`: Frequency `f` of the oscillation to damp, in cycles per time unit (`ω = 2πf`). The sign selects the formulation: positive for Åkervik, negative for Casacuberta.
+- `userParam05`: Growth rate `σ` of that oscillation (use `0` for continuation from previous run). Åkervik gives the filter the cutoff `ω/2` and the gain `−2σ`; Casacuberta gives it the cutoff `(√(ω² + σ²) − σ)/2` and the gain `−(√(ω² + σ²) + σ)/2`. The run prints both values (`Akervik  cutoff, gain:` or `Casacub. cutoff, gain:`).
+
+**DMT Parameters** (`userParam01 = 1.3`):
+- `userParam11`: target angular frequency `ω_c` (`2π St`)
+- `userParam12`: filter damping `β`
+- `userParam13`: feedback gain `χ`
+- `userParam14`: time before the forcing starts
+- `userParam15`: convergence tolerance of the residual
 
 SFD ends, and writes the converged base flow `BF_*`, when its residual falls below the larger of the two `residualTol` of the `.par`. The residual (`residu.dat`, column 2) is the root mean square over the domain of the change of the state during one time step, so it does not depend on the size of the domain. With a thermal or RANS state the temperature and every scalar enter it, with the weight of the Krylov inner product. TDF uses the same measure for the difference between the state and the state one period earlier, and BoostConv for the change of the velocity. Once the state has converged, the residual stops falling at the noise of the solves, so `residualTol` has to lie above that level; for `cylinder_re100/110_baseflow_sfd` the level is about 8e-12, against `residualTol = 1e-10`.
 
