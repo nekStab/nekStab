@@ -5,8 +5,8 @@ stopAt = endTime
 endTime = 1000.0
 
 userParam01 = 1.1  # SFD (Akervik static)
-userParam04 = 0.166 # freq = St of leading mode at Re=100 (Williamson 1996)
-userParam05 = 0.26  # gain chi = 2*sigma_r at Re=100 (Barkley & Henderson 1996; sigma_r ~ 0.13)
+userParam04 = 0.166 # f = omega/2pi in cycles per time unit (St): shedding frequency of the Re=100 wake (Williamson 1996); POSITIVE -> Akervik, cutoff = omega/2
+userParam05 = 0.26  # sigma in the Akervik gain = -2 sigma = -0.52; the rule gain = -2 sigma_r asks for -0.25 (sigma_r = 0.1248, stage 310_stability_direct)
 
 dt = 0
 variableDt = yes
