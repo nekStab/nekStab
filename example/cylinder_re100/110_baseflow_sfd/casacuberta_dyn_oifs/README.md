@@ -5,7 +5,7 @@ Compare with ../casacuberta_dyn (the same case with BDF3); the family README (`.
 
 ## Case
 
-- 2D flow around a circular cylinder, `viscosity = -100` (Re = 100), 2128 elements, `lx1 = 8`, `lxd = 12`.
+- 2D flow around a circular cylinder, `viscosity = -100` (Re = 100), 2128 elements, `lx1 = 6`, `lxd = 9`.
 - `startFrom = BF_seed_1cyl0.f00001`, the seed that the cylinder base-flow stages share. `1cyl.usr` sets the restart time to 0.
 - `userParam01 = 1.1` (SFD), `userParam04 = -0.166` (negative: Casacuberta), `userParam05 = 0.26`.
   `userParam04` is the frequency in cycles per time unit (omega = 2 pi f = 1.043) and `userParam05` the growth rate sigma

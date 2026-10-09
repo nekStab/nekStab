@@ -17,8 +17,8 @@ in `../fp/`.
 - Initial condition: `BF_seed_1cyl0.f00001` (canonical 2128-element seed)
 
 ## Mesh
-2128 elements (`lelg=2128` in `SIZE`), polynomial order N=7 (`lx1=8`),
-dealiasing N=11 (`lxd=12`).
+2128 elements (`lelg=2128` in `SIZE`), polynomial order N=5 (`lx1=6`),
+dealiasing N=8 (`lxd=9`).
 
 ## Run
 ```bash

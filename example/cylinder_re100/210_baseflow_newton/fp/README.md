@@ -16,8 +16,8 @@ reduction in total linear solver calls.
   with the rest of the cylinder baseflow suite)
 
 ## Mesh
-2128 elements (`lelg=2128` in `SIZE`), polynomial order N=7 (`lx1=8`),
-dealiasing N=11 (`lxd=12`).
+2128 elements (`lelg=2128` in `SIZE`), polynomial order N=5 (`lx1=6`),
+dealiasing N=8 (`lxd=9`).
 
 ## Run
 ```bash
