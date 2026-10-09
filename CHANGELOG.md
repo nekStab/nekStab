@@ -42,6 +42,20 @@ description for the 2.0 series; entries here are the per-tag deltas.
   310), beta = 1 and chi = 0.5 the residual falls below 1e-7 at t = 766, and
   the field agrees with the Newton solution to 4e-5. The README states that DMT
   filters one frequency band, so a steady flow is the only state without force.
+- `scripts/compiler_battery.py` exports the tracked files of an example stage,
+  builds it under nine compiler profiles (gfortran at -O0, -O2 and -O3, a
+  portable build, floating-point traps and signalling NaN; ifx at -O0, the
+  default level and a portable build), runs it, and lists every reference
+  quantity under each profile with the spread. Seven stages (cylinder DNS,
+  thermosyphon Newton and direct, BoostConv, flip-flop wavemaker and Floquet,
+  dynamic Newton) pass the run gate and the reference check under every
+  profile. The relative spread of the field statistics is 1.7e-4 or less; the
+  cylinder DNS agrees to 5e-11 and gives the same Strouhal number to all
+  printed digits.
+- `validation/tests/test_references_not_vacuous.py` exports `example/` of HEAD
+  without running anything and requires that no quantity of any
+  `ref/reference.json` passes. A second test requires every quantity to have a
+  numeric value, a source and exactly one tolerance.
 
 ### Changed
 - A `userParam01` that is not a mode code stops the run with an error that
