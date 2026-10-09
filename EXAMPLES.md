@@ -78,7 +78,7 @@ single steady or periodic operator.
 | `example/cylinder_re100/` | 2D cylinder wake, Re = 50-100 | DNS, SFD, BoostConv, Newton, direct (linear and finite-difference) and adjoint stability, transient growth, mode animation, wavemaker, steady force sensitivity, OTD, POD/DMD/SPOD |
 | `example/cylinder_re180/` | 2D cylinder wake, Re = 180 | DNS seed, Newton UPO, direct/adjoint Floquet stability, Floquet mode animation, OTD |
 | `example/cylinder_re30_thermal/` | Thermally coupled cylinder wake, Re = 30 | DNS seed, Newton thermal baseflow |
-| `example/cylinder_re1m/` | 2D RANS cylinder wake, Re = 1e6 | DNS, SFD base, URANS, Newton, direct stability of the SFD base (coupled and quasilaminar). Mean-flow stability not run. |
+| `example/cylinder_re1m/` | 2D RANS cylinder wake, Re = 1e6 | DNS, SFD base, URANS, direct stability of the SFD base (coupled and quasilaminar). Newton from the SFD field does not converge (probe documented in `110_baseflow_sfd/README.md`). Mean-flow stability not run. |
 | `example/back_fstep_re500/` | Backward-facing step, Re = 500 | Newton baseflow, transient growth |
 | `example/flip_flop_re62/` | Side-by-side cylinders, Re = 62 | DNS, Newton UPO, direct/adjoint Floquet stability, wavemaker |
 | `example/tpjet_re2005/` | Triple-port jet, mixed Re = 1900/2005 | DMT baseflow (configuration only), forced periodic orbit, direct Floquet stability |

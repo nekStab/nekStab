@@ -14,3 +14,14 @@ not k, tau, or eddy viscosity.
 `userParam04 = -0.192` is the measured wake Strouhal number used as the SFD
 cutoff (from the earlier shedding run, not this 2D mesh). `dt = 0.001` is
 fixed; the k-tau source is stiff at larger steps.
+
+## Newton probe from this field (not a stage)
+Newton-GMRES (`userParam01 = 2`, `userParam07 = 5`) was started from
+`base_converged.f00001` with the same mesh, dt and k-tau model. The first
+forward residual was 0.54. Five Arnoldi columns left it there, at rate 0.9999.
+The linear residual then jumped to about 100 and stayed there. The next
+Newton residual was 0.542, and the field written by Newton matches the SFD
+velocity exactly. Newton therefore does not reach a fixed point of the coupled
+k-tau map from this field, and the SFD field stays the base for the stability
+stages. The stage was removed from the release because it ends in this failure.
+`newton_vs_sfd.png` compares the Newton output with the SFD field.

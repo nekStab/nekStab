@@ -40,7 +40,7 @@ The force is off unless `nekStab_usrchk` calls `reynolds_enable`. That call is n
 
 Explicit-filter results (`filterWeight = 1`, `filterCutoffRatio = 0.67`): coupled leads at σ = 3.41, St = 0.491, on the cylinder. Quasilaminar leads at σ = 1.15, St = 0, also on the cylinder. A wake-frequency mode remains in the quasilaminar spectrum at St = 0.189, σ = 0.261, and is not leading. The hpfrt result, σ = 0.237 at St = 0.194, is in `spectre_hpfrt.tar`.
 
-Newton in `210_baseflow_newton/` did not produce a fixed point. Two iterations left the residual at 0.54, and the outposted velocity matches the SFD field. Figure: `210_baseflow_newton/newton_vs_sfd.png`.
+A Newton probe from the SFD field did not produce a fixed point (no stage in this release). Two iterations left the residual at 0.54, and the outposted velocity matches the SFD field. Details and figure: `110_baseflow_sfd/README.md`, `110_baseflow_sfd/newton_vs_sfd.png`.
 
 Still required: a converged fixed point, then a new direct spectrum of that fixed point. The numbers above are not that spectrum.
 
@@ -63,7 +63,6 @@ Not started. Requires a saturated periodic run, a phase average, and the phase-c
 - `000_dns/` is the nonlinear k-tau march on the 2D mesh (`lelg=1480`). Its `.par` is still the Re=40000 continuation point.
 - `110_baseflow_sfd/` builds the SFD base the current stability stages restart from.
 - `120_urans/` is the bare forward march. It documents that this operator does not fluctuate.
-- `210_baseflow_newton/` is a failed Newton probe from the SFD field.
 - `310_stability_direct/coupled/` is the coupled closure operator on the imperfect SFD base.
 - `310_stability_direct/quasilaminar/` is the frozen-eddy-viscosity operator on the same base.
 
