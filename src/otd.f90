@@ -582,14 +582,14 @@ contains
             open (unit=OTD_UNIT_FTLE, file='otd_ftle.dat', &
                   status='replace', form='formatted')
             close (OTD_UNIT_FTLE)
-         end if
-      end if
-
             if (otd_FTLEPeriod > 0.0d0) then
                open (unit=OTD_UNIT_FTLE, file='otd_ftle_period.dat', &
                      status='replace', form='formatted')
                close (OTD_UNIT_FTLE)
             end if
+         end if
+      end if
+
       if (pfrac < dt) then
          ! docs/otd-spec.md §1.6: split a boundary-crossing step and linearly
          ! interpolate Lr at the period boundary before resetting the integral.
@@ -607,9 +607,6 @@ contains
          if (nid == 0) then
             write (6, *) '[OTD] FTLE PRD', istep, &
                't=', time, (FTLEv(mode), mode=1, npert)
-         end if
-
-         call otd_zero_FTLE
             !  One line per completed period: the exponents averaged over exactly one
             !  period. otd_ftle.dat holds the running value inside the period.
             if (otd_FTLEPeriod > 0.0d0) then
@@ -619,6 +616,9 @@ contains
                write (OTD_UNIT_FTLE, fmte) time, (FTLEv(mode), mode=1, npert)
                close (OTD_UNIT_FTLE)
             end if
+         end if
+
+         call otd_zero_FTLE
          call copy(Lrp, Lrc, lpert*lpert)
          call copy(Lrc, otd_Lr, lpert*lpert)
          call integrate_trap(Lrp, Lrc, period, pfrac)
@@ -1100,6 +1100,9 @@ contains
          end do
          normality = sqrt(normality/npert)
 
+         !  Zero first: with one mode the sum below is empty, and the printed
+         !  value used to be whatever the caller's variable held.
+         orthogonality = 0.0d0
          if (npert > 1) then
             do row = 1, npert
                do col = row + 1, npert
@@ -1116,9 +1119,6 @@ contains
             write (6, *) '  [OTD] NOout', &
                istep, info, &
                normality - 1.0d0, orthogonality
-         !  Zero first: with one mode the sum below is empty, and the printed
-         !  value used to be whatever the caller's variable held.
-         orthogonality = 0.0d0
          end if
       end if
 
