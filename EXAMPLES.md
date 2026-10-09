@@ -101,13 +101,13 @@ this repository.
 
 | Case | Re / Ra | Mode | Expected result |
 |---|---:|---|---|
-| `example/cylinder_re100/120_baseflow_boostconv/` | 100 | BoostConv (1.2) | converged steady state |
+| `example/cylinder_re100/120_baseflow_boostconv/` | 50 | BoostConv (1.2) | converged steady state |
 | `example/cylinder_re100/130_baseflow_dmt/` | 100 | DMT (1.3) | converged steady state, residual below 1e-7 |
 | `example/cylinder_re100/210_baseflow_newton/fp/` | 100 | Newton-GMRES (2.0) | converged steady state |
 | `example/cylinder_re100/210_baseflow_newton/dyn/` | 100 | Newton + `ifdyntol` (2.0) | converged steady state |
-| `example/cylinder_re100/110_baseflow_sfd/akervik/` | 50 | SFD baseline (1.1) | converged steady state |
-| `example/cylinder_re100/110_baseflow_sfd/akervik_dyn/` | 50 | SFD + dyn-tol (1.1) | converged steady state |
-| `example/cylinder_re100/110_baseflow_sfd/akervik_dyn_oifs/` | 50 | SFD + OIFS (1.1) | converged steady state |
+| `example/cylinder_re100/110_baseflow_sfd/akervik/` | 100 | SFD baseline (1.1) | converged steady state |
+| `example/cylinder_re100/110_baseflow_sfd/akervik_dyn/` | 100 | SFD + dyn-tol (1.1) | converged steady state |
+| `example/cylinder_re100/110_baseflow_sfd/akervik_dyn_oifs/` | 100 | SFD + OIFS (1.1) | converged steady state |
 | `example/cylinder_re100/310_stability_direct/direct/` | 100 | Direct LNSE (3.1) | leading eigenvalue near sigma = 0.125 + 0.734i |
 | `example/cylinder_re100/320_stability_adjoint/` | 100 | Adjoint LNSE (3.2) | matches direct spectrum |
 | `example/cylinder_re100/410_postproc_animate_modes/` | 100 | Mode animation (4.50) | snapshots per period |
