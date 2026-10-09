@@ -35,6 +35,8 @@ writeToFieldFile = yes
 
 [VELOCITY]
 residualTol = 1.0E-9
-residualProj = yes
+# Velocity residual projection off: with it the Newton run stops with a non-finite
+# norm at 24 or more ranks on Jean Zay (ifort). Off, it converges at 8 to 40 ranks.
+residualProj = no
 density = 1.0
 viscosity = -2000.0 # Re_c ~ 
