@@ -113,6 +113,13 @@ street: vortices born in the near wake and advecting downstream, the
 pattern convecting ~one wavelength per period. This is the μ=+1 synchronous
 Floquet mode at the base-flow frequency.
 
+## Check
+`ref/reference.json` checks the time of the last frame, `1cyl0.f00100` (t = T = 5.189627, the end of the period of
+`../../210_baseflow_newton/`), and the norms of the first and last frames (1e-4 and 1e-3). The orbit is periodic, so
+the norms of the first and the last frame differ by 1e-6. The base flow of the run comes from the Newton stage: copy
+its `BF_1cyl0.f00001` here, together with the leading Floquet mode and `Spectre_NSd_conv.dat` of
+`../../311_stability_direct_floquet/`.
+
 ## Reference
 Barkley & Henderson, *J. Fluid Mech.* **322** (1996) 215 — Floquet stability
 of the periodic cylinder wake (Mode A/B are the 3D instabilities this 2D
