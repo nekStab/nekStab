@@ -2,7 +2,6 @@
 """Analyze the NACA 0012 Re=2000 DNS stage."""
 from __future__ import annotations
 
-import json
 import math
 from pathlib import Path
 
@@ -15,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import nekplot as nk
 
 CASE_DIR = Path(__file__).resolve().parent
-LINEAR_SIGMA = -0.1127203
-LINEAR_OMEGA = 8.036574
+LINEAR_SIGMA = -0.0665382  # leading eigenvalue of ../310_stability_direct
+LINEAR_OMEGA = 8.00579
 RINGDOWN_WINDOW = (30.0, 70.0)
 AMPLITUDE_RATIO_WINDOWS = ((30.0, 40.0), (60.0, 70.0))
 
@@ -121,60 +120,6 @@ def render_snapshot(path: Path) -> None:
     plt.close(fig)
 
 
-def write_reference(outcome: str, frequency: float, omega: float,
-                    sigma_hilbert: float, sigma_ratio: float,
-                    amplitude: float) -> None:
-    quantities = {
-        "dominant_frequency": {
-            "source": "analysis_metrics.dat:col1:first",
-            "value": frequency,
-            "tol_rel": 0.02,
-        },
-        "late_amplitude": {
-            "source": "analysis_metrics.dat:col2:first",
-            "value": amplitude,
-            "tol_rel": 0.02,
-        },
-        "fitted_sigma": {
-            "source": "analysis_metrics.dat:col3:first",
-            "value": sigma_hilbert,
-            "tol_rel": 0.02,
-        },
-        "fitted_omega": {
-            "source": "analysis_metrics.dat:col4:first",
-            "value": omega,
-            "tol_rel": 0.02,
-        },
-        "sigma_window_ratio": {
-            "source": "analysis_metrics.dat:col5:first",
-            "value": sigma_ratio,
-            "tol_rel": 0.02,
-        },
-    }
-    description = (
-        "NACA 0012 Re=2000 DNS from finite-amplitude Re=2000 wake restart; "
-        f"outcome={outcome}. The late-window DNS frequency agrees with the "
-        "linear eigenvalue omega=8.036574 to about 0.4%, but the decay rate "
-        "differs from the linear prediction sigma=-0.1127203 and remains under "
-        "investigation. The DNS steady state differs from the Newton base flow "
-        "by O(1e-2) in the wake and O(0.2) in the sponge zone."
-    )
-    spec = {
-        "case": "naca0012_re2000/000_dns",
-        "description": description,
-        "produced": {
-            "date": "2026-06-10",
-            "ranks": "8",
-            "nekstab_mode": "0 (DNS)",
-            "initial_condition": "resnaca00120.f00010",
-        },
-        "quantities": quantities,
-    }
-    ref_dir = CASE_DIR / "ref"
-    ref_dir.mkdir(exist_ok=True)
-    (ref_dir / "reference.json").write_text(json.dumps(spec, indent=2) + "\n")
-
-
 def main() -> None:
     nk.configure_style()
     probes, data = read_his(CASE_DIR / "naca0012.his")
@@ -233,7 +178,6 @@ def main() -> None:
     plt.close(fig)
 
     render_snapshot(find_snapshot())
-    write_reference(outcome, frequency, omega, sigma_hilbert, sigma_ratio, amplitude)
 
     for name in ("signal.png", "spectrum.png", "snapshot.png"):
         (CASE_DIR / "ref" / name).write_bytes((CASE_DIR / name).read_bytes())

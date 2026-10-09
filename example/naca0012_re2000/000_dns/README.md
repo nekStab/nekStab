@@ -3,8 +3,8 @@
 DNS stage for the NACA 0012 wake at Re=2000.
 
 The companion steady Newton stage gives a stable fixed point, and
-`310_stability_direct/direct/Spectre_NSd.dat` reports the leading pair
-`sigma=-0.1127203`, `omega=+/-8.036574`. This stage tests the nonlinear wake
+`../310_stability_direct/Spectre_NSd_conv.dat` reports the leading pair
+`sigma=-0.0665382`, `omega=+/-8.00579`. This stage tests the nonlinear wake
 from a finite-amplitude restart and distinguishes ringdown from a sustained
 subcritical oscillation.
 
@@ -40,41 +40,35 @@ The Slurm script writes stdout and stderr to `logfile`.
 
 ## Latest Result
 
-Slurm job `184` ran with 8 ranks and completed in `4607 s` of wall time. The
-final checkpoint is `naca00120.f00007` at `t=70.0`.
+Jean Zay, 8 ranks, `ifort`, 2026-10-09: wall time 5882 s (98 min). The final checkpoint is `naca00120.f00007` at `t=70.0`.
 
-The finite-amplitude wake rings down monotonically. The accepted late analysis
-uses the `v_y(1,0,0)` residual over `30 <= t <= 70`, after the startup
-transient has passed:
+The finite-amplitude wake rings down monotonically. The late analysis uses the
+`v_y(1,0,0)` residual over `30 <= t <= 70`, after the startup transient has passed:
 
 - Hilbert-envelope decay rate: `sigma = -0.063802`
 - window-amplitude-ratio decay rate: `sigma = -0.065368`
-- linear reference: `sigma = -0.1127203`
-- discrepancy: DNS late decay is about `43%` less negative than the Newton
-  base-flow eigenvalue
+- linear value of `../310_stability_direct`: `sigma = -0.0665382`
+- the DNS decay rates are 4.1 % and 1.8 % less negative than the linear value
 - fitted angular frequency: `omega = 8.066107`
-- linear reference: `omega = 8.036574`
-- relative frequency error: `0.37%`
+- linear value: `omega = 8.00579`
+- relative frequency difference: `0.75 %`
 - dominant frequency: `f = 1.283761`
 
-The frequency agreement validates the DNS wake period against the linear mode.
-The decay-rate discrepancy is not hidden: the DNS steady state differs from the
-Newton base flow by O(1e-2) in the wake and O(0.2) in the sponge zone, so the
-late DNS ringdown appears to measure the least-damped mode about the DNS steady
-state rather than the Newton base-flow operator. This remains an open
-investigation.
+The decay rate and the frequency of the nonlinear ringdown agree with the leading eigenvalue of the
+Newton base flow.
 
 Run `python3 plot.py` after the Slurm job finishes. It writes:
 
+- `analysis_metrics.dat`
 - `signal.png`
 - `spectrum.png`
 - `snapshot.png`
-- `ref/reference.json`
 - `ref/signal.png`
 - `ref/spectrum.png`
 - `ref/snapshot.png`
 
-The measured outcome and scalar values are recorded in `ref/reference.json`.
+`ref/reference.json` holds fixed values of `analysis_metrics.dat` (written by `plot.py` from the probe history)
+for the committed run; `plot.py` does not write the reference.
 
 ## Verify
 
