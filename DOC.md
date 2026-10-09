@@ -892,6 +892,7 @@ nekStab/
 │   │── eigensolvers.f90          # Krylov-Schur algorithm
 │   │── lapack_wrapper.f90        # LAPACK wrappers (Schur, eig, etc.)
 │   │── argsort.f90               # Sorting utilities
+│   │── ks_select.f90             # Ritz value selection of the Krylov-Schur restart
 │   │── nek_vectors.f90           # nop* vector operations
 │   │
 │   │── matvec.f90                # Linearized NS operator
@@ -906,7 +907,6 @@ nekStab/
 │   │── statistics.f90            # Time averaging
 │   │── diagnostics.f90           # Energy, enstrophy, output
 │   │
-│   │── ks_select.f90             # Ritz value selection of the Krylov-Schur restart
 │   │── probes.f90                # Point monitoring
 │   │── noise.f90                 # Initial condition perturbations
 │   │── torque.f90                # Force/torque computation
@@ -975,6 +975,7 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `nekstab_vectors` | `nek_vectors.f90` | `nopcopy`, `nopadd2`, `nopadd2s2`, `nopsub2`, `nopsub3`, `nopcmult`, `noprzero`, `nopaxpby`, `axpby`, `opadd3`, `opaddcol3` |
 | `nekstab_lapack` | `lapack_wrapper.f90` | `schur`, `ordschur`, `eig`, `sort_eigendecomp`, `select_eigvals`, `lstsq`, `eig_symmetric`, `eig_hermitian` |
 | `nekstab_argsort` | `argsort.f90` | `argsort` |
+| `nekstab_ks_select` | `ks_select.f90` | `ks_select_eigenvalues`, `ks_ensure_conjugate_pairs` |
 | `nekstab_matvec` | `matvec.f90` | `prepare_linearized_solver`, `matvec`, `forward_linearized_map`, `forward_finite_difference_map`, `adjoint_linearized_map` |
 | `nekstab_io` | `IO.f90` | `whereyouwant`, `read_eigenvalue`, `load_mode_pair`, `load_files`, `k_load` |
 | `nekstab_newton` | `newton_krylov.f90` | `newton_krylov`, `ts_gmres`, `initialize_gmres_vector`, `nonlinear_forward_map`, `set_nek5000_tolerances`, `spec_tole` |
@@ -989,7 +990,6 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `nekstab_probes` | `probes.f90` | `pointcheck`, `zero_crossing` |
 | `nekstab_torque_mod` | `torque.f90` | `nekStab_torque`, `nekStab_define_obj` |
 | `nekstab_forcing_mod` | `forcing.f90` | `nekStab_forcing`, `nekStab_forcing_temp`, `activate_sponge`, `spng_init`, `spng_set`, `mth_stepf` |
-| `nekstab_ks_select` | `ks_select.f90` | `ks_select_eigenvalues`, `ks_ensure_conjugate_pairs` |
 | `nekstab_mode_config` | `mode_config.f90` | `nekStab_resolve_mode`, `nekStab_mode_from_string`, `nekStab_mode_from_flags`, `nekStab_mode_from_uparam`, `nekStab_validate_mode`, `nekStab_sync_uparam` |
 | `nekstab_otd` | `otd.f90` | `otd`, `otd_construct_linear_operator`, `otd_compute_OTD_modes`, `otd_white_noise`, `otd_generate_forces`, `otd_orthonormalize_basis`, `otd_compute_FTLE` |
 | `nekstab_fst` | `fst.f90` | `fst`, `fst_uin`, `fst_vin`, `fst_win` (public); internals: `readFSTinflow`, `defineBC`, `interpolateModes`, `computeBC`, `computeTurbu`, `spline`, `splint` |
