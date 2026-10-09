@@ -12,6 +12,9 @@ run lasts 600 time units (`endTime`) and writes a snapshot every 100 (`writeInte
 snapshot, `cav0.f00006`, seeds `../210_baseflow_newton/fp/` (copy it to `BF_cav0.f00001`): at
 `lx1 = 12` its first Newton residual is 4.4e-9.
 
+Run: `sbatch run.local.slurm` (4 ranks; 18 min on Jean Zay with `ifort`, 2026-10-09).
+`plot.py` writes `plot_snapshot.png` (velocity magnitude of the last snapshot); `ref/` holds a copy as `snapshot.png`.
+
 ## Resolution
 Order 5 (`lx1 = 6`, the former setting) is too low for this flow: the steady state of its
 filtered DNS is not a fixed point of the unfiltered map of the later stages, and they found a
