@@ -1271,8 +1271,7 @@ example/cylinder/
 │   ├── direct/    # 3. Direct eigenmodes
 │   └── adjoint/   # 4. Adjoint eigenmodes
 └── postproc/
-    ├── sensitivity_budget_wavemaker/
-    └── steady_force_sensitivity/
+    └── sensitivity_budget_wavemaker/
 ```
 
 ### Running a Complete Analysis

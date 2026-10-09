@@ -1034,31 +1034,6 @@ CASES: dict[str, MethodCase] = {
             " direct+adjoint modes"
         ),
     ),
-    "cylinder/postproc/steady_force_sensitivity": MethodCase(
-        case_id="cylinder/postproc/steady_force_sensitivity",
-        flow_family="cylinder_re100", method_lane="wavemaker",
-        current_path="example/cylinder_re100/412_postproc_steady_force_sensitivity",
-        proposed_folder="example/cylinder_re100/412_postproc_steady_force_sensitivity", sort_prefix="412",
-        label="Cylinder Steady Force Sensitivity", mode_name="Force Sensitivity", legacy_uparam01="4.11",
-        expected_behavior="Steady force sensitivity postprocessing at Re=100",
-        status=CaseStatus.VALIDATED, compute_class=_BLV,
-        target_parameters=_CYL_RE100,
-        evidence_requirements=(_REQ_IMG,),
-        artifacts=(
-            _img("validation/figures/cylinder_postproc_steady_force_sensitivity_real_Re50.png"),
-            _img("validation/figures/cylinder_postproc_steady_force_sensitivity_imag_Re50.png"),
-            _history("example/cylinder_re100/412_postproc_steady_force_sensitivity/residu_arnoldi.dat"),
-            _log("example/cylinder_re100/412_postproc_steady_force_sensitivity/logfile"),
-        ),
-        prerequisites=("cylinder/stability/adjoint",),
-        evidence_prereqs=(
-            "validation/figures/cylinder_postproc_steady_force_sensitivity_real_Re50.png",
-            "validation/figures/cylinder_postproc_steady_force_sensitivity_imag_Re50.png",
-        ),
-        why_note=(
-            "Re=100-canonical; k_dim=50 (userParam07=50); postproc reading adjoint mode"
-        ),
-    ),
     # ------------------------------------------------------------------
     # Cylinder OTD / Modal / RANS
     # ------------------------------------------------------------------

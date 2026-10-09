@@ -75,7 +75,7 @@ single steady or periodic operator.
 
 | Case | Physics | Stages in the repository |
 |------|---------|--------------------------|
-| `example/cylinder_re100/` | 2D cylinder wake, Re = 50-100 | DNS, SFD, BoostConv, Newton, direct (linear and finite-difference) and adjoint stability, transient growth, mode animation, wavemaker, steady force sensitivity, OTD, POD/DMD/SPOD |
+| `example/cylinder_re100/` | 2D cylinder wake, Re = 50-100 | DNS, SFD, BoostConv, Newton, direct (linear and finite-difference) and adjoint stability, transient growth, mode animation, wavemaker, OTD, POD/DMD/SPOD |
 | `example/cylinder_re180/` | 2D cylinder wake, Re = 180 | DNS seed, Newton UPO, direct/adjoint Floquet stability, Floquet mode animation, OTD |
 | `example/cylinder_re30_thermal/` | Thermally coupled cylinder wake, Re = 30 | DNS seed, Newton thermal baseflow |
 | `example/cylinder_re1m/` | 2D RANS cylinder wake, Re = 1e6 | DNS, SFD base, URANS, direct stability of the SFD base (coupled and quasilaminar). Newton from the SFD field does not converge (probe documented in `110_baseflow_sfd/README.md`). Mean-flow stability not run. |
@@ -111,7 +111,6 @@ this repository.
 | `example/cylinder_re100/320_stability_adjoint/` | 100 | Adjoint LNSE (3.2) | matches direct spectrum |
 | `example/cylinder_re100/410_postproc_animate_modes/` | 100 | Mode animation (4.50) | snapshots per period |
 | `example/cylinder_re100/411_postproc_wavemaker/` | 100 | Wavemaker (4.0) | wm, sr/si, pr/pi, tr/ti fields |
-| `example/cylinder_re100/412_postproc_steady_force_sensitivity/` | 100 | Steady force (4.41) | sensitivity field |
 | `example/cylinder_re100/000_dns/` | 100 | DNS (0.0) | vortex shedding |
 | `example/cylinder_re100/000_dns/ci_test/` | 100 | DNS smoke (0.0) | 10-step smoke |
 | `example/moving_cylinder_re100/000_dns/` | 100 | DNS forced osc (0.0) | DNS subcase |

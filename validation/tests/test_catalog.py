@@ -50,7 +50,6 @@ REQUIRED_CYLINDER_CASES = (
     "cylinder/stability/animate_modes",
     "cylinder/stability/animate_modes_with_UPO",
     "cylinder/postproc/sensitivity_budget_wavemaker",
-    "cylinder/postproc/steady_force_sensitivity",
     "cylinder/otd",
     "cylinder/modal",
     "cylinder/RANS",

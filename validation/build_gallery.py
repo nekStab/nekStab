@@ -74,7 +74,6 @@ SECTIONS: list[tuple[str, list[Case]]] = [
     ]),
     ('Cylinder · Postproc', [
         Case('cylinder/postproc/sensitivity_budget_wavemaker', 'Re100', 'Wavemaker / budget (4.0)', 'wm, sr/si, pr/pi, tr/ti fields', 'validated', 'cylinder_postproc_sensitivity_budget_wavemaker'),
-        Case('cylinder/postproc/steady_force_sensitivity',     'Re100', 'Steady force (4.41)',     'sensitivity field fsr',           'validated', 'cylinder_postproc_steady_force_sensitivity'),
     ]),
     ('Cylinder · DNS / smoke', [
         Case('cylinder/dns',             'Re100', 'DNS (0.0)',                'vortex shedding past t=100', 'validated', 'cylinder_dns'),
