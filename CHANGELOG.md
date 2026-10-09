@@ -317,6 +317,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
   that difference as well. The cylinder stage (`cylinder_re100/120_baseflow_boostconv`,
   Re = 50) meets its gate 1e-6 at t = 164.8 now, against 167.5 before, and its base
   flow differs from the Newton solution at Re = 50 by 2.5e-5 in the extrema, as before.
+- `scripts/check_against_ref.py` no longer fails a clean run because of one log
+  line. With a fixed time step Nek5000 prints `DTCFL` and `DTFS` unset in the line
+  `DT/DTCFL/DTFS/DTINIT`, and some builds show `NaN` there (gfortran at `-O3` did).
+  The run gate skips that line; a `NaN` anywhere else still fails the run.
 
 ## [2.0.0-rc4] - 2026-06-12
 

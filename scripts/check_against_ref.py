@@ -158,6 +158,10 @@ def run_failed(stage: Path) -> str | None:
     log = stage / "logfile"
     if log.exists():
         for line in log.read_text(errors="replace").splitlines():
+            # With a fixed time step Nek5000 (setdt in subs1.f) prints DTCFL and DTFS unset: the
+            # line shows whatever the memory held, and some builds print NaN there. The run is clean.
+            if "DT/DTCFL/DTFS/DTINIT" in line:
+                continue
             if FAILED_RUN.search(line):
                 return f"logfile: {line.strip()[:100]}"
     return None

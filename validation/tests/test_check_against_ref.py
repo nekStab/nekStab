@@ -108,6 +108,15 @@ def test_advice_about_non_finite_norm_passes(tmp_path: Path) -> None:
     assert code == 0, out
 
 
+def test_unset_time_step_line_passes(tmp_path: Path) -> None:
+    # Nek5000 prints DTCFL and DTFS unset when the time step is fixed; a build can show NaN there.
+    log = "     DT/DTCFL/DTFS/DTINIT   0.250E-01         NaN         NaN   0.000E+00\n"
+    code, out = run_check(make_stage(tmp_path / "clean", log=log))
+    assert code == 0, out
+    code, out = run_check(make_stage(tmp_path / "nan", log=log + "residual = NaN\n"))
+    assert code == 1, out
+
+
 def test_empty_quantity_list_fails(tmp_path: Path) -> None:
     code, out = run_check(make_stage(tmp_path, quantities={}))
     assert code == 1, out
