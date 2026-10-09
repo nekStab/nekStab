@@ -50,7 +50,7 @@ def main() -> None:
         )
     if sigma is not None:
         ax.axhline(
-            sigma, color="k", lw=0.8, ls="--", label=rf"$\sigma$ of 310 ({sigma:.4f})"
+            sigma, color="k", lw=0.8, ls="--", label=rf"$\sigma$ of 310 ({sigma:.6f})"
         )
     ax.set_xlabel(r"$t$ (convective time units)")
     ax.set_ylabel(r"finite-time exponent ($1/t_c$)")
