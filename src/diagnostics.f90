@@ -33,7 +33,9 @@ module nekstab_diagnostics
                                  initc, spng_st, isize, &
                                  isDirect, isAdjoint, isTransientGrowth, &
                                  isFloquetDirect, isFloquetAdjoint, &
-                                 isFloquetTransientGrowth
+                                 isFloquetTransientGrowth, ifprojfld, &
+                                 isNewtonFP, isNewtonPO, isNewtonPO_T, &
+                                 session, lhis
    use nekstab_vortex, only: vortex_core
    implicit none
    private
@@ -452,7 +454,7 @@ contains
       logical :: needs_base, orbit_mode
       character(len=132) :: fname
       character(len=132) :: hdr
-      integer :: i, u, ios, wdsz, nxr, nyr, nzr, iflag
+      integer :: i, u, ios, wdsz, nxr, nyr, nzr, iflag, nprobe
 
       !  Newton modes are not listed: a Newton run may start from a seed of
       !  another order (a DNS at lower order), and its result is then at the
@@ -462,6 +464,42 @@ contains
                    isFloquetTransientGrowth
       orbit_mode = isFloquetDirect .or. isFloquetAdjoint .or. &
                    isFloquetTransientGrowth
+
+      !  Velocity residual projection. Every matvec of a Newton or Krylov mode
+      !  starts from an unrelated vector, so the projection space carries no
+      !  useful history across matvecs. On naca0012 (Newton) the velocity
+      !  Helmholtz solve with projection stopped with a non-finite norm at 24
+      !  or more ranks. With residualProj = no in [VELOCITY] it converged at 8, 16,
+      !  24, 32 and 40 ranks, with identical residuals at 8 to 32.
+      if (nid == 0 .and. ifprojfld(1) .and. &
+          (needs_base .or. isNewtonFP .or. isNewtonPO .or. isNewtonPO_T)) then
+         write (6, *) 'nekStab: NOTE: [VELOCITY] residualProj = yes in a Newton or'
+         write (6, *) '  Krylov mode. If the run stops with "non-finite norm", set'
+         write (6, *) '  residualProj = no in [VELOCITY]; naca0012 needed it at 24+ ranks.'
+      end if
+
+      !  History points. hpts sends the probes to ranks in blocks of lhis. When the
+      !  number of probes is a multiple of lhis, the last block stays on a rank
+      !  that hpts_out does not read, and the output file holds zeros for it.
+      !  Measured on cylinder_re100: 2 probes with lhis = 2 wrote zeros, 2 probes
+      !  with lhis = 3 wrote the values.
+      if (nid == 0) then
+         open (newunit=u, file=trim(adjustl(session))//'.his', status='old', &
+               action='read', iostat=ios)
+         if (ios == 0) then
+            read (u, *, iostat=ios) nprobe
+            close (u)
+            if (ios == 0 .and. nprobe > 0 .and. lhis > 0) then
+               if (mod(nprobe, lhis) == 0) then
+                  write (6, *) 'nekStab: WARNING: ', nprobe, ' history points and lhis =', lhis
+                  write (6, *) '  hpts writes zeros for the last block when the number of'
+                  write (6, *) '  points is a multiple of lhis. Set lhis in SIZE to a value'
+                  write (6, *) '  that does not divide the number of points (for example 100).'
+               end if
+            end if
+         end if
+      end if
+
       if (.not. needs_base) return
 
       iflag = 0 ! 0: fine, 1: order differs

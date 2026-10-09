@@ -1635,6 +1635,30 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - If `ifdyntol = .true.`, add `ew_tol_cap` for stiff cases that need a tighter inner-solve cap
 - Check whether the new stagnation warning or divergence guard is firing in the Newton log
 
+**Run stops with `k_normalize non-finite norm` in a Newton or Krylov mode**
+- Set `residualProj = no` in `[VELOCITY]`. Each matvec starts from an unrelated
+  vector, so the velocity residual projection has no history to use, and on
+  `naca0012_re2000` its Helmholtz solve produced a non-finite norm at 24 or more
+  ranks on Jean Zay (ifort). With `residualProj = no` the Newton run gave identical
+  residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
+  the projection is on in these modes.
+
+**Run stops with `Cannot open history file in subroutine hpts()`**
+- `hpts` reads the probe list from `<session>.his` and writes the probe values
+  after it, in the same file. The file name ends in `.his`, which `.gitignore`
+  excludes, so a fresh clone does not have it. Each `run.local.slurm` of the
+  examples writes the probe list before the run. In your own case, create the
+  file: the first line holds the number of points, then one line per point with
+  `x y z` (`x y` in 2D).
+
+**History points hold zeros**
+- Set `lhis` in `SIZE` to a value that does not divide the number of probes. When
+  the number of probes is a multiple of `lhis`, `hpts` leaves the last block of
+  probes on a rank that the output routine does not read, and the file receives
+  zeros for them. On `cylinder_re100`, 2 probes with `lhis = 2` wrote zeros;
+  with `lhis = 3` the same run wrote the values. `nekStab` prints a warning at
+  start-up when it finds this case.
+
 **Floquet modes incorrect**
 - Ensure `ifstorebase = .true.`
 - Verify base flow period matches actual period
