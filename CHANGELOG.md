@@ -105,6 +105,22 @@ description for the 2.0 series; entries here are the per-tag deltas.
   limit cycle, so its last field and its wake-probe period start the Newton
   stage directly. The Newton stage runs without the explicit filter.
 
+- The Newton stages `example/naca0012_re2000/210_baseflow_newton/fp` and
+  `example/tpjet_re2005/210_baseflow_newton` start from a field that is not
+  converged. Before, each started from its own converged output: the first
+  residual was already below the tolerance and the stage did not test Newton.
+  The airfoil stage starts from the last DNS snapshot (`BF_seed_naca00120.f00001`,
+  t = 70) and needs 5 iterations (squared residual 6.1e-7 to 9.5e-10, 956 s on 8
+  ranks). The jet stage starts from the Re = 1900 field
+  (`BF_Re1900_tpjet0.f00001`) and needs 7 iterations (1.1e-4 to 9.3e-9). Both
+  references check the first residual and the iteration count, so a run that
+  starts from a converged field fails. The sponge forces the velocity toward the
+  field that the run holds at its start, so the airfoil base flow depends on its
+  seed inside the sponge zone (`DOC.md`, "Sponge reference field"). It differs by
+  1.1e-2 (relative l2 norm of the velocity) from the base flow that the stability
+  stages ship, and the leading growth rate of the direct stage is -0.0643 on it
+  instead of -0.0665.
+
 ### Fixed
 - The convergence residual of SFD (`residu.dat`, column 2) and of the TDF mode is
   the root mean square over the domain again. The multi-field change of
