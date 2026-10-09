@@ -17,3 +17,6 @@ no secondary instability, so the DNS settles on the same limit cycle that
 Newton computes.
 
 Run: `sbatch run.local.slurm` (8 ranks; 34 763 steps, 17 min on x2, a 6-core machine).
+
+## Reference
+`ref/reference.json` checks the last checkpoint, `1cyl0.f00003`: its time stamp (t = 300) and the norms of `vx` (1 %) and `vy` (5 %), which depend on the phase of the shedding. The stage writes the seed of the Newton stage, so the check is loose.

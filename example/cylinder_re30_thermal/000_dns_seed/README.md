@@ -10,3 +10,6 @@ earlier seed was written on a different mesh. This stage therefore does not
 feed the chain; it shows how to produce a thermal seed.
 
 Run: `mks 1cyl`, then `sbatch run.local.slurm`.
+
+## Reference
+`ref/reference.json` checks the last snapshot, `1cyl0.f00004`: its time stamp (t = 100) and the norms of `vx` and of the temperature (1 % each). The stage feeds no other stage, so the check is loose.

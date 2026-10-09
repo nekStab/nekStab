@@ -7,3 +7,6 @@ t = 100 (the probe signal changes by 1e-8 per time unit; 27 min, 69 571 steps on
 field, `cav0.f00010`, is the seed of `../210_baseflow_newton/fp/`.
 
 Run: `sbatch run.local.slurm`.
+
+## Reference
+`ref/reference.json` checks the last snapshot, `cav0.f00010`: its time stamp (t = 100), the maximum and the norm of `vx` (1 %) and the norm of `vy` (2 %).

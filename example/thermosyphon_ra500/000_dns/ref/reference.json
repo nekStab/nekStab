@@ -1,0 +1,26 @@
+{
+  "case": "thermosyphon_ra500/000_dns",
+  "description": "DNS of the thermosyphon at Ra = 500, Pr = 5, from rest to t = 200. The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot to the stated tolerance. The values are those of the run named under produced.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "compiler": "ifort 2021.9 (Jean Zay)"
+  },
+  "quantities": {
+    "last_snapshot_time": {
+      "source": "tsyphon0.f00002:field:time",
+      "value": 200.0,
+      "tol_abs": 0.5
+    },
+    "snapshot_vx_max": {
+      "source": "tsyphon0.f00002:field:vx.max",
+      "value": 0.3090768,
+      "tol_rel": 0.05
+    },
+    "snapshot_t_norm": {
+      "source": "tsyphon0.f00002:field:t.norm",
+      "value": 64.68825,
+      "tol_rel": 0.02
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "case": "cylinder_re180/000_dns_seed",
+  "description": "DNS of the Re = 180 cylinder wake from a uniform flow to t = 300, with the periodic shedding developed. The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot to the stated tolerance. The values are those of the run named under produced.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "compiler": "ifort 2021.9 (Jean Zay)"
+  },
+  "quantities": {
+    "last_snapshot_time": {
+      "source": "1cyl0.f00003:field:time",
+      "value": 300.0,
+      "tol_abs": 0.5
+    },
+    "snapshot_vx_norm": {
+      "source": "1cyl0.f00003:field:vx.norm",
+      "value": 267.5289,
+      "tol_rel": 0.01
+    },
+    "snapshot_vy_norm": {
+      "source": "1cyl0.f00003:field:vy.norm",
+      "value": 41.20509,
+      "tol_rel": 0.05
+    }
+  }
+}
