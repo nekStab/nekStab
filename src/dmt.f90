@@ -3,8 +3,10 @@
 !
 ! Purpose:
 !   Implements the Dynamic Mode Tracking technique of Queguineur et al.
-!   (Phys. Fluids 31(3), 034101, 2019) for stabilizing unstable periodic
-!   orbits by band-pass filtering the velocity field.
+!   (Phys. Fluids 31(3), 034101, 2019) for computing unstable steady states
+!   by band-pass filtering the velocity field. The band-pass has zero gain
+!   only at zero frequency, so a steady state is the only state without
+!   force. A periodic orbit has content at its own frequencies and is not held.
 !
 ! Algorithm:
 !   PDE:   d2ubar/dt2 - d2u/dt2 + beta*dubar/dt = omc2*(u - ubar)
