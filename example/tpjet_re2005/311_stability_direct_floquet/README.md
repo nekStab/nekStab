@@ -17,8 +17,10 @@ Row 3 of `Spectre_NSd_conv.dat` is a real multiplier at σ = 0.0436 (μ = 1.075)
 - `viscosity = -1900.0` — Re = 1900
 
 ## Initial condition
-`startFrom = BF_tpjet0.f00001` — the forced orbit from
-`../210_baseflow_newton` (shipped here).
+`startFrom = BF_tpjet0.f00001` — the forced orbit, shipped here. It comes from an
+earlier run of `../210_baseflow_newton`. The present 210 run starts from the Re = 1900
+field and ends on an orbit that differs from this file by 4.7e-4 (relative l2 norm of
+the velocity, largest pointwise difference 1.1e-3).
 
 ## Run
 ```bash
