@@ -29,3 +29,8 @@ sbatch run.local.slurm     # 8 ranks
   `scripts/check_against_ref.py example/naca0012_re2000/320_stability_adjoint`.
 
 Outputs: leading adjoint eigenmodes `aRenaca00120.f0000{1,2}` (shipped).
+
+Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): σ = -0.0665164, ω = 8.00577, wall time 1334 s.
+`plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged
+eigenvalues, growth rate against frequency) and `plot_mode.png` (vy of the leading adjoint mode, which
+sits at the trailing edge); `ref/` holds copies as `bf.png`, `spectrum.png` and `mode.png`.
