@@ -78,6 +78,12 @@ description for the 2.0 series; entries here are the per-tag deltas.
   stage directly. The Newton stage runs without the explicit filter.
 
 ### Fixed
+- A run that stops on an error ends on all ranks. `nekStab_error` called the
+  collective `nek_end`; several callers sit inside `if (nid == 0)` (a missing
+  `Spectre_NSd_conv.dat`, a residual file that does not open), so rank 0 waited
+  in `nek_end` for ranks that waited in another collective, and the job hung
+  until its time limit. `nekStab_error` now prints the message and calls
+  `MPI_Abort`: the run ends within seconds with exit code 1.
 - `naca0012_re2000/210_baseflow_newton` runs at any rank count up to 40. With
   the velocity residual projection on, the Newton run stopped with
   `k_normalize non-finite norm` at 24, 32 and 40 ranks on Jean Zay (ifort

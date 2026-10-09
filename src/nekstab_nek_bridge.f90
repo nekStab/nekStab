@@ -68,8 +68,16 @@
 !-----------------------------------------------------------------------
       subroutine nekStab_error(msg)
          character(len=*), intent(in) :: msg
+         integer :: ierr_abort, abort_mid, abort_mp, nekcomm, nekgroup, nekreal
+         common /nekmpi/ abort_mid, abort_mp, nekcomm, nekgroup, nekreal
+         external :: mpi_abort
+!  Several callers sit inside "if (nid == 0)" (a file that does not
+!  open, for example). nek_end is collective: called by rank 0 alone it
+!  waits for ranks that wait in another collective, and the job hangs
+!  until its time limit. MPI_Abort ends all ranks at once.
          if (nid == 0) write (6, *) 'ERROR: ', trim(msg)
-         call nek_end
+         flush (6)
+         call mpi_abort(nekcomm, 1, ierr_abort)
       end subroutine nekStab_error
 
 !-----------------------------------------------------------------------
