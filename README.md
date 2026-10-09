@@ -273,3 +273,15 @@ The full list of authors and contributors is in [AUTHORS](AUTHORS).
 ## Citation
 
 When using **nekStab**, please cite [Frantz et al. (2023)](https://doi.org/10.1115/1.4056808). See [CITATIONS.md](CITATIONS.md) for BibTeX entries and additional references.
+
+## Disclaimer
+
+This software is provided "as is", without warranty of any kind. To the extent
+permitted by law, the authors and contributors are not liable for any damage, loss
+or claim arising from its use or misuse. You are responsible for how you use it and
+for following the laws and rules that apply to you. The full terms are in
+[LICENSE](LICENSE).
+
+This is research software. It has not been validated for engineering design,
+certification or safety-critical use. Check its results independently before you
+rely on them.
