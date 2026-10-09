@@ -12,8 +12,10 @@ c-----------------------------------------------------------------------
       real, dimension(lv) :: csol, lsol, fsol
       real, save :: period
       real :: eps_x, eps_y, glsc3
+      integer :: imode ! mode code nint(100*userParam01): 0 DNS, 10 linear DNS, 220 Newton PO-T, 311 Floquet
 
       nv = nx1*ny1*nz1*nelv
+      imode = nint(uparam(1)*100.0d0) ! integer code: a float == test on 2.2 or 3.11 depends on rounding
 
       if(ifusermv) call my_meshv ! Compute our own mesh velocity
 
@@ -23,7 +25,7 @@ c-----------------------------------------------------------------------
             if (nid.eq.0) write(6,*) 'computed period', period
             ifpo = .true.; ifto = .true. ! Dump vorticity as T
 
-            if((uparam(1).eq.0) .or. (uparam(1).eq.0.1))then
+            if((imode.eq.0) .or. (imode.eq.10))then
 
                   time = 0.0d0
                   if(nid.eq.0) write(6,*) 'in DNS mode'
@@ -32,7 +34,7 @@ c-----------------------------------------------------------------------
                   param(10) = fintim
                   param(14) = timeio
 
-            elseif(uparam(1).eq.2.2)then
+            elseif(imode.eq.220)then
 
                   time = 0.0d0
                   if(nid.eq.0) write(6,*) 'in Newton mode'
@@ -40,7 +42,7 @@ c-----------------------------------------------------------------------
                   param(10) = fintim
                   ifto = .false.
 
-            elseif(uparam(1).eq.3.11)then
+            elseif(imode.eq.311)then
 
                   time = 0.0d0
                   if(nid.eq.0) write(6,*) 'in Floquet mode'
@@ -140,7 +142,7 @@ c-----------------------------------------------------------------------
         maxmodes = 10 ; call bcast(maxmodes,isize)
         ifdyntol = .true. ; call bcast(ifdyntol,lsize)
         ifstorebase = .true. ; call bcast(ifstorebase,lsize)
-        if(uparam(1).gt.0.5)then
+        if(nint(uparam(1)*100.0d0).gt.50)then ! any mode above linear DNS (0.1)
             ifvor = .true. ; call bcast(ifvor,lsize)
         else
             ifvor = .false. ; call bcast(ifvor,lsize)
