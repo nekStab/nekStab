@@ -54,12 +54,9 @@ def find_ic(case_dir):
 
 
 def find_bf(case_dir):
-    for pat in ('BF_tpjet0.f00001', 'BF_Re*tpjet0.f00001',
-                'BF_*tpjet0.f*', 'BF_*0.f00001'):
-        matches = sorted(case_dir.glob(pat))
-        if matches:
-            return matches[-1]
-    return None
+    # Only the orbit that Newton writes: the seed BF_Re1900_tpjet0.f00001 must not show up as the base flow.
+    matches = sorted(case_dir.glob('BF_tpjet0.f00001'))
+    return matches[-1] if matches else None
 
 
 def render_tpjet_field(ax, field_path, vmin=0, vmax=1):

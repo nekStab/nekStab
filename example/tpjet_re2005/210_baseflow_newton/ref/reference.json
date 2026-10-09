@@ -1,17 +1,50 @@
 {
   "case": "tpjet_re2005/210_baseflow_newton",
-  "description": "Triple-port jet forced periodic orbit at Re=1900 via Newton-GMRES (St=0.6)",
+  "description": "Axisymmetric jet, forced periodic orbit at Re=1900 (St=0.6, period 1.666667) by Newton-GMRES from the shipped Re=1900 field BF_Re1900_tpjet0.f00001 (polynomial order 5, interpolated to the order 4 of the run). Regression values of this repository, not literature values. The seed is not on the orbit of this mesh and order, so the first residual and the iteration count test the Newton solver, and the field statistics test its result. The residual is the squared norm of F(q) - q and the tolerance is 1e-8. The orbit of this stage differs from the orbit that stage 311 ships by 4.7e-4 (relative l2 norm of the velocity), so the field statistics carry a tolerance of 1e-3.",
   "produced": {
-    "ranks": "8",
+    "ranks": "16",
+    "nekstab": "v2.0.0",
     "nekstab_mode": "2.2 (Newton-GMRES forced periodic orbit)",
-    "Re": "1900"
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "Re": "1900",
+    "date": "2026-10-10"
   },
   "quantities": {
+    "newton_first_residual": {
+      "source": "residu_newton.dat:col7:first",
+      "value": 0.0001130246,
+      "tol_rel": 0.02,
+      "note": "Residual of the seed (column 7, first row). The tolerance of the run is 1e-8, so the seed is 11000 times above it."
+    },
+    "newton_iterations": {
+      "source": "residu_newton.dat:col1:last",
+      "value": 7,
+      "tol_abs": 1,
+      "note": "Newton iterations to the tolerance: the residual falls by a factor of 4 to 6 per iteration, because each linear solve stops at one fifth of the residual (dynamic tolerance)."
+    },
     "newton_final_residual": {
       "source": "residu_newton.dat:col7:last",
       "value": 0.0,
       "tol_abs": 1e-08,
       "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8)."
+    },
+    "bf_vx_norm": {
+      "source": "BF_tpjet0.f00001:field:vx.norm",
+      "value": 128.07345,
+      "tol_rel": 1e-3,
+      "note": "Norm of vx of the orbit at t = T."
+    },
+    "bf_vy_norm": {
+      "source": "BF_tpjet0.f00001:field:vy.norm",
+      "value": 6.690083,
+      "tol_rel": 1e-3,
+      "note": "Norm of vy of the orbit at t = T."
+    },
+    "bf_vx_max": {
+      "source": "BF_tpjet0.f00001:field:vx.max",
+      "value": 1.158478,
+      "tol_rel": 1e-3,
+      "note": "Largest vx of the orbit at t = T."
     }
   }
 }
