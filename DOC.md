@@ -725,8 +725,8 @@ Set in `nekStab_usrchk` subroutine in your `.usr` file:
 | `k_dim` | 100 | Krylov subspace dimension (larger = more eigenvalues but more memory) |
 | `use_cgs` | .true. | Use CGS2 orthogonalization with batched BLAS/MPI reductions (`.false.` = classic MGS + reorthogonalization) |
 | `eigen_tol` | 1e-6 | Convergence tolerance for eigenvalues |
-| `schur_tgt` | 2 | Number of eigenvalues to lock per restart |
-| `schur_del` | 0.10 | Deflation threshold |
+| `schur_tgt` | 2 | Number of wanted eigenvalues. A restart keeps at least `schur_tgt + 2` and at most `k_dim - schur_tgt` Ritz values, so the next Arnoldi run adds at least `schur_tgt` steps |
+| `schur_del` | 0.10 | Selection radius of the restart: it keeps the Ritz values with `abs(mu) >= 1 - schur_del`, and those with a Schur residual below `sqrt(eigen_tol)` |
 | `maxmodes` | 20 | Maximum eigenmodes to save to disk |
 
 **Optimal Parameter Selection** (from parametric studies):
