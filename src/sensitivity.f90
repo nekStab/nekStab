@@ -27,7 +27,8 @@ module nekstab_sensitivity
                                  ldim, ldimt, lelt, lelv, lsize, lx1, ly1, lz1, ndim, &
                                  nekStab_log, nelv, nid, nof, nsteps, param, pbase, pi, pr, &
                                  SESSION, t, tbase, time, timeio, ubase, uparam, vbase, vx, &
-                                 vxp, vy, vyp, vz, vzp, wbase, wdsize
+                                 vxp, vy, vyp, vz, vzp, wbase, wdsize, &
+                                 ifForceSensReal, ifForceSensImag, nekStab_error
    use nekstab_vectors, only: nopcopy, opaddcol3, zero_forcing
    use nekstab_io, only: k_load, load_mode_pair, read_eigenvalue
    use nekstab_energy_budget, only: compute_velocity_gradient_tensor
@@ -403,12 +404,14 @@ contains
       call opcopy(ubase, vbase, wbase, vx, vy, vz)
 
       !     --> Load the forcing term.
-      if (uparam(01) == 4.41d0) then
+      if (ifForceSensReal) then
          write (filename, '(a, a, a)') 'sr_', trim(session), '0.f00001'
          prefix = 'fsr'
-      elseif (uparam(01) == 4.42d0) then
+      elseif (ifForceSensImag) then
          write (filename, '(a, a, a)') 'si_', trim(session), '0.f00001'
          prefix = 'fsi'
+      else
+         call nekStab_error('steady force sensitivity needs ifForceSensReal or ifForceSensImag')
       end if
       call load_fld(filename)
       call opcopy(rhs%vx, rhs%vy, rhs%vz, vx, vy, vz)
