@@ -193,9 +193,6 @@ contains
       rate = residu - residu0
       residu0 = residu
 
-      call copy(t(1, 1, 1, 1, 1), do1, n)
-      call copy(t(1, 1, 1, 1, 2), do2, n)
-
       call opcmult(do1, do2, do3, -dmt_gan)
       if (time > dmt_skp) call opadd2(fcx, fcy, fcz, do1, do2, do3)
 
