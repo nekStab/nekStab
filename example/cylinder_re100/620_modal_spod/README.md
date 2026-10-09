@@ -6,8 +6,8 @@ Spectral Proper Orthogonal Decomposition yields frequency-resolved spatial
 modes that are optimal in the POD sense at each frequency. With `spod_nfft=64`
 and `spod_noverlap=48` (Welch's method), the frequency resolution is
 df = 1/(64 * 0.5) = 0.03125 Strouhal units and 3 spectral blocks are formed
-from 100 snapshots. The leading SPOD mode at Re=100 captures vortex shedding
-at St ~= 0.164-0.167.
+from 100 snapshots. The leading eigenvalue at Re=100 peaks in the bin of the vortex
+shedding, St = 0.1657.
 
 ## Bootstrap IC
 
@@ -19,8 +19,9 @@ copies them when they are missing. The DNS takes about 100 s on 8 ranks.
 
 ## Expected outputs
 
-- `sRe1cyl0.f00001` ... `sRe1cyl0.f00009` — leading SPOD modes (real part)
-- `sIm1cyl0.f00001` ... `sIm1cyl0.f00009` — leading SPOD modes (imag part)
+- `sRe1cyl0.f00001` ... `sRe1cyl0.f00009` — leading SPOD mode (real part) of the nine saved bins,
+  St = 0, 0.125, 0.25, ..., 1. The code saves every eighth bin (`nfreq / 8`) and the last one
+- `sIm1cyl0.f00001` ... `sIm1cyl0.f00009` — the same modes (imag part)
 - `spod_stream_spectrum.dat` — SPOD eigenvalues (three blocks) in every frequency bin
 - `mea1cyl0.f00001` — time-averaged (mean) flow field
 - `logfile` — Slurm job log
@@ -30,6 +31,10 @@ Jean Zay, 8 ranks, 2026-10-09: the leading eigenvalue peaks in the bin St = 0.15
 (15.77); the bin St = 0.1875 holds 8.41. The shedding frequency (0.166) lies between the
 bins, which are 0.03125 wide. These are the values of `../600_modal_pod`. `ref/reference.json`
 holds them.
+
+`plot.py` writes `plot_spectrum.png` (the eigenvalues of every bin against St) and `plot_mode.png` (vy of the real
+part of the saved mode with the largest leading eigenvalue). That mode is the bin St = 0.125 (lambda_1 = 0.90): the
+peak bin 0.15625 is not one of the saved bins. `ref/` holds copies as `spectrum.png` and `mode.png`.
 
 ## How to run
 
