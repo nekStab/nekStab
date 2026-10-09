@@ -2,7 +2,7 @@
 startFrom = BF_1cyl0.f00001
 
 stopAt = endTime
-endTime = 8.3050 # period of leading mode
+endTime = 8.5639 # period of the leading mode, 2 pi / 0.7336851 (omega of 310_stability_direct/direct)
 
 userParam01 = 4.5 #3.1 # Direct
 

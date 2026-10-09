@@ -3,7 +3,7 @@
 ## Physics
 2D flow around a circular cylinder at Re = 100. Reconstructs and animates the
 leading direct eigenmode over one oscillation period (T = 2π/ω ≈ 8.56 with
-ω = 0.7337 from `../direct/`).
+ω = 0.7336851 from `../310_stability_direct/direct/`).
 
 ## nekStab Mode
 `userParam01 = 4.5` — Animate modes (period-step reconstruction)
@@ -24,14 +24,14 @@ python3 plot.py
 ```
 
 ## Outputs (regenerated per run)
-- `dQ_1cyl0.f00001` … `dQ_1cyl0.f00092` — eigenmode snapshots over one period (spacing 0.0903)
+- `dQ_1cyl0.f00001` … `dQ_1cyl0.f00092` — eigenmode snapshots over one period (spacing 0.0931 = T/92, first snapshot at 0.0931)
 - `dQ_1cyl.nek5000` — collection file for ParaView
 
 ## Latest Result
-Verified 2026-05-16 on 8 ranks (Slurm):
+Verified 2026-10-09 on 8 ranks (Jean Zay):
 
-- Run completes in 0.77 s (pure field reconstruction)
-- 92 mode snapshots generated covering one full period (last time stamp 8.305)
+- Run completes in about 4 s (pure field reconstruction)
+- 92 mode snapshots generated covering one full period (last time stamp 8.5639)
 
 ## Plot
 ```bash
@@ -43,6 +43,6 @@ shedding instability.
 
 ## Reference
 `ref/reference.json` holds regression values of this repository, not literature values: the time stamp
-of the last snapshot (8.305, one full period), and the maximum of `vx` and the norm of `pr` in the first
+of the last snapshot (8.5639, one full period), and the maximum of `vx` and the norm of `pr` in the first
 snapshot. They follow from the unit-norm direct mode of `../310_stability_direct/direct`. Check a run with
 `uv run --with numpy --with pymech python scripts/check_against_ref.py example/cylinder_re100/410_postproc_animate_modes`.

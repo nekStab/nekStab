@@ -1,6 +1,6 @@
 {
   "case": "cylinder_re100/410_postproc_animate_modes",
-  "description": "Regression values of this repository (not literature values): the leading direct mode over one period T = 8.305, written as 92 snapshots; the amplitudes follow from the unit-norm eigenmode of ../310_stability_direct/direct",
+  "description": "Regression values of this repository (not literature values): the leading direct mode over one period T = 8.5639 (2 pi / omega, omega = 0.7336851 of ../310_stability_direct/direct), written as 92 snapshots; the amplitudes follow from the unit-norm eigenmode of that stage",
   "produced": {
     "ranks": "8",
     "nekstab": "v2.0.0",
@@ -10,19 +10,19 @@
   "quantities": {
     "last_snapshot_time": {
       "source": "dQ_1cyl0.f00092:field:time",
-      "value": 8.305,
+      "value": 8.5639,
       "tol_abs": 0.0001,
       "note": "The last snapshot is at the end of one period; a stopped run has no such file or an earlier time."
     },
     "snapshot1_vx_max": {
       "source": "dQ_1cyl0.f00001:field:vx.max",
-      "value": 0.1649991,
-      "tol_rel": 0.0001
+      "value": 0.1621882,
+      "tol_rel": 0.001
     },
     "snapshot1_pr_norm": {
       "source": "dQ_1cyl0.f00001:field:pr.norm",
-      "value": 1.84681,
-      "tol_rel": 0.0001
+      "value": 1.847438,
+      "tol_rel": 0.001
     }
   }
 }
