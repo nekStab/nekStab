@@ -55,8 +55,11 @@ description for the 2.0 series; entries here are the per-tag deltas.
   still disable it by setting `ifnewton_backtrack = .false.` in the
   `.usr`. A stalling Newton run now leaves the loop gracefully and
   outposts its best state instead of aborting: when no damped step can
-  reduce the residual the current state is held, and three iterations
-  without progress end the loop.
+  reduce the residual the current state is held, and six iterations
+  without progress end the loop. Three ended a converging run too early:
+  `lid_driven_re3600/210_baseflow_newton/fp` from a DNS seed stalled for
+  three iterations at iteration 6, wrote no base flow, and converged at
+  iteration 15 once the limit was lifted.
 - The two RANS stability operators in `example/cylinder_re1m/310_stability_direct/`
   are renamed: `findiff/` becomes `coupled/` (the full RANS Frechet operator —
   velocity, k and tau perturbed, eddy viscosity responding, still selected by
@@ -84,6 +87,16 @@ description for the 2.0 series; entries here are the per-tag deltas.
   stage directly. The Newton stage runs without the explicit filter.
 
 ### Fixed
+- The first residual of a steady Newton run was computed with the explicit
+  velocity filter and every later residual without it. The steady linearized
+  solver runs with `ifbase = .false.`, `q_filter` skips the velocity filter in
+  that state, and the first linearized sweep left the flag false for the later
+  nonlinear evaluations. For a seed from a filtered DNS the first residual was
+  therefore smaller than the later ones (7e-7, then 3e-5 for the same state in
+  `lid_driven_re3600`), the first Newton step was wasted, and the stagnation
+  count started with a false stall. The nonlinear map of a steady Newton run now
+  runs unfiltered from its first evaluation, like the Jacobian. The converged
+  base flows are the same: they were already fixed points of the unfiltered map.
 - A run that stops on an error ends on all ranks. `nekStab_error` called the
   collective `nek_end`; several callers sit inside `if (nid == 0)` (a missing
   `Spectre_NSd_conv.dat`, a residual file that does not open), so rank 0 waited

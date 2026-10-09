@@ -840,6 +840,8 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 
 A Newton-converged orbit closes to 1e-5 or below. Above 1e-3 the run prints a warning, because the multipliers then belong to a path that does not close: the period of the time stamp is wrong, the polynomial order differs from that of the orbit, or the base flow is not on the orbit. With a period 9 % too long, the orbit of `flip_flop_re62` closed to 7.7e-3. The run also prints the converged multiplier closest to 1 and warns when none lies within 1e-3, but a multiplier near 1 does not prove the period: with that wrong period the converged list still held two multipliers within 1e-11 of 1 whose eigenvectors sat on a few mesh vertices.
 
+**Explicit velocity filter.** `filtering = explicit` acts while the base flow advances: in a DNS, in SFD and in the first sweep of a Floquet run. The steady Newton run, the steady direct and adjoint runs and the later sweeps of a Floquet run (they replay the stored orbit) apply no velocity filter. A steady state from a filtered DNS or SFD run is therefore not an exact fixed point of the unfiltered map that Newton and the stability runs use: its first Newton residual is larger than the DNS suggests (`lid_driven_re3600`: 3e-5 for the state that the DNS had left at 7e-7 under the filter), and Newton moves it to the fixed point of the unfiltered map. With `filtering = explicit` the first sweep of a Floquet run therefore differs from the later ones. The Floquet stages of the examples run without the filter, except `cubic_cavity_re1950`, whose orbit comes from a filtered DNS.
+
 #### Sponge Zone
 
 | Parameter | Default | Description |
@@ -1680,6 +1682,7 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - Reduce `epsilon_base` for better Jacobian approximation
 - If `ifdyntol = .true.`, add `ew_tol_cap` for stiff cases that need a tighter inner-solve cap
 - Check whether the new stagnation warning or divergence guard is firing in the Newton log
+- A seed from a filtered DNS can start at a residual 40 times that of the DNS (see the explicit velocity filter under Base Flow), and the residual can stay flat or rise for three iterations in a row before it falls (`lid_driven_re3600`: 14 iterations in all). The loop ends only after six iterations without progress.
 
 **Run stops with `k_normalize non-finite norm` in a Newton or Krylov mode**
 - Set `residualProj = no` in `[VELOCITY]`. Each matvec starts from an unrelated

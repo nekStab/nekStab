@@ -20,7 +20,7 @@ module nekstab_newton
                                       k_add2s2, k_cmult, k_copy, k_dot, k_matmul, k_norm, &
                                       k_normalize, k_sub2, k_zero, krylov_vector, lt, lv, &
                                       norm, nt, tor, uor, vor, wor
-   use nekstab_nek_bridge, only: bm1s, dt, ew_tol_cap, if3D, if3d, ifdyntol, iffindiff, &
+   use nekstab_nek_bridge, only: bm1s, dt, ew_tol_cap, if3D, if3d, ifbase, ifdyntol, iffindiff, &
                                  ifield, ifnewton_backtrack, ifpert, ifpsco, ifstorebase, &
                                  ifto, isNewtonFP, isNewtonPO, isNewtonPO_T, istep, k_dim, &
                                  ldimt, ldimt1, lsize, nekStab_error, &
@@ -173,6 +173,7 @@ contains
       real :: prev_residual = 0.0d0 ! Previous iteration residual for scheduling + stagnation
       real :: initial_residual = 0.0d0 ! For divergence guard
       integer :: stagnation_count = 0 ! Stagnation detection counter
+      integer, parameter :: max_stagnation = 6 ! Iterations without progress that end the Newton loop
       real :: newton_start_time, newton_iter_time ! Timing for Newton iterations
       integer :: total_gmres_calls ! Track GMRES calls per Newton iteration
       integer :: total_calls = 0, nonlin_calls = 0, lin_calls = 0 ! Call counters
@@ -229,6 +230,17 @@ contains
       accepted_residuals = 0.0d0
       accepted_residual_count = 0
       accepted_residual_next = 1
+
+      !  WHY: the steady linearized solver runs with ifbase = .false., and q_filter skips the
+      !  velocity filter in that state. The first linearized sweep therefore switched the
+      !  nonlinear map from filtered to unfiltered after its first evaluation: the first
+      !  residual belonged to another map than every later residual and than the Jacobian.
+      !  With a seed from a filtered DNS (lid_driven_re3600) the first residual was 7e-7, the
+      !  same state gave 3e-5 afterwards, and the first Newton step was wasted.
+      if (isNewtonFP) then
+         ifbase = .false.
+         call bcast(ifbase, lsize)
+      end if
 
       nnewton = 0
       newton_open = .true.
@@ -368,9 +380,13 @@ contains
 
          ! WHY: a repeated stall should end gracefully so the best state is
          ! outposted instead of spinning or aborting near the convergence floor.
-         if (stagnation_count >= 3) then
-            if (nid == 0) write (6, *) 'WARNING: Newton stagnation', &
-               ' (3 iterations without progress); exiting Newton loop'
+         ! Six iterations, not three: a converging Newton run with a nonmonotone line
+         ! search can stall for three iterations and then converge. lid_driven_re3600 from
+         ! a DNS seed stalled for three iterations at iteration 6 and converged at
+         ! iteration 15 with the limit lifted.
+         if (stagnation_count >= max_stagnation) then
+            if (nid == 0) write (6, '(A,I2,A)') ' WARNING: Newton stagnation (', max_stagnation, &
+               ' iterations without progress); exiting Newton loop'
             newton_open = .false.
             exit newton
          end if
