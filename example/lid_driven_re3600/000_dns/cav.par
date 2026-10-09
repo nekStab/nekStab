@@ -3,7 +3,7 @@
 # startFrom =            # cold start
 
 stopAt = endTime
-endTime = 100.0          # TEMPLATE: total integration time
+endTime = 600.0          # the slowest decay has rate 0.016, so 600 leaves the state within 1e-4 of the steady flow
 
 userParam01 = 0          # 0 = DNS (direct numerical simulation)
 userParam10 = 1.5   # cavity aspect ratio (.usr rescales Y to [0,uparam10])
@@ -14,7 +14,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 10.0     # TEMPLATE: snapshot interval
+writeInterval = 100.0    # six snapshots; the last one seeds the Newton stage
 writeDoublePrecision = no
 
 dealiasing = yes

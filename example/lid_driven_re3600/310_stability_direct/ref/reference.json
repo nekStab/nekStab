@@ -1,14 +1,29 @@
 {
   "case": "lid_driven_re3600/310_stability_direct",
-  "description": "Regression value of this repository (not a literature value): leading real eigenvalue of the regularized-lid cavity at Re=3600",
+  "description": "Leading eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12), direct problem. The flow is linearly stable: a real eigenvalue -0.01679 and a complex pair -0.04198 +- 0.77165 i. The values depend on the resolution (table in the family README); the tolerance of 1e-4 is below the change between lx1 = 10 and 12.",
   "produced": {
-    "nekstab_mode": "3.1 (direct)"
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "4",
+    "compiler": "ifort on Jean Zay",
+    "mode": "userParam01=3.1 (direct)"
   },
   "quantities": {
     "leading_sigma": {
-      "source": "Spectre_NSd_conv.dat:col1:first",
-      "value": -0.01693063,
-      "tol_abs": 0.002
+      "source": "Spectre_NSd_conv.dat:col1:row1",
+      "value": -0.01679253,
+      "tol_abs": 0.0001
+    },
+    "pair_sigma": {
+      "source": "Spectre_NSd_conv.dat:col1:row2",
+      "value": -0.04197811,
+      "tol_abs": 0.0001
+    },
+    "pair_omega": {
+      "source": "Spectre_NSd_conv.dat:col2:row2",
+      "value": -0.771649,
+      "tol_abs": 0.0001,
+      "note": "Imaginary part of the second row; the file lists one member of the conjugate pair."
     }
   }
 }

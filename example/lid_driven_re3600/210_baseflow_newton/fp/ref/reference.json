@@ -1,16 +1,50 @@
 {
   "case": "lid_driven_re3600/210_baseflow_newton/fp",
-  "description": "Lid-driven cavity (aspect 1.5) steady base flow at Re=3600 via Newton-GMRES",
+  "description": "Steady base flow of the lid-driven cavity by Newton-GMRES from the t = 600 DNS state of 000_dns (lx1 = 12). The first residual is 4.4e-9: at this order the DNS state, computed with the explicit filter, is a fixed point of the unfiltered map to that level, and Newton ends in two iterations at the tolerance 1e-9. At lx1 = 6 the first residual was 3.5e-5 and Newton went to a second, unstable steady state.",
   "produced": {
-    "ranks": "8",
-    "nekstab_mode": "2.0 (Newton-GMRES fixed point)"
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "4",
+    "compiler": "ifort on Jean Zay",
+    "mode": "userParam01=2 (Newton-GMRES fixed point)"
   },
   "quantities": {
     "newton_final_residual": {
       "source": "residu_newton.dat:col7:last",
       "value": 0.0,
       "tol_abs": 1e-09,
-      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8)."
+      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8, 1e-9)."
+    },
+    "newton_first_residual": {
+      "source": "residu_newton.dat:col7:row1",
+      "value": 4.371367e-09,
+      "tol_rel": 0.1,
+      "note": "Residual of the DNS seed; it measures how well the DNS state is a fixed point of the unfiltered map."
+    },
+    "bf_vx_min": {
+      "source": "BF_cav0.f00001:field:vx.min",
+      "value": -0.3323821,
+      "tol_rel": 0.0001
+    },
+    "bf_vx_norm": {
+      "source": "BF_cav0.f00001:field:vx.norm",
+      "value": 17.85441,
+      "tol_rel": 0.0001
+    },
+    "bf_vy_min": {
+      "source": "BF_cav0.f00001:field:vy.min",
+      "value": -0.4627067,
+      "tol_rel": 0.0001
+    },
+    "bf_vy_max": {
+      "source": "BF_cav0.f00001:field:vy.max",
+      "value": 0.3116753,
+      "tol_rel": 0.0001
+    },
+    "bf_vy_norm": {
+      "source": "BF_cav0.f00001:field:vy.norm",
+      "value": 13.74875,
+      "tol_rel": 0.0001
     }
   }
 }
