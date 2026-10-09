@@ -45,6 +45,7 @@ module nekstab_matvec
    logical, save :: forward_linearized_map_init = .false.
    logical, save :: forward_finite_difference_map_init = .false.
    logical, save :: adjoint_linearized_map_init = .false.
+   logical, save :: orbit_closure_done = .false.
 
    public :: prepare_linearized_solver, matvec, &
              forward_linearized_map, &
@@ -283,6 +284,7 @@ contains
       type(krylov_vector), intent(inout) :: q
 
       integer m
+      logical base_integrated
 
       ! nt from globals
 
@@ -321,6 +323,8 @@ contains
       call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1), &
                    q%vx, q%vy, q%vz, q%pr, q%t)
 
+      base_integrated = ifbase ! this call integrates the base flow over one period
+
       time = 0.0d+00
       do istep = 1, nsteps
 !     --> Output current info to logfile.
@@ -346,11 +350,67 @@ contains
          ifbase = .false.; forward_linearized_map_init = .true.
       end if
 
+!     --> Floquet: the base flow must be back at its start field after one period.
+      if (base_integrated .and. (isFloquetDirect .or. isFloquetTransientGrowth)) call orbit_closure_check()
+
 !     --> Copy the solution.
       call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, &
                    vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1))
 
    end subroutine forward_linearized_map
+
+!-----------------------------------------------------------------------
+! orbit_closure_check — Does the base flow return to its start field?
+!
+!     A Floquet map linearizes the flow over one period T of a closed
+!     orbit, so the base flow integrated from the start field over T must
+!     come back to the start field. The relative defect
+!
+!     ||U(T) - U(0)|| / ||U(0)||
+!
+!     tests the period in the time stamp of the base-flow file. It is
+!     about 1e-6 for a Newton-converged orbit. It is of the order of the
+!     oscillation amplitude when the period is wrong. The check runs once,
+!     after the first sweep that integrates the base flow. The norm is the
+!     Krylov norm, so the sponge region does not count.
+!-----------------------------------------------------------------------
+   subroutine orbit_closure_check()
+
+      use nekstab_krylov_subspace, only: k_cmult, k_add2, k_norm
+
+      type(krylov_vector), allocatable :: u_start, u_end
+      real :: norm_start, norm_defect
+      integer :: alloc_stat
+
+      if (orbit_closure_done) return
+      orbit_closure_done = .true.
+
+      ! Heap storage: a krylov_vector holds the full velocity, pressure and temperature fields.
+      allocate (u_start, u_end, stat=alloc_stat)
+      if (alloc_stat /= 0) call exitti('orbit closure allocation failed$', alloc_stat)
+
+      call nopcopy(u_end%vx, u_end%vy, u_end%vz, u_end%pr, u_end%t, vx, vy, vz, pr, t)
+      call nopcopy(u_start%vx, u_start%vy, u_start%vz, u_start%pr, u_start%t, ubase, vbase, wbase, pbase, tbase)
+      u_start%time = 0.0d0
+      u_end%time = 0.0d0
+
+      call k_norm(norm_start, u_start)
+      call k_cmult(u_start, -1.0d0)
+      call k_add2(u_end, u_start) ! u_end = U(T) - U(0)
+      call k_norm(norm_defect, u_end)
+      deallocate (u_start, u_end)
+
+      if (nid == 0 .and. norm_start > 0.0d0) then
+         write (6, *) 'Orbit closure: ||U(T)-U(0)||/||U(0)|| =', norm_defect/norm_start, ' for T =', param(10)
+         if (norm_defect > 1.0d-3*norm_start) then
+            write (6, *) 'nekStab: WARNING: the base flow does not return to its start field after one period.'
+            write (6, *) '  The Floquet multipliers are not those of a closed orbit. Check the period'
+            write (6, *) '  in the time stamp of the base-flow file, the polynomial order, the sponge'
+            write (6, *) '  and that the base flow is on the orbit.'
+         end if
+      end if
+
+   end subroutine orbit_closure_check
 
 !-----------------------------------------------------------------------
 ! forward_finite_difference_map — Approximate linearized map via FD
@@ -535,6 +595,7 @@ contains
             call nek_advance_quiet()
             call orbit_store(istep) ! orbit(j) = U(j*dt)
          end do
+         call orbit_closure_check()
          ifpert = .true.; call bcast(ifpert, lsize)
          ifbase = .false.; init = .true.
       end if

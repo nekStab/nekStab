@@ -13,8 +13,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   lost. The steady stability modes print a warning for the same mismatch.
   Newton runs are not checked: they may start from a seed of another
   order. A stability mode with an active sponge prints a note that the
-  sponge also forces the base flow. A Floquet run warns when no converged
-  multiplier lies within 1e-3 of 1. A Newton or Krylov mode with
+  sponge also forces the base flow. A Floquet run prints the closure of its
+  orbit, `||U(T)-U(0)|| / ||U(0)||` of the base flow integrated over the period
+  of the base-flow time stamp, and warns above 1e-3. The orbit of
+  `flip_flop_re62` closes to 8e-6; with a period 9 % too long it closes to
+  8e-3. A Floquet run also warns when no converged multiplier lies within 1e-3
+  of 1, but that test is weaker: with the wrong period the converged list still
+  held two multipliers within 1e-11 of 1, and their eigenvectors sat on a few
+  mesh vertices instead of on the wake. A Newton or Krylov mode with
   `residualProj = yes` in `[VELOCITY]` prints a note that the velocity
   residual projection can stop the run with a non-finite norm (see Fixed).
 - `validation/tests/test_mode_selector.py` compiles `mode_config.f90` against a

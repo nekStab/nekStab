@@ -413,6 +413,10 @@ contains
       !  another polynomial order than the Newton run, a sponge, or a base flow
       !  that is not on the orbit. The threshold 1e-3 is 3 orders above the gap
       !  of the validated examples (1e-6 to 1e-13).
+      !  A multiplier near 1 does not prove the period. With a period 9 % too long
+      !  (flip_flop_re62) the converged list still held two multipliers within
+      !  1e-11 of 1, and their eigenvectors sat on a few mesh vertices, not on the
+      !  wake. The orbit closure check in matvec.f90 tests the period itself.
       if ((isFloquetDirect .or. isFloquetAdjoint) .and. converged_eigenvalues > 0) then
          orbit_gap = huge(1.0d0)
          do i = 1, k_dim

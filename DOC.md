@@ -832,6 +832,14 @@ If all are `.false.`, the `useric` subroutine defines the initial condition.
 | `ifbf2D` | .false. | Force 2D base flow (zero w-component) |
 | `ifstorebase` | .true. | Store base flow in memory for Floquet |
 
+**Period of a Floquet run.** The period is the time stamp of the base-flow file `BF_<session>0.f00001`, not `endTime`. The first sweep integrates the base flow over this period from the start field and prints
+
+```
+ Orbit closure: ||U(T)-U(0)||/||U(0)|| =  8.356E-06  for T =  8.81517222497400
+```
+
+A Newton-converged orbit closes to 1e-5 or below. Above 1e-3 the run prints a warning, because the multipliers then belong to a path that does not close: the period of the time stamp is wrong, the polynomial order differs from that of the orbit, or the base flow is not on the orbit. With a period 9 % too long, the orbit of `flip_flop_re62` closed to 7.7e-3. The run also prints the converged multiplier closest to 1 and warns when none lies within 1e-3, but a multiplier near 1 does not prove the period: with that wrong period the converged list still held two multipliers within 1e-11 of 1 whose eigenvectors sat on a few mesh vertices.
+
 #### Sponge Zone
 
 | Parameter | Default | Description |
