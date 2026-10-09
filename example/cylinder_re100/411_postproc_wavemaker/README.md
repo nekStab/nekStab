@@ -10,9 +10,11 @@ pre-computed direct and adjoint eigenmodes.
 `userParam01 = 4` — Full post-processing (includes 4.1 + 4.2 + 4.3)
 
 ## Prerequisites
-- Base flow: `BF_1cyl0.f00001` (from `../../baseflow/newton/`)
-- Direct modes: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}` (from `../../stability/direct/`)
-- Adjoint modes: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}` (from `../../stability/adjoint/`)
+- Base flow: `BF_1cyl0.f00001` (shipped; the base flow of `../310_stability_direct/direct`)
+- Direct modes: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}` (copy from `../310_stability_direct/direct/`)
+- Adjoint modes: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}` (copy from `../320_stability_adjoint/`)
+- The code reads `dRe`, `dIm` from file `f00001` and `aRe`, `aIm` from file `f00002`. Only the `f00002` files are
+  tracked; run the two stability stages first and copy all eight mode files.
 - No restart-from-time-history needed (the case reads the eigenmodes directly).
 
 ## Mesh
@@ -33,12 +35,13 @@ python3 plot.py
 - `tr_1cyl0.f00001`, `ti_1cyl0.f00001` — transport real/imag parts
 
 ## Latest Result
-Verified 2026-05-15 on 8 ranks (Slurm):
+Gate run 2026-10-09 on 8 ranks (Jean Zay, ifort 2021.9), with the modes of the gate runs of the two
+stability stages:
 
-- Run completes in 0.7 s (pure field arithmetic on pre-computed modes)
+- Run completes in 1.4 s (pure field arithmetic on pre-computed modes)
 - All 7 output fields written
-- Plot shows the canonical Giannetti-Luchini structure: wavemaker concentrated
-  in the near-wake recirculation region (≈ 1 < x < 8), where direct mode
+- The wavemaker maximum is 0.1709 at x = 3.84, y = -0.64. The field exceeds half of this maximum for
+  1.7 < x < 5.7 (|y| < 1.0), so it lies in the near-wake recirculation region, where direct mode
   amplitude and adjoint mode amplitude overlap most strongly.
 
 ## Plot
