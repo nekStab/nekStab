@@ -620,14 +620,18 @@ Example: `1cyl0.f00001` through `1cyl0.f00100` for 100 snapshots.
 
 | File | Contents | Format |
 |------|----------|--------|
-| `pod_energy.dat` | POD eigenvalue spectrum | `mode, eigenvalue, energy_%, cumulative_%` |
-| `dmd_spectrum.dat` | DMD eigenvalues | `mode, |μ|, σ, ω, St, Re(μ), Im(μ)` |
-| `spod_spectrum.dat` | SPOD spectrum | `St, λ₁, λ₂, ..., λ_nblk` |
+| `pod_spectrum.dat` | POD eigenvalue spectrum | `mode, eigenvalue, energy_%, cumulative_%`; the first `modal_nsave` rows add `‖Φ‖` |
+| `pod_coefficients.dat` | POD temporal coefficients | `snapshot, a_1, a_2, ...` |
+| `pod_fft_spectrum.dat` | Welch power spectrum of the POD coefficients (written by `ifpod` and by `ifspod`) | `St, P_mode 1, P_mode 2, ...` |
+| `dmd_spectrum.dat` | DMD eigenvalues, ordered by \|μ\| | `mode, \|μ\|, σ, ω, St, Re(μ), Im(μ)`; the first `modal_nsave` rows add `‖Φ_re‖` |
+| `dmd_svd.dat` | Singular values of the snapshot matrix and the rank used | `i, σ_i, energy_%, cumulative_%` |
+| `spod_stream_spectrum.dat` | SPOD eigenvalues of every frequency bin | `St, λ₁, λ₂, ..., λ_nblk` |
 | `mea*.f00001` | Temporal mean field | Nek5000 field file |
-| `pod*.f00001` | POD modes | Nek5000 field files |
-| `dm1*.f00001` | DMD modes (real part) | Nek5000 field files |
-| `dm2*.f00001` | DMD modes (imag part) | Nek5000 field files |
-| `SPG*.f00001` | SPOD modes | Nek5000 field files |
+| `pod*.f00001` | POD modes | One field file per saved mode (`modal_nsave`) |
+| `dm1*`, `dm2*` | DMD modes: real part, imaginary part | One field file per saved mode, numbered in the order of `dmd_spectrum.dat` (`dm11cyl0.f00003` is mode 3) |
+| `sRe*`, `sIm*` | SPOD modes: real part, imaginary part | The leading `modal_nsave` modes of the frequency bins 1, 1 + `nfreq/8`, 1 + 2 `nfreq/8`, ... and of the last bin; the peak bin is not always among them |
+
+`SPG*` files hold the sponge-zone function (`forcing.f90`), not SPOD modes.
 
 #### Plotting Results
 
@@ -641,7 +645,7 @@ python plot_modal.py --dmd     # DMD only
 python plot_modal.py --spod    # SPOD only
 ```
 
-Generates: `pod_spectrum.png`, `dmd_spectrum.png`, `spod_spectrum.png`
+Generates: `pod_spectrum.png`, `dmd_spectrum.png`, `spod_spectrum.png`, `pod_fft_spectrum.png`, `spectral_comparison.png`
 
 #### Method Details
 

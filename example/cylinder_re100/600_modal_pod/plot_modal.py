@@ -3,7 +3,7 @@
 plot_modal.py: Unified plotting for modal analysis results (POD, DMD, SPOD)
 
 Reads output files from nekStab modal_analysis.f90:
-  - pod_energy.dat          : POD eigenvalue spectrum
+  - pod_spectrum.dat        : POD eigenvalue spectrum
   - pod_fft_spectrum.dat    : POD-FFT power spectra
   - dmd_spectrum.dat        : DMD eigenvalues and frequencies
   - spod_spectrum.dat       : Batch SPOD spectrum (legacy)
@@ -66,14 +66,14 @@ def spectral_grid(ax):
 # -----------------------------------------------------------------------------
 
 class PODSpectrum:
-    """Read POD eigenvalue spectrum from pod_energy.dat"""
+    """Read POD eigenvalue spectrum from pod_spectrum.dat"""
 
-    def __init__(self, filename='pod_energy.dat'):
+    def __init__(self, filename='pod_spectrum.dat'):
         if not Path(filename).exists():
             raise FileNotFoundError(f'{filename} not found')
 
         print(f'Reading {filename}')
-        data = np.genfromtxt(filename, comments='#')
+        data = np.genfromtxt(filename, comments='#', usecols=(0, 1, 2, 3))
 
         self.mode = data[:, 0].astype(int)
         self.eigenvalue = data[:, 1]
@@ -92,7 +92,7 @@ class DMDSpectrum:
             raise FileNotFoundError(f'{filename} not found')
 
         print(f'Reading {filename}')
-        data = np.genfromtxt(filename, comments='#')
+        data = np.genfromtxt(filename, comments='#', usecols=range(7))
 
         self.mode = data[:, 0].astype(int)
         self.mu_abs = data[:, 1]      # |mu|
@@ -544,7 +544,7 @@ if __name__ == '__main__':
     print('-' * 50)
     if plots_made == 0:
         print('No data files found. Run modal analysis first.')
-        print('Expected files: pod_energy.dat, dmd_spectrum.dat,')
+        print('Expected files: pod_spectrum.dat, dmd_spectrum.dat,')
         print('                spod_stream_spectrum.dat, pod_fft_spectrum.dat')
     else:
         print(f'Done. Generated {plots_made} plot(s).')
