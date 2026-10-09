@@ -44,6 +44,7 @@
       logical :: isDirect, isAdjoint, isTransientGrowth
       logical :: isFloquetDirect, isFloquetAdjoint
       logical :: isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
+      logical :: ifotdDNS ! OTD about the base flow that the DNS advances (uparam(1) = 5.1)
 
       ! ─────────────────────────────────────────────────────────────────
       ! USER-SETTABLE MODE FLAGS (alternative to uparam encoding)
@@ -86,6 +87,7 @@
       common/nStab_logical/ifstorebase, ifdyntol, iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired, isNekStabinit
       common/nStab_logical/isDirect, isAdjoint, isTransientGrowth, isFloquetDirect, isFloquetAdjoint
       common/nStab_logical/isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
+      common/nStab_logical/ifotdDNS
 
       logical :: use_cgs ! CGS2 orthogonalization (vs MGS)
       logical :: ifquasilaminar ! quasilaminar RANS stability

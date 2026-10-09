@@ -84,7 +84,8 @@
 | 4.5 | `'animate_mode'` | `'animate'` | Mode animation |
 | 4.51 | `'animate_bf_deform'` | | Base flow deformation animation |
 | 4.52 | `'animate_floquet'` | | Floquet mode animation |
-| 5 | `'otd'` | | Optimally Time-Dependent modes |
+| 5 | `'otd'` | | Optimally Time-Dependent modes about a frozen base flow |
+| 5.1 | `'otd_dns'` | | Optimally Time-Dependent modes about the base flow that the DNS advances |
 | 6.1 | `'pod'` | | Proper Orthogonal Decomposition |
 | 6.2 | `'dmd'` | | Dynamic Mode Decomposition |
 | 6.3 | `'spod'` | | Spectral POD |

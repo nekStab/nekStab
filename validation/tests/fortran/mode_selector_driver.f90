@@ -42,7 +42,7 @@ program mode_selector_driver
    call add(ifForceSensImag, 'ifForceSensImag'); call add(ifDeltaForcing, 'ifDeltaForcing')
    call add(ifAnimateMode, 'ifAnimateMode'); call add(ifAnimateBFDeform, 'ifAnimateBFDeform')
    call add(ifAnimateFloquet, 'ifAnimateFloquet')
-   call add(ifotd, 'ifotd'); call add(ifpod, 'ifpod'); call add(ifdmd, 'ifdmd')
+   call add(ifotd, 'ifotd'); call add(ifotdDNS, 'ifotdDNS'); call add(ifpod, 'ifpod'); call add(ifdmd, 'ifdmd')
    call add(ifspod, 'ifspod')
    write (6, '(a,f7.3)') trim(line)//' | uparam1=', uparam(1)
 
@@ -66,6 +66,7 @@ contains
       case ('ifFloquet'); ifFloquet = .true.
       case ('ifEnergyBudget'); ifEnergyBudget = .true.
       case ('ifWavemaker'); ifWavemaker = .true.
+      case ('ifotdDNS'); ifotdDNS = .true.
       case default
          write (6, '(a)') 'driver: unknown flag '//name
          stop 4

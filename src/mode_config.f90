@@ -29,7 +29,7 @@ module nekstab_mode_config
                                  ifEnergyBudget, ifWavemaker, ifBFSensitivity, &
                                  ifForceSensReal, ifForceSensImag, ifDeltaForcing, &
                                  ifAnimateMode, ifAnimateBFDeform, ifAnimateFloquet, &
-                                 ifotd, ifpod, ifdmd, ifspod
+                                 ifotd, ifotdDNS, ifpod, ifdmd, ifspod
    use nekstab_mode_codes, only: MODE_DNS, MODE_LINDNS, MODE_SFD, MODE_BOOSTCONV, &
                                  MODE_DMT, MODE_TDF, MODE_NEWTON_FP, MODE_NEWTON_PO, &
                                  MODE_NEWTON_POT, MODE_DIRECT, MODE_FLOQUET_DIRECT, &
@@ -39,8 +39,8 @@ module nekstab_mode_config
                                  MODE_BF_SENSITIVITY, MODE_FORCE_SENS_REAL, &
                                  MODE_FORCE_SENS_IMAG, MODE_DELTA_FORCING, &
                                  MODE_ANIMATE, MODE_ANIMATE_DEFORM, MODE_ANIMATE_FLOQUET, &
-                                 MODE_OTD, MODE_MODAL_ALL, MODE_POD, MODE_DMD, &
-                                 MODE_SPOD, uparam_to_mode_code
+                                 MODE_OTD, MODE_OTD_DNS, MODE_MODAL_ALL, MODE_POD, &
+                                 MODE_DMD, MODE_SPOD, uparam_to_mode_code
    implicit none
    private
    public :: nekStab_resolve_mode, &
@@ -74,7 +74,7 @@ contains
                           ifEnergyBudget .or. ifWavemaker .or. ifBFSensitivity .or. &
                           ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing &
                           .or. ifAnimateMode .or. ifAnimateBFDeform &
-                          .or. ifAnimateFloquet .or. ifotd &
+                          .or. ifAnimateFloquet .or. ifotd .or. ifotdDNS &
                           .or. ifDMT &
                           .or. ifpod .or. ifdmd .or. ifspod
 
@@ -151,6 +151,7 @@ contains
       ifAnimateFloquet = .false.
 
       ifotd = .false.
+      ifotdDNS = .false.
       ifpod = .false.
       ifdmd = .false.
       ifspod = .false.
@@ -249,6 +250,9 @@ contains
          !  Mode 5: OTD
       case ('otd')
          ifotd = .true.
+      case ('otd_dns')
+         ifotd = .true.
+         ifotdDNS = .true.
 
          !  Mode 6: Modal analysis
       case ('pod')
@@ -273,6 +277,9 @@ contains
 !   becomes isFloquetDirect.
 !-----------------------------------------------------------------------
    subroutine nekStab_mode_from_flags
+
+      !  OTD about the DNS base flow is an OTD mode
+      if (ifotdDNS) ifotd = .true.
 
       !  Apply ifFloquet modifier to base stability modes
       if (ifFloquet) then
@@ -394,6 +401,9 @@ contains
          !  Mode 5: OTD
       case (MODE_OTD)
          ifotd = .true.
+      case (MODE_OTD_DNS)
+         ifotd = .true.
+         ifotdDNS = .true.
 
          !  Mode 6: Modal analysis
       case (MODE_MODAL_ALL)
@@ -555,7 +565,11 @@ contains
 
          !  Mode 5: OTD
       elseif (ifotd) then
-         uparam(1) = 5.0
+         if (ifotdDNS) then
+            uparam(1) = 5.1
+         else
+            uparam(1) = 5.0
+         end if
 
          !  Mode 6: Modal analysis
       elseif (ifpod) then

@@ -47,6 +47,7 @@ DECIMALS = {
     4.51: ({"ifAnimateBFDeform"}, 4.51),
     4.52: ({"ifAnimateFloquet"}, 4.52),
     5: ({"ifotd"}, 5.0),
+    5.1: ({"ifotd", "ifotdDNS"}, 5.1),
     6: ({"ifpod", "ifdmd", "ifspod"}, 6.1),
     6.1: ({"ifpod"}, 6.1),
     6.2: ({"ifdmd"}, 6.2),
@@ -83,6 +84,7 @@ STRINGS = {
     "animate_bf_deform": {"ifAnimateBFDeform"},
     "animate_floquet": {"ifAnimateFloquet"},
     "otd": {"ifotd"},
+    "otd_dns": {"ifotd", "ifotdDNS"},
     "pod": {"ifpod"},
     "dmd": {"ifdmd"},
     "spod": {"ifspod"},
@@ -157,6 +159,13 @@ def test_flags_select_mode(driver):
     assert status == 0, out
     assert got == {"isNewtonFP"}
     assert after == pytest.approx(2.0, abs=1e-6)
+
+
+def test_otd_dns_flag_implies_the_otd_flag(driver):
+    status, got, after, out = resolve(driver, 0, "-", "ifotdDNS")
+    assert status == 0, out
+    assert got == {"ifotd", "ifotdDNS"}
+    assert after == pytest.approx(5.1, abs=1e-6)
 
 
 def test_floquet_flag_modifies_stability_flag(driver):

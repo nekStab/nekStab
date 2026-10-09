@@ -27,7 +27,7 @@ module nekstab_otd
                                  OTDmix, OTDmiy, OTDmiz, OTDmrx, OTDmry, OTDmrz, RWORK, &
                                  SESSION, VXP, VYP, VZP, bm1, convx, convy, convz, diffx, &
                                  diffy, diffz, dt, dxm1, dxtm1, dytm1, gradpx, gradpy, &
-                                 gradpz, gsstep_override, if3d, ifbase, ifield, ifotd, &
+                                 gradpz, gsstep_override, if3d, ifbase, ifield, ifotd, ifotdDNS, &
                                  ifoutfld, ifpert, initc, istep, jacmi, lastep, ldim, lelv, &
                                  lglel, lpert, lsize, lx1, lx2, ly1, ly2, lz1, lz2, ndim, &
                                  nekStab_error, nekStab_log, nelv, nid, npert, nx1, ny1, nz1, &
@@ -173,14 +173,17 @@ contains
                          wpic(1, mode), pr, t, 'ip'//trim(mode_tag))
          end do
 
-         if (uparam(1) > 5) then
+         !  Code 5.0 freezes the base flow: the perturbations evolve about the loaded
+         !  field and the DNS is not advanced. Code 5.1 (ifotdDNS) advances the base
+         !  flow with the DNS, so the basis follows the trajectory.
+         if (ifotdDNS) then
+            call nekStab_log('OTD with the base flow advanced by the DNS')
             ifbase = .true.
-            call bcast(ifbase, lsize)
-         elseif (uparam(1) == 5) then
+         else
             call nekStab_log('OTD in Frozen baseflow mode!')
             ifbase = .false.
-            call bcast(ifbase, lsize)
          end if
+         call bcast(ifbase, lsize)
 
          gsstep_override = .true.
          call otd_orthonormalize_basis

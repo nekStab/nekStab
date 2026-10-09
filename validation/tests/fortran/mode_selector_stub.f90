@@ -20,7 +20,7 @@ module nekstab_nek_bridge
    logical :: ifEnergyBudget = .false., ifWavemaker = .false., ifBFSensitivity = .false.
    logical :: ifForceSensReal = .false., ifForceSensImag = .false., ifDeltaForcing = .false.
    logical :: ifAnimateMode = .false., ifAnimateBFDeform = .false., ifAnimateFloquet = .false.
-   logical :: ifotd = .false., ifpod = .false., ifdmd = .false., ifspod = .false.
+   logical :: ifotd = .false., ifotdDNS = .false., ifpod = .false., ifdmd = .false., ifspod = .false.
 contains
    subroutine nekStab_error(msg)
       character(len=*), intent(in) :: msg

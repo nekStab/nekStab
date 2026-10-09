@@ -332,7 +332,8 @@ end subroutine
 | `'animate_mode'` | Animate eigenmode | 4.50 |
 | `'animate_bf_deform'` | Animate with base flow deformation | 4.51 |
 | `'animate_floquet'` | Animate Floquet mode | 4.52 |
-| `'otd'` | Optimally Time-Dependent modes | 5 |
+| `'otd'` | Optimally Time-Dependent modes, frozen base flow | 5 |
+| `'otd_dns'` | Optimally Time-Dependent modes, base flow advanced by the DNS | 5.1 |
 | `'pod'` | Proper Orthogonal Decomposition | 6.1 |
 | `'dmd'` | Dynamic Mode Decomposition | 6.2 |
 | `'spod'` | Spectral POD | 6.3 |
@@ -378,7 +379,7 @@ end subroutine
 | Stability | `isDirect`, `isAdjoint`, `isTransientGrowth` |
 | Floquet modifier | `ifFloquet` (transforms base stability modes) |
 | Postprocessing | `ifEnergyBudget`, `ifWavemaker`, `ifBFSensitivity`, `ifForceSensReal`, `ifForceSensImag`, `ifDeltaForcing`, `ifAnimateMode`, `ifAnimateBFDeform`, `ifAnimateFloquet` |
-| OTD | `ifotd` |
+| OTD | `ifotd`; `ifotdDNS` (also sets `ifotd`) for the evolving base flow |
 | Modal Analysis | `ifpod`, `ifdmd`, `ifspod` |
 
 **The `ifFloquet` modifier** combines with base stability modes:
@@ -530,7 +531,22 @@ it still writes the field. Treat that field as unverified.
 
 ### Mode 5: OTD
 
-Optimally Time-Dependent modes for systems with chaotic base flows. Tracks the most unstable directions in real-time.
+Optimally Time-Dependent modes (Babaee and Sapsis, 2016). A basis of `lpert` orthonormal perturbations (`lpert` in `SIZE`) evolves
+with the linearized Navier-Stokes equations and follows the subspace of fastest growth. The reduced operator and the finite-time
+exponents are written to `otd_eigenvalues.dat`, `otd_growth_rates.dat` and `otd_ftle.dat`.
+
+| Value | String | Base flow |
+|-------|--------|-----------|
+| `5` | `'otd'` | Frozen. The field loaded from `BF_<session>0.f00001` is not advanced; the `useric` base-flow branch (`JP == 0`) must return `ubic`, `vbic`, `wbic`, which the driver filled from that file. |
+| `5.1` | `'otd_dns'` | Evolving. The DNS advances the base flow next to the perturbations, so the basis follows the trajectory. With `otd_FTLEPeriod` set to the period of an orbit, `otd_ftle_period.dat` holds the exponents of each period. |
+
+The OTD perturbations start from the files `r01<session>0.f<n>`, `r02<session>0.f<n>`, ... (the highest `n` found) and from white
+noise when there are none. A run writes files with these names, so remove those of an earlier run before seeding. About a steady base
+flow, the real and imaginary parts of the leading eigenmode of `310_stability_direct` are an exact start: in
+`cylinder_re100/500_otd` the eigenvalues of the reduced operator at the start equal the growth rate 0.12479 of the 310 stage to 1e-4.
+From white noise the basis needs 100 to 200 convective time units to settle: 100 for the steady wake of
+`cylinder_re100/500_otd` and 190 for the orbit of `cylinder_re180/500_otd`. A `userParam` value between 5 and 5.1 is not a mode
+and stops the run.
 
 ### Mode 6: Modal Analysis (POD, DMD, SPOD)
 

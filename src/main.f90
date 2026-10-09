@@ -95,6 +95,7 @@
          spng_st = 0.0d0
 
          ifotd = .false.
+         ifotdDNS = .false.
          otd_printStep = 100
          otd_gsStep = 10
          otd_FTLEPeriod = 0.0d0
@@ -238,6 +239,7 @@
          call bcast(ifstorebase, lsize)
          call bcast(ifdyntol, lsize)
          call bcast(ifotd, lsize)
+         call bcast(ifotdDNS, lsize)
          call bcast(ifbuoyancy, lsize)
          call bcast(buoyancy_qvol_wired, lsize)
 
