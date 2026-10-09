@@ -2,7 +2,7 @@
 
 ## What this case shows
 
-Three OTD modes (`lpert = 3`, `userParam01 = 5`) evolve with the linearized Navier-Stokes
+Three OTD modes (`lpert = 3`, `nekstab_mode = 'otd'` in the `.usr`, the same as `userParam01 = 5`) evolve with the linearized Navier-Stokes
 equations about the frozen laminar profile U = 1 − y², from a white-noise start. The box is
 periodic in x with length 2π and spans y = −1 to 1; Re = 1/ν = 5000 is based on the centre-line
 velocity and the half-height. The mesh has 32 elements of order 7 (`lx1 = 8`), and the time

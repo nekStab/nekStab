@@ -20,7 +20,7 @@ T = 1/St = 1.66667) with Newton-GMRES.
 ## Run
 ```bash
 mks tpjet
-sbatch run.local.slurm     # 8 ranks
+sbatch run.local.slurm     # 16 ranks
 ```
 
 ## Reference (ref/)

@@ -17,7 +17,7 @@ Direct numerical simulation from a uniform initial condition.
 ## Run
 ```bash
 mks slot
-sbatch run.local.slurm     # 8 ranks
+sbatch run.local.slurm     # 16 ranks
 ```
 
 ## Reference (ref/)

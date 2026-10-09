@@ -23,7 +23,7 @@ Row 3 of `Spectre_NSd_conv.dat` is a real multiplier at σ = 0.0436 (μ = 1.075)
 ## Run
 ```bash
 mks tpjet
-sbatch run.local.slurm     # 8 ranks
+sbatch run.local.slurm     # 16 ranks
 ```
 
 ## Result (2026-10-09, Jean Zay, `ifort`, 16 ranks)

@@ -17,7 +17,7 @@ Newton initial guess (shipped). Converges to `BF_tsyphon0.f00001` at Ra=500.
 ## Run
 ```bash
 mks tsyphon
-sbatch run.local.slurm     # 8 ranks
+sbatch run.local.slurm     # 4 ranks
 ```
 
 ## Reference (ref/)

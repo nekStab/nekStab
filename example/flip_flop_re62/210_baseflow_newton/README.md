@@ -20,7 +20,7 @@ Re = 62 from this guess.
 ## Run
 ```bash
 mks 2cyl
-sbatch run.local.slurm     # 8 ranks
+sbatch run.local.slurm     # 16 ranks
 ```
 
 ## Result (2026-10-09, Jean Zay, `ifort`, 16 ranks)

@@ -16,7 +16,7 @@ real, steady (ω = 0) monotonically growing mode.
 ## Run
 ```bash
 mks tsyphon
-sbatch run.local.slurm     # 8 ranks
+sbatch run.local.slurm     # 4 ranks
 ```
 
 ## Reference (ref/)
