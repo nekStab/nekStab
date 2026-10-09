@@ -8,7 +8,7 @@ the residual and measured-cost panels make the speed/accuracy tradeoff explicit.
 OUTPUTS: plot_ic.png, plot_residual.png, plot_residual_vs_walltime.png, plot_bf.png
 """
 from pathlib import Path
-import sys
+import sys, re
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -155,6 +155,13 @@ def _read_startfrom(par_path):
     return None
 
 
+def residual_gate(case_dir):
+    """Stop gate of the run: the larger residualTol of the .par file (SFD and BoostConv stop below it)."""
+    tols = [float(v) for f in case_dir.glob('*.par')
+            for v in re.findall(r'^\s*residualTol\s*=\s*([0-9.eE+-]+)', f.read_text(), re.M)]
+    return max(tols) if tols else None
+
+
 def main():
     nk.configure_style()
 
@@ -194,7 +201,9 @@ def main():
         for case in cases:
             plot_residual(ax_time, case, case['time'],
                           label_suffix=f" ({case['steps']} steps)")
-        ax_time.axhline(1e-9, lw=0.5, c='k', ls=':', label='1e-9 target')
+        gate = residual_gate(CASE_DIR)
+        if gate:
+            ax_time.axhline(gate, lw=0.5, c='k', ls=':', label=f'gate {gate:.0e}')
         ax_time.grid(True, which='both', lw=0.25, alpha=0.35)
         ax_time.set_xlabel(r'$t$')
         ax_time.set_ylabel(r'$\|r\|$')
@@ -213,7 +222,9 @@ def main():
         for case in cases_with_cost:
             plot_residual(ax_cost, case, case['cost'],
                           label_suffix=f" ({case['elapsed']:.0f} s)")
-        ax_cost.axhline(1e-9, lw=0.5, c='k', ls=':', label='1e-9 target')
+        gate = residual_gate(CASE_DIR)
+        if gate:
+            ax_cost.axhline(gate, lw=0.5, c='k', ls=':', label=f'gate {gate:.0e}')
         ax_cost.grid(True, which='both', lw=0.25, alpha=0.35)
         ax_cost.set_xlabel('wall time on 8 ranks (s)')
         ax_cost.set_ylabel(r'$\|r\|$')

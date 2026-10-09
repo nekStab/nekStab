@@ -78,6 +78,13 @@ def find_bf(case_dir):
     return None
 
 
+def residual_gate(case_dir):
+    """Stop gate of the run: the larger residualTol of the .par file (SFD and BoostConv stop below it)."""
+    tols = [float(v) for f in case_dir.glob('*.par')
+            for v in re.findall(r'^\s*residualTol\s*=\s*([0-9.eE+-]+)', f.read_text(), re.M)]
+    return max(tols) if tols else None
+
+
 def main():
     nk.configure_style()
 
@@ -97,7 +104,9 @@ def main():
     if residu_sfd.exists():
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
         nk.plot_residuals(ax, residu_sfd, label='SFD', color='C0')
-        ax.axhline(1e-9, color='k', ls=':', lw=0.5, label=r'tol $10^{-9}$')
+        gate = residual_gate(CASE_DIR)
+        if gate:
+            ax.axhline(gate, color='k', ls=':', lw=0.5, label=f'gate {gate:.0e}')
         ax.set_xlabel(r'$t$')
         ax.set_ylabel(r'$\|r\|$')
         ax.legend(fontsize=7, loc='upper right')
