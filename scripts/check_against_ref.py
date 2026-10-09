@@ -140,7 +140,8 @@ def extract(stage: Path, source: str) -> float:
 
 
 # Strings in a Nek5000 or nekStab log that mean the run did not finish cleanly.
-FAILED_RUN = re.compile(r"non-finite|\bNaN\b|\bInfinity\b|^\s*EXIT:|^\s*ERROR:|an error occured|forrtl: severe")
+# A quoted "non-finite norm" is the advice that diagnostics.f90 prints for residualProj = yes, not a failure.
+FAILED_RUN = re.compile(r"(?<!\")non-finite|\bNaN\b|\bInfinity\b|^\s*EXIT:|^\s*ERROR:|an error occured|forrtl: severe")
 
 
 def run_failed(stage: Path) -> str | None:

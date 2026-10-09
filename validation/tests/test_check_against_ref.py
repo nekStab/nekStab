@@ -3,7 +3,8 @@
 A reference check is worth something only if it fails when the run is wrong. Each test
 builds a small stage folder (a reference, a column file, a log, a DONE file) and checks
 that the verdict follows: pass for a good run; fail for a shifted value, a missing output,
-a bad exit code, an ERROR line in the log, a NaN in the log, and an empty list of quantities.
+a bad exit code, an ERROR line in the log, a NaN in the log, and an empty list of quantities;
+the advice that names a non-finite norm in quotes is not a failure.
 """
 
 from __future__ import annotations
@@ -88,6 +89,23 @@ def test_nan_in_log_fails(tmp_path: Path) -> None:
     code, out = run_check(make_stage(tmp_path, log="residual = NaN\n"))
     assert code == 1, out
     assert "run gate" in out
+
+
+def test_non_finite_norm_message_fails(tmp_path: Path) -> None:
+    log = "ERROR [k_normalize]: non-finite norm; refusing to scale Krylov vector.\n"
+    code, out = run_check(make_stage(tmp_path, log=log))
+    assert code == 1, out
+    assert "run gate" in out
+
+
+def test_advice_about_non_finite_norm_passes(tmp_path: Path) -> None:
+    log = (
+        " nekStab: NOTE: [VELOCITY] residualProj = yes in a Newton or\n"
+        '   Krylov mode. If the run stops with "non-finite norm", set\n'
+        "   residualProj = no in [VELOCITY]; naca0012 needed it at 24+ ranks.\n"
+    )
+    code, out = run_check(make_stage(tmp_path, log=log))
+    assert code == 0, out
 
 
 def test_empty_quantity_list_fails(tmp_path: Path) -> None:
