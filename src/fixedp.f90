@@ -445,8 +445,7 @@ contains
       !  seed and that array (1.67 on the cylinder), the rate divided by dt = 0
       !  and printed Infinity
       !  in the log and in residu.dat, and the first snapshot of the subspace was
-      !  that difference. Skipping the call leaves the convergence of the cylinder
-      !  stage unchanged (t = 164.8 against 167.5, the same gate 1e-6).
+      !  that difference.
       if (istep > 0 .and. mod(istep, bst_skp) == 0) then
 
          if (.not. boostconv_init) then
