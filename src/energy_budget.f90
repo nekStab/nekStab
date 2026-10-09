@@ -378,6 +378,8 @@ contains
    !                                       13    Ebar
    !                                       14    sigma_r from the budget (with Sbar)
    !                                       15    Sbar, sponge damping
+   !                                       16    sigma_r from the energy of the marched
+   !                                             mode after one period
    !
    ! ---------------------------------------------------------------------
    ! ASSUMPTIONS, CONVENTIONS, AND LIMITATIONS (read before trusting)
@@ -1079,10 +1081,11 @@ contains
          !        --> Scalar summary file PKE_floquet_<session>0.f<mode>:
          !            the 10 integrals, then total production sum(1:9), the net
          !            P-D, the averaged energy E_bar, the budget growth rate
-         !            sigma_check (sponge included) and the sponge damping
-         !            sponge_bar. This is the machine-readable record used to
-         !            tabulate the closure check across cases. The sponge value
-         !            comes last so the earlier lines keep their position.
+         !            sigma_check (sponge included), the sponge damping
+         !            sponge_bar and the energy-ratio exponent sigma_E. This is the
+         !            machine-readable record used to tabulate the closure check
+         !            across cases. The new values come last so the earlier lines
+         !            keep their position.
          if (nid == 0) then
             write (filename, '(A,A,A,A)') &
                'PKE_floquet_', trim(SESSION), '0.f', &
@@ -1099,6 +1102,7 @@ contains
             write (NEKSTAB_UNIT_PKE, '(1E15.7)') E_bar
             write (NEKSTAB_UNIT_PKE, '(1E15.7)') sigma_check
             write (NEKSTAB_UNIT_PKE, '(1E15.7)') sponge_bar
+            write (NEKSTAB_UNIT_PKE, '(1E15.7)') sigma_E
             close (NEKSTAB_UNIT_PKE)
          end if
 

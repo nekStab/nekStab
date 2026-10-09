@@ -263,8 +263,9 @@ description for the 2.0 series; entries here are the per-tag deltas.
   damping of the sponge force, so a case with a sponge read the sponge as
   growth: `flip_flop_re62` gave `sigma_r = 8.478e-3` for the eigenvalue
   7.896e-3 (7.4 %). The routine now adds the sponge loss `S_bar`, and the
-  closure is 1.2 % (0.99 % at half the time step). `S_bar` is printed and is the
-  last line of `PKE_floquet_*`; the earlier lines keep their position. The flux
+  closure is 1.2 % (0.99 % at half the time step). `S_bar` is printed and is
+  line 15 of `PKE_floquet_*`, the energy-ratio exponent below is line 16; the earlier
+  lines keep their position. The flux
   through an open outflow is still not counted: keep the sponge in front of it.
   (2) The period was `endTime` of the `.par` file, while the Floquet eigensolve
   takes it from the time stamp of `BF_*0.f00001`. The `flip_flop_re62` stage
@@ -310,7 +311,7 @@ description for the 2.0 series; entries here are the per-tag deltas.
   fails a run with that word in its log. The first snapshot of the subspace was
   that difference as well. The cylinder stage (`cylinder_re100/120_baseflow_boostconv`,
   Re = 50) meets its gate 1e-6 at t = 164.8 now, against 167.5 before, and its base
-  flow is the same to 2.5e-5.
+  flow differs from the Newton solution at Re = 50 by 2.5e-5 in the extrema, as before.
 
 ## [2.0.0-rc4] - 2026-06-12
 
