@@ -115,7 +115,7 @@ this repository.
 | `example/cylinder_re100/000_dns/ci_test/` | 100 | DNS smoke (0.0) | 10-step smoke |
 | `example/moving_cylinder_re100/000_dns/` | 100 | DNS forced osc (0.0) | DNS subcase |
 | `example/lid_driven_re3600/210_baseflow_newton/fp/` | 3600 | Newton (2.0) | converged steady state |
-| `example/poiseuille_re5k/500_otd/` | 5000 | OTD smoke | builds and runs |
+| `example/poiseuille_re5k/500_otd/` | 5000 | OTD (5.0), 3 modes | eigenvalues of the reduced operator: -nu (pi/2)^2 and the Orr-Sommerfeld real part -1.7503e-3 (0.5 %) |
 | `example/thermosyphon_ra500/210_baseflow_newton/` | Ra = 500 | Newton + thermal (2.0) | converged thermal steady state |
 | `example/thermosyphon_ra500/310_stability_direct/direct/` | Ra = 500 | Direct + thermal (3.1) | leading real eigenvalue (pitchfork) |
 | `example/naca0012_re2000/210_baseflow_newton/fp/` | 2000 | Newton (2.0) | converged steady state |

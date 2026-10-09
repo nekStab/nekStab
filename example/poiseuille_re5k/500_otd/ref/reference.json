@@ -1,17 +1,31 @@
 {
   "case": "poiseuille_re5k/500_otd",
-  "description": "Optimally time-dependent (OTD) modes of plane Poiseuille flow at Re=5000",
-  "produced": {"ranks": "8", "nekstab_mode": "5.0 (OTD)"},
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": 4,
+    "mode": "userParam01=5 (OTD, frozen base flow), lpert = 3, white-noise start, endTime = 5000",
+    "compiler": "ifort 2021.9 (Jean Zay)"
+  },
   "quantities": {
-    "ftle_mode1": {
-      "source": "otd_ftle.dat:col2:last",
-      "value": -1.510589e-3,
-      "tol_abs": 1.0e-4
+    "otd_eigenvalue_1_final": {
+      "source": "otd_eigenvalues.dat:col2:last",
+      "value": -0.0004934802,
+      "tol_rel": 0.001,
+      "note": "-nu (pi/2)^2: the x-independent mode u = cos(pi y / 2), exact value"
     },
-    "ftle_mode2": {
-      "source": "otd_ftle.dat:col3:last",
-      "value": -1.771633e-3,
-      "tol_abs": 1.0e-4
+    "otd_eigenvalue_2_final": {
+      "source": "otd_eigenvalues.dat:col3:last",
+      "value": -0.00175034,
+      "tol_rel": 0.005,
+      "note": "real part of the Orr-Sommerfeld eigenvalue at alpha = 1 (orr_sommerfeld.py)"
+    },
+    "otd_eigenvalue_3_final": {
+      "source": "otd_eigenvalues.dat:col4:last",
+      "value": -0.00175034,
+      "tol_rel": 0.005,
+      "note": "same eigenvalue: modes 2 and 3 span the real and the imaginary part of the Tollmien-Schlichting wave"
     }
-  }
+  },
+  "description": "The expected values are exact or from theory, not read back from an OTD run. Mode 1 is x-independent and decays by viscosity alone: -nu (pi/2)^2 = -4.934802e-4. Modes 2 and 3 span the Tollmien-Schlichting wave of wavenumber 1, whose Orr-Sommerfeld eigenvalue at Re = 5000 is -0.00175034 +- 0.26813148 i. The eigenvalues in otd_eigenvalues.dat are the diagonal entries of the upper triangular reduced operator, so the pair appears as two real numbers whose mean is the real part sigma. At t = 5000 the run gave -4.935449e-4, -1.751402e-3 and -1.752725e-3: mode 1 is 6.5e-8 from its exact value (the error falls by a factor 12 per 1000 time units) and the pair is 0.06 % and 0.14 % from sigma. The entries of the pair move slowly after t = 5000: in a run to t = 10000 they stay within 1.0 % of sigma and their mean within 0.55 %, so the tolerance of 0.5 % holds at the end time of this stage and is not a statement about other end times."
 }

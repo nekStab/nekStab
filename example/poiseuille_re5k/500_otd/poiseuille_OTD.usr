@@ -13,6 +13,9 @@
 ! Override defaults (see nekStab_setDefault for full list)
       otd_printStep = 20; call bcast(otd_printStep, isize)
       otd_gsStep = 2; call bcast(otd_gsStep, isize)
+! No early stop. The test compares the running average of the exponents between two print
+! steps, which changes little long before the basis has converged.
+      otd_convTol = 0.0d0; call bcast(otd_convTol, wdsize)
       end
 ! -----------------------------------------------------------------------
       subroutine userf(ix, iy, iz, ieg)

@@ -1,97 +1,172 @@
 #!/usr/bin/env python3
-"""plot.py: Visualize Poiseuille OTD results.
+"""plot.py: OTD of plane Poiseuille flow at Re = 5000, three modes about the parabolic profile.
 
-OUTPUTS: plot_lyapunov_exponents.png, plot_otd_residuals.png, plot_otd_mode1.png, plot_otd_mode2.png
-USAGE:   python plot.py
+plot_otd_eigenvalues.png
+    (a) real parts of the eigenvalues of Lr against time, with the two exact values as guide lines:
+        -nu (pi/2)^2 for the x-independent mode and the Orr-Sommerfeld real part for alpha = 1;
+    (b) distance of the first eigenvalue from -nu (pi/2)^2, with the tolerance of ref/reference.json.
+plot_otd_modes.png
+    the three OTD basis fields at the last output: u of mode 1, v of modes 2 and 3.
+
+USAGE: python plot.py
 """
-from pathlib import Path
+
 import sys
-sys.path.insert(0, str(next(d for d in Path(__file__).resolve().parents if (d / 'nekplot.py').exists())))
-import nekplot as nk
+from pathlib import Path
+
+sys.path.insert(
+    0,
+    str(
+        next(d for d in Path(__file__).resolve().parents if (d / "nekplot.py").exists())
+    ),
+)
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import nekplot as nk
 import numpy as np
 
 CASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(CASE_DIR))
+from orr_sommerfeld import spectrum  # noqa: E402
+
+RE = 5000.0
+EXACT_1 = -(np.pi**2) / (
+    4.0 * RE
+)  # u = cos(pi y / 2) decays by viscosity alone: -nu (pi/2)^2
+TOL_1 = 1.0e-3 * abs(EXACT_1)  # tol_rel of the first quantity in ref/reference.json
+T_FROM = 200.0  # start of the eigenvalue curves
+
+
+def spread(n_rows, n_marks, shift=0):
+    """Indices of n_marks samples spread evenly over n_rows rows, moved by shift rows."""
+    return sorted(set(int(i) for i in (np.linspace(0, n_rows - 1, n_marks) + shift).clip(0, n_rows - 1)))
+
+
+def eigenvalue_figure():
+    data = np.loadtxt(CASE_DIR / "otd_eigenvalues.dat")
+    # The start from white noise first selects the subspace; its eigenvalues swing by orders of
+    # magnitude over the first 200 time units and are left out.
+    data = data[data[:, 0] >= T_FROM]
+    t = data[:, 0]
+    os_real = spectrum(RE, 1.0)[0].real
+    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.2), constrained_layout=True)
+
+    ax = axes[0]
+    # the thickest line is drawn first, at the back
+    styles = [(3.4, "o", 1), (2.2, "s", 2), (1.2, "^", 3)]
+    for (lw, marker, col), zorder in zip(styles, (1, 2, 3)):
+        if col >= data.shape[1]:
+            continue
+        ax.plot(
+            t,
+            data[:, col],
+            lw=lw,
+            marker=marker,
+            ms=3.5,
+            markevery=spread(len(t), 14, shift=(col - 1) * len(t) // 42),
+            zorder=zorder,
+            label=rf"$\Re\,\lambda_{col}$ (end value {data[-1, col]:.4e})",
+        )
+    ax.axhline(
+        EXACT_1, color="k", lw=0.8, ls="--", label=rf"$-\nu(\pi/2)^2$ ({EXACT_1:.4e})"
+    )
+    ax.axhline(
+        os_real,
+        color="0.4",
+        lw=0.8,
+        ls=":",
+        label=rf"Orr-Sommerfeld, $\alpha=1$ ({os_real:.4e})",
+    )
+    ax.set_xlim(T_FROM, t[-1])
+    ax.set_ylim(-3.2e-3, 1.7e-3)
+    ax.set_xlabel(r"$t$ (convective time units)")
+    ax.set_ylabel(r"real part of the eigenvalue of $L_r$ ($1/t_c$)")
+    ax.set_title(r"(a) Eigenvalues of $L_r$", loc="left", fontsize=9)
+    ax.legend(frameon=True, fontsize=6.5, loc="upper right")
+
+    ax = axes[1]
+    err = np.abs(data[:, 1] - EXACT_1)
+    keep = err > 0
+    ax.semilogy(
+        t[keep],
+        err[keep],
+        lw=2.0,
+        marker="o",
+        ms=3.5,
+        markevery=spread(int(keep.sum()), 14),
+        label=r"$|\Re\,\lambda_1 + \nu(\pi/2)^2|$",
+    )
+    ax.axhline(
+        TOL_1, color="k", lw=0.8, ls="--", label=rf"reference tolerance ({TOL_1:.2e})"
+    )
+    ax.set_xlim(T_FROM, t[-1])
+    ax.set_xlabel(r"$t$ (convective time units)")
+    ax.set_ylabel(r"error of the first eigenvalue ($1/t_c$)")
+    ax.set_title(r"(b) Convergence of $\lambda_1$", loc="left", fontsize=9)
+    ax.legend(frameon=True, fontsize=6.5, loc="upper right")
+    out = CASE_DIR / "plot_otd_eigenvalues.png"
+    fig.savefig(out, dpi=400)
+    plt.close(fig)
+    print(f"Saved {out}")
+
+
+def last_field(prefix):
+    files = nk.find_fields(f"{prefix}poiseuille_OTD0.f*", CASE_DIR)
+    return files[-1] if files else None
+
+
+def mode_figure():
+    jobs = [(1, "vx", "u"), (2, "vy", "v"), (3, "vy", "v")]
+    panels = []
+    for mode, key, name in jobs:
+        f = last_field(f"r{mode:02d}")
+        if f is not None:
+            panels.append((mode, key, name, f))
+    if not panels:
+        return
+    fig, axes = plt.subplots(
+        len(panels),
+        1,
+        figsize=(6.4, 1.5 * len(panels) + 0.4),
+        constrained_layout=True,
+        squeeze=False,
+    )
+    for ax, (mode, key, name, f), letter in zip(axes[:, 0], panels, "abc"):
+        x, y, fields, _ = nk.read_field(f)
+        q = fields[key]
+        bd = float(np.nanmax(np.abs(q)))
+        triang = nk.make_triangulation(x, y)
+        cf = nk.tricontourf(
+            ax, triang, q, levels=65, cmap="RdBu", vmin=-bd, vmax=bd, extend="both"
+        )
+        nk.inset_colorbar(
+            ax,
+            cf,
+            orientation="horizontal",
+            width="30%",
+            height="6%",
+            loc=9,
+            ticks=[-bd, bd],
+            tick_labels=[f"{-bd:.2f}", f"{bd:.2f}"],
+        )
+        ax.set_aspect("equal")
+        ax.set_xlabel(r"$x$", labelpad=-1)
+        ax.set_ylabel(r"$y$", labelpad=1)
+        ax.set_title(rf"({letter}) OTD mode {mode}, ${name}$", loc="left", fontsize=9)
+    out = CASE_DIR / "plot_otd_modes.png"
+    fig.savefig(out, dpi=400)
+    plt.close(fig)
+    print(f"Saved {out}")
 
 
 def main():
     nk.configure_style()
-
-    has_dat = any((CASE_DIR / f).exists()
-                  for f in ('otd_ftle.dat', 'otd_eigenvalues.dat', 'otd_growth_rates.dat'))
-    has_resid = (CASE_DIR / 'otd_residuals.dat').exists()
-    ff1 = nk.find_fields('r01poiseuille_OTD0.f00001', CASE_DIR)
-    ff2 = nk.find_fields('r02poiseuille_OTD0.f00001', CASE_DIR)
-
-    if has_dat:
-        fig, ax_otd = plt.subplots(
-            1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        nk.plot_otd_exponents(ax_otd, CASE_DIR)
-        ax_otd.set_title('Lyapunov exponents', fontsize=8)
-        output = CASE_DIR / 'plot_lyapunov_exponents.png'
-        fig.savefig(output, dpi=600, bbox_inches='tight')
-        print(f'Saved {output}')
-        plt.close(fig)
-
-    if has_resid:
-        fig, ax_res = plt.subplots(
-            1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        data = np.genfromtxt(str(CASE_DIR / 'otd_residuals.dat'))
-        if data.ndim == 1:
-            data = data.reshape(1, -1)
-        t = data[:, 0]
-        n_modes = data.shape[1] - 1
-        colors_cycle = ['b', 'g', 'r', 'c', 'm']
-        for j in range(n_modes):
-            c = colors_cycle[j % len(colors_cycle)]
-            vals = data[:, j + 1]
-            mask = vals > 0  # skip zeros for log scale
-            ax_res.semilogy(t[mask], vals[mask], lw=0.8, color=c,
-                            label=rf'$|\Delta\lambda_{j+1}|$')
-        ax_res.axhline(1e-6, color='k', ls='--', lw=0.6,
-                       label=r'tol $= 10^{-6}$')
-        ax_res.set_xlabel('$t$')
-        ax_res.set_ylabel(r'$|\Delta \mathrm{FTLE}|$')
-        ax_res.legend(fontsize=5, loc='best')
-        ax_res.grid(True, ls=':', lw=0.3, alpha=0.5)
-        output = CASE_DIR / 'plot_otd_residuals.png'
-        fig.savefig(output, dpi=600, bbox_inches='tight')
-        print(f'Saved {output}')
-        plt.close(fig)
-
-    for ff, title, filename in [
-        (ff1, 'OTD mode 1 ($v_y$)', 'plot_otd_mode1.png'),
-        (ff2, 'OTD mode 2 ($v_y$)', 'plot_otd_mode2.png'),
-    ]:
-        if ff:
-            fig, ax_m = plt.subplots(
-                1, 1, figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.4))
-            x, y, fields, _ = nk.read_field(ff[0])
-            triang = nk.make_triangulation(x, y)
-            q = fields.get('vy', fields.get('vx'))
-            if q is not None:
-                bd = np.nanpercentile(np.abs(q), 99)
-                if bd < 1e-15:
-                    bd = 1.0
-                cf = nk.tricontourf(ax_m, triang, q, levels=257,
-                                    cmap='RdBu', vmin=-bd, vmax=bd,
-                                    extend='both')
-                bdr = round(bd, 2)
-                nk.inset_colorbar(ax_m, cf, orientation='horizontal',
-                                  width="50%", height="5%", loc=9,
-                                  ticks=[-bdr, bdr],
-                                  tick_labels=[f'{-bdr}', f'{bdr}'])
-            ax_m.set_aspect('equal')
-            ax_m.set_xlabel(r'$x$', labelpad=-1)
-            ax_m.set_ylabel(r'$y$', labelpad=1)
-            ax_m.spines['right'].set_visible(False)
-            ax_m.spines['top'].set_visible(False)
-            ax_m.set_title(title, fontsize=8)
-            output = CASE_DIR / filename
-            fig.savefig(output, dpi=600, bbox_inches='tight')
-            print(f'Saved {output}')
-            plt.close(fig)
+    if (CASE_DIR / "otd_eigenvalues.dat").exists():
+        eigenvalue_figure()
+    mode_figure()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
