@@ -234,7 +234,10 @@ contains
    subroutine nekStab_comment
       use nekstab_krylov_subspace, only: dnekclock
       implicit none
-      real, save :: eetime0, eetime1, eetime2, deltatime
+      !  The timers start at zero: the first call tests eetime0 == 0, and a start value
+      !  that the compiler leaves undefined (gfortran -finit-real=snan) made every
+      !  timer line print NaN.
+      real, save :: eetime0 = 0.0d0, eetime1 = 0.0d0, eetime2 = 0.0d0, deltatime = 0.0d0
       real telapsed, tpernondt, tmiss, ttime
       real ttime_stp
 
