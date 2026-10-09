@@ -31,7 +31,7 @@ stdout/stderr to `logfile`.
 ## Result (2026-10-09, Jean Zay, `ifort`, 16 ranks)
 - Leading adjoint pair: sigma = 0.007889578, omega = +/-0.1407610. The run of 2026-06-11 gave the same values.
 - Direct 311 leading pair: sigma = 0.007896230, omega = +/-0.1407652. The adjoint sigma is 6.7e-6 (0.08 %) lower.
-- Wall time = 1448.2 s.
+- Wall time = 1453 s.
 
 ## Reference (ref/)
 - `reference.json` - leading adjoint Floquet pair from `Spectre_NSa.dat` row 1.

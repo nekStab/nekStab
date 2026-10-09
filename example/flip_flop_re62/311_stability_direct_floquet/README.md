@@ -29,7 +29,7 @@ sbatch --ntasks=16 --mem-per-cpu=2000 run.local.slurm
 - Leading multiplier: sigma = 0.007896230, omega = +/-0.1407652 (just above zero - consistent with
   Re = 62 barely above the secondary bifurcation). The run of 2026-06-11 gave sigma = 0.007896231.
 - Rows 3 and 4 are real multipliers at sigma = 3.3e-6 and 6.5e-11, that is |mu| = 1 to within 3e-5.
-- Wall time = 1039.6 s
+- Wall time = 1131 s
 
 ## Reference (ref/)
 - `reference.json` — leading Floquet multiplier (σ, ω) from `Spectre_NSd.dat`
@@ -40,10 +40,11 @@ sbatch --ntasks=16 --mem-per-cpu=2000 run.local.slurm
 - `ref/upo_snapshot.png` — UPO base-flow snapshot
 
 ## Plot notes
-- `plot.py` shows velocity magnitude; paper plots the **vx** component (asymmetry
-  visible). PiYG diverging colormap: ±1.5 clim for the UPO base flow, ±0.5 for
-  the Floquet mode. Bounds x ∈ [−3, 20], y ∈ [−3, 3]; cylinders at (0, ±0.85),
-  radius 0.5.
+- `plot.py` plots the **vx** component with the PiYG diverging colormap: ±1.5 for
+  the UPO base flow, ±0.5 for the Floquet mode. Bounds x ∈ [−5, 30], y ∈ [−8, 8];
+  cylinders at (0, ±0.85), radius 0.5.
+- The spectrum shows the multipliers of `Spectre_Hd.dat` with a residual below 1e-5:
+  44 of the 100 Ritz values. `Spectre_NSd_conv.dat` lists the ten that the run writes as modes.
 - A full paper figure needs a multi-Re sweep (Re = 60, 62, 63, 67); reference
   data Carini et al. (2014).
 
