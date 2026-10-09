@@ -1,7 +1,7 @@
 [GENERAL]
 startFrom = BF_2cyl0.f00001
 stopAt = endTime
-endTime = 8.73356  # Orbit period from UPO computation (updated by Newton)
+endTime = 8.815172  # orbit period, read by the run from the time stamp of BF_2cyl0.f00001
 
 userParam01 = 3.11  # Direct Floquet analysis
 userParam07 = 100    # k_dim (Krylov subspace dimension)
