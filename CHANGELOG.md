@@ -14,9 +14,37 @@ description for the 2.0 series; entries here are the per-tag deltas.
   Newton runs are not checked: they may start from a seed of another
   order. A stability mode with an active sponge prints a note that the
   sponge also forces the base flow. A Floquet run warns when no converged
-  multiplier lies within 1e-3 of 1.
+  multiplier lies within 1e-3 of 1. A Newton or Krylov mode with
+  `residualProj = yes` in `[VELOCITY]` prints a note that the velocity
+  residual projection can stop the run with a non-finite norm (see Fixed).
+- `validation/tests/test_mode_selector.py` compiles `mode_config.f90` against a
+  stand-in for the Nek5000 bridge and checks every legacy `userParam01`
+  decimal, every mode string, the flag path, the Floquet modifier, the
+  conflicts and the invalid inputs.
+- OTD about a base flow that the DNS advances: `userParam01 = 5.1`, string
+  `'otd_dns'`, flag `ifotdDNS` (mode code 510). The code for the frozen base
+  flow stays `5` (`'otd'`). Before, the branch for an evolving base flow in
+  `otd.f90` could not be reached, because the mode table had one OTD code.
+  With `otd_FTLEPeriod` set, `otd_ftle_period.dat` holds one line per
+  completed period, the exponents averaged over exactly that period.
+- `ts_gmres` returns the squared residual of its solution in the optional
+  argument `final_res`. The steady force sensitivity (modes 4.41 and 4.42) uses
+  it to print a warning when GMRES ends above its target of 1e-6; the field is
+  still written. Before, the run ended without a message.
 
 ### Changed
+- A `userParam01` that is not a mode code stops the run with an error that
+  names the value. Before, `3.15` or `7.3` matched no mode and the run
+  fell back to DNS with a warning, and `3.104` was read as `3.1`. A value
+  must lie within 1e-4 of a code in the mode table. The float-tolerance
+  decoder that followed the integer decoder could not match anything the
+  integer decoder had missed, and is removed. Existing `.par` files are
+  unaffected: every `userParam01` in the examples decodes.
+- The seed loader of the eigensolver and the steady force sensitivity choose
+  their files from the mode flags (`isDirect`, `isAdjoint`, `ifForceSensReal`
+  and so on) instead of comparing `uparam(01)` to floats. A seed load in a mode
+  with no seed file, and a force sensitivity without either flag, now stop the
+  run with a message (the file name used to stay undefined).
 - Newton residual backtracking is now enabled by default; a case can
   still disable it by setting `ifnewton_backtrack = .false.` in the
   `.usr`. A stalling Newton run now leaves the loop gracefully and
@@ -35,12 +63,80 @@ description for the 2.0 series; entries here are the per-tag deltas.
   `base_mut.o`). The "School A"/"School B" names are retired; no aliases or
   compatibility shims are kept.
 
+- `example/cylinder_re100/412_postproc_steady_force_sensitivity/` is removed.
+  Its GMRES solve ended at a squared relative residual of 1.35e-2 against a
+  target of 1e-6 (T = 1, `k_dim` = 50, 10 restarts), and the stage reported a
+  result without saying so. The residual stayed above 7e-3 for T = 1 to 3 and
+  for `k_dim` up to 400, and the adjoint map grows to a squared norm of 3.9e25
+  at T = 10. The cause is not found. The modes 4.41 and 4.42 stay in the code
+  and are documented as not validated in 2.0.0 (`DOC.md`, "Steady force
+  sensitivity").
+
 - `example/cylinder_re180/000_dns_seed/` is one DNS at Re = 180 from rest.
   It replaces the Re = 150, 170 and 175 seed folders. The DNS lands on the
   limit cycle, so its last field and its wake-probe period start the Newton
   stage directly. The Newton stage runs without the explicit filter.
 
 ### Fixed
+- `naca0012_re2000/210_baseflow_newton` runs at any rank count up to 40. With
+  the velocity residual projection on, the Newton run stopped with
+  `k_normalize non-finite norm` at 24, 32 and 40 ranks on Jean Zay (ifort
+  2021.9) and converged at 8 and 16. The projection is now off in that `.par`
+  (`[VELOCITY] residualProj = no`, as in the other Newton and Krylov stages); the
+  residuals are identical to seven digits at 8, 16, 24 and 32 ranks, and
+  agree with the 16-rank run with the projection on.
+- The OTD stages `cylinder_re100/500_otd` and `cubic_cavity_re1914/500_otd`
+  set the initial perturbation fields to zero in `useric`, so the OTD basis was
+  zero, the FTLE stayed zero and the run reported convergence after 300 steps.
+  The `cylinder_re100`, `cylinder_re180` and `cubic_cavity_re1914` stages also
+  returned a uniform flow for the base flow in `useric`; `setics` overwrote the
+  base flow that the driver had loaded, and the perturbations evolved about
+  u = (1, 0) instead of the steady wake (growth rates of -0.014 for all modes).
+  All three now read `vxpic`, `vypic`, `vzpic` and return `ubic`, `vbic`, `wbic`,
+  and the Gram-Schmidt step stops with a message when a basis vector has zero
+  norm. The orthogonality measure printed for one OTD mode was undefined; it is
+  zero. `cylinder_re100/500_otd` runs without sponge, which the 310 stage also
+  does, and reproduces its growth rate 0.12479 to 1e-4 (seeded with the leading
+  eigenmode), or to 1e-3 after about 100 time units from white noise.
+- `cylinder_re100/610_modal_dmd` and `620_modal_spod` analysed the wrong snapshot
+  window when a restart file at another time was present in the folder, because
+  the run script copied the restart of `600_modal_pod` only when none existed,
+  and the old reference listed no quantity. The three modal stages now run the
+  DNS leg (t = 150 to 200) and the modal analysis in one script from tracked
+  files, and their references check the POD energy, the DMD Strouhal numbers and
+  the SPOD eigenvalues.
+- Streaming SPOD no longer crashes. `spod_stream_update` and three more
+  routines outside the module used an implicit real for `spod_s_nfreq` and
+  failed at the first snapshot (ifort, segmentation fault). They import
+  it and declare `implicit none`. The streaming eigenvalues equal those of the
+  batch routine to six digits in every bin.
+- The error for a non-finite Krylov norm reports the squared norm, which is
+  the quantity that overflowed.
+- The Krylov-Schur restart could keep all `k_dim` Ritz values and report
+  `k_dim - 2` converged eigenvalues that were not converged (an ellipse with
+  `k_dim = 160`: "keeping 160 of 160", then 158 converged). The cap at
+  `k_dim - schur_tgt` removed single values, and the step that completes the
+  conjugate pairs added them back. With no Arnoldi step after the restart,
+  the residual test read the Schur form, where only the last 2x2 block has a
+  nonzero last component, so every other Ritz value passed. The cap now removes
+  whole pairs (`src/ks_select.f90`), and the restart stops with a message if it
+  would keep all `k_dim` values. `validation/tests/test_ks_select.py` fails on
+  the old selection (22 of 25 cases) and passes on the new one. A selection
+  below the cap is unchanged; the logs at hand keep 21 to 44 of 50 values.
+  The pre-releases 2.0.0-alpha.1 to 2.0.0-rc4 have the defect. Version 1.0.1 has no
+  cap on the number of kept values at all.
+- Thirty-five example stages called `hpts` and aborted at the first step in a
+  fresh clone with `Cannot open history file in subroutine hpts()`. `hpts`
+  reads the probe list from `<session>.his` and writes the probe values after
+  it in the same file, and `.gitignore` excludes `*.his`. Each `run.local.slurm`
+  (and `run.sh` of `cylinder_re1m/120_urans`) now writes its probe list before
+  the run.
+- `hpts` wrote zeros for the last block of probes when the number of probes was
+  a multiple of `lhis` (2 probes with `lhis = 2` on `cylinder_re100`; with
+  `lhis = 3`, 3 probes with `lhis = 2`, or 1 probe with `lhis = 2` the values
+  were correct). The routine is in Nek5000; no shipped stage is affected.
+  `nekStab_check_setup` prints a warning when the first line of `<session>.his`
+  is a multiple of `lhis`, and `DOC.md` lists the cause under troubleshooting.
 - Transient growth writes the true optimal response. The `ore` output was
   the optimal perturbation multiplied by G, because the response call went
   through `matvec`, which dispatches on the mode flags and so still applied
