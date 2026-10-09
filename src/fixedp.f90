@@ -440,7 +440,14 @@ contains
       real, allocatable, save, dimension(:) :: dvx, dvy, dvz
       real :: residu, h1, semi, linf, rate, tol
       real, save :: residu0
-      if (mod(istep, bst_skp) == 0) then
+      !  Not at istep = 0: no step has been taken, so vxlag holds no previous
+      !  step. The "residual" there was the norm of the difference between the
+      !  seed and that array (1.67 on the cylinder), the rate divided by dt = 0
+      !  and printed Infinity
+      !  in the log and in residu.dat, and the first snapshot of the subspace was
+      !  that difference. Skipping the call leaves the convergence of the cylinder
+      !  stage unchanged (t = 164.8 against 167.5, the same gate 1e-6).
+      if (istep > 0 .and. mod(istep, bst_skp) == 0) then
 
          if (.not. boostconv_init) then
             allocate (dvx(lv), dvy(lv), dvz(lv))

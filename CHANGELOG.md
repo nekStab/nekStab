@@ -303,6 +303,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   (`omega_c = 0.7337`, `beta = 1`, `chi = 0.5`, 8 ranks) DMT reaches 1e-7 at
   t = 766.27, and its base flow agrees with the Newton solution to 4e-5 (minimum
   of `vx`) and 8e-6 (norm), as the SFD base flows do.
+- BoostConv (`userParam01 = 1.2`) does not sample at step 0 any more. No step has
+  been taken there, so the "residual" compared the seed with an unset previous
+  step (1.67 on the cylinder), its rate divided by `dt = 0`, and the first line of
+  the log and of `residu.dat` read `Infinity`; `check_against_ref.py` rightly
+  fails a run with that word in its log. The first snapshot of the subspace was
+  that difference as well. The cylinder stage (`cylinder_re100/120_baseflow_boostconv`,
+  Re = 50) meets its gate 1e-6 at t = 164.8 now, against 167.5 before, and its base
+  flow is the same to 2.5e-5.
 
 ## [2.0.0-rc4] - 2026-06-12
 
