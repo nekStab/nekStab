@@ -12,8 +12,8 @@ receptivity region where the flow is most sensitive to perturbations.
 - Sponge: `userParam08 = 5` (left), `userParam09 = 5` (right)
 
 ## Prerequisites
-- Base flow: `BF_1cyl0.f00001` (committed; sourced from
-  `../../baseflow/newton/BF_1cyl0.f00001`, the canonical Re=100 Newton BF)
+- Base flow: `BF_1cyl0.f00001` (committed: the Newton base flow of
+  `../210_baseflow_newton/fp`, copied here; the same file as in `../310_stability_direct/direct`)
 
 ## Run
 ```bash
@@ -23,11 +23,11 @@ python3 plot.py
 ```
 
 ## Local I/O Warning
-On this 1996-element mesh, too many MPI ranks for local runs can corrupt the
-`elmap` in generated field files. **8 ranks** is the known-good local count.
+On the earlier 1996-element mesh, too many MPI ranks for local runs corrupted the
+`elmap` in generated field files. The runs on the 2128-element mesh use **8 ranks** (`lpmin = 8`).
 
 ## Expected Output
-Leading adjoint eigenpair near σ = 0.13 ± 0.74i — **identical** to the direct
+Leading adjoint eigenpair σ = 0.1248 ± 0.7337i — **identical** to the direct
 spectrum (the operator and its adjoint share spectrum). The spatial mode
 differs: concentrated upstream of and around the cylinder rather than
 downstream in the wake.
@@ -37,11 +37,11 @@ downstream in the wake.
 isothermal suite.
 
 ## Latest Result
-Verified 2026-06-11 on 8 ranks (Slurm), 2128 mesh, BF from `../../baseflow/newton/`:
+Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../210_baseflow_newton/fp`:
 
 - 2 eigenvalues converged with residual <= 6.1e-7
-- Leading mode: sigma = 0.1247881, omega = 0.7336846 (matches direct to 6 digits)
-- Wall time: 118 s
+- Leading mode: sigma = 0.1247881, omega = 0.7336846 (matches the direct sigma to 6e-7)
+- Wall time: 229 s
 - Outputs: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}`,
   `Spectre_NSa*.dat`, `Spectre_Ha*.dat`
 

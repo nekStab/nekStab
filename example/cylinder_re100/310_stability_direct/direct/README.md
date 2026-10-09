@@ -12,8 +12,8 @@ unstable von Kármán shedding instability).
 - `userParam07 = 50`  — `k_dim`: Krylov subspace size (single-node-viable)
 
 ## Prerequisites
-- Base flow: `BF_1cyl0.f00001` (committed; sourced from
-  `../../baseflow/newton/BF_1cyl0.f00001`, the canonical Re=100 Newton BF)
+- Base flow: `BF_1cyl0.f00001` (committed: the Newton base flow of
+  `../../210_baseflow_newton/fp`, copied here; both files give vx min -0.2001774 and vx norm 264.3375)
 
 ## Run
 ```bash
@@ -23,13 +23,13 @@ python3 plot.py
 ```
 
 ## Local I/O Warning
-On this 1996-element mesh, too many MPI ranks for local runs can corrupt the
+On the earlier 1996-element mesh, too many MPI ranks for local runs corrupted the
 `elmap` in generated field files (pymech warns "elmap appears to be
-corrupted"). **8 ranks** is the known-good local count.
+corrupted"). The runs on the 2128-element mesh use **8 ranks** (`lpmin = 8`).
 
 ## Expected Output
-Leading eigenpair near σ = 0.13 ± 0.74i (growth rate ± angular frequency),
-giving Strouhal St = ω/(2π) ≈ 0.118 for the linear instability mode around the
+Leading eigenpair σ = 0.1248 ± 0.7337i (growth rate ± angular frequency),
+giving Strouhal St = ω/(2π) = 0.1168 for the linear instability mode around the
 Re=100 unstable steady base flow.  This is the textbook 2D cylinder shedding
 mode (Barkley & Henderson 1996).
 
@@ -38,11 +38,11 @@ mode (Barkley & Henderson 1996).
 isothermal suite.
 
 ## Latest Result
-Verified 2026-05-15 on 8 ranks (Slurm), 2128 mesh, BF from `../../baseflow/newton/`:
+Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../../210_baseflow_newton/fp`:
 
-- 2 eigenvalues converged with residual ≤ 7.1e-7
-- Leading mode: σ = 0.1247590, ω = 0.7337421  (St = 0.1168)
-- Wall time: 773 s
+- 2 eigenvalues converged with residual ≤ 3.1e-7
+- Leading mode: σ = 0.1247875, ω = 0.7336851  (St = 0.1168)
+- Wall time: 231 s
 - Outputs: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}`, `Spectre_NSd*.dat`,
   `Spectre_Hd*.dat`
 
