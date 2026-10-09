@@ -22,8 +22,12 @@
 
             otd_printStep = 10; call bcast(otd_printStep, isize)
             otd_gsStep = 10; call bcast(otd_gsStep, isize)
-            ! otd_FTLEPeriod = 5.98197034139; call bcast(otd_FTLEPeriod, wdsize)
-            otd_FTLEPeriod = 0.0d0; call bcast(otd_FTLEPeriod, wdsize)
+            ! One averaging window = one period of the orbit of 210_baseflow_newton (the time
+            ! stamp of BF_1cyl0.f00001). Each window is written to otd_ftle_period.dat.
+            otd_FTLEPeriod = 5.189628136357d0; call bcast(otd_FTLEPeriod, wdsize)
+            ! No early stop. The test compares the running average between two print steps,
+            ! which changes little long before the exponent has converged.
+            otd_convTol = 0.0d0; call bcast(otd_convTol, wdsize)
             otd_computeFTLE = .true.; call bcast(otd_computeFTLE, lsize)
 
          end if
@@ -49,13 +53,12 @@
          integer ix, iy, iz, ieg, ie, ijke
          ie = gllel(ieg)
          if (JP == 0) then ! velocity
-            ux = 1.0d0
-            uy = 0.0d0
-            uz = 0.0d0
+            ! The OTD driver loads the base flow into ubic, vbic and wbic before
+            ! it calls setics. Returning a uniform flow here replaced that base flow.
+            ux = ubic(ix, iy, iz, ie)
+            uy = vbic(ix, iy, iz, ie)
+            uz = wbic(ix, iy, iz, ie)
             temp = 0.0d0
-            ubic(ix, iy, iz, ie) = ux
-            vbic(ix, iy, iz, ie) = uy
-            wbic(ix, iy, iz, ie) = uz
          else ! perturbation
             ux = 0.0d0
             uy = 0.0d0

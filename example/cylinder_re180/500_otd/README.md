@@ -1,33 +1,82 @@
-# Cylinder OTD — Optimally time-dependent modes
+# cylinder_re180 / 500_otd — OTD about the Newton orbit (`userParam01 = 5.1`)
 
-## Physics
-2D flow around a circular cylinder at Re = 180. OTD decomposition tracks instantaneous flow instabilities.
+## What this case shows
 
-## nekStab Mode
-`userParam01 = 5` — OTD
+One OTD mode (`lpert = 1`) evolves with the linearized Navier-Stokes equations about the
+periodic orbit of `210_baseflow_newton`, while the DNS advances the base flow along the
+orbit. This is `userParam01 = 5.1` (`'otd_dns'`). `userParam01 = 5` would keep the base flow
+at the field of `BF_1cyl0.f00001`, which suits a steady base flow (see
+`../../cylinder_re100/500_otd/`).
 
-## Prerequisites
-- Base flow `BF_1cyl0.f00001` (the OTD warm-start, read via `startFrom`). Seed it
-  from the Re=180 UPO base flow on the same unified 2128-element mesh:
-  `cp ../210_baseflow_newton/BF_1cyl0.f00001 .` — without it the run aborts in
-  `mfi_prepare` (missing restart). Field files are gitignored, so this copy is
-  required after a fresh checkout. `SIZE` uses the same polynomial order as
-  `../210_baseflow_newton/` (`lx1 = 8`), so the orbit is read without
-  interpolation.
+`otd_FTLEPeriod` is set to one period of the orbit, T = 5.189628, so `otd_ftle_period.dat`
+holds the exponent of the mode for each period: time at the end of the period, exponent.
+For a periodic base flow the exponent of the leading OTD mode converges to the largest
+Floquet exponent of the orbit. At Re = 180 in 2D that is the phase mode, multiplier 1 and
+exponent 0 (`../311_stability_direct_floquet/` gives 3.4e-6). The converged exponent must
+therefore be 0.
+
+Re = 180 in 2D is a proxy: this stage checks the OTD machinery against an exponent known
+from theory. It says nothing about Mode A or Mode B, which need a 3D flow.
+
+## Start
+
+`run.local.slurm` copies `BF_1cyl0.f00001` from `../210_baseflow_newton/` (the field file is
+not tracked) and removes `r0?1cyl0.f*` files of an earlier run. With no such file the driver
+starts from white noise, which this stage uses. `SIZE` has `lpert = 1` and the polynomial
+order of the Newton stage (`lx1 = 8`), so the orbit is read without interpolation.
+
+`1cyl.usr` sets `otd_convTol = 0`, which turns the early stop off. The stop compares the
+running average of the exponents between two print steps, and that changes little long
+before the exponent has converged (the explanation is in
+`../../cylinder_re100/500_otd/README.md`). `otd_residuals.dat` stays empty for this reason.
+
+## Result (white-noise start, 50 periods)
+
+Run on 8 ranks of c8 (`ifx`), 5744 s.
+
+| period | t at the end | exponent of the period |
+|---|---|---|
+| 1 | 5.19 | -1.07e-1 |
+| 10 | 51.90 | +2.85e-2 |
+| 20 | 103.79 | +3.20e-2 |
+| 30 | 155.69 | -9.26e-2 |
+| 32 | 166.07 | -2.42e-1 |
+| 36 | 186.83 | -1.17e-3 |
+| 37 | 192.02 | -1.45e-4 |
+| 38 | 197.21 | -1.29e-5 |
+| 40 | 207.59 | +6.69e-6 |
+| 45 | 233.53 | +1.76e-5 |
+| 50 | 259.48 | +1.45e-5 |
+
+The first 36 periods (190 time units) are the transient of the white-noise start: the
+exponent of a period is the growth of the current basis vector, and that vector is not yet
+the phase mode. From period 38 on, the exponent stays below 2.1e-5 in absolute value, so it
+agrees with the exponent 0 of the phase mode to that level. The transient depends on the
+start field.
+
+The running exponent of `otd_ftle.dat` averages from t = 0, so it still carries the
+transient: it is -5.9e-3 at t = 260. Read `otd_ftle_period.dat` for this stage.
+
+`ref/reference.json` compares the exponent of the last period with 0, the exact value of the
+phase mode, with a tolerance of 1e-4. The value is not read back from an OTD run.
+`python3 plot.py` writes `plot_otd.png`.
 
 ## Run
+
 ```bash
-mks 1cyl                     # Compile
-cp ../210_baseflow_newton/BF_1cyl0.f00001 .   # seed the OTD base flow
-sbatch run.local.slurm       # or: nekbmpi 1cyl N
-python3 plot.py              # regenerate the evidence figures
+mks 1cyl
+sbatch run.local.slurm      # 8 ranks, about 1.6 h on c8
+python3 plot.py
+python3 ../../../scripts/check_against_ref.py .
 ```
 
-## Expected Output
-OTD modes and instantaneous Lyapunov exponents (`otd_ftle.dat`,
-`otd_growth_rates.dat`, `otd_eigenvalues.dat`) plus mode fields. Krylov
-dimension k = 92. Re=180 here is a 2D proxy, so this validates the OTD
-machinery, not a physical Mode A/B spectrum.
+## Files
+
+- `otd_ftle_period.dat` — time at the end of the period, exponent of the mode in that period
+- `otd_ftle.dat` — time, running exponent from t = 0
+- `otd_eigenvalues.dat`, `otd_growth_rates.dat` — time, eigenvalues of the reduced operator and of its symmetric part
+- `plot_otd.png` — figure from `python3 plot.py`
 
 ## Reference
-Babaee & Sapsis (2016), Proc. R. Soc. A.
+
+Babaee and Sapsis (2016), Proc. R. Soc. A 472: 20150779.

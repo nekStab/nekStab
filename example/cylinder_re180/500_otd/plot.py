@@ -1,118 +1,60 @@
 #!/usr/bin/env python3
-"""plot.py: Visualize OTD analysis results for cylinder Re=180.
+"""plot.py: OTD about the Newton orbit of the cylinder at Re = 180 (userParam01 = 5.1, lpert = 1).
 
-Panels (emitted only when data is present):
-  plot_lyapunov_exponents.png - Lyapunov exponents / FTLE
-  plot_otd_residuals.png      - OTD convergence residuals
-  plot_otd_mode1.png          - OTD mode 1 (v_y)
-  plot_otd_mode2.png          - OTD mode 2 (v_y)
+(a) exponent of the OTD mode for each period of the orbit (otd_ftle_period.dat), with the
+    exponent of the phase mode of the orbit, 0, as a guide line;
+(b) the absolute value of the same exponents on a logarithmic axis, with the tolerance of
+    ref/reference.json as a guide line.
 
-OUTPUTS: plot_lyapunov_exponents.png, plot_otd_residuals.png, plot_otd_mode1.png, plot_otd_mode2.png
-USAGE:   python plot.py
+OUTPUT: plot_otd.png
+USAGE:  python plot.py
 """
+
 from pathlib import Path
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-import nekplot as nk
+
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
 CASE_DIR = Path(__file__).resolve().parent
+TOLERANCE = 1.0e-4  # tol_abs of otd_period_exponent_final in ref/reference.json
 
 
-def find_otd_mode(mode_index):
-    """Find OTD mode field file for cylinder. Tries multiple naming patterns."""
-    patterns = [
-        f'ip{mode_index}*1cyl0.f00001',
-        f'r0{mode_index + 1}*1cyl0.f00001',
-        f'r{mode_index + 1:02d}*1cyl0.f00001',
-    ]
-    for pat in patterns:
-        matches = sorted(CASE_DIR.glob(pat))
-        if matches:
-            return matches[0]
-    return None
+def main() -> None:
+    data = np.loadtxt(CASE_DIR / "otd_ftle_period.dat")
+    t, sigma = data[:, 0], data[:, 1]
+    label = f"OTD mode, {len(t)} periods"
+
+    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.2), constrained_layout=True)
+
+    ax = axes[0]
+    ax.plot(t, sigma, lw=1.6, marker="o", ms=3.5, label=label)
+    ax.axhline(0.0, color="k", lw=0.8, ls="--", label="phase mode of the orbit (0)")
+    ax.set_xlabel(r"$t$ (convective time units)")
+    ax.set_ylabel(r"exponent per period ($1/t_c$)")
+    ax.set_title("(a) Exponent of the OTD mode", loc="left", fontsize=9)
+    ax.legend(frameon=True, fontsize=8)
+
+    ax = axes[1]
+    ax.semilogy(t, np.abs(sigma), lw=1.6, marker="o", ms=3.5, label=label)
+    ax.axhline(
+        TOLERANCE,
+        color="k",
+        lw=0.8,
+        ls="--",
+        label=f"tolerance of the reference ({TOLERANCE:.0e})",
+    )
+    ax.set_xlabel(r"$t$ (convective time units)")
+    ax.set_ylabel(r"$|$exponent per period$|$ ($1/t_c$)")
+    ax.set_title("(b) Absolute value", loc="left", fontsize=9)
+    ax.legend(frameon=True, fontsize=8)
+
+    out = CASE_DIR / "plot_otd.png"
+    fig.savefig(out, dpi=400)
+    print(f"Saved {out}")
 
 
-def main():
-    nk.configure_style()
-
-    # PANEL: LYAPUNOV EXPONENTS
-    has_dat = any((CASE_DIR / f).exists()
-                  for f in ('otd_ftle.dat', 'otd_eigenvalues.dat', 'otd_growth_rates.dat'))
-    if has_dat:
-        fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        nk.plot_otd_exponents(ax, CASE_DIR)
-        ax.set_title('Lyapunov exponents', fontsize=8)
-        output = CASE_DIR / 'plot_lyapunov_exponents.png'
-        fig.savefig(output, dpi=600, bbox_inches='tight')
-        print(f'Saved {output}')
-        plt.close(fig)
-
-    # PANEL: OTD RESIDUALS
-    resid_file = CASE_DIR / 'otd_residuals.dat'
-    if resid_file.exists():
-        data = np.genfromtxt(str(resid_file))
-        if data.ndim == 1:
-            data = data.reshape(1, -1)
-        t = data[:, 0]
-        n_modes = data.shape[1] - 1
-        colors_cycle = ['b', 'g', 'r', 'c', 'm']
-        fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        for j in range(n_modes):
-            c = colors_cycle[j % len(colors_cycle)]
-            vals = data[:, j + 1]
-            mask = vals > 0  # skip zeros for log scale
-            ax.semilogy(t[mask], vals[mask], lw=0.8, color=c,
-                        label=rf'$|\Delta\lambda_{j+1}|$')
-        ax.axhline(1e-6, color='k', ls='--', lw=0.6,
-                   label=r'tol $= 10^{-6}$')
-        ax.set_xlabel('$t$')
-        ax.set_ylabel(r'$|\Delta \mathrm{FTLE}|$')
-        ax.legend(fontsize=5, loc='best')
-        ax.grid(True, ls=':', lw=0.3, alpha=0.5)
-        output = CASE_DIR / 'plot_otd_residuals.png'
-        fig.savefig(output, dpi=600, bbox_inches='tight')
-        print(f'Saved {output}')
-        plt.close(fig)
-
-    # PANEL: OTD MODE 1 and MODE 2
-    for mode_idx, title, fname in [
-        (0, 'OTD mode 1 ($v_y$)', 'plot_otd_mode1.png'),
-        (1, 'OTD mode 2 ($v_y$)', 'plot_otd_mode2.png'),
-    ]:
-        ff = find_otd_mode(mode_idx)
-        if ff is None:
-            continue
-        fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.4))
-        x, y, fields, _ = nk.read_field(ff)
-        triang = nk.make_triangulation(x, y)
-        q = fields.get('vy', fields.get('vx'))
-        if q is not None:
-            bd = np.nanpercentile(np.abs(q), 99)
-            if bd < 1e-15:
-                bd = 1.0
-            cf = nk.tricontourf(ax, triang, q, levels=257,
-                                cmap='RdBu', vmin=-bd, vmax=bd, extend='both')
-            bdr = round(bd, 2)
-            nk.inset_colorbar(ax, cf, orientation='horizontal',
-                              width="50%", height="5%", loc=9,
-                              ticks=[-bdr, bdr],
-                              tick_labels=[f'{-bdr}', f'{bdr}'])
-        ax.set_aspect('equal')
-        nk.add_cylinder_patches(ax)
-        ax.set_xlim(-2, 20)
-        ax.set_ylim(-4, 4)
-        ax.set_xlabel(r'$x$', labelpad=-1)
-        ax.set_ylabel(r'$y$', labelpad=1)
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.set_title(title, fontsize=8)
-        output = CASE_DIR / fname
-        fig.savefig(output, dpi=600, bbox_inches='tight')
-        print(f'Saved {output}')
-        plt.close(fig)
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

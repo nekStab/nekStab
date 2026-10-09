@@ -2,8 +2,8 @@
 startFrom = BF_1cyl0.f00001
 
 stopAt = endTime
-endTime = 100.0
-userParam01 = 5
+endTime = 260.0 # 50 periods of the orbit
+userParam01 = 5.1 # OTD about the base flow that the DNS advances
 userParam07 = 92 # k_dim
 userParam08 = 5   # Sponge left side
 userParam09 = 5   # Sponge right side
