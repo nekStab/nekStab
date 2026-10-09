@@ -95,8 +95,9 @@ def read_field(fname):
     if hasattr(field.elem[0], 'temp') and len(field.elem[0].temp) > 0:
         nscalars = len(field.elem[0].temp)
         for iscalar in range(nscalars):
-            has_s = any(np.any(elem.temp[iscalar])
-                        for elem in field.elem[:min(5, nel)])
+            # All elements are tested: a scalar that is zero in the first five (the cold
+            # far field of a heated cylinder) was dropped, and the plot scripts failed on it.
+            has_s = any(np.any(elem.temp[iscalar]) for elem in field.elem)
             if has_s:
                 arr = np.empty(ntotal)
                 for ie, elem in enumerate(field.elem):
