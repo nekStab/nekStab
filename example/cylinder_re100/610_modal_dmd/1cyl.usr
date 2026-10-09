@@ -58,8 +58,10 @@
         modal_dt = 0.5d0
         call bcast(modal_dt, wdsize)
 
-!       Number of modes to save
-        modal_nsave = 1
+!       Number of modes to save, in the order of dmd_spectrum.dat (largest |mu| first).
+!       Mode 1 is the pair at St = 0.497, the third harmonic of the shedding. Mode 3 is
+!       the shedding mode (St = 0.166), so three modes put it in dm11cyl0.f00003.
+        modal_nsave = 3
         call bcast(modal_nsave, isize)
 
 !       Window normalization: .true. = PySPOD compatible (amplitude)
