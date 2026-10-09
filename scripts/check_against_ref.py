@@ -140,7 +140,7 @@ def extract(stage: Path, source: str) -> float:
 
 
 # Strings in a Nek5000 or nekStab log that mean the run did not finish cleanly.
-FAILED_RUN = re.compile(r"non-finite|\bNaN\b|\bInfinity\b|^\s*EXIT:|an error occured|forrtl: severe")
+FAILED_RUN = re.compile(r"non-finite|\bNaN\b|\bInfinity\b|^\s*EXIT:|^\s*ERROR:|an error occured|forrtl: severe")
 
 
 def run_failed(stage: Path) -> str | None:
