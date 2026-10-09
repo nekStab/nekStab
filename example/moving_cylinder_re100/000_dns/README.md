@@ -29,10 +29,12 @@ Run `python3 plot.py` after the Slurm job finishes. It writes:
 - `spectrum.png`
 - `snapshot.png`
 - `analysis_metrics.dat`
-- `ref/reference.json`
 - `ref/signal.png`
 - `ref/spectrum.png`
 - `ref/snapshot.png`
+
+`ref/reference.json` holds fixed values (the dominant frequency and the late amplitude of the probe signal of the
+committed run). `plot.py` reads the probe history and does not write the reference.
 
 ## Verify
 

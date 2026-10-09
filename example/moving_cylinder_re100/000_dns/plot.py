@@ -2,7 +2,6 @@
 """Analyze the moving-cylinder Re=100 DNS stage."""
 from __future__ import annotations
 
-import json
 import math
 import shutil
 import sys
@@ -90,33 +89,6 @@ def render_snapshot(path: Path) -> None:
     plt.close(fig)
 
 
-def write_reference(frequency: float, amplitude: float) -> None:
-    spec = {
-        "case": "moving_cylinder_re100/000_dns",
-        "description": "Moving-cylinder Re=100 DNS late-window dominant frequency and amplitude from 1cyl.his.",
-        "produced": {
-            "date": "2026-06-10",
-            "ranks": 8,
-            "mode": "userParam01=0",
-        },
-        "quantities": {
-            "dominant_frequency": {
-                "value": frequency,
-                "source": "analysis_metrics.dat:col1:first",
-                "tol_rel": 1.0e-3,
-            },
-            "late_amplitude": {
-                "value": amplitude,
-                "source": "analysis_metrics.dat:col2:first",
-                "tol_rel": 0.02,
-            },
-        },
-    }
-    ref_dir = CASE_DIR / "ref"
-    ref_dir.mkdir(exist_ok=True)
-    (ref_dir / "reference.json").write_text(json.dumps(spec, indent=2) + "\n")
-
-
 def main() -> None:
     nk.configure_style()
     probes, data = read_his(CASE_DIR / "1cyl.his")
@@ -162,7 +134,6 @@ def main() -> None:
     plt.close(fig)
 
     render_snapshot(final_snapshot())
-    write_reference(frequency, amplitude)
 
     ref_dir = CASE_DIR / "ref"
     for name in ("signal.png", "spectrum.png", "snapshot.png"):
