@@ -37,6 +37,11 @@ description for the 2.0 series; entries here are the per-tag deltas.
   argument `final_res`. The steady force sensitivity (modes 4.41 and 4.42) uses
   it to print a warning when GMRES ends above its target of 1e-6; the field is
   still written. Before, the run ended without a message.
+- `example/cylinder_re100/130_baseflow_dmt`: the Re = 100 base flow by Dynamic
+  Mode Tracking (mode 1.3). With omega_c = 0.7337 (the leading mode of stage
+  310), beta = 1 and chi = 0.5 the residual falls below 1e-7 at t = 766, and
+  the field agrees with the Newton solution to 4e-5. The README states that DMT
+  filters one frequency band, so a steady flow is the only state without force.
 
 ### Changed
 - A `userParam01` that is not a mode code stops the run with an error that
