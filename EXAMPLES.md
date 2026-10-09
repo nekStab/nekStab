@@ -85,7 +85,7 @@ single steady or periodic operator.
 | `example/thermosyphon_ra500/` | Buoyancy-driven thermosyphon, Ra = 500 | DNS, Newton thermal baseflow, direct stability (linear and finite-difference) |
 | `example/lid_driven_re3600/` | 2D lid-driven cavity, Re = 3600 | DNS, Newton, direct/adjoint stability |
 | `example/cubic_cavity_re1914/` | 3D cubic cavity, Re = 1914 | DNS, Newton (steady), direct/adjoint stability (stable flow), OTD |
-| `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, DNS period estimate, direct Floquet stability (stable limit cycle), POD/DMD |
+| `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, DNS period estimate, direct and adjoint Floquet stability (unstable limit cycle, pair outside the unit circle), DNS check of the unstable pair, POD/DMD |
 | `example/naca0012_re2000/` | NACA 0012 airfoil, Re = 2000 | DNS, Newton, direct/adjoint stability, wavemaker |
 | `example/poiseuille_re5k/` | Channel flow, Re = 5000 | OTD |
 | `example/slot_fst_re495/` | Slot flow with free-stream turbulence | DNS, free-stream turbulence synthesis |
@@ -155,9 +155,5 @@ their state. Known gaps:
 - `example/cylinder_re30_thermal/` — baseflow only, no stability stage yet.
 - `example/cubic_cavity_re1914/500_otd/` — figures come from the regularized
   lid used until 2026-10; the case file now has the uniform lid; not rerun.
-- `example/cubic_cavity_re1950/` — its lid profile `(1-(2x)^2)^2(1-(2z)^2)^2`
-  drives the cavity more weakly than the uniform lid of the thesis, so its
-  limit cycle is not the LC1 cycle of the thesis. To be redone with the
-  uniform lid.
 - `example/tpjet_re2005/130_baseflow_dmt/` — configuration only; the DMT
   residual stalls near 0.7.

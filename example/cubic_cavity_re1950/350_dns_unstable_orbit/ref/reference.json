@@ -1,0 +1,10 @@
+{
+  "case": "cubic_cavity_re1950/350_dns_unstable_orbit",
+  "description": "DNS of the unstable Re=1950 limit cycle (orbit plus a small part of the leading Floquet mode), compared with the Floquet pair of ../311_stability_direct_floquet. plot.py fits the once-per-period deviation of the probe and writes floquet_vs_dns.dat. The two relative errors are pass criteria (growth rate within 20 %, frequency within 5 %); the DNS growth rate is a regression value of this repository, not a literature value.",
+  "produced": {"ranks": "16", "machine": "c8 (Slurm)", "wall_time_h": "13.7", "end_time": "2000 time units", "plot_script": "plot.py"},
+  "quantities": {
+    "sigma_dns": {"source": "floquet_vs_dns.dat:col2:last", "value": 3.336704e-3, "tol_rel": 0.3},
+    "relerr_sigma_vs_floquet": {"source": "floquet_vs_dns.dat:col5:last", "value": 0.0, "tol_abs": 0.20},
+    "relerr_omega_vs_floquet": {"source": "floquet_vs_dns.dat:col6:last", "value": 0.0, "tol_abs": 0.05}
+  }
+}
