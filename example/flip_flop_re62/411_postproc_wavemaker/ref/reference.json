@@ -1,32 +1,55 @@
 {
   "case": "flip_flop_re62/411_postproc_wavemaker",
-  "description": "Flip-flop Re=62 Floquet mode-4.11 post-processing: wavemaker maximum and location from leading direct/adjoint Floquet modes.",
+  "description": "Orbit-averaged perturbation kinetic energy budget (userParam01 = 4.11) of the two Floquet modes of the flip-flop orbit at Re = 62. The period T = 8.815172 is the time stamp of BF_2cyl0.f00001. The budget must reproduce the Floquet exponent of stage 311, 7.89623e-3 (row 1 of Spectre_NSd_conv.dat): sigma = (P - D - S)/(2 E) with the production P, the dissipation D and the sponge damping S averaged over one orbit. It closes to 1.2 %. The exponent from the energy of the marched mode after one period (no space derivative in it) is within 0.11 % of the eigenvalue, so the remaining 1.2 % comes from the production and dissipation integrals, which are about eight times larger than sigma times E. Without the sponge term the budget gave 8.478e-3 (7.4 % above) and fails the first two quantities. The sponge loss and the three field statistics are regression values of the run.",
   "produced": {
-    "date": "2026-06-11",
-    "ranks": 8,
-    "mode": "userParam01=4.11",
-    "spectrum_source": "example/flip_flop_re62/stability/direct_Floquet/Spectre_NSd*.dat"
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "8",
+    "compiler": "ifx on a workstation",
+    "mode": "Floquet PKE budget (userParam01 = 4.11)"
   },
   "quantities": {
-    "wm_max": {
-      "value": 0.03216049123256942,
-      "source": "wm_metrics.dat:col1:first",
-      "tol_rel": 1.0e-3
+    "sigma_budget_mode1": {
+      "source": "PKE_floquet_2cyl0.f00001:col1:row14",
+      "value": 0.00789623,
+      "tol_rel": 0.02,
+      "note": "sigma reconstructed from the budget of mode 1 (line 14 of PKE_floquet_2cyl0.f00001) against the Floquet exponent of stage 311. Measured 7.9926e-3, 1.22 % above."
     },
-    "wm_x_at_max": {
-      "value": 2.4090390205383301,
-      "source": "wm_metrics.dat:col2:first",
-      "tol_abs": 1.0e-3
+    "sigma_budget_mode2": {
+      "source": "PKE_floquet_2cyl0.f00002:col1:row14",
+      "value": 0.00789623,
+      "tol_rel": 0.02,
+      "note": "The same for mode 2, the complex conjugate of mode 1, which has the same exponent."
     },
-    "wm_y_at_max": {
-      "value": 0.6052520275115967,
-      "source": "wm_metrics.dat:col3:first",
-      "tol_abs": 1.0e-3
+    "sigma_energy_mode1": {
+      "source": "PKE_floquet_2cyl0.f00001:col1:row16",
+      "value": 0.00789623,
+      "tol_rel": 0.005,
+      "note": "sigma from ln(E(T)/E(0))/(2T) of the marched mode (line 16). Measured 7.8874e-3, 0.11 % below: the mode is an eigenvector of the monodromy over the period of the base flow."
     },
-    "wm_mean": {
-      "value": 0.0005153653561364195,
-      "source": "wm_metrics.dat:col4:first",
-      "tol_rel": 1.0e-3
+    "sponge_loss_mode1": {
+      "source": "PKE_floquet_2cyl0.f00001:col1:row15",
+      "value": 0.0002435942,
+      "tol_rel": 0.02,
+      "note": "Sponge damping S of mode 1 (line 15), the term the first version of the budget left out."
+    },
+    "production_vx_max": {
+      "source": "F012cyl0.f00001:field:vx.max",
+      "value": 0.003388321,
+      "tol_rel": 0.01,
+      "note": "Largest value of the first stored production component of mode 1 (x-derivative of the base flow, x-momentum)."
+    },
+    "production_vy_max": {
+      "source": "F012cyl0.f00001:field:vy.max",
+      "value": 0.003875754,
+      "tol_rel": 0.01,
+      "note": "Largest value of the second stored production component of mode 1 (x-derivative of the base flow, y-momentum)."
+    },
+    "production_y_derivative_vy_min": {
+      "source": "F012cyl0.f00002:field:vy.min",
+      "value": -0.001032136,
+      "tol_rel": 0.01,
+      "note": "Smallest value of the y-momentum production component for the y-derivative of the base flow, mode 1."
     }
   }
 }

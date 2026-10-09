@@ -30,22 +30,24 @@ def _velocity(path):
     return x, y, fields["vx"], fields["vy"]
 
 
-def _budget_field():
-    for pattern in ("F022cyl0.f00001", "F012cyl0.f00001"):
-        path = _read_required(pattern)
-        x, y, fields, _time = nk.read_field(path)
-        if "vx" in fields and "vy" in fields:
-            return x, y, np.sqrt(fields["vx"]**2 + fields["vy"]**2)
-        for key in ("t", "p"):
-            if key in fields:
-                return x, y, np.abs(fields[key])
-    raise KeyError("no budget field with vx/vy, t, or p found")
+def _production_density():
+    """Orbit-averaged production density of mode 1, the sum of the stored components.
+
+    F012cyl0.f00001 holds the components for the x-derivative of the base flow, F012cyl0.f00002 those for the
+    y-derivative (the z components of a 2D run are not written). Their volume integral is P_bar of the log.
+    """
+    total = None
+    for number in (1, 2):
+        x, y, fields, _time = nk.read_field(_read_required(f"F012cyl0.f0000{number}"))
+        part = sum(fields[name] for name in ("vx", "vy", "vz") if name in fields)
+        total = part if total is None else total + part
+    return x, y, total
 
 
 def _plot(kind, x, y, values, output):
     fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 1.35, nk.COL_WIDTH * 0.55))
     triang = nk.make_triangulation(x, y)
-    if kind in {"wavemaker", "budget"}:
+    if kind == "wavemaker":
         vmax = float(np.nanpercentile(values, 99.5))
         cf = nk.tricontourf(ax, triang, values, levels=257, cmap="hot_r",
                             vmin=0.0, vmax=vmax, extend="max")
@@ -71,27 +73,12 @@ def _plot(kind, x, y, values, output):
     print(f"Saved {output.name}")
 
 
-def _write_metrics(x, y, values):
-    idx = int(np.nanargmax(values))
-    metrics = {
-        "wm_max": float(values[idx]),
-        "wm_x_at_max": float(x[idx]),
-        "wm_y_at_max": float(y[idx]),
-        "wm_mean": float(np.nanmean(values)),
-    }
-    with (CASE_DIR / "wm_metrics.dat").open("w") as fh:
-        fh.write("# wm_max wm_x_at_max wm_y_at_max wm_mean\n")
-        fh.write("{wm_max:.16e} {wm_x_at_max:.16e} "
-                 "{wm_y_at_max:.16e} {wm_mean:.16e}\n".format(**metrics))
-    return metrics
-
-
 def main():
     nk.configure_style()
 
     xd, yd, dvx, dvy = _velocity(_read_required("dRe2cyl0.f00001"))
     xa, ya, avx, avy = _velocity(_read_required("aRe2cyl0.f00001"))
-    xb, yb, budget_mag = _budget_field()
+    xb, yb, production = _production_density()
 
     direct_mag = np.sqrt(dvx**2 + dvy**2)
     adjoint_mag = np.sqrt(avx**2 + avy**2)
@@ -99,16 +86,12 @@ def main():
     _plot("wavemaker", xd, yd, overlap, CASE_DIR / "plot_wavemaker.png")
     _plot("direct", xd, yd, dvy, CASE_DIR / "plot_direct_mode.png")
     _plot("adjoint", xa, ya, avy, CASE_DIR / "plot_adjoint_mode.png")
-    _plot("budget", xb, yb, budget_mag, CASE_DIR / "plot_budget_field.png")
-    metrics = _write_metrics(xd, yd, overlap)
+    _plot("production", xb, yb, production, CASE_DIR / "plot_budget_field.png")
 
     ref_dir = CASE_DIR / "ref"
     ref_dir.mkdir(exist_ok=True)
     for png in CASE_DIR.glob("plot_*.png"):
         shutil.copy2(png, ref_dir / png.name)
-    print("Wrote wm_metrics.dat")
-    for name, value in metrics.items():
-        print(f"{name} {value:.16e}")
 
 
 if __name__ == "__main__":
