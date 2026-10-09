@@ -58,7 +58,7 @@ module nekstab_dmt
    real, allocatable, save :: vxdd(:), vydd(:), vzdd(:)
    real, allocatable, save :: xx(:), xy(:), xz(:)
    real, allocatable, save :: yx(:), yy(:), yz(:)
-   real, save :: residu0, omc2
+   real, save :: residu0, omc2, dt_ref
    integer, save :: n
 
    public :: dmt_init, dmt
@@ -144,6 +144,7 @@ contains
       n = lx1*ly1*lz1*nelt
 
       if (istep == 1) then
+         dt_ref = dt
          call opcopy(vxo(1, 3), vyo(1, 3), vzo(1, 3), vx, vy, vz)
          return
       elseif (istep == 2) then
@@ -153,6 +154,16 @@ contains
          call opcopy(vxo(1, 1), vyo(1, 1), vzo(1, 1), vx, vy, vz)
          call opcopy(xxo, xyo, xzo, vx, vy, vz)
          return
+      end if
+
+      !  The BDF2 stencil and the Euler step below take one time step for the three steps back.
+      !  Nek5000 shortens the last step to land on endTime (0.0011 against 0.0100 on the cylinder):
+      !  the residual l2/dt then jumped by a factor 10 to 100 in the last row of residu_dmt.dat.
+      !  That step is skipped. Any other change of dt (variableDt = yes) gives a wrong stencil
+      !  and stops the run.
+      if (abs(dt - dt_ref) > 1.0d-6*dt_ref) then
+         if (abs(time - param(10)) < 1.0d-6*dt_ref) return
+         call nekStab_error('DMT needs a constant time step: set variableDt = no in the .par file')
       end if
 
       call opcopy(do1, do2, do3, vx, vy, vz)

@@ -289,6 +289,20 @@ description for the 2.0 series; entries here are the per-tag deltas.
   the examples (2D and 3D, single and double precision, `XU`, `XUP`, `XUT`,
   `XUPT`, `XT`). Its test wrote a file in the layout the old reader expected; it
   now writes the Nek5000 layout, 2D in single and 3D in double precision.
+- The DMT mode (`userParam01 = 1.3`) had three faults. (1) After every step it
+  copied the residual components into `t(:,:,:,:,1)` and `t(:,:,:,:,2)`: with
+  `ldimt = 1` the second copy lay outside `t`, and with a temperature or scalar
+  field both overwrote it. The copies are removed. (2) The converged `BF_*` file
+  was written in single precision, which rounds the base flow to 6e-8 before the
+  stability stages read it; it is written in double precision now, as SFD,
+  BoostConv and Newton write theirs. (3) Nek5000 shortens the last step to land
+  on `endTime`, and the BDF2 stencil of DMT assumes one time step: the residual
+  of that step (divided by the short `dt`) jumped by a factor 10 to 100 in the
+  last row of `residu_dmt.dat`. The step is skipped now, and any other change of
+  the time step stops the run with a message. On the Re = 100 cylinder
+  (`omega_c = 0.7337`, `beta = 1`, `chi = 0.5`, 8 ranks) DMT reaches 1e-7 at
+  t = 766.27, and its base flow agrees with the Newton solution to 4e-5 (minimum
+  of `vx`) and 8e-6 (norm), as the SFD base flows do.
 
 ## [2.0.0-rc4] - 2026-06-12
 
