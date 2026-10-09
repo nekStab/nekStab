@@ -224,7 +224,8 @@ method of snapshots (Sirovich, 1987).
 - Eigenvalues encode growth rate sigma = log|mu|/dt and frequency
   St = arg(mu)/(2*pi*dt)
 
-**SPOD** — Spectral POD (Towne et al., 2018), two implementations:
+**SPOD** — Spectral POD (Towne et al., 2018), two implementations (the modal
+driver calls the streaming one; the batch routine gives the same eigenvalues):
 - `modal_spod.f90` (batch): divide snapshots into overlapping blocks,
   window + FFT each block, form cross-spectral density (CSD) matrix
   at each frequency via `k_gram_complex` (single gop per frequency),
@@ -438,7 +439,13 @@ whose reference runs are still pending.
       regression gate (37 of 37 pass, 2026-10-06)
 - [x] Update `DOC.md` with string-mode documentation
 - [x] Update copyright year (2020-2026) in `main.f90`
-- [ ] Review SPOD streaming module status — deferred to v2.1
+- [x] Review SPOD streaming module: it ran on `cylinder_re100/620_modal_spod`
+      (8 ranks, Jean Zay), after a fix of the implicit real `spod_s_nfreq` in
+      its external routines (they now import it and declare `implicit none`). Its eigenvalues equal those of the batch
+      routine `spod_compute` to six digits in all 33 frequency bins, and the
+      three eigenvalues of each bin sum to the total power of the POD-FFT
+      analysis to four digits. The driver calls the streaming routine only;
+      `spod_compute` is kept as the reference implementation.
 - [ ] Tag `v2.0.0` and merge `dev` → `main`
 
 
