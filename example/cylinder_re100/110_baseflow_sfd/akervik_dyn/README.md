@@ -1,106 +1,60 @@
-# Cylinder SFD Dynamic Testcase
+# cylinder_re100 / 110_baseflow_sfd / akervik_dyn
 
-This folder is the dynamic-tolerance SFD baseline for the cylinder base-flow
-suite.
+Steady base flow of the Re = 100 cylinder wake by selective frequency damping, Åkervik formulation, dynamic solver tolerance.
+Compare with ../akervik (fixed tolerance) and ../akervik_dyn_oifs (OIFS); the family README (`../README.md`) has the table of all six.
 
-It is intentionally the non-OIFS case:
+## Case
 
-- `dyn` means tolerance scheduling through `ifdyntol = .true.`
-- `oifs` is not active here
-- the separate acceleration testcase lives in `../sfd_dyn_oifs`
+- 2D flow around a circular cylinder, `viscosity = -100` (Re = 100), 2128 elements, `lx1 = 8`, `lxd = 12`.
+- `startFrom = BF_seed_1cyl0.f00001`, the seed that the cylinder base-flow stages share. `1cyl.usr` sets the restart time to 0.
+- `userParam01 = 1.1` (SFD), `userParam04 = 0.166` (positive: Åkervik), `userParam05 = 0.26`.
+  `userParam04` is the frequency in cycles per time unit (omega = 2 pi f = 1.043) and `userParam05` the growth rate sigma
+  of the formulas in `DOC.md`. The run prints `cutoff 0.5215, gain -0.5200`.
+- The time stepper is BDF3 with `targetCFL = 0.5` (step about 0.01, variable).
+- `ifdyntol = .true.` in `1cyl.usr`: the velocity solver tolerance follows `userParam08` = 0.9 times the residual, is updated every `userParam09` = 100 steps and never falls below the gate; the pressure tolerance stays fixed. `dyn_tol.dat` records the schedule (time, residual, tolerance before the update, requested tolerance, tolerance used, cap).
+- The run stops when the residual falls below the larger `residualTol` of the `.par` (1e-10) and writes `BF_1cyl0.f00001` in double
+  precision. `endTime = 1000` is a limit that the run does not reach.
+- The residual in `residu.dat` (column 2) is the root mean square over the domain of the change of the velocity during one time step.
 
-## Physics
+## Result (Jean Zay, 8 ranks, `ifort`)
 
-- 2D flow around a circular cylinder with `viscosity = -50.0`
-  (`Re = 50` in Nek5000's negative-viscosity Reynolds-number convention)
-- steady base flow computed with selective frequency damping
+- The residual meets the gate 1e-10 at t = 668.26 after 66477 time steps; it ends at 9.981e-11
+  and started at 2.09e-04. Wall time 480 s.
+- Over the last fifth of the run the residual falls as exp(-0.0234 t).
+- The converged field against the Newton solution of `../../210_baseflow_newton` (a different method for the same steady flow):
 
-This testcase is intentionally Re = 50 so it can be compared directly with
-`../sfd`.  Do not use this folder for the Re = 100 SFD experiment; the same
-SFD parameters at Re = 100 do not give the documented monotone convergence.
+| statistic of the field | this run | Newton | relative difference |
+|---|---|---|---|
+| vx.min | -0.2001695 | -0.2001774 | 4.0e-05 |
+| vx.max | 1.156066 | 1.156073 | 6.1e-06 |
+| vx.norm | 264.3354 | 264.3375 | 8.1e-06 |
+| vy.max | 0.6032385 | 0.6032416 | 5.2e-06 |
 
-## Active Case Definition
+The strict gate brings the field to 4e-5 of the Newton solution in every statistic; the tolerance of the reference (1e-4) covers that.
 
-- `startFrom = BF_seed_1cyl0.f00001`
-- shared seed hash:
-  `596d45112a8abaadde4c62120bf981fa0761f5ff8f0acb1e5beece48c829befa`
-- `endTime = 400.0`
-- `userParam01 = 1.1` for SFD
-- `userParam04 = 0.12`
-- `userParam05 = 0.05`
-- `userParam08 = 0.9` for the dynamic velocity-tolerance factor
-- `userParam09 = 100` for the dynamic tolerance update stride
-- `variableDt = yes`
-- `timeStepper = bdf3`
-- `targetCFL = 0.5`
-- `lx1 = 8`, `lxd = 12`
-- `extrapolation` is left at the non-OIFS baseline
-- pressure and velocity tolerances are `1e-9`
-- `ew_tol_cap = 0` in `1cyl.usr`
-- `viscosity = -50.0`
+## Reference
 
-Dynamic tolerance scheduling is enabled in `1cyl.usr` with:
+`ref/reference.json` checks six quantities. The last residual of `residu.dat` must lie below the gate (tolerance equal to the gate, so a
+run that stops at `endTime` fails). The time of the last row must be within 5 % of 668.26. The four statistics of `BF_1cyl0.f00001`
+must be within 1e-4 of the Newton values above. `python3 ../../../../scripts/check_against_ref.py .` runs the check; the figures of the
+run are `plot_ic.png` (the seed), `plot_bf.png` (the converged field), `plot_residual.png`, `plot_dynamic_tolerance.png`.
 
-```fortran
-ifdyntol = .true.
-```
-
-The cap is an optional upper bound.  Leave it at `0` for this benchmark so the
-velocity tolerance follows `0.9 * residual` down to the final `1e-9`
-convergence gate.  The scheduler updates every 100 timesteps and leaves the
-pressure tolerance fixed.
-
-## Mesh
-2128 elements (`lelg=2128` in `SIZE`).  Same mesh as the rest of the cylinder
-isothermal suite.
-
-## Latest Result
-
-Latest local verification on the 2128 mesh (Slurm, 8 ranks):
-
-- date: 2026-05-15
-- convergence time: `t = 288.28`
-- final residual: `9.999e-10`
-- total timesteps: 52531
-- elapsed wall time: ~811 s (≈ 13.5 min)
-- scheduler: velocity-only, `0.9 * residual`, update stride 100
-- output: converged `BF_1cyl0.f00001` (5.3 MB)
-
-Reaches the same `1e-9` gate as the fixed-tolerance `../sfd` baseline with
-near-identical step count (52531 vs 52515).  Dynamic scheduler is active and
-logged (see `dyn_tol.dat`); it relaxes only the velocity Helmholtz tolerance
-and keeps the pressure tolerance fixed.  The wall-time win over `../sfd`
-(811 vs 982 s) comes from the cheaper early-iteration velocity solves.
-
-## Saved Artifacts
-
-- `BF_seed_1cyl0.f00001` — Initial condition.
-- `BF_seed_1cyl.nek5000` — Collection file for the IC.
-- `BF_1cyl0.f00001` — Converged dynamic-tolerance SFD base flow (committed as proof).
-- `BF_1cyl.nek5000` — Collection file for the converged BF.
-- `residu.dat` / `dyn_tol.dat` — Residual + scheduler history (not committed; regenerated per run).
-- `plot.png` — Evidence figure regenerated by `plot.py` (not committed).
-
-## Plotting
+## Run
 
 ```bash
+mks 1cyl
+sbatch run.local.slurm      # 8 ranks
 python3 plot.py
+python3 ../../../../scripts/check_against_ref.py .
 ```
 
-Panel (a) overlays this case's residual against `../sfd/residu.dat`.  Panel
-(b) is the converged base-flow field.
+Use 8 ranks. Higher rank counts on this small mesh can write field files with corrupted `elmap` metadata.
 
-The dynamic scheduler writes `dyn_tol.dat` with columns: time, SFD residual,
-current Nek5000 solver tolerance before the update, requested scheduler
-tolerance `userParam08 * residual`, tolerance actually used after applying
-any cap, cap value.
+## Saved files
 
-## Notes
+`BF_seed_1cyl0.f00001` is the initial condition. `BF_1cyl0.f00001` is a converged base flow kept as proof.
+`residu.dat` and `dyn_tol.dat` are regenerated.
 
-- This folder should remain the clean dynamic-tolerance baseline.
-- Do not enable `OIFS` here; that is a separate testcase.
-- Keep both the initial condition and the actual saved result so the two states
-  can be inspected or diffed directly.
-- The seed restart time is reset to `t = 0` in `nekStab_usrchk` so residual and
-  scheduler plots are referenced to the start of the testcase, not to the time
-  stored in the Re = 40 seed file.
+## Literature
+
+Åkervik et al. (2006), Phys. Fluids 18, 068102; Casacuberta et al. (2018), J. Comput. Phys. 375.

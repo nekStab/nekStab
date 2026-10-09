@@ -1,125 +1,60 @@
-# Cylinder SFD Dynamic OIFS Testcase
+# cylinder_re100 / 110_baseflow_sfd / casacuberta_dyn_oifs
 
-This folder tests selective frequency damping with dynamic solver tolerances
-and OIFS time integration for the cylinder base-flow suite.
+Steady base flow of the Re = 100 cylinder wake by selective frequency damping, Casacuberta formulation, dynamic solver tolerance, OIFS time stepping.
+Compare with ../casacuberta_dyn (the same case with BDF3); the family README (`../README.md`) has the table of all six.
 
-It is intentionally the accelerated comparison case:
+## Case
 
-- `dyn` means tolerance scheduling through `ifdyntol = .true.`
-- `oifs` means the OIFS time-stepper acceleration is active
-- OIFS is case-specific and must be validated against the non-OIFS baselines
+- 2D flow around a circular cylinder, `viscosity = -100` (Re = 100), 2128 elements, `lx1 = 8`, `lxd = 12`.
+- `startFrom = BF_seed_1cyl0.f00001`, the seed that the cylinder base-flow stages share. `1cyl.usr` sets the restart time to 0.
+- `userParam01 = 1.1` (SFD), `userParam04 = -0.166` (negative: Casacuberta), `userParam05 = 0.26`.
+  `userParam04` is the frequency in cycles per time unit (omega = 2 pi f = 1.043) and `userParam05` the growth rate sigma
+  of the formulas in `DOC.md`. The run prints `cutoff 0.4075, gain -0.6675`.
+- The time stepper is OIFS (`extrapolation = OIFS`) with `targetCFL = 5`, so the step is about 0.10 instead of 0.01. The gate is `residualTol = 1e-6`, and so is the solver tolerance. The residual is the change of the velocity per step, so the larger step gives a residual about ten times larger for the same state: the gate is comparable to 1e-7 at the BDF3 step.
+- `ifdyntol = .true.` in `1cyl.usr`: the velocity solver tolerance follows `userParam08` = 0.95 times the residual, is updated every `userParam09` = 100 steps and never falls below the gate; the pressure tolerance stays fixed. `dyn_tol.dat` records the schedule (time, residual, tolerance before the update, requested tolerance, tolerance used, cap).
+- The run stops when the residual falls below the larger `residualTol` of the `.par` (1e-6) and writes `BF_1cyl0.f00001` in double
+  precision. `endTime = 700` is a limit that the run does not reach.
+- The residual in `residu.dat` (column 2) is the root mean square over the domain of the change of the velocity during one time step.
 
-## Physics
+## Result (Jean Zay, 8 ranks, `ifort`)
 
-- 2D flow around a circular cylinder with `viscosity = -50.0`
-  (`Re = 50` in Nek5000's negative-viscosity Reynolds-number convention)
-- steady base flow computed with selective frequency damping
+- The residual meets the gate 1e-6 at t = 466.34 after 4639 time steps; it ends at 9.999e-07
+  and started at 2.08e-03. Wall time 163 s.
+- Over the last fifth of the run the residual falls as exp(-0.0109 t).
+- The converged field against the Newton solution of `../../210_baseflow_newton` (a different method for the same steady flow):
 
-This testcase is intentionally Re = 50 so it can be compared directly with
-`../sfd` and `../sfd_dyn`.  OIFS is an acceleration path, not a suite-wide
-default.
+| statistic of the field | this run | Newton | relative difference |
+|---|---|---|---|
+| vx.min | -0.1995037 | -0.2001774 | 3.4e-03 |
+| vx.max | 1.156258 | 1.156073 | 1.6e-04 |
+| vx.norm | 264.4401 | 264.3375 | 3.9e-04 |
+| vy.max | 0.6022542 | 0.6032416 | 1.6e-03 |
 
-## Active Case Definition
+The gate of this variant is 1e-6, so the field still carries the slowly decaying residual: it differs from the Newton solution by up to 3e-03 instead of 4e-5 for the strict variants.
 
-- `startFrom = BF_seed_1cyl0.f00001`
-- shared seed hash:
-  `596d45112a8abaadde4c62120bf981fa0761f5ff8f0acb1e5beece48c829befa`
-- `endTime = 400.0`
-- `userParam01 = 1.1` for SFD
-- `userParam04 = 0.12`
-- `userParam05 = 0.05`
-- `userParam08 = 0.95` for the dynamic velocity-tolerance factor
-- `userParam09 = 100` for the dynamic tolerance update stride
-- `variableDt = yes`
-- `timeStepper = bdf3`
-- `targetCFL = 5`
-- `extrapolation = OIFS`
-- `lx1 = 8`, `lxd = 12`
-- pressure and velocity tolerances are `1e-9`
-- `ew_tol_cap = 0` in `1cyl.usr`
-- `viscosity = -50.0`
+## Reference
 
-Dynamic tolerance scheduling is enabled in `1cyl.usr` with:
+`ref/reference.json` checks six quantities. The last residual of `residu.dat` must lie below the gate (tolerance equal to the gate, so a
+run that stops at `endTime` fails). The time of the last row must be within 5 % of 466.34. The four statistics of `BF_1cyl0.f00001`
+must be within 1e-2 of the Newton values above. `python3 ../../../../scripts/check_against_ref.py .` runs the check; the figures of the
+run are `plot_ic.png` (the seed), `plot_bf.png` (the converged field), `plot_residual.png`, `plot_residual_vs_walltime.png`.
 
-```fortran
-ifdyntol = .true.
-```
-
-The cap is an upper bound.  Leave it at `0` for this benchmark so the velocity
-tolerance follows `0.95 * residual` down to the final `1e-9` convergence gate.
-The scheduler updates every 100 timesteps and leaves the pressure tolerance
-fixed.
-
-## Mesh
-2128 elements (`lelg=2128` in `SIZE`).  Same mesh as the rest of the cylinder
-isothermal suite.
-
-## Latest Result
-
-Latest local verification on the 2128 mesh (Slurm, 8 ranks):
-
-- date: 2026-05-15
-- convergence time: `t = 332.78`
-- final residual: `9.996e-10`
-- total timesteps: 6064
-- elapsed wall time: 617 s (≈ 10 min)
-- output: converged `BF_1cyl0.f00001` (5.3 MB)
-
-Comparison against the non-OIFS baselines from the same seed (Slurm, 8 ranks):
-
-| Case | Timesteps | Final |F| | Wall time |
-|---|---:|---:|---:|
-| `../sfd`         | 52515 | 9.997e-10 | 982 s |
-| `../sfd_dyn`     | 52531 | 9.999e-10 | 811 s |
-| `../sfd_dyn_oifs`|  6064 | 9.996e-10 | 617 s |
-
-Conclusion: OIFS reaches the same strict `1e-9` convergence gate with about
-**8.7 times fewer timesteps** and about **0.76 times the wall time** of
-`../sfd_dyn` for this Re = 50 testcase.
-
-The step-count speedup and the wall-clock speedup are intentionally reported
-separately.  OIFS advances much farther per timestep, but each OIFS timestep is
-more expensive than the standard BDF timestep.  The plotting scripts therefore
-include a measured-cost panel using the verified 8-rank wall times above.  If
-the cases are rerun, update the elapsed-time constants in `plot.py` together
-with this section.
-
-## Saved Artifacts
-
-- `BF_seed_1cyl0.f00001` — Initial condition.
-- `BF_seed_1cyl.nek5000` — Collection file for the IC.
-- `BF_1cyl0.f00001` — Converged OIFS dynamic-tolerance SFD base flow (committed as proof).
-- `BF_1cyl.nek5000` — Collection file for the converged BF.
-- `residu.dat` / `dyn_tol.dat` — Residual + scheduler history (not committed; regenerated per run).
-- `plot.png` — Evidence figure regenerated by `plot.py` (not committed).
-
-## Running And Plotting
+## Run
 
 ```bash
 mks 1cyl
-mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
-visnek BFRe40_1cyl
-visnek BF_1cyl
+sbatch run.local.slurm      # 8 ranks
 python3 plot.py
+python3 ../../../../scripts/check_against_ref.py .
 ```
 
-`plot.py` produces a multi-panel figure that overlays `../sfd`, `../sfd_dyn`,
-and this OIFS case for both physical-time convergence and measured 8-rank
-wall cost, plus the saved final field.
+Use 8 ranks. Higher rank counts on this small mesh can write field files with corrupted `elmap` metadata.
 
-The dynamic scheduler writes `dyn_tol.dat` with columns: time, SFD residual,
-current Nek5000 solver tolerance before the update, requested scheduler
-tolerance `userParam08 * residual`, tolerance actually used after applying
-any cap, cap value.
+## Saved files
 
-## Notes
+`BF_seed_1cyl0.f00001` is the initial condition. The converged `BF_1cyl0.f00001` is regenerated by every run and is not committed.
+`residu.dat` and `dyn_tol.dat` are regenerated.
 
-- Keep this folder separate from `../sfd_dyn`; OIFS must not be enabled in the
-  strict dynamic-tolerance baseline.
-- `SESSION.NAME` must point to this folder.  If it points to `../sfd_dyn`, the
-  run will silently read and overwrite the wrong case artifacts.
-- Keep both the initial condition and the actual saved result so the two states
-  can be inspected or diffed directly.
-- The seed restart time is reset to `t = 0` in `nekStab_usrchk` so residual and
-  scheduler plots are referenced to the start of the testcase, not to the time
-  stored in the Re = 40 seed file.
+## Literature
+
+Åkervik et al. (2006), Phys. Fluids 18, 068102; Casacuberta et al. (2018), J. Comput. Phys. 375.
