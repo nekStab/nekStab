@@ -45,7 +45,7 @@ module nekstab_dmt
                                  nekStab_error, nekStab_log, &
                                  NEKSTAB_UNIT_DYNTOL, istep, time, dt, &
                                  nsteps, vx, vy, vz, pr, t, fcx, fcy, fcz, &
-                                 ifbfcv, lastep
+                                 ifbfcv, lastep, param, wdsize
    implicit none
    private
 
@@ -204,7 +204,13 @@ contains
 
       if (residu < dmt_tol) then
          if (nid == 0) write (6, *) ' Converged DMT base flow to:', residu
+         !  64-bit output, as SFD, BoostConv and Newton write it: a base flow read back
+         !  in single precision carries 6e-8 of error into every stability stage after it.
+         param(63) = 1.0d0
+         call bcast(param(63), wdsize)
          call outpost(vx, vy, vz, pr, t, 'BF_')
+         param(63) = 0.0d0
+         call bcast(param(63), wdsize)
          ifbfcv = .true.
          lastep = 1
       end if
