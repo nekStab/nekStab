@@ -507,7 +507,6 @@ Arnoldi orthogonalization uses CGS2 by default (`use_cgs = .true.`), with classi
 | `4.51` | Animate mode with base flow deformation |
 | `4.52` | Animate Floquet mode |
 
-### Mode 5: OTD
 #### Steady force sensitivity (4.41, 4.42)
 
 Not validated in 2.0.0, and no example ships for it. The modes solve `(I - exp(T L†)) x = c` for the
@@ -529,6 +528,7 @@ map was linear to 6e-20 in the squared relative error, so the growth belongs to 
 the residual plateau and of this growth is not established. The mode prints a warning when GMRES ends above its target, and
 it still writes the field. Treat that field as unverified.
 
+### Mode 5: OTD
 
 Optimally Time-Dependent modes for systems with chaotic base flows. Tracks the most unstable directions in real-time.
 
