@@ -1,8 +1,8 @@
 [GENERAL]
-startFrom = rst_1cyl0.f00001
+startFrom = BF_1cyl0.f00001 # steady base flow of 310_stability_direct, frozen
 
 stopAt = endTime
-endTime = 100 # OTD evolves alongside DNS; long enough to see basis convergence
+endTime = 30 # seeded with the two leading eigenmodes; white-noise start: see README
 
 userParam01 = 5.0 # OTD (Optimally Time-Dependent modes)
 # OTD basis size controlled by lpert in SIZE (compile-time); set lpert=N for N modes

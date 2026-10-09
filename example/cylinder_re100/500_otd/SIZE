@@ -24,7 +24,7 @@ c
       parameter (lelr=lelt)            ! max number of local elements per restart file
       parameter (lhis=2 )              ! max history/monitoring points
       parameter (maxobj=1)             ! max number of objects
-      parameter (lpert=4)              ! OTD basis size (4 modes for pilot; increase + recompile for larger basis)
+      parameter (lpert=2)              ! OTD basis size: 2 modes hold the leading complex pair of 310_stability_direct
       parameter (toteq=1)              ! max number of conserved scalars in CMT
       parameter (nsessmax=1)           ! max sessions to NEKNEK
       parameter (lxo=lx1)              ! max GLL points on output (lxo>=lx1)

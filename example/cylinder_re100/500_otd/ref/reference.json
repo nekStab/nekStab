@@ -1,36 +1,33 @@
 {
   "case": "cylinder_re100/500_otd",
   "produced": {
-    "date": "2026-06-11",
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
     "ranks": 8,
-    "mode": "userParam01=5.0",
-    "compiler": "gfortran"
+    "mode": "userParam01=5 (frozen base flow), lpert = 2, perturbations seeded with the leading eigenmode of 310_stability_direct",
+    "compiler": "ifx"
   },
   "quantities": {
-    "otd_final_time": {
-      "value": 0.8701904,
-      "source": "otd_growth_rates.dat:col1:last",
-      "tol_abs": 1.0e-6
+    "otd_eigenvalue_1_at_start": {
+      "value": 0.1247875,
+      "source": "otd_eigenvalues.dat:col2:first",
+      "tol_abs": 1.0e-4
     },
-    "otd_growth_rate_1": {
-      "value": 0.0,
-      "source": "otd_growth_rates.dat:col2:last",
-      "tol_abs": 1.0e-12
+    "otd_eigenvalue_2_at_start": {
+      "value": 0.1247875,
+      "source": "otd_eigenvalues.dat:col3:first",
+      "tol_abs": 1.0e-4
     },
-    "otd_growth_rate_2": {
-      "value": 0.0,
-      "source": "otd_growth_rates.dat:col3:last",
-      "tol_abs": 1.0e-12
+    "otd_ftle_1_final": {
+      "value": 0.1247875,
+      "source": "otd_ftle.dat:col2:last",
+      "tol_abs": 1.0e-3
     },
-    "otd_growth_rate_3": {
-      "value": 0.0,
-      "source": "otd_growth_rates.dat:col4:last",
-      "tol_abs": 1.0e-12
-    },
-    "otd_growth_rate_4": {
-      "value": 0.0,
-      "source": "otd_growth_rates.dat:col5:last",
-      "tol_abs": 1.0e-12
+    "otd_ftle_2_final": {
+      "value": 0.1247875,
+      "source": "otd_ftle.dat:col3:last",
+      "tol_abs": 1.0e-3
     }
-  }
+  },
+  "description": "The expected value of all four is the growth rate sigma = 0.1247875 of the leading eigenvalue pair of 310_stability_direct (Spectre_NSd.dat), not a value read back from an OTD run. The seeded basis spans the invariant subspace of that pair, so the eigenvalues of the reduced operator at the start and the finite-time exponents at the end equal sigma (observed 0.124779, 0.124776, 0.124777, 0.124519)."
 }

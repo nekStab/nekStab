@@ -46,6 +46,24 @@ fi
 
 printf "%s\n%s/\n" "${CASE}" "$(pwd)" > SESSION.NAME
 
+# The OTD basis evolves about the steady base flow of 310_stability_direct. The
+# field file is not in this folder in a fresh clone.
+if [[ ! -f "BF_${CASE}0.f00001" ]]; then
+  cp "../310_stability_direct/direct/BF_${CASE}0.f00001" .
+fi
+
+# The OTD driver reads r01<case>0.f<n> and r02<case>0.f<n> (the highest n found) as the
+# initial perturbations, and a run writes files with these names. Remove those of an
+# earlier run, or the driver starts from them. The seeds are the real and imaginary
+# parts of the leading eigenmode of 310_stability_direct, so the basis starts on the
+# leading invariant subspace. OTD_SEED=0 starts from white noise instead (set
+# endTime = 200 in the .par file).
+rm -f r[0-9][0-9]"${CASE}"0.f*
+if [[ "${OTD_SEED:-1}" == "1" ]]; then
+  cp "../310_stability_direct/direct/dRe${CASE}0.f00001" "r01${CASE}0.f00001"
+  cp "../310_stability_direct/direct/dIm${CASE}0.f00001" "r02${CASE}0.f00001"
+fi
+
 mpiexec -np "${NPROCS}" "${EXE}"
 
 echo "finished=$(date --iso-8601=seconds)"
