@@ -11,7 +11,7 @@ startFrom = rst_1cyl0.f00001
 stopAt = endTime
 endTime = 2050
 
-userParam01 = 6.1 # DMD modal analysis (sets ifdmd=.true. via nekstab_mode='dmd')
+userParam01 = 6.2 # DMD modal analysis (sets ifdmd=.true. via nekstab_mode='dmd')
 
 dt = 0
 variableDt = yes

@@ -1,0 +1,10 @@
+{
+  "case": "cylinder_re100/610_modal_dmd",
+  "description": "Regression values of this repository for DMD (rank 20) of 100 snapshots (t = 150 to 200, one per 0.5 time units) of the Re=100 limit cycle. The first oscillatory pair after the near-Nyquist pair sits at the shedding frequency St = 0.166 (literature value for the 2D cylinder at Re = 100: about 0.165) and its first harmonic follows at twice that value.",
+  "produced": {"nekstab": "v2.0.0", "nproc": "8", "compiler": "ifort 2021.9 (Jean Zay)", "date": "2026-10-09"},
+  "quantities": {
+    "dmd_strouhal_fundamental": {"source": "dmd_spectrum.dat:col5:row3", "value": 0.165660, "tol_rel": 0.005},
+    "dmd_strouhal_second_harmonic": {"source": "dmd_spectrum.dat:col5:row5", "value": 0.331580, "tol_rel": 0.005},
+    "dmd_strouhal_third_harmonic": {"source": "dmd_spectrum.dat:col5:row7", "value": 0.663009, "tol_rel": 0.005}
+  }
+}

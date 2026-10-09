@@ -1,12 +1,13 @@
 #
 # DNS phase for snapshot generation (Re=100)
-# Runs from t=2000 to t=2050, saving every 0.5 time units = 100 snapshots
+# Runs from the restart file (t = 150, a limit-cycle state) to t = 200, saving every 0.5 time
+# units = 100 snapshots 1cyl0.f00001 ... 1cyl0.f00100
 #
 [GENERAL]
 startFrom = rst_1cyl0.f00001
 
 stopAt = endTime
-endTime = 2050
+endTime = 200
 
 userParam01 = 0
 

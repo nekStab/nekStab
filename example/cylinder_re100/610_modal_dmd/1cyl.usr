@@ -30,15 +30,19 @@
         spng_st = 1.7; call bcast(spng_st, wdsize)
 
 !       ═══════════════════════════════════════════════════════════════
-!       DMD ANALYSIS CONFIGURATION (Mode 6.1)
+!       DMD ANALYSIS CONFIGURATION (Mode 6.2)
 !       ═══════════════════════════════════════════════════════════════
 
 !       Set mode via string (higher priority than uparam(1))
-        nekstab_mode = 'dmd'
-        call bcast(nekstab_mode, 32*csize)
+!       The modal analysis is selected only in the modal phase (userParam01 >= 6, mode code nint(100*userParam01) >= 600). In the
+!       snapshot phase (dns.par, userParam01 = 0) the same executable runs a plain DNS.
+        if (nint(uparam(1)*100.0d0) .ge. 600) then
+          nekstab_mode = 'dmd'
+          call bcast(nekstab_mode, 32*csize)
 
-!       Belt-and-suspenders: also set flag directly
-        ifdmd = .true.;  call bcast(ifdmd, lsize)
+!         Belt-and-suspenders: also set flag directly
+          ifdmd = .true.;  call bcast(ifdmd, lsize)
+        endif
 
 !       Snapshot source (prefix of DNS output files)
 !       Empty prefix means use SESSION name directly (1cyl0.f*)

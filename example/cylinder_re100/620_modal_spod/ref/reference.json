@@ -1,0 +1,11 @@
+{
+  "case": "cylinder_re100/620_modal_spod",
+  "description": "Regression values of this repository for streaming SPOD (nfft = 64, noverlap = 48, 3 blocks) of 100 snapshots (t = 150 to 200, one per 0.5 time units) of the Re=100 limit cycle. The leading eigenvalue peaks in the bin St = 0.15625 (shedding frequency 0.166 lies between the bins 0.15625 and 0.1875, whose width is 0.03125). The sum of the three eigenvalues in each bin equals the total spectral power of the POD-FFT analysis of 600_modal_pod to four digits.",
+  "produced": {"nekstab": "v2.0.0", "nproc": "8", "compiler": "ifort 2021.9 (Jean Zay)", "date": "2026-10-09"},
+  "quantities": {
+    "spod_lambda1_peak": {"source": "spod_stream_spectrum.dat:col2:max", "value": 15.7704, "tol_rel": 0.005},
+    "spod_lambda1_bin_0.15625": {"source": "spod_stream_spectrum.dat:col2:row6", "value": 15.7704, "tol_rel": 0.005},
+    "spod_lambda1_bin_0.1875": {"source": "spod_stream_spectrum.dat:col2:row7", "value": 8.40764, "tol_rel": 0.005},
+    "spod_lambda1_bin_0.125": {"source": "spod_stream_spectrum.dat:col2:row5", "value": 0.902531, "tol_rel": 0.01}
+  }
+}

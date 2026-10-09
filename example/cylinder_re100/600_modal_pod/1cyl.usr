@@ -53,9 +53,13 @@
         call bcast(modal_nsave, isize)
 
 !       Which methods to run
-        ifpod = .true.;  call bcast(ifpod, lsize)
-        ifdmd = .true.;  call bcast(ifdmd, lsize)
-        ifspod = .true.; call bcast(ifspod, lsize)
+!       The modal analysis is selected only in the modal phase (userParam01 >= 6, mode code nint(100*userParam01) >= 600). In the
+!       snapshot phase (dns.par, userParam01 = 0) the same executable runs a plain DNS.
+        if (nint(uparam(1)*100.0d0) .ge. 600) then
+          ifpod = .true.;  call bcast(ifpod, lsize)
+          ifdmd = .true.;  call bcast(ifdmd, lsize)
+          ifspod = .true.; call bcast(ifspod, lsize)
+        endif
 
 !       Window normalization: .true. = PySPOD compatible (amplitude)
 !                            .false. = Parseval (energy-preserving)

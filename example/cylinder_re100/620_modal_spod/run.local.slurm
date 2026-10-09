@@ -46,6 +46,21 @@ fi
 
 printf "%s\n%s/\n" "${CASE}" "$(pwd)" > SESSION.NAME
 
+# Phase 1 of 2: DNS from the restart file (t = 150) to t = 200. It writes the
+# 100 snapshots ${CASE}0.f00001 ... ${CASE}0.f00100 (one every 0.5 time units)
+# that the modal analysis of phase 2 reads. ${CASE}.par holds the modal-analysis
+# parameters; the DNS parameters are in dns.par.
+# The restart file and dns.par are kept in ../600_modal_pod.
+for f in rst_1cyl0.f00001 rst_1cyl0.f00001.nek5000 dns.par; do
+  [[ -f "${f}" ]] || cp "../600_modal_pod/${f}" .
+done
+cp "${CASE}.par" modal.par
+trap 'cp -f modal.par "${CASE}.par"; rm -f modal.par' EXIT
+cp dns.par "${CASE}.par"
+mpiexec -np "${NPROCS}" "${EXE}"
+
+# Phase 2 of 2: modal analysis of the snapshots.
+cp modal.par "${CASE}.par"
 mpiexec -np "${NPROCS}" "${EXE}"
 
 echo "finished=$(date --iso-8601=seconds)"
