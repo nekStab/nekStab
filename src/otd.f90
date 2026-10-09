@@ -968,7 +968,13 @@ contains
          if (invnorm > 0.0d0) then
             invnorm = 1.0d0/sqrt(invnorm)
          else
-            invnorm = 0.0d0
+            !  A zero vector used to be kept as zero. The case then ran on, with
+            !  zero Gram matrix, zero FTLE and a convergence message after
+            !  otd_minSteps (cylinder_re100/500_otd, whose useric set the
+            !  perturbation fields to zero instead of reading vxpic).
+            call nekStab_error('OTD mode has zero norm in Gram-Schmidt. '// &
+                               'The initial fields of the perturbations must come from '// &
+                               'vxpic, vypic, vzpic in useric.')
          end if
 
          call cmult(vxp(1, basis_col), invnorm, active_count)
@@ -1081,7 +1087,6 @@ contains
          normality = sqrt(normality/npert)
 
          if (npert > 1) then
-            orthogonality = 0.0d0
             do row = 1, npert
                do col = row + 1, npert
                   orthogonality = orthogonality &
@@ -1097,6 +1102,9 @@ contains
             write (6, *) '  [OTD] NOout', &
                istep, info, &
                normality - 1.0d0, orthogonality
+         !  Zero first: with one mode the sum below is empty, and the printed
+         !  value used to be whatever the caller's variable held.
+         orthogonality = 0.0d0
          end if
       end if
 
