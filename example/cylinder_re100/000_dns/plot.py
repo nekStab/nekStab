@@ -180,7 +180,8 @@ def main():
         ax.spines['top'].set_visible(False)
 
         def update(i):
-            ax.collections.clear()
+            for coll in list(ax.collections):  # ArtistList has no clear() since matplotlib 3.10
+                coll.remove()
             x, y, fields, t = nk.read_field(snaps[i])
             tri = nk.make_triangulation(x, y) if (x.shape != x0.shape) else triang
             umag = np.sqrt(fields['vx']**2 + fields['vy']**2)
