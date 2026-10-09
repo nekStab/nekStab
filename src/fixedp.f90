@@ -26,7 +26,7 @@ module nekstab_fixedpoint
                                  fct, nx1, ny1, nz1, nelv, nelt, nfield, &
                                  vxlag, vylag, vzlag, ifbfcv, ifdyntol, lsize, &
                                  wdsize, nof, ew_tol_cap, bst_snp, bst_skp, &
-                                 NEKSTAB_UNIT_RESIDU, NEKSTAB_UNIT_DYNTOL
+                                 NEKSTAB_UNIT_RESIDU, NEKSTAB_UNIT_DYNTOL, volvm1
    use nekstab_vectors, only: nopcopy, nopsub2, opadd3
    use nekstab_diagnostics, only: outpost_vort
    use nekstab_newton, only: set_nek5000_velocity_tolerance
@@ -227,6 +227,9 @@ contains
                end do
             end if
             call k_norm(l2, tdfD)
+            !  Root mean square over the domain, as normvc gave before the multi-field norm: k_norm is
+            !  the integral norm, which grows with sqrt(volume), and the gate below is residualTol.
+            l2 = l2/sqrt(volvm1)
             rate = (l2 - residu0)
             residu0 = l2
             call apply_feedback_forcing(tdfD, gain)
@@ -361,6 +364,12 @@ contains
          call nopcopy(tempM%vx, tempM%vy, tempM%vz, tempM%pr, tempM%t, vx, vy, vz, pr, t)
          call k_sub3(tempD, tempM, oldV)        ! tempD = current - previous step
          call k_norm(res, tempD)
+         !  Root mean square over the domain, as normvc gave before the multi-field norm (BoostConv
+         !  still uses it). k_norm is the integral norm sqrt(int |dq|^2 dV), which grows with
+         !  sqrt(volume), while the gate below and the dynamic solver tolerance are set against
+         !  residualTol. On the cylinder mesh (volume 6250) the residual was 79 times larger, it
+         !  stopped falling at 6e-10 (the noise of the solves), and the 1e-10 gate was never met.
+         res = res/sqrt(volvm1)
          rate = (res - SFD_oldRes)/dt; SFD_oldRes = res
          call k_copy(oldV, tempM)               ! oldV = current state (next step)
          if (nid == 0) then

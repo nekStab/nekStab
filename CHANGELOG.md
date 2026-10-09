@@ -87,6 +87,17 @@ description for the 2.0 series; entries here are the per-tag deltas.
   stage directly. The Newton stage runs without the explicit filter.
 
 ### Fixed
+- The convergence residual of SFD (`residu.dat`, column 2) and of the TDF mode is
+  the root mean square over the domain again. The multi-field change of
+  2026-06-21 replaced `normvc` by `k_norm`, the integral norm, which grows with
+  the square root of the domain volume: it is 79 times larger on the cylinder
+  mesh (volume 6250). The gate, the larger `residualTol` of the `.par`
+  (1e-10 in `cylinder_re100/110_baseflow_sfd`), then lay below the noise of the
+  solves: the residual stopped falling at 6e-10, SFD never reported
+  convergence, and it never wrote `BF_*`. The dynamic solver tolerance, set to
+  0.9 times the residual, was 79 times looser than before. BoostConv still
+  used `normvc` and was not affected. A cylinder SFD run (`akervik`, 8 ranks)
+  converges again at t = 668 with residual 9.998e-11, as before the change.
 - The first residual of a steady Newton run was computed with the explicit
   velocity filter and every later residual without it. The steady linearized
   solver runs with `ifbase = .false.`, `q_filter` skips the velocity filter in
