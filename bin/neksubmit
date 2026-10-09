@@ -6,9 +6,14 @@ LOCAL_DIR=$(pwd)
 # Get the name of the current directory
 DIR_NAME=$(basename ${LOCAL_DIR})
 
-# Define remote directory and host
-REMOTE_DIR=/gpfswork/rech/vpo/rvpo014/${DIR_NAME}
-REMOTE_HOST=rvpo014@jean-zay.idris.fr
+# Remote host, work directory and Slurm account come from the environment,
+# for example in ~/.bashrc:
+#   export NEKSUBMIT_HOST=user@cluster.example.org
+#   export NEKSUBMIT_WORKDIR=/path/to/remote/work
+#   export NEKSUBMIT_ACCOUNT=project@cpu
+REMOTE_HOST=${NEKSUBMIT_HOST:?set NEKSUBMIT_HOST to user@host of the cluster}
+REMOTE_DIR=${NEKSUBMIT_WORKDIR:?set NEKSUBMIT_WORKDIR to the remote work directory}/${DIR_NAME}
+SLURM_ACCOUNT=${NEKSUBMIT_ACCOUNT:?set NEKSUBMIT_ACCOUNT to the Slurm project account}
 
 # Sync files to supercomputer
 rsync -avz ${LOCAL_DIR}/ ${REMOTE_HOST}:${REMOTE_DIR}/
@@ -24,7 +29,7 @@ read -r -d '' JOB_SCRIPT << EOM
 #SBATCH --ntasks-per-node=40
 #SBATCH --hint=nomultithread
 #SBATCH --exclusive
-#SBATCH -A vpo@cpu
+#SBATCH -A ${SLURM_ACCOUNT}
 #SBATCH --time=02:00:00
 #SBATCH --output=logfile
 #SBATCH --error=logerror

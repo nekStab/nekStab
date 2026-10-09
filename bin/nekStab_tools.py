@@ -315,7 +315,7 @@ def check_job_status(job_name):
     Args: job_name (str)
     Returns: bool (True if running, exits program if found)
     """
-    result = subprocess.run(["squeue", "-u", "rvpo014"], capture_output=True, text=True)
+    result = subprocess.run(["squeue", "-u", os.environ.get("USER", "")], capture_output=True, text=True)
     job_status = job_name in result.stdout
     if job_status:
         print(f"Job {job_name} is running.")
@@ -332,7 +332,7 @@ def check_job_exist(job_name):
     Args: job_name (str)
     Returns: bool (True if job exists)
     """
-    result = subprocess.run(["squeue", "-u", "rvpo014"], capture_output=True, text=True)
+    result = subprocess.run(["squeue", "-u", os.environ.get("USER", "")], capture_output=True, text=True)
     # print(result)
     job_status = job_name in result.stdout
     if job_status:
