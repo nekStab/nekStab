@@ -16,7 +16,7 @@
 !   compute_laplacian                — Laplacian via double gradient
 !
 ! Dependencies:
-!   nekstab_vectors, nekstab_nek_bridge, nekstab_io, nekstab_matvec,
+!   nekstab_vectors, nekstab_nek_bridge, nekstab_matvec,
 !   nekstab_eigensolvers, krylov_subspace (subroutine-level)
 !
 ! See also:
@@ -28,8 +28,8 @@ module nekstab_energy_budget
    use nekstab_nek_bridge, only: nid, SESSION, vx, vy, vz, pr, t, &
                                  ubase, vbase, wbase, pbase, tbase, maxmodes, bm1, if3d, ifto, &
                                  NEKSTAB_UNIT_PKE, nelv, lelv, lelt, lx1, ly1, lz1, nsteps, dt, time, &
-                                 istep, ifpert, ifadj, lsize, ifbase, param, vxp, vyp, vzp, tp
-   use nekstab_io, only: read_eigenvalue
+                                 istep, ifpert, ifadj, lsize, ifbase, param, vxp, vyp, vzp, tp, &
+                                 spng_fn, spng_st, wdsize, nekStab_error, NEKSTAB_UNIT_RESIDU
    use nekstab_matvec, only: prepare_linearized_solver
    use nekstab_eigensolvers, only: norm
    implicit none
@@ -72,6 +72,37 @@ contains
       end if
 
    end subroutine ensure_production_workspace
+
+   !  Read (sigma, omega) of the first nmodes eigenvalues from the
+   !  convergence file of the eigensolver, one row per mode in the order of
+   !  the mode files dRe/dIm. read_eigenvalue in nekstab_io returns row 1
+   !  only, which is right for the leading mode and wrong for any other.
+   !  Rank 0 reads, all ranks receive. omega is returned as abs(), the
+   !  budget does not use its sign. Stops with a message if the file has
+   !  fewer than nmodes rows.
+   subroutine read_mode_eigenvalues(sigma_m, omega_m, nmodes)
+      integer, intent(in) :: nmodes
+      real, intent(out) :: sigma_m(nmodes), omega_m(nmodes)
+      integer :: m, ierr
+
+      sigma_m = 0.0d0
+      omega_m = 0.0d0
+      if (nid == 0) then
+         open (unit=NEKSTAB_UNIT_RESIDU, file='Spectre_NSd_conv.dat', &
+               status='old', action='read', iostat=ierr)
+         if (ierr /= 0) call nekStab_error('Could not open Spectre_NSd_conv.dat')
+         do m = 1, nmodes
+            read (NEKSTAB_UNIT_RESIDU, '(2E15.7)', iostat=ierr) sigma_m(m), omega_m(m)
+            if (ierr /= 0) call nekStab_error( &
+               'Spectre_NSd_conv.dat has fewer rows than maxmodes: lower maxmodes or converge more modes')
+            omega_m(m) = abs(omega_m(m))
+         end do
+         close (NEKSTAB_UNIT_RESIDU)
+      end if
+      call bcast(sigma_m, nmodes*wdsize)
+      call bcast(omega_m, nmodes*wdsize)
+
+   end subroutine read_mode_eigenvalues
 
    !-----------------------------------------------------------------------
    ! stability_energy_budget — PKE budget for steady base flows
@@ -251,15 +282,21 @@ contains
    !   zero under incompressibility (div q = 0) with closed/no-slip or
    !   periodic boundaries, leaving the exact balance
    !
-   !       dE/dt = P(t) - D(t),
+   !       dE/dt = P(t) - D(t) - S(t),
    !       P(t) = - integral( real( conjg(q_i) q_j ) dU_i/dx_j ) dV   (production)
    !       D(t) =   (1/Re) integral( grad q : grad conjg(q) ) dV      (dissipation)
+   !       S(t) =   integral( s(x) q . conjg(q) ) dV                  (sponge damping)
    !
    !   where real(.) is the real part, Re is the Reynolds number, and
    !   summation over repeated indices i,j is implied. P is the rate at
    !   which the perturbation Reynolds stress does work against the
    !   base-flow strain; D is the (sign-definite) viscous dissipation.
    !   Both are real because they are Hermitian forms.
+   !   S is the loss caused by the sponge force -s(x) q that the linearised
+   !   solver adds to the perturbation equation (nekStab_forcing), with
+   !   s = spng_st*spng_fn >= 0. It is zero when the sponge is off. A
+   !   budget that leaves S out sees the sponge as extra growth: the
+   !   reconstructed sigma_r comes out too high by Sbar/(2 Ebar).
    !
    ! ---------------------------------------------------------------------
    ! FROM THE BALANCE TO THE GROWTH RATE (the key cancellation)
@@ -272,13 +309,13 @@ contains
    !   because exp(-i omega t) * exp(+i omega t) = 1. Hence
    !   E = exp(2 sigma_r t) E~, P = exp(2 sigma_r t) P~, D = ... with the
    !   tilde quantities GENUINELY T-PERIODIC (no residual omega ripple).
-   !   Substituting into dE/dt = P - D gives
-   !       2 sigma_r E~ + dE~/dt = P~ - D~,
+   !   Substituting into dE/dt = P - D - S gives
+   !       2 sigma_r E~ + dE~/dt = P~ - D~ - S~,
    !   and averaging over one period (<dE~/dt> = 0 by periodicity) yields
    !
-   !       +-------------------------------------------+
-   !       |   sigma_r = ( Pbar - Dbar ) / ( 2 Ebar )  |
-   !       +-------------------------------------------+
+   !       +-----------------------------------------------------+
+   !       |   sigma_r = ( Pbar - Dbar - Sbar ) / ( 2 Ebar )     |
+   !       +-----------------------------------------------------+
    !
    !   This closed form is identical for steady, real-multiplier, and
    !   complex-multiplier modes. The frequency omega NEVER enters the
@@ -324,21 +361,36 @@ contains
    ! ---------------------------------------------------------------------
    ! INPUTS / OUTPUTS
    ! ---------------------------------------------------------------------
-   !   Reads : BF_<session>0.f00001        periodic-orbit base-flow IC
+   !   Reads : BF_<session>0.f00001        periodic-orbit base-flow IC; its time
+   !                                       stamp is the orbit period T, as in the
+   !                                       Floquet eigensolve (endTime of the .par
+   !                                       file is replaced by it)
    !           dRe<session>0.f<mode>       eigenmode real part
    !           dIm<session>0.f<mode>       eigenmode imaginary part (complex modes)
-   !           eigenvalue file via read_eigenvalue -> (sigma_r, omega)
+   !           Spectre_NSd_conv.dat        row m = (sigma_r, omega) of mode m
    !   Writes: F<mode> spatial budget fields (production components)
-   !           PKE_floquet_<session>0.f<mode>  integrated budget + checks
+   !           PKE_floquet_<session>0.f<mode>  integrated budget + checks, one
+   !                                       number per line:
+   !                                       1-10  integrals of the 10 budget fields
+   !                                             (1-9 production, 10 = -Dbar)
+   !                                       11    total production
+   !                                       12    production - dissipation
+   !                                       13    Ebar
+   !                                       14    sigma_r from the budget (with Sbar)
+   !                                       15    Sbar, sponge damping
    !
    ! ---------------------------------------------------------------------
    ! ASSUMPTIONS, CONVENTIONS, AND LIMITATIONS (read before trusting)
    ! ---------------------------------------------------------------------
    !   - Mode normalisation is irrelevant to sigma_r because it cancels in
    !     the ratio (Pbar - Dbar)/(2 Ebar); Ebar carries the same scale.
-   !   - The orbit integral uses a first-order rectangle rule; the closure
-   !     error therefore scales with dt and shrinks as the orbit is
-   !     resolved more finely.
+   !   - The orbit integral uses a rectangle rule at the end of each step.
+   !     The integrand is periodic, so the rule is accurate, and halving dt
+   !     moved the closure of flip_flop_re62 by about a fifth of its error.
+   !     Most of the remaining error comes from the space discretisation of
+   !     the production and dissipation kernels: sigma_r is the small
+   !     difference of two larger terms (about ten times smaller than
+   !     either), so an error of 0.15 % in one term shows as 1 % in sigma_r.
    !   - The factor-of-1/2 energy convention lives in the compute_* helpers
    !     (see their docstrings); production and dissipation share it so the
    !     ratio is convention-independent.
@@ -365,7 +417,13 @@ contains
    !     before any novelty claim. See docs/pke-periodic-orbit.md sec. 7-8.
    !   - Validity rests on div q = 0 and boundaries that kill the surface
    !     work terms (closed/no-slip or periodic) — the standard setting for
-   !     these flows.
+   !     these flows. The sponge force is counted (Sbar). The energy flux
+   !     through an open outflow boundary is not counted, so keep the
+   !     sponge between the region of interest and the outflow: the flux is
+   !     then negligible. All integrals use the full mass matrix bm1, not
+   !     the Krylov mass matrix bm1s that blanks the sponge zone.
+   !   - Several modes: mode m uses row m of Spectre_NSd_conv.dat for
+   !     sigma_r and omega. The file must hold at least maxmodes rows.
    !
    ! ---------------------------------------------------------------------
    ! REFERENCES
@@ -399,10 +457,15 @@ contains
       !                            steady budget for direct comparison.
       !       budget_avg(:,10)   : the orbit-averaged dissipation field.
       !       energy_avg(:)      : the orbit-averaged PKE density field.
+      !       sponge_avg(:)      : the orbit-averaged sponge damping density
+      !                            s*|q|^2/2 with s = spng_st*spng_fn, in the
+      !                            same 1/2 convention as energy_avg. Stays
+      !                            zero when the sponge is off.
       !       integrals(1:10)    : volume integrals of the 10 budget fields;
       !                            sum(1:9)=Pbar, integrals(10)=Dbar.
       real, allocatable :: budget_avg(:, :)
       real, allocatable :: energy_avg(:)
+      real, allocatable :: sponge_avg(:)
       real, dimension(10) :: integrals
       real, allocatable :: prod_x(:), prod_y(:), prod_z(:), diss_tmp(:)
 
@@ -420,18 +483,28 @@ contains
       logical, allocatable :: has_im_m(:) ! per-mode: dIm present & complex
 
       !     ----- Eigenvalue / scalar diagnostics -----
-      !       sigma_r, omega : the Floquet exponent mu = sigma_r + i*omega.
+      !       sigma_m, omega_m : row m of the eigenvalue file, one per mode.
+      !       sigma_r, omega : the Floquet exponent mu = sigma_r + i*omega of
+      !                        the mode being analysed.
       !       period         : orbit period T = nsteps*dt (averaging window).
       !       growth_corr    : exp(-2*sigma_r*t), undoes modal growth.
       !       weight         : per-step orbit-average weight = growth_corr*dt/T.
       !       E_bar          : orbit- and volume-averaged energy Ebar.
+      !       sponge_bar     : orbit- and volume-averaged sponge damping Sbar.
       !       sigma_check    : growth rate reconstructed from the budget.
       !       rel_error      : |sigma_check - sigma_r|/|sigma_r| (closure test).
+      !       e_first, e_last: energy of the seed and of the marched field after
+      !                        one period, summed over the a and b passes.
+      !       sigma_E        : ln(e_last/e_first)/(2T). It needs no space
+      !                        derivatives, so it separates a drifting or
+      !                        under-converged mode from an error in the kernels.
+      real, allocatable :: sigma_m(:), omega_m(:)
       real :: sigma_r, omega, period, growth_corr, weight
-      real :: E_bar, sigma_check, rel_error
+      real :: E_bar, sponge_bar, sigma_check, rel_error
+      real :: e_first, e_last, sigma_E
 
       !     ----- Miscellaneous -----
-      real :: glsc2
+      real :: glsc2, glsc3
       integer :: i, j, k, mode, m, col
       character(len=80) :: filename
       character(len=6) :: mode_str
@@ -454,19 +527,24 @@ contains
       allocate (prod_x(lv), prod_y(lv), prod_z(lv), diss_tmp(lv))
 
       !     #####
-      !     #####     READ EIGENVALUE
+      !     #####     READ EIGENVALUES
       !     #####
-      !     The Floquet exponent mu = sigma_r + i*omega is read from the
-      !     eigensolver output. Both parts steer the rest of the routine:
-      !     sigma_r sets the growth correction exp(-2*sigma_r*t) applied to
-      !     every sample, and omega decides whether the mode is complex
-      !     (omega /= 0 -> the dIm pass below runs) or real (omega ~ 0 ->
-      !     the dIm pass is skipped and the budget reduces to the real case).
+      !     The Floquet exponent mu = sigma_r + i*omega of every mode is read
+      !     from the eigensolver output, row m for mode m. Both parts steer
+      !     the rest of the routine: sigma_r sets the growth correction
+      !     exp(-2*sigma_r*t) applied to every sample, and omega decides
+      !     whether the mode is complex (omega /= 0 -> the dIm pass below
+      !     runs) or real (omega ~ 0 -> the dIm pass is skipped and the
+      !     budget reduces to the real case). An earlier version read row 1
+      !     only and used it for every mode, so a mode with another exponent
+      !     was weighted with the wrong growth rate.
 
-      call read_eigenvalue(sigma_r, omega)
+      allocate (sigma_m(maxmodes), omega_m(maxmodes))
+      call read_mode_eigenvalues(sigma_m, omega_m, maxmodes)
       if (nid == 0) then
-         write (6, *) 'Floquet PKE budget: sigma_r =', sigma_r
-         write (6, *) 'Floquet PKE budget: omega   =', omega
+         do m = 1, maxmodes
+            write (6, *) 'Floquet PKE budget: mode', m, ' sigma_r =', sigma_m(m), ' omega =', omega_m(m)
+         end do
       end if
 
       !     #####
@@ -479,6 +557,22 @@ contains
       !         integrator starts the orbit from the correct point.
       write (filename, '(a,a,a)') 'BF_', trim(SESSION), '0.f00001'
       call load_fld(filename)
+
+      !     --> The orbit period is the time stamp of the base-flow file. The
+      !         Floquet eigensolve takes it from there too (param(10) = time in
+      !         the eigensolver), so the modes read below belong to that period.
+      !         endTime of the .par file is only a fallback for a file with no
+      !         time stamp. The flip_flop_re62 stage kept the initial guess of
+      !         the Newton run (8.73356) in its .par file, while the converged
+      !         orbit has T = 8.815177: the modes were marched over a period
+      !         0.9 % short and the base orbit was cut before it closed.
+      if (time > 0.0d0) then
+         if (nid == 0 .and. abs(param(10) - time) > 1.0d-6*time) write (6, *) &
+            'WARNING: endTime of the .par file (', param(10), ') is not the period stored in ', &
+            trim(filename), ' (', time, '); the stored period is used.'
+         param(10) = time
+      end if
+      call bcast(param(10), wdsize)
 
       !     --> Configure the linearised time stepper. This sets nsteps and dt
       !         from the .par (param(10) = end time), i.e. it fixes how the
@@ -515,7 +609,7 @@ contains
          call opcopy(sRe_x(1, m), sRe_y(1, m), sRe_z(1, m), vx, vy, vz)
          if (ifto) call copy(sRe_t(1, m), t, nt)
 
-         if (abs(omega) > 1.0d-12) then
+         if (abs(omega_m(m)) > 1.0d-12) then
             write (filename, '(a,a,a,a)') 'dIm', trim(SESSION), '0.f', trim(mode_str)
             inquire (file=filename, exist=has_im_m(m))
             if (has_im_m(m)) then
@@ -606,6 +700,7 @@ contains
       !     --> Allocate budget accumulators on heap
       allocate (budget_avg(lv, 10))
       allocate (energy_avg(lv))
+      allocate (sponge_avg(lv))
 
       !     #####
       !     #####     LOOP OVER MODES
@@ -618,7 +713,14 @@ contains
 
          budget_avg = 0.0d0
          energy_avg = 0.0d0
+         sponge_avg = 0.0d0
          integrals = 0.0d0
+         e_first = 0.0d0
+         e_last = 0.0d0
+
+         !        --> Exponent of this mode (row `mode` of the eigenvalue file).
+         sigma_r = sigma_m(mode)
+         omega = omega_m(mode)
 
          !        --> Mode number formats the file suffix (dRe...0.f00001 etc).
          write (mode_str, '(i5.5)') mode
@@ -645,6 +747,14 @@ contains
 
          ifbase = .false.
          time = 0.0d0
+
+         !           --> Energy of the seed. Together with the energy after one
+         !               period (e_last) it gives sigma_E without any space
+         !               derivative. The 2D guard keeps the unused z field out.
+         e_first = e_first + 0.5d0*(glsc3(bm1, sRe_x(1, mode), sRe_x(1, mode), nv) &
+                                    + glsc3(bm1, sRe_y(1, mode), sRe_y(1, mode), nv))
+         if (if3d) e_first = e_first + 0.5d0*glsc3(bm1, sRe_z(1, mode), sRe_z(1, mode), nv)
+
          do istep = 1, nsteps
 
             !           --> Log progress
@@ -731,7 +841,24 @@ contains
                                *(vx_d(i)**2 + vy_d(i)**2 + vz_d(i)**2)
             end do
 
+            !           --> Sponge damping: the linearised solver adds the force
+            !               -s q with s = spng_st*spng_fn (nekStab_forcing), which
+            !               removes s|q|^2 from dE/dt. Same 1/2 convention and
+            !               weight as the energy. Skipped when the sponge is off,
+            !               where spng_fn is not set.
+            if (spng_st /= 0.0d0) then
+               do i = 1, nv
+                  sponge_avg(i) = sponge_avg(i) + weight*0.5d0*spng_st*spng_fn(i) &
+                                  *(vx_d(i)**2 + vy_d(i)**2 + vz_d(i)**2)
+               end do
+            end if
+
          end do ! istep
+
+         !           --> Energy after one period (vx_d holds the last step).
+         e_last = e_last + 0.5d0*(glsc3(bm1, vx_d, vx_d, nv) &
+                                  + glsc3(bm1, vy_d, vy_d, nv) &
+                                  + glsc3(bm1, vz_d, vz_d, nv))
 
          !        ─────────────────────────────────────────
          !        PASS 2: dIm ORBIT INTEGRATION + ACCUMULATION
@@ -762,6 +889,12 @@ contains
             !               referenced to the same orbit phase as PASS 1.
             ifbase = .false.
             time = 0.0d0
+
+            !              --> Energy of the b seed (see PASS 1).
+            e_first = e_first + 0.5d0*(glsc3(bm1, sIm_x(1, mode), sIm_x(1, mode), nv) &
+                                       + glsc3(bm1, sIm_y(1, mode), sIm_y(1, mode), nv))
+            if (if3d) e_first = e_first + 0.5d0*glsc3(bm1, sIm_z(1, mode), sIm_z(1, mode), nv)
+
             do istep = 1, nsteps
 
                !           --> Log progress
@@ -822,7 +955,20 @@ contains
                                   *(vx_d(i)**2 + vy_d(i)**2 + vz_d(i)**2)
                end do
 
+               !           --> Sponge damping for the dIm part (see PASS 1)
+               if (spng_st /= 0.0d0) then
+                  do i = 1, nv
+                     sponge_avg(i) = sponge_avg(i) + weight*0.5d0*spng_st*spng_fn(i) &
+                                     *(vx_d(i)**2 + vy_d(i)**2 + vz_d(i)**2)
+                  end do
+               end if
+
             end do ! istep
+
+            !              --> Energy of the b field after one period
+            e_last = e_last + 0.5d0*(glsc3(bm1, vx_d, vx_d, nv) &
+                                     + glsc3(bm1, vy_d, vy_d, nv) &
+                                     + glsc3(bm1, vz_d, vz_d, nv))
          end if ! has_im (PASS 2)
 
          !        ─────────────────────────────────────────
@@ -838,10 +984,11 @@ contains
             integrals(i) = glsc2(bm1, budget_avg(:, i), nv)
          end do
          E_bar = glsc2(bm1, energy_avg, nv)
+         sponge_bar = glsc2(bm1, sponge_avg, nv)
 
          !        --> Growth rate reconstructed purely from the energy budget:
-         !            sigma_check = (Pbar - Dbar) / (2 Ebar) physically, but two
-         !            code conventions collapse the prefactor and flip a sign:
+         !            sigma_check = (Pbar - Dbar - Sbar) / (2 Ebar) physically, but
+         !            two code conventions collapse the prefactor and flip a sign:
          !            (1) integrals(10) stores the VISCOUS ENERGY CONTRIBUTION
          !                = -Dbar (compute_dissipation returns 0.5*q.lap(q)*nu,
          !                whose integral is negative), so Pbar - Dbar is
@@ -850,21 +997,32 @@ contains
          !                0.5, i.e. they return HALF the physical P and D. With
          !                E_bar = <0.5 int |q|^2> (also half), the 2's cancel:
          !                sigma = (Pphys-Dphys)/(2 Ebar) = (Pcode+int10)/Ebar.
+         !            (3) sponge_bar is accumulated with the same 1/2, so it enters
+         !                as -sponge_bar next to Pcode+int10.
          !            Verified against the cylinder Re=100 leading mode: the budget
          !            reproduces sigma_eig=0.1248 exactly with this form (the old
          !            (sum-int10)/(2 Ebar) gave 0.099 - wrong). max() guards the
          !            (physically impossible) zero-energy divide.
-         sigma_check = (sum(integrals(1:9)) + integrals(10)) &
+         sigma_check = (sum(integrals(1:9)) + integrals(10) - sponge_bar) &
                        /max(E_bar, 1.0d-30)
 
          !        --> Closure metric: agreement between the budget-derived
          !            growth rate and the eigenvalue. A small relative error
-         !            (typically a few percent, limited by the first-order
-         !            orbit quadrature) certifies that eigenmode, base orbit,
-         !            and budget are mutually consistent; a large one is a red
-         !            flag to investigate before trusting the decomposition.
+         !            (5e-4 on the closed lid_driven_re3600 cavity, 1.2 % on
+         !            flip_flop_re62 with its sponge and open outflow) certifies
+         !            that eigenmode, base orbit, and budget are mutually
+         !            consistent; a large one is a red flag to investigate
+         !            before trusting the decomposition.
          rel_error = abs(sigma_check - sigma_r) &
                      /max(abs(sigma_r), 1.0d-30)
+
+         !        --> Second check, without space derivatives: the energy of the
+         !            marched mode after one period against the energy of the seed.
+         !            For an exact Floquet mode e_last/e_first = exp(2 sigma_r T).
+         !            If this one is off, the mode or the period is wrong; if it
+         !            agrees and the budget closure does not, the kernels or a
+         !            missing term are at fault.
+         sigma_E = log(max(e_last, 1.0d-300)/max(e_first, 1.0d-300))/(2.0d0*period)
 
          if (nid == 0) then
             write (6, *) ''
@@ -878,12 +1036,16 @@ contains
             write (6, '(A,E15.7)') &
                '  relative error       = ', rel_error
             write (6, '(A,E15.7)') &
+               '  sigma_r (energy)     = ', sigma_E
+            write (6, '(A,E15.7)') &
                '  E_bar                = ', E_bar
             write (6, '(A,E15.7)') &
                '  P_bar (total)        = ', &
                sum(integrals(1:9))
             write (6, '(A,E15.7)') &
                '  D_bar                = ', integrals(10)
+            write (6, '(A,E15.7)') &
+               '  S_bar (sponge)       = ', sponge_bar
             do i = 1, 10
                write (6, '(A,I2,A,E15.7)') &
                   '  Integral ', i, ' = ', integrals(i)
@@ -916,9 +1078,11 @@ contains
 
          !        --> Scalar summary file PKE_floquet_<session>0.f<mode>:
          !            the 10 integrals, then total production sum(1:9), the net
-         !            P-D, the averaged energy E_bar, and the budget growth rate
-         !            sigma_check. This is the machine-readable record used to
-         !            tabulate the closure check across cases.
+         !            P-D, the averaged energy E_bar, the budget growth rate
+         !            sigma_check (sponge included) and the sponge damping
+         !            sponge_bar. This is the machine-readable record used to
+         !            tabulate the closure check across cases. The sponge value
+         !            comes last so the earlier lines keep their position.
          if (nid == 0) then
             write (filename, '(A,A,A,A)') &
                'PKE_floquet_', trim(SESSION), '0.f', &
@@ -934,6 +1098,7 @@ contains
                sum(integrals(1:9)) + integrals(10)
             write (NEKSTAB_UNIT_PKE, '(1E15.7)') E_bar
             write (NEKSTAB_UNIT_PKE, '(1E15.7)') sigma_check
+            write (NEKSTAB_UNIT_PKE, '(1E15.7)') sponge_bar
             close (NEKSTAB_UNIT_PKE)
          end if
 
@@ -942,6 +1107,8 @@ contains
       !     --> Cleanup
       if (allocated(budget_avg)) deallocate (budget_avg)
       if (allocated(energy_avg)) deallocate (energy_avg)
+      if (allocated(sponge_avg)) deallocate (sponge_avg)
+      if (allocated(sigma_m)) deallocate (sigma_m, omega_m)
       if (allocated(uor)) deallocate (uor, vor, wor)
       if (allocated(tor)) deallocate (tor)
 

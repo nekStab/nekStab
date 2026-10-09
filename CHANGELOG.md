@@ -258,6 +258,25 @@ description for the 2.0 series; entries here are the per-tag deltas.
   trial and the orbit storage grows when a trial orbit is longer than
   the allocation. This closes the rc4 known limitation; the flag is now
   safe for UPO runs.
+- The Floquet energy budget (mode 4.11) closes. It had three errors, and the
+  closure it prints is the check that finds them. (1) The balance left out the
+  damping of the sponge force, so a case with a sponge read the sponge as
+  growth: `flip_flop_re62` gave `sigma_r = 8.478e-3` for the eigenvalue
+  7.896e-3 (7.4 %). The routine now adds the sponge loss `S_bar`, and the
+  closure is 1.2 % (0.99 % at half the time step). `S_bar` is printed and is the
+  last line of `PKE_floquet_*`; the earlier lines keep their position. The flux
+  through an open outflow is still not counted: keep the sponge in front of it.
+  (2) The period was `endTime` of the `.par` file, while the Floquet eigensolve
+  takes it from the time stamp of `BF_*0.f00001`. The `flip_flop_re62` stage
+  kept the initial guess of its Newton run (8.73356) and marched 0.9 % short of
+  the converged period (8.815177). The routine now takes the period from the time
+  stamp and prints a warning when the `.par` value differs. (3) Every mode used
+  row 1 of `Spectre_NSd_conv.dat` for its growth rate; mode m now reads row m.
+  On the closed `lid_driven_re3600` cavity (a steady base flow, no sponge, two
+  modes with different exponents) the closures are 5.1e-4 for the real mode and
+  3.5e-4 for the complex mode; mode 2 gave an error of 324 % before. The log also
+  prints `sigma_r (energy)`, the exponent from the energy of the marched mode
+  after one period, which has no space derivative in it.
 
 ## [2.0.0-rc4] - 2026-06-12
 
