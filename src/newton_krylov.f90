@@ -682,8 +682,12 @@ contains
    ! - maxiter: Maximum number of GMRES iterations
    ! - tol: Convergence tolerance for GMRES
    ! - dtol: Target Newton tolerance (for output only)
+   ! - final_res (optional): squared residual of the returned solution,
+   !   recomputed from sol after the last restart. A caller that needs
+   !   convergence compares it with tol; the routine itself does not stop
+   !   the run when it ends above tol.
    !-----------------------------------------------------------------------
-   subroutine ts_gmres(rhs, sol, maxiter, ksize, tol, calls, k_out, newton_iter, dtol)
+   subroutine ts_gmres(rhs, sol, maxiter, ksize, tol, calls, k_out, newton_iter, dtol, final_res)
 
       !     Implementation of simple time-stepper GMRES to be part of the Newton-Krylov solver
       !     for fixed point computation. The rank of the Krylov subspace is set as the user parameter k_dim.
@@ -695,6 +699,7 @@ contains
       real, intent(in) :: tol, dtol
       integer, intent(out) :: calls, k_out
       integer, intent(in) :: newton_iter
+      real, intent(out), optional :: final_res
 
       type(krylov_vector) :: dq
       type(krylov_vector), dimension(:), allocatable :: Q
@@ -865,6 +870,7 @@ contains
       deallocate (Q, H, yvec, evec)
 
       k_out = nbasis ! Save final column count
+      if (present(final_res)) final_res = beta2
 
       if (opened_local_logs) call close_gmres_log_units()
 

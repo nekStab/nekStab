@@ -396,7 +396,7 @@ contains
       character(len=3) :: prefix
       real :: alpha
       integer :: calls, k_out, newton_iter
-      real :: dtol
+      real :: dtol, gmres_tol, gmres_res
 
       !     --> Load base flow.
       write (filename, '(a, a, a)') 'BF_', trim(session), '0.f00001'
@@ -427,8 +427,25 @@ contains
 
       !     --> Solve the linear system.
       dtol = 1.0d-6
+      gmres_tol = 1.0d-6
       newton_iter = 0
-      call ts_gmres(rhs, sol, 10, k_dim, 1.0d-6, calls, k_out, newton_iter, dtol)
+      call ts_gmres(rhs, sol, 10, k_dim, gmres_tol, calls, k_out, newton_iter, dtol, gmres_res)
+
+      !     --> ts_gmres does not stop the run when it ends above the target, so
+      !         say so here. gmres_res is the squared residual of sol relative to the
+      !         normalized rhs. On cylinder Re = 100 (k_dim = 50, 10 restarts, T = 1)
+      !         it ended at 1.35e-2 against the target of 1e-6 (DOC.md, "Steady force
+      !         sensitivity"), and the field was written without a message. The test
+      !         is written so that NaN also takes the warning branch.
+      if (.not. (gmres_res < gmres_tol)) then
+         if (nid == 0) then
+            write (6, *) 'nekStab: WARNING: the steady force sensitivity did not converge.'
+            write (6, '(A,1PE10.3,A,1PE10.3)') 'nekStab: WARNING: GMRES ended at a squared relative residual of', &
+               gmres_res, ' against a target of', gmres_tol
+            write (6, *) 'nekStab: WARNING: the field is written, but it does not solve the linear'
+            write (6, *) 'nekStab: WARNING: system to the target. Treat it as unverified.'
+         end if
+      end if
 
       !     -->
       call k_cmult(sol, alpha)
