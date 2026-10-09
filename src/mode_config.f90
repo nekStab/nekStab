@@ -298,18 +298,26 @@ contains
 ! Purpose:
 !   Backward-compatible decoder that maps uparam(1) floating-point
 !   values to boolean mode flags.
-!   Primary path: integer select case on nint(uparam(1)*100) using
-!   MODE_* constants from nekstab_mode_codes.
-!   Fallback (case default): legacy tolerance-based float comparison
-!   for any value not matched by the primary path.
+!   Integer select case on nint(uparam(1)*100) using MODE_* constants from
+!   nekstab_mode_codes. A value that is not a mode code stops the run with an
+!   error; it never falls back to DNS.
 !-----------------------------------------------------------------------
    subroutine nekStab_mode_from_uparam
       real :: up1
       real, parameter :: tol = 1.0e-4
       integer :: icode
+      character(len=80) :: msg
 
       up1 = uparam(1)
       icode = uparam_to_mode_code(real(up1, 8))
+
+      !  nint() alone would read 3.104 as 3.1. Accept only a value within tol of a
+      !  code (the tolerance the former float fallback used), so a typo cannot
+      !  select a neighbouring mode.
+      if (abs(real(up1, 8) - 0.01d0*icode) > tol) then
+         write (msg, '(a,f9.4)') 'Unknown mode, userParam01 = ', up1
+         call nekStab_error(trim(msg)//'. It is not a mode code (see the list in the docs).')
+      end if
 
       !  Primary decoder: integer select case on nint(uparam(1)*100).
       !  Unambiguous and collision-free (see docs/mode-code-constants-design.md).
@@ -400,83 +408,13 @@ contains
          ifspod = .true.
 
       case default
-         !  Legacy fallback: tolerance-based float comparison.
-         !  Handles uparam(1) values not exactly representable after *100.
-         !  Note: this path exists for .usr files from v1.0 that used the float
-         !  uparam(1) encoding directly; the icode path (from mode_codes) is
-         !  preferred for new cases (historical compatibility preserved).
-         if (abs(up1 - 0.0) < tol) then
-            ifDNS = .true.
-         elseif (abs(up1 - 0.1) < tol) then
-            ifLinDNS = .true.
-         elseif (abs(up1 - 1.1) < tol) then
-            ifSFD = .true.
-         elseif (abs(up1 - 1.2) < tol) then
-            ifBoostConv = .true.
-         elseif (abs(up1 - 1.3) < tol) then
-            ifDMT = .true.
-         elseif (abs(up1 - 1.4) < tol) then
-            ifTDF = .true.
-         elseif (abs(up1 - 2.0) < tol) then
-            isNewtonFP = .true.
-         elseif (abs(up1 - 2.1) < tol) then
-            isNewtonPO = .true.
-         elseif (abs(up1 - 2.2) < tol) then
-            isNewtonPO_T = .true.
-         elseif (abs(up1 - 3.1) < tol) then
-            isDirect = .true.
-         elseif (abs(up1 - 3.11) < tol) then
-            isFloquetDirect = .true.
-         elseif (abs(up1 - 3.2) < tol) then
-            isAdjoint = .true.
-         elseif (abs(up1 - 3.21) < tol) then
-            isFloquetAdjoint = .true.
-         elseif (abs(up1 - 3.3) < tol) then
-            isTransientGrowth = .true.
-         elseif (abs(up1 - 3.31) < tol) then
-            isFloquetTransientGrowth = .true.
-         elseif (abs(up1 - 4.0) < tol) then
-            ifEnergyBudget = .true.
-            ifWavemaker = .true.
-            ifBFSensitivity = .true.
-         elseif (abs(up1 - 4.1) < tol) then
-            ifEnergyBudget = .true.
-         elseif (abs(up1 - 4.11) < tol) then
-            ifEnergyBudget = .true.
-            ifFloquet = .true.
-         elseif (abs(up1 - 4.2) < tol) then
-            ifWavemaker = .true.
-         elseif (abs(up1 - 4.3) < tol) then
-            ifBFSensitivity = .true.
-         elseif (abs(up1 - 4.41) < tol) then
-            ifForceSensReal = .true.
-         elseif (abs(up1 - 4.42) < tol) then
-            ifForceSensImag = .true.
-         elseif (abs(up1 - 4.43) < tol) then
-            ifDeltaForcing = .true.
-         elseif (abs(up1 - 4.50) < tol) then
-            ifAnimateMode = .true.
-            animate_mode_num = int(uparam(7))
-         elseif (abs(up1 - 4.51) < tol) then
-            ifAnimateBFDeform = .true.
-            animate_mode_num = int(uparam(7))
-         elseif (abs(up1 - 4.52) < tol) then
-            ifAnimateFloquet = .true.
-            animate_mode_num = int(uparam(7))
-         elseif (abs(up1 - 5.0) < tol) then
-            ifotd = .true.
-         elseif (abs(up1 - 6.0) < tol) then
-            ifpod = .true.
-            ifdmd = .true.
-            ifspod = .true.
-         elseif (abs(up1 - 6.1) < tol) then
-            ifpod = .true.
-         elseif (abs(up1 - 6.2) < tol) then
-            ifdmd = .true.
-         elseif (abs(up1 - 6.3) < tol) then
-            ifspod = .true.
-         end if
-
+         !  An unknown code used to leave every flag false, and nekStab_validate_mode
+         !  then fell back to DNS with a warning: a typo such as userParam01 = 3.15
+         !  ran a long DNS instead of the stability analysis that was meant.
+         write (msg, '(a,f9.4)') 'Unknown mode, userParam01 = ', up1
+         call nekStab_error(trim(msg)//'. Valid: 0, 0.1, 1.1-1.4, 2.0-2.2, '// &
+                            '3.1, 3.11, 3.2, 3.21, 3.3, 3.31, 4, 4.1-4.3, 4.11, '// &
+                            '4.41-4.43, 4.5-4.52, 5, 6, 6.1-6.3')
       end select
 
    end subroutine nekStab_mode_from_uparam
