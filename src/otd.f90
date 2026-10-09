@@ -585,6 +585,11 @@ contains
          end if
       end if
 
+            if (otd_FTLEPeriod > 0.0d0) then
+               open (unit=OTD_UNIT_FTLE, file='otd_ftle_period.dat', &
+                     status='replace', form='formatted')
+               close (OTD_UNIT_FTLE)
+            end if
       if (pfrac < dt) then
          ! docs/otd-spec.md §1.6: split a boundary-crossing step and linearly
          ! interpolate Lr at the period boundary before resetting the integral.
@@ -605,6 +610,15 @@ contains
          end if
 
          call otd_zero_FTLE
+            !  One line per completed period: the exponents averaged over exactly one
+            !  period. otd_ftle.dat holds the running value inside the period.
+            if (otd_FTLEPeriod > 0.0d0) then
+               write (fmte, '("(",I0,"(E15.7,1X))")') npert + 1
+               open (unit=OTD_UNIT_FTLE, file='otd_ftle_period.dat', &
+                     position='append', status='unknown', form='formatted')
+               write (OTD_UNIT_FTLE, fmte) time, (FTLEv(mode), mode=1, npert)
+               close (OTD_UNIT_FTLE)
+            end if
          call copy(Lrp, Lrc, lpert*lpert)
          call copy(Lrc, otd_Lr, lpert*lpert)
          call integrate_trap(Lrp, Lrc, period, pfrac)
