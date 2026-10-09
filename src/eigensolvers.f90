@@ -30,9 +30,9 @@ module nekstab_eigensolvers
                                  ifpo, ifpsco, idpss, ifres, ifseed_load, ifseed_nois, &
                                  ifseed_symm, ifto, isFloquetAdjoint, isFloquetDirect, &
                                  isFloquetTransientGrowth, isNewtonPO, istep, isDirect, &
-                                 isTransientGrowth, k_dim, ldim, ldimt, lelt, lelv, lx1, &
+                                 isTransientGrowth, isAdjoint, k_dim, ldim, ldimt, lelt, lelv, lx1, &
                                  lx2, ly1, ly2, lz1, lz2, maxmodes, nekStab_dp, &
-                                 nekStab_log, NEKSTAB_UNIT_EXPORT, NEKSTAB_UNIT_FICH1, &
+                                 nekStab_error, nekStab_log, NEKSTAB_UNIT_EXPORT, NEKSTAB_UNIT_FICH1, &
                                  NEKSTAB_UNIT_FICH2, NEKSTAB_UNIT_FICH3, &
                                  NEKSTAB_UNIT_FICH4, NEKSTAB_UNIT_HESS, nelfld, nelgv, &
                                  nelv, nid, nof, np, npscal, nsteps, nx1, nx2, ny1, ny2, nz1, &
@@ -211,10 +211,15 @@ contains
 
          elseif (ifseed_load) then ! loading initial seed (e.g. Re_ )
 
-            if (uparam(01) >= 3.0d0 .and. uparam(01) < 3.2d0) then
+            !  Mode flags, not float ranges of uparam(1): direct (3.1, 3.11) loads
+            !  the direct mode, adjoint (3.2, 3.21) the adjoint mode. Transient
+            !  growth has no seed file, and filename used to stay undefined there.
+            if (isDirect .or. isFloquetDirect) then
                write (filename, '(a,a,a)') 'dRe', trim(SESSION), '0.f00001'
 
-            elseif (uparam(01) >= 3.2d0 .and. uparam(01) < 3.3d0) then
+            elseif (isAdjoint .or. isFloquetAdjoint) then
+            else
+               call nekStab_error('ifseed_load needs a direct or adjoint mode')
                write (filename, '(a,a,a)') 'aRe', trim(SESSION), '0.f00001'
             end if
 
