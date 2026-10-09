@@ -391,7 +391,7 @@ contains
    !     moved the closure of flip_flop_re62 by about a fifth of its error.
    !     Most of the remaining error comes from the space discretisation of
    !     the production and dissipation kernels: sigma_r is the small
-   !     difference of two larger terms (about ten times smaller than
+   !     difference of two larger terms (about eight times smaller than
    !     either), so an error of 0.15 % in one term shows as 1 % in sigma_r.
    !   - The factor-of-1/2 energy convention lives in the compute_* helpers
    !     (see their docstrings); production and dissipation share it so the
@@ -566,7 +566,7 @@ contains
       !         endTime of the .par file is only a fallback for a file with no
       !         time stamp. The flip_flop_re62 stage kept the initial guess of
       !         the Newton run (8.73356) in its .par file, while the converged
-      !         orbit has T = 8.815177: the modes were marched over a period
+      !         orbit has T = 8.8152: the modes were marched over a period
       !         0.9 % short and the base orbit was cut before it closed.
       if (time > 0.0d0) then
          if (nid == 0 .and. abs(param(10) - time) > 1.0d-6*time) write (6, *) &
