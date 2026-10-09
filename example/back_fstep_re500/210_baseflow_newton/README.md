@@ -32,28 +32,29 @@ sbatch run.local.slurm                   # 8 ranks, both phases in one job
 phase-1 file when it ends:
 
 1. Phase 1 (DNS settle): `bfs_dns.par` — uniform IC to steady recirculation on
-   this mesh, ~5 min, writes `bfs0.f00001..4`.
+   this mesh, endTime 400, 483 s on 8 ranks (Jean Zay), writes `bfs0.f00001..4`.
 2. Phase 2 (Newton polish): `bfs_newton.par` (`startFrom = bfs0.f00004`) —
-   converges in ~4 iterations and writes `BF_bfs0.f00001`.
+   converges in 4 iterations (639 s on 8 ranks, Jean Zay) and writes `BF_bfs0.f00001`.
 
 The converged steady base flow is written to `BF_bfs0.f00001`.
 
-## Convergence record (validated 2026-06-18, pop-os, 8 ranks)
-DNS Phase 1 relaxes monotonically; t=300→t=400 fields differ by 2.5e-2 (slow
-recirculation-bubble tail — exactly the mode Newton kills fast). Newton Phase 2
-from that seed:
+## Convergence record (gate run 2026-10-09, Jean Zay, ifort 2021.9, 8 ranks)
+DNS Phase 1 relaxes monotonically; the t=300 and t=400 fields differ by 2.5e-2
+(relative l2 norm of the velocity; slow recirculation-bubble tail — exactly the
+mode Newton kills fast). Newton Phase 2 moves the t=400 field by a further
+2.0e-2 (same norm) to the fixed point. Newton residuals from that seed:
 
 | Newton iter | residual  |
 |-------------|-----------|
 | 1           | 7.03e-7   |
 | 2           | 2.75e-7   |
-| 3           | 1.00e-7   |
-| 4           | 9.67e-9   → **converged** (target 1e-8) |
+| 3           | 1.01e-7   |
+| 4           | 9.75e-9   → **converged** (target 1e-8) |
 
-Convergence is ~linear (≈2.7× per step) rather than quadratic, and the inner
-Arnoldi count grows (49→84→32 vectors): the near-marginal eigenvalue dominates
-the residual. This is physics (Re=500 near the stability limit), not a solver
-defect — and the reason `k_dim` must stay at 100.
+The residual falls by factors 2.6, 2.7 and 10 per step, which is slower than
+quadratic, and the three GMRES solves use 49, 84 and 32 Arnoldi vectors: the
+near-marginal eigenvalue dominates the residual. This is physics (Re=500 near
+the stability limit), not a solver defect — and the reason `k_dim` must stay at 100.
 
 ## Pitfalls that previously broke this "easy" case
 1. **Foreign seed.** Seeding Newton from a base flow exported by a *different*
@@ -69,6 +70,10 @@ defect — and the reason `k_dim` must stay at 100.
 - `ref/bf.png` base flow, `ref/ic.png` initial guess, `ref/residual.png`.
   Compare the converged `BF_bfs0.f00001` visually against `ref/bf.png`.
   A fresh run regenerates `residu_newton.dat` (target 1e-8).
+- `reference.json` checks three quantities of `residu_newton.dat`: the final residual
+  (below the 1e-8 target), the iteration count (4, tolerance 1) and the first
+  residual (7.03e-7, tolerance 5 %). The last two fail if the run starts from an
+  already converged field.
 
 ## Related
 `../330_transient_growth` consumes this base flow for finite-time optimal
