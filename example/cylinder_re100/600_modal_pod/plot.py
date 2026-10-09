@@ -79,7 +79,8 @@ def main():
     if not spec_file.exists():
         spec_file = CASE_DIR / 'pod_spectrum.dat'
     if spec_file.exists():
-        data = np.genfromtxt(str(spec_file), comments='#')
+        # The first modes carry a fifth column (||Phi||), the others do not: read the four columns all rows have.
+        data = np.genfromtxt(str(spec_file), comments='#', usecols=(0, 1, 2, 3))
         if data.ndim == 2 and data.shape[1] >= 3:
             modes = data[:, 0].astype(int)
             energy_pct = data[:, 2]
