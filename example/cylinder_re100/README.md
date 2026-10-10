@@ -22,6 +22,7 @@ Re_c = 46.6). The Reynolds number of a stage is the (negative) `viscosity` in it
 | `000_dns/` | DNS of the shedding wake; `ci_test/` is the 10-step smoke test of the CI |
 | `110_baseflow_sfd/` | steady base flow by selective frequency damping, six variants: the Akervik and the Casacuberta form, each plain, with dynamic tolerance (`_dyn`), and with dynamic tolerance and OIFS time stepping (`_dyn_oifs`) |
 | `120_baseflow_boostconv/` | steady base flow by BoostConv |
+| `130_baseflow_dmt/` | steady base flow by dynamic mode tracking |
 | `210_baseflow_newton/` | steady base flow by Newton-GMRES, `fp` (fixed tolerance) and `dyn` (dynamic tolerance) |
 | `140_baseflow_meanflow/` | mean flow of the shedding wake, averaged over 25 whole periods; the DNS stops when the average closes |
 | `310_stability_direct/direct/` | direct eigenvalue problem of the steady wake |
