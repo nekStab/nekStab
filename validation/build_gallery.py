@@ -21,6 +21,9 @@ Image src is emitted relative to validation/index.html (for example
 .github/workflows/pages-validation.yml ships the png and gif files of example/
 next to validation/index.html, so the same paths work there.
 
+The same run rewrites the table of verified stages in EXAMPLES.md between the markers
+VERIFIED_START and VERIFIED_END: one row per drawn stage, with the summary of its reference.
+
 Run:  python validation/build_gallery.py [output.html]
 Open: xdg-open validation/index.html
 """
@@ -37,6 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / 'index.html'
 EXAMPLE = ROOT.parent / 'example'
+EXAMPLES_MD = ROOT.parent / 'EXAMPLES.md'
 
 FIGURE_SUFFIXES = ('.png', '.gif')
 
@@ -1952,6 +1956,27 @@ def render_family(family: str, stages: list[Stage]) -> str:
     return ''.join(parts)
 
 
+VERIFIED_START = '<!-- verified:start (written by validation/build_gallery.py from the summary of each ref/reference.json) -->'
+VERIFIED_END = '<!-- verified:end -->'
+
+
+def verified_table(stages: list[Stage]) -> str:
+    """Return the Markdown table of the drawn stages for EXAMPLES.md."""
+    rows = ['| Stage | Re / Ra | Mode | Result |', '|---|---|---|---|']
+    for stage in stages:
+        mode = f'{MODE_NAMES[stage.mode]} ({stage.mode})' if stage.mode in MODE_NAMES else ''
+        summary = ' '.join(stage.summary.split()).replace('|', '\\|')
+        rows.append(f'| `example/{stage.path}/` | {stage.re_tag} | {mode} | {summary} |')
+    return '\n'.join(rows)
+
+
+def examples_md_with_table(text: str, stages: list[Stage]) -> str:
+    """Return the text of EXAMPLES.md with the table between the markers replaced."""
+    start = text.index(VERIFIED_START) + len(VERIFIED_START)
+    end = text.index(VERIFIED_END)
+    return text[:start] + '\n' + verified_table(stages) + '\n' + text[end:]
+
+
 def build_page() -> str:
     """Return the HTML of the gallery for the stage folders in example/."""
     stages = drawn_stages(discover_stages())
@@ -2019,6 +2044,7 @@ def main(argv: list[str] | None = None) -> int:
     stages = discover_stages()
     out.write_text(build_page(), encoding='utf-8')
     drawn = drawn_stages(stages)
+    EXAMPLES_MD.write_text(examples_md_with_table(EXAMPLES_MD.read_text(encoding='utf-8'), drawn), encoding='utf-8')
     print(f'Wrote {out}')
     print(f'  stages drawn: {len(drawn)} of {len(stages)} in {len({s.family for s in drawn})} cases')
     for stage in stages:

@@ -10,6 +10,7 @@ fail when
 - a folder of example/ has no title in build_gallery.FAMILIES;
 - the mode names of the gallery differ from the mode codes of src/mode_codes.f90;
 - validation/index.html differs from the output of build_gallery.py.
+- the table of verified stages in EXAMPLES.md differs from the output of build_gallery.py.
 """
 
 from __future__ import annotations
@@ -169,4 +170,11 @@ def test_every_mode_of_a_stage_has_a_name() -> None:
 def test_the_committed_page_is_the_output_of_the_generator() -> None:
     assert INDEX.read_text(encoding="utf-8") == gallery.build_page(), (
         "validation/index.html is out of date: run python validation/build_gallery.py"
+    )
+
+
+def test_the_table_of_verified_stages_in_examples_md_is_the_output_of_the_generator() -> None:
+    text = (REPO / "EXAMPLES.md").read_text(encoding="utf-8")
+    assert gallery.examples_md_with_table(text, gallery.drawn_stages(STAGES)) == text, (
+        "the table in EXAMPLES.md is out of date: run python validation/build_gallery.py"
     )
