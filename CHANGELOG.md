@@ -6,6 +6,21 @@ description for the 2.0 series; entries here are the per-tag deltas.
 ## [Unreleased]
 
 ### Added
+- DMT filter bank, mode 6.4 (`userParam01 = 6.4`, string `'dmt_bank'`, flag
+  `ifdmtbank`). Second-order filters of the Dynamic Mode Tracking kind, one per chosen
+  frequency, run on the DNS without a force and return the spatial structure of the flow at
+  their frequency as a complex field (`bRe`, `bIm`); a frequency 0 gives the mean flow. The
+  frequencies are registered in `nekStab_usrchk` with `dmt_bank_add(omega, beta)`, at most 8.
+  Each filter is a damped oscillator driven by the flow and integrated exactly for an input
+  that varies linearly between the steps (`dmt_filter.f90`). The amplitude comes from the
+  filtered signal and its derivative, which passes a constant mean flow with no gain; the
+  combination `beta*(q + i*omega*p)` has the gain `i*beta/omega` for it. `dmt_bank_options`
+  sets the length of the history `dmt_bank.dat` (norms of the flow, of what no filter holds,
+  and of each amplitude), the output of the filtered fields at each output step, and a window
+  over which the amplitude is averaged: a filter also passes about `beta/omega` of the
+  neighbouring frequencies, and the average over whole periods removes that ripple (a test
+  with three harmonics on a mean: 5 %, 15 % and 45 % at the last step, 4e-5, 5e-5 and 1e-4 on
+  the average of 10 periods). Mode 1.3 is unchanged.
 - Setup checks at start-up. A Floquet run (direct, adjoint or transient
   growth) now stops with a message when the restart file (the orbit) was
   written at another polynomial order than `lx1` in `SIZE`; Nek5000

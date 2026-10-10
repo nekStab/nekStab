@@ -38,6 +38,7 @@
 | **POD** | Proper Orthogonal Decomposition (energy-ranked modes) |
 | **DMD** | Dynamic Mode Decomposition (frequency-ranked modes) |
 | **SPOD** | Spectral POD (frequency-resolved coherent structures) |
+| **DMT filter bank** | Online second-order filters on the DNS: the spatial structure of the flow at chosen frequencies |
 
 ### Advanced Capabilities
 - **OTD modes** — real-time Lyapunov vectors for chaotic flows
@@ -89,6 +90,7 @@
 | 6.1 | `'pod'` | | Proper Orthogonal Decomposition |
 | 6.2 | `'dmd'` | | Dynamic Mode Decomposition |
 | 6.3 | `'spod'` | | Spectral POD |
+| 6.4 | `'dmt_bank'` | | DMT filter bank: filters on the running DNS at chosen frequencies |
 
 See [DOC.md](DOC.md) for full parameter reference.
 

@@ -29,7 +29,7 @@ module nekstab_mode_config
                                  ifEnergyBudget, ifWavemaker, ifBFSensitivity, &
                                  ifForceSensReal, ifForceSensImag, ifDeltaForcing, &
                                  ifAnimateMode, ifAnimateBFDeform, ifAnimateFloquet, &
-                                 ifotd, ifotdDNS, ifpod, ifdmd, ifspod, ifmvbd
+                                 ifotd, ifotdDNS, ifpod, ifdmd, ifspod, ifdmtbank, ifmvbd
    use nekstab_mode_codes, only: MODE_DNS, MODE_LINDNS, MODE_SFD, MODE_BOOSTCONV, &
                                  MODE_DMT, MODE_TDF, MODE_NEWTON_FP, MODE_NEWTON_PO, &
                                  MODE_NEWTON_POT, MODE_DIRECT, MODE_FLOQUET_DIRECT, &
@@ -40,7 +40,7 @@ module nekstab_mode_config
                                  MODE_FORCE_SENS_IMAG, MODE_DELTA_FORCING, &
                                  MODE_ANIMATE, MODE_ANIMATE_DEFORM, MODE_ANIMATE_FLOQUET, &
                                  MODE_OTD, MODE_OTD_DNS, MODE_MODAL_ALL, MODE_POD, &
-                                 MODE_DMD, MODE_SPOD, uparam_to_mode_code
+                                 MODE_DMD, MODE_SPOD, MODE_DMT_BANK, uparam_to_mode_code
    implicit none
    private
    public :: nekStab_resolve_mode, &
@@ -76,7 +76,7 @@ contains
                           .or. ifAnimateMode .or. ifAnimateBFDeform &
                           .or. ifAnimateFloquet .or. ifotd .or. ifotdDNS &
                           .or. ifDMT &
-                          .or. ifpod .or. ifdmd .or. ifspod
+                          .or. ifpod .or. ifdmd .or. ifspod .or. ifdmtbank
 
       !  Priority 1: String mode (nekstab_mode) - highest priority
       if (len_trim(nekstab_mode) > 0) then
@@ -155,6 +155,7 @@ contains
       ifpod = .false.
       ifdmd = .false.
       ifspod = .false.
+      ifdmtbank = .false.
 
    end subroutine nekStab_clear_mode_flags
 
@@ -261,6 +262,8 @@ contains
          ifdmd = .true.
       case ('spod')
          ifspod = .true.
+      case ('dmt_bank')
+         ifdmtbank = .true.
 
       case default
          call nekStab_error('Unknown nekstab_mode: '//trim(mode_str))
@@ -416,6 +419,8 @@ contains
          ifdmd = .true.
       case (MODE_SPOD)
          ifspod = .true.
+      case (MODE_DMT_BANK)
+         ifdmtbank = .true.
 
       case default
          !  An unknown code used to leave every flag false, and nekStab_validate_mode
@@ -424,7 +429,7 @@ contains
          write (msg, '(a,f9.4)') 'Unknown mode, userParam01 = ', up1
          call nekStab_error(trim(msg)//'. Valid: 0, 0.1, 1.1-1.4, 2.0-2.2, '// &
                             '3.1, 3.11, 3.2, 3.21, 3.3, 3.31, 4, 4.1-4.3, 4.11, '// &
-                            '4.41-4.43, 4.5-4.52, 5, 6, 6.1-6.3')
+                            '4.41-4.43, 4.5-4.52, 5, 6, 6.1-6.4')
       end select
 
    end subroutine nekStab_mode_from_uparam
@@ -456,7 +461,7 @@ contains
           .or. ifAnimateMode .or. ifAnimateBFDeform &
           .or. ifAnimateFloquet) nmodes = nmodes + 1
       if (ifotd) nmodes = nmodes + 1
-      if (ifpod .or. ifdmd .or. ifspod) nmodes = nmodes + 1
+      if (ifpod .or. ifdmd .or. ifspod .or. ifdmtbank) nmodes = nmodes + 1
 
       if (nmodes > 1) then
          call nekStab_error('Multiple conflicting modes active - set only ONE mode category')
@@ -586,6 +591,8 @@ contains
          uparam(1) = 6.2
       elseif (ifspod) then
          uparam(1) = 6.3
+      elseif (ifdmtbank) then
+         uparam(1) = 6.4
       end if
 
    end subroutine nekStab_sync_uparam

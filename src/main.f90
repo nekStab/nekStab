@@ -155,6 +155,7 @@
          ifpod = .false.      ! POD analysis
          ifdmd = .false.      ! DMD analysis
          ifspod = .false.     ! SPOD analysis
+         ifdmtbank = .false.  ! DMT filter bank on the DNS (online)
          ifwinamp = .true.    ! Amplitude normalization (PySPOD compatible)
          use_cgs = .true.     ! CGS2 orthogonalization (2 gop calls vs 2k for MGS)
          ifquasilaminar = .false. ! quasilaminar: prescribed base eddy viscosity
@@ -273,6 +274,7 @@
          call bcast(ifpod, lsize)
          call bcast(ifdmd, lsize)
          call bcast(ifspod, lsize)
+         call bcast(ifdmtbank, lsize)
          call bcast(ifwinamp, lsize)
          call bcast(use_cgs, lsize)
          call bcast(ifquasilaminar, lsize)
@@ -406,7 +408,7 @@
      &      ts_steady_force_sensitivity, delta_forcing, animate_mode_only,
      &      animate_mode
          use nekstab_otd, only: otd
-         use nekstab_dmt, only: dmt
+         use nekstab_dmt, only: dmt, dmt_bank
          use nekstab_modal_analysis, only: modal_analysis
          use nekstab_vectors, only: zero_forcing
          implicit none
@@ -552,6 +554,19 @@
          if (ifpod .or. ifdmd .or. ifspod) then
             call modal_analysis
             call nek_end
+         end if
+
+      !  ═══════════════════════════════════════════════════════════════════
+      !  MODE 6.4: DMT filter bank
+      !
+      !  Online: the DNS runs unforced to endTime and the filters of the
+      !  bank watch it. Same per-step calls as Mode 0.
+      !  ═══════════════════════════════════════════════════════════════════
+         if (ifdmtbank) then
+            call nekStab_outpost
+            call nekStab_comment
+            call zero_forcing
+            call dmt_bank
          end if
 
       end subroutine nekStab

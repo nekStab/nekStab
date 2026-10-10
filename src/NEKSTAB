@@ -80,6 +80,7 @@
       logical :: ifpod ! POD analysis (uparam=6.1)
       logical :: ifdmd ! DMD analysis (uparam=6.2)
       logical :: ifspod ! SPOD analysis (uparam=6.3)
+      logical :: ifdmtbank ! DMT filter bank on the DNS (uparam=6.4)
       logical :: ifwinamp ! Window normalization: .true.=amplitude (PySPOD),
       !                       .false.=energy (Parseval)
 
@@ -98,6 +99,7 @@
       common/nStab_mode_flags/ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod, ifwinamp, use_cgs
       common/nStab_mode_flags/ifnewton_backtrack, ifquasilaminar
       common/nStab_mode_flags/ifKEnorm
+      common/nStab_mode_flags/ifdmtbank
 
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc, dtmaxx

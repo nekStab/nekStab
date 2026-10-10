@@ -43,7 +43,7 @@ program mode_selector_driver
    call add(ifAnimateMode, 'ifAnimateMode'); call add(ifAnimateBFDeform, 'ifAnimateBFDeform')
    call add(ifAnimateFloquet, 'ifAnimateFloquet')
    call add(ifotd, 'ifotd'); call add(ifotdDNS, 'ifotdDNS'); call add(ifpod, 'ifpod'); call add(ifdmd, 'ifdmd')
-   call add(ifspod, 'ifspod')
+   call add(ifspod, 'ifspod'); call add(ifdmtbank, 'ifdmtbank')
    write (6, '(a,f7.3)') trim(line)//' | uparam1=', uparam(1)
 
 contains
@@ -67,6 +67,7 @@ contains
       case ('ifEnergyBudget'); ifEnergyBudget = .true.
       case ('ifWavemaker'); ifWavemaker = .true.
       case ('ifotdDNS'); ifotdDNS = .true.
+      case ('ifdmtbank'); ifdmtbank = .true.
       case ('ifmvbd'); ifmvbd = .true.
       case default
          write (6, '(a)') 'driver: unknown flag '//name

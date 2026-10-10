@@ -27,6 +27,8 @@ $(O)/argsort.o:           $(NS)/argsort.f90           $(O)/nekstab_nek_bridge.o 
 $(O)/lapack_wrapper.o:    $(NS)/lapack_wrapper.f90    $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 # ks_select: Ritz value selection of the Krylov-Schur restart; no Nek5000 dependency.
 $(O)/ks_select.o:         $(NS)/ks_select.f90         $(O)/argsort.o ;$(FC) -c $(FL2_FREE) $< -o $@
+# dmt_filter: oscillator-pair filter of the DMT bank; no Nek5000 dependency.
+$(O)/dmt_filter.o:        $(NS)/dmt_filter.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/vortex.o:            $(NS)/vortex.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 # mode_codes.f90 has no nekstab_nek_bridge dependency: it is a leaf
@@ -81,7 +83,7 @@ $(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O
 # Level 5: Modules that depend on eigensolvers
 # ─────────────────────────────────────────────────────────────────────
 $(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o $(O)/newton_krylov.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/dmt.o:               $(NS)/dmt.f90               $(O)/nekstab_nek_bridge.o $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/dmt.o:               $(NS)/dmt.f90               $(O)/nekstab_nek_bridge.o $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/dmt_filter.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o $(O)/newton_krylov.o $(O)/energy_budget.o $(O)/torque.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o ;$(FC) -c $(FL2_FREE) $< -o $@

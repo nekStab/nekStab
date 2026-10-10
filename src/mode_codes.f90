@@ -30,7 +30,7 @@ module nekstab_mode_codes
              MODE_BF_SENSITIVITY, MODE_FORCE_SENS_REAL, MODE_FORCE_SENS_IMAG, &
              MODE_DELTA_FORCING, MODE_ANIMATE, MODE_ANIMATE_DEFORM, &
              MODE_ANIMATE_FLOQUET, MODE_OTD, MODE_OTD_DNS, MODE_MODAL_ALL, &
-             MODE_POD, MODE_DMD, MODE_SPOD, uparam_to_mode_code
+             MODE_POD, MODE_DMD, MODE_SPOD, MODE_DMT_BANK, uparam_to_mode_code
 
    !  Integer mode codes: nint(uparam(1) * 100.0)
    !  Phase 1 of mode-code cleanup design.
@@ -80,6 +80,7 @@ module nekstab_mode_codes
    integer, parameter :: MODE_POD = 610
    integer, parameter :: MODE_DMD = 620
    integer, parameter :: MODE_SPOD = 630
+   integer, parameter :: MODE_DMT_BANK = 640 ! filters of the DNS at chosen frequencies
 
 contains
 

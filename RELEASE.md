@@ -196,6 +196,7 @@ wrong eigenvalues.
 | POD | 6.1 | `pod` | Proper Orthogonal Decomposition |
 | DMD | 6.2 | `dmd` | Dynamic Mode Decomposition |
 | SPOD | 6.3 | `spod` | Spectral POD (Welch + CSD) |
+| DMT filter bank | 6.4 | `dmt_bank` | Filters on the running DNS at chosen frequencies |
 | All modal | 6.0 | — | POD + DMD + SPOD together |
 
 #### Modal analysis framework (Mode 6)
@@ -362,7 +363,7 @@ post-process it.
 | `3x0/3x1_stability_*` | 310 direct, 311 direct Floquet, 320 adjoint, 321 adjoint Floquet, 330 transient growth |
 | `4xx_postproc_*` | 410 mode animation, 411 wavemaker |
 | `500_otd` | OTD modes |
-| `6x0_modal_*` | 600 POD, 610 DMD, 620 SPOD |
+| `6x0_modal_*` | 600 POD, 610 DMD, 620 SPOD, 630 DMT filter bank |
 
 Families: `cylinder_re100` (flagship, full ladder), `cylinder_re180`
 (Floquet chain; 2D proxy — Mode A/B physics needs 3D), `cylinder_re30_thermal`,
@@ -430,6 +431,7 @@ whose reference runs are still pending.
 - **6.1**: POD
 - **6.2**: DMD
 - **6.3**: SPOD
+- **6.4**: DMT filter bank (online, on the DNS)
 
 
 ## TODO before tagging 2.0

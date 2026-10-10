@@ -52,6 +52,7 @@ DECIMALS = {
     6.1: ({"ifpod"}, 6.1),
     6.2: ({"ifdmd"}, 6.2),
     6.3: ({"ifspod"}, 6.3),
+    6.4: ({"ifdmtbank"}, 6.4),
 }
 
 # nekstab_mode string -> flags that must be true (uparam(1) = 0 in the .par).
@@ -88,6 +89,7 @@ STRINGS = {
     "pod": {"ifpod"},
     "dmd": {"ifdmd"},
     "spod": {"ifspod"},
+    "dmt_bank": {"ifdmtbank"},
 }
 
 
@@ -168,6 +170,13 @@ def test_otd_dns_flag_implies_the_otd_flag(driver):
     assert after == pytest.approx(5.1, abs=1e-6)
 
 
+def test_dmt_bank_flag_selects_the_filter_bank(driver):
+    status, got, after, out = resolve(driver, 0, "-", "ifdmtbank")
+    assert status == 0, out
+    assert got == {"ifdmtbank"}
+    assert after == pytest.approx(6.4, abs=1e-6)
+
+
 def test_floquet_flag_modifies_stability_flag(driver):
     status, got, after, out = resolve(driver, 0, "-", "isAdjoint", "ifFloquet")
     assert status == 0, out
@@ -175,7 +184,7 @@ def test_floquet_flag_modifies_stability_flag(driver):
     assert after == pytest.approx(3.21, abs=1e-6)
 
 
-@pytest.mark.parametrize("up1", [3.15, 3.104, 7.3, 0.2, 1.0, 2.5, 4.4, 6.4, -1.0, 12.0])
+@pytest.mark.parametrize("up1", [3.15, 3.104, 7.3, 0.2, 1.0, 2.5, 4.4, 6.5, -1.0, 12.0])
 def test_unknown_userparam_stops_the_run(driver, up1):
     # An unknown code must stop the run. It used to run a DNS with a warning.
     status, got, _, out = resolve(driver, up1)
@@ -192,7 +201,13 @@ def test_unknown_string_stops_the_run(driver):
 
 @pytest.mark.parametrize(
     "args",
-    [("-", "isDirect", "isAdjoint"), ("-", "isDirect", "ifSFD"), ("-", "isDirect", "isTransientGrowth")],
+    [
+        ("-", "isDirect", "isAdjoint"),
+        ("-", "isDirect", "ifSFD"),
+        ("-", "isDirect", "isTransientGrowth"),
+        ("-", "isDirect", "ifdmtbank"),
+        ("-", "ifDNS", "ifdmtbank"),
+    ],
 )
 def test_conflicting_flags_stop_the_run(driver, args):
     status, _, _, out = resolve(driver, 0, *args)

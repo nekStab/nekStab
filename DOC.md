@@ -337,6 +337,7 @@ end subroutine
 | `'pod'` | Proper Orthogonal Decomposition | 6.1 |
 | `'dmd'` | Dynamic Mode Decomposition | 6.2 |
 | `'spod'` | Spectral POD | 6.3 |
+| `'dmt_bank'` | DMT filter bank on the running DNS | 6.4 |
 
 Mode strings are **case-insensitive** and support aliases:
 
@@ -380,7 +381,7 @@ end subroutine
 | Floquet modifier | `ifFloquet` (transforms base stability modes) |
 | Postprocessing | `ifEnergyBudget`, `ifWavemaker`, `ifBFSensitivity`, `ifForceSensReal`, `ifForceSensImag`, `ifDeltaForcing`, `ifAnimateMode`, `ifAnimateBFDeform`, `ifAnimateFloquet` |
 | OTD | `ifotd`; `ifotdDNS` (also sets `ifotd`) for the evolving base flow |
-| Modal Analysis | `ifpod`, `ifdmd`, `ifspod` |
+| Modal Analysis | `ifpod`, `ifdmd`, `ifspod`; `ifdmtbank` (filters on the running DNS) |
 
 **The `ifFloquet` modifier** combines with base stability modes:
 - `isDirect = .true.` + `ifFloquet = .true.` → Floquet direct analysis
@@ -706,6 +707,45 @@ mks 1cyl && nekbmpi 1cyl 4
 python plot_modal.py
 ```
 
+### Mode 6.4: DMT Filter Bank
+
+`userParam01 = 6.4` (or `nekstab_mode = 'dmt_bank'`) runs the DNS without any force and passes the flow through a set of filters, one per chosen frequency. Each filter returns the spatial structure of the flow at its frequency as a complex field `û(x)`, with `u(x,t) ≈ Re[û(x) e^{iωt}]`. It is the filter of mode 1.3 used for analysis: the filters watch the flow and do not act on it. Unlike POD, DMD and SPOD it needs no snapshot files; it runs in the time loop and writes the result at the last step.
+
+**Filter.** A filter of angular frequency `ω` and width `β` is a damped oscillator driven by the flow `u`, point by point:
+
+```
+p' = q,    q' = u − β q − ω² p,    b = β q
+```
+
+`b` is `u` filtered around `ω`: gain 1 and phase 0 at `ω`, gain 0 at frequency 0. The complex amplitude is `û = (b − i b'/ω) e^{−iωt}`, where `b' = β (u − β q − ω² p)` follows from the equations, so no data are differentiated. The simpler combination `β (q + iωp)` has the same value in the band but passes a constant mean flow with the gain `iβ/ω`; for a mean of 1 and a tone of 0.01 it gave an error of 5 in units of the tone amplitude, the form above gave 2e-3 (the start-up transient). `ω = 0` gives the mean flow: `b = β q` follows `u` with the time constant `1/β`. The oscillator is integrated exactly over each step for an input that varies linearly between the steps (matrix exponential, `dmt_filter.f90`), so a variable time step needs no special case. Every active field is filtered: velocity, and pressure and scalars when they are written.
+
+**Registration**, in `nekStab_usrchk`, on every rank:
+
+```fortran
+use nekstab_dmt, only: dmt_bank_add, dmt_bank_options
+...
+call dmt_bank_add(omega1, beta1)          ! angular frequency 2*pi*f; beta is optional, default 0.05*omega
+call dmt_bank_add(2.0d0*omega1)
+call dmt_bank_add(0.0d0, 0.1d0*omega1)    ! the mean flow, averaged over 1/beta
+call dmt_bank_options(hist_step=100, snapshots=.false., avg_from=t_avg)
+```
+
+At most 8 filters; `beta` must lie below `omega`. The filters start from the field at the start of the run, in the equilibrium of that field, so a mean flow starts no transient.
+
+**Width and run length.** The start-up transient decays as `exp(−β t/2)`: after `2 ln(1000)/β = 13.8/β` time units it is below 1e-3 of the amplitude. A narrow filter separates close frequencies (a tone at distance `Δω` appears with about `β/Δω` of its amplitude) and settles slowly. The start-up prints the settling time of each filter and warns when the run is shorter.
+
+**Leakage and averaging.** A filter also passes part of the other frequencies of the flow, about `β/ω` of their amplitude. In a flow with harmonics of one frequency this appears as a ripple of `û` at the difference of the frequencies. With `avg_from` the files hold the average of `û` over `[avg_from, end of run]`, and over a whole number of periods of the fundamental the ripple cancels. On a flow made of three harmonics (amplitudes 0.10, 0.03, 0.01) on a mean, at `β = 0.1 ω`, the amplitude at the last step differs from the exact one by 5 %, 15 % and 45 % of the amplitude of each harmonic, and the average over 10 periods by 4e-5, 5e-5 and 1e-4. Without `avg_from`, expect a ripple of this size.
+
+**Files.** The number `k` follows the order of the calls of `dmt_bank_add`.
+
+| File | Contents |
+|------|----------|
+| `bRe<session>0.f0000k`, `bIm<session>0.f0000k` | `Re û` and `Im û` of filter `k`, at the last step or averaged over the window; the time stamp is the end of the run |
+| `dmt_bank.dat` | every `hist_step` steps: `time, ‖u‖, ‖u − Σ b_k‖, ‖û_1‖, ‖û_2‖, ...`; the norm is the Krylov-vector norm, and `‖û_k‖` does not depend on the phase |
+| `b01<session>0.f<n>`, `b02...` | `b_k` at every output step of Nek5000, with `snapshots=.true.` |
+
+`‖u − Σ b_k‖` is the part of the flow that no filter holds. The filter states are not written to disk: a restarted run starts its filters again.
+
 ---
 
 ## Parameter Reference
@@ -896,6 +936,7 @@ A Newton-converged orbit closes to 1e-5 or below. Above 1e-3 the run prints a wa
 | `ifpod` | .false. | Enable POD computation |
 | `ifdmd` | .false. | Enable DMD computation |
 | `ifspod` | .false. | Enable SPOD computation |
+| `ifdmtbank` | .false. | Enable the DMT filter bank (mode 6.4), see Mode 6.4 |
 | `ifwinamp` | .true. | Window normalization: .true.=amplitude (PySPOD), .false.=energy (Parseval) |
 | `dmd_rank` | 0 | DMD truncation rank (0 = auto, use all) |
 | `spod_nfft` | 64 | SPOD FFT block size |
@@ -925,6 +966,7 @@ nekStab/
 │   │── lapack_wrapper.f90        # LAPACK wrappers (Schur, eig, etc.)
 │   │── argsort.f90               # Sorting utilities
 │   │── ks_select.f90             # Ritz value selection of the Krylov-Schur restart
+│   │── dmt_filter.f90            # Oscillator-pair filter of the DMT bank (coefficients)
 │   │── nek_vectors.f90           # nop* vector operations
 │   │
 │   │── matvec.f90                # Linearized NS operator
@@ -1007,7 +1049,9 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `nekstab_vectors` | `nek_vectors.f90` | `nopcopy`, `nopadd2`, `nopadd2s2`, `nopsub2`, `nopsub3`, `nopcmult`, `noprzero`, `nopaxpby`, `axpby`, `opadd3`, `opaddcol3` |
 | `nekstab_lapack` | `lapack_wrapper.f90` | `schur`, `ordschur`, `eig`, `sort_eigendecomp`, `select_eigvals`, `lstsq`, `eig_symmetric`, `eig_hermitian` |
 | `nekstab_argsort` | `argsort.f90` | `argsort` |
-| `nekstab_ks_select` | `ks_select.f90` | `ks_select_eigenvalues`, `ks_ensure_conjugate_pairs` |
+| `nekstab_ks_select` | `ks_select.f90` | `ks_select_eigenvalues`, `ks_ensure_conjugate_pairs`, `ks_converged_indices` |
+| `nekstab_dmt_filter` | `dmt_filter.f90` | `dmt_filter_step_coeffs`, `dmt_filter_amp_coeffs` |
+| `nekstab_dmt` | `dmt.f90` | `dmt`, `dmt_init`, `dmt_bank_add`, `dmt_bank_options`, `dmt_bank` |
 | `nekstab_matvec` | `matvec.f90` | `prepare_linearized_solver`, `matvec`, `forward_linearized_map`, `forward_finite_difference_map`, `adjoint_linearized_map` |
 | `nekstab_io` | `IO.f90` | `whereyouwant`, `read_eigenvalue`, `load_mode_pair`, `load_files`, `k_load` |
 | `nekstab_newton` | `newton_krylov.f90` | `newton_krylov`, `ts_gmres`, `initialize_gmres_vector`, `nonlinear_forward_map`, `set_nek5000_tolerances`, `spec_tole` |
