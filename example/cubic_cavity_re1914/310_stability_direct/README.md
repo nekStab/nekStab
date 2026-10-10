@@ -12,7 +12,9 @@ Result and comparison with the other stage: see `../README.md`.
 **Run** (Jean Zay, 2026-10-10, 40 ranks): 2437 s. The six converged eigenvalues agree with those of a
 16-rank run to 1e-8 in sigma and 1e-7 in omega.
 
-**Reference**: `ref/reference.json` checks sigma and omega of the leading pair (tolerances 1e-3 and 2e-3).
+**Reference**: `ref/reference.json` checks sigma and omega of the leading pair (tolerances 2e-6 and 1e-4)
+and of the second pair (1e-4 and 5e-4). The tolerance on sigma is 200 times the spread between the 16-rank
+and the 40-rank run. The leading pair of the same flow at Re = 1920 (sigma = +5.84e-4) fails it.
 Verify with `scripts/check_against_ref.py example/cubic_cavity_re1914/310_stability_direct`.
 
 **Figure**: `python3 plot.py` writes `plot_spectrum.png`, the direct and the adjoint spectrum (it reads

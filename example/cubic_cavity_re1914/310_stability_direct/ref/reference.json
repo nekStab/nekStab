@@ -1,22 +1,40 @@
 {
   "case": "cubic_cavity_re1914/310_stability_direct",
-  "summary": "Leading eigenpair of the steady cubic cavity flow at Re = 1914. The pair is slightly stable, with ω = 0.587.",
-  "description": "Leading pair (T1) of the steady cavity flow at Re=1914, uniform lid: sigma slightly negative, omega = 0.587 (St = 0.0934, thesis)",
+  "summary": "Leading eigenpairs of the steady cubic cavity flow at Re = 1914. The leading pair is slightly stable: sigma = -1.83e-4, omega = 0.5868.",
+  "description": "Direct stability (mode 3.1) about the steady flow of 210_baseflow_newton/fp at Re = 1914, uniform lid. The leading pair has a growth rate just below zero, so the flow is stable but close to the first Hopf bifurcation (Re = 1916.63). The expected values are those of the run named under produced, not literature values. The frequency of the leading pair agrees with St = 0.0934 of the thesis (Table 4.1): 2 pi St = 0.5869. The runs on 16 and on 40 ranks agree to 1e-8 on sigma and 1e-7 on omega, so the tolerance of 2e-6 on sigma is 200 times the spread between runs. It still fails the leading pair of the same flow at Re = 1920 (sigma = +5.84e-4, omega = 0.58679, cubic_cavity_re1920/310_stability_direct) and any run at a Reynolds number that is wrong by more than 0.02 (d sigma / d Re = 1.3e-4 per unit of Re). The second pair is stable, sigma = -0.0205, omega = 0.5609; it checks that the leading pair is the only one near the imaginary axis.",
   "produced": {
-    "ranks": "16",
+    "nekstab": "v2.0.0",
     "nekstab_mode": "3.1 (direct)",
-    "k_dim": "120"
+    "ranks": "40",
+    "k_dim": "120",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-10",
+    "wall_s": 2437.16
   },
   "quantities": {
     "leading_sigma": {
       "source": "Spectre_NSd_conv.dat:col1:first",
-      "value": -0.0001829624,
-      "tol_abs": 0.001
+      "value": -0.0001829623,
+      "tol_abs": 2e-06,
+      "note": "Growth rate of the leading pair (negative: stable)."
     },
     "leading_omega": {
       "source": "Spectre_NSd_conv.dat:col2:first",
       "value": 0.5868358,
-      "tol_abs": 0.002
+      "tol_abs": 0.0001,
+      "note": "Frequency of the leading pair."
+    },
+    "second_sigma": {
+      "source": "Spectre_NSd_conv.dat:col1:row3",
+      "value": -0.02049337,
+      "tol_abs": 0.0001,
+      "note": "Growth rate of the second pair (third row of the file): stable."
+    },
+    "second_omega": {
+      "source": "Spectre_NSd_conv.dat:col2:row3",
+      "value": 0.5609375,
+      "tol_abs": 0.0005,
+      "note": "Frequency of the second pair."
     }
   }
 }
