@@ -1,0 +1,64 @@
+{
+  "case": "moving_cylinder_re100/210_baseflow_newton",
+  "summary": "Newton-GMRES for the forced periodic orbit of the cylinder in transverse oscillation at Re = 100 (A = 1.08, f = 0.1643): the squared residual falls from 3.7e-3 to 9e-10 in 11 iterations.",
+  "description": "Mode 2.2 on the moving mesh, started from the last field of ../010_dns_forced (30 periods, phase 0). The period is the period of the forcing, 1 / 0.1643 = 6.086427, so the time stamp of the orbit file is checked against it and not against a value read back from a run. The residual of the first iteration is the distance of the seed to the orbit; the last residual has to lie below the Newton tolerance 1e-9. Without the mesh-velocity term in the linearized solver the run ended at a squared residual of 1.9e-5 after seven iterations, so the last-residual check fails it. The seed differs from the orbit by 4.9e-4 in the l2 norm of vx, 1.2e-3 in vy and 2.0e-3 in the pressure, which the tolerances on the norms of the orbit fail. The residual history, the distance of the seed to the orbit and the norms are regression values of this repository, from the run named under produced.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "2.2 (Newton, forced orbit)",
+    "ranks": "12",
+    "k_dim": "100",
+    "compiler": "ifx on nexus-dev",
+    "date": "2026-10-10",
+    "wall_s": 6687
+  },
+  "quantities": {
+    "first_residual": {
+      "source": "residu_newton.dat:col7:first",
+      "value": 0.003717782,
+      "tol_rel": 0.02,
+      "note": "Squared residual of the DNS seed, before the first Newton step (observed 3.717782e-3)."
+    },
+    "final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 0.0,
+      "tol_abs": 1e-09,
+      "note": "Squared residual of the last iteration: below the Newton tolerance 1e-9 (observed 9.02e-10)."
+    },
+    "n_iterations": {
+      "source": "residu_newton.dat:col1:last",
+      "value": 11,
+      "tol_abs": 2,
+      "note": "Number of Newton iterations (the dynamic tolerance gives a factor 0.12 to 0.25 per iteration)."
+    },
+    "orbit_period": {
+      "source": "BF_1cyl0.f00001:field:time",
+      "value": 6.086427267194,
+      "tol_rel": 1e-09,
+      "note": "Time stamp of the orbit file: the period of the forcing, 1 / 0.1643."
+    },
+    "seed_distance": {
+      "source": "newton_change.dat:col1:first",
+      "value": 0.0026186652,
+      "tol_rel": 0.05,
+      "note": "Relative l2 distance from the seed to the orbit in the near field (-2 < x < 10, abs(y) < 4)."
+    },
+    "orbit_vx_norm": {
+      "source": "BF_1cyl0.f00001:field:vx.norm",
+      "value": 260.257459,
+      "tol_rel": 0.0002,
+      "note": "l2 norm of vx at phase 0 (the seed has 260.384)."
+    },
+    "orbit_vy_norm": {
+      "source": "BF_1cyl0.f00001:field:vy.norm",
+      "value": 61.008148,
+      "tol_rel": 0.0002,
+      "note": "l2 norm of vy at phase 0 (the seed has 61.081)."
+    },
+    "orbit_pr_norm": {
+      "source": "BF_1cyl0.f00001:field:pr.norm",
+      "value": 57.773195,
+      "tol_rel": 0.0005,
+      "note": "l2 norm of the pressure at phase 0 (the seed has 57.891)."
+    }
+  }
+}
