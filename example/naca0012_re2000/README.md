@@ -64,8 +64,5 @@ pipeline is the same one nekStab implements here.
 
 ## Note on operating points
 
-The active case targets **Re = 2000** only. A `naca0012_Re2500.png` figure
-exists in `validation/figures/` as a historical artifact from a higher-Re
-run but is not catalog-referenced; the on-disk `.par` is at Re=2000 and
-that's the canonical operating point. Re=2500 evidence is treated as
-stale until a matching `.par` is re-introduced.
+The case runs at **Re = 2000** only: the `.par` file of every stage has
+Re = 2000. This release has no Re = 2500 case.
