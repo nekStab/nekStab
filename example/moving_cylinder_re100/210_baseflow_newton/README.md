@@ -16,8 +16,8 @@ correct Jacobian reduces the residual by a factor 0.2 per iteration or better.
 The seed is the last field of the forced DNS (30 periods, phase 0). `run.local.slurm` copies `../010_dns_forced/1cyl0.f00030`
 to `BF_seed_1cyl0.f00001`, and `startFrom = BF_seed_1cyl0.f00001 time=0` resets the time to the phase 0. The seed
 is 2.6e-3 from the orbit in the near field (-2 < x < 10, abs(y) < 4) and 3.3e-3 over all nodes, relative to the l2 norm of
-the velocity: the forced DNS of `010` has not finished relaxing after 30 periods (its change from period to period is 4.7e-5,
-and it falls by only 0.93 per period at the end).
+the velocity. The forced DNS of `010` changes by 4.7e-5 from period 29 to period 30 in the near field, and the change
+falls by a factor 0.93 per period at the end.
 
 ## Moving mesh in the linearized solver
 
