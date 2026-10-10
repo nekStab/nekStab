@@ -1,178 +1,384 @@
 #!/usr/bin/env python3
-"""build_gallery.py - case-catalog-driven HTML gallery for nekStab validation.
+"""build_gallery.py - HTML gallery of the nekStab example stages.
 
-Reads result plots DIRECTLY from each case's example/* folder (no copy or
-canonical-rename layer): a catalog artifact resolves to
-example/<current_path>/plot_<panel>.png in place. The gallery is therefore a
-live mask over the example tree:
+The gallery is built from the stage folders of example/. A stage is a folder
+with a .par file and a three-digit stage number in its path (000_dns,
+310_stability_direct, ...). Each stage becomes one card:
 
-  - case folder holds the plot          -> live thumbnail
-  - plot absent (not run, or misnamed)  -> grey "hole" placeholder
-  - deferred cases at the bottom (collapsed)
+  - the figures are the image files of the ref/ folder of the stage;
+  - the reference table is ref/reference.json, the numbers that
+    scripts/check_against_ref.py compares a new run with;
+  - the one-line text is the "summary" of that file, and its "description" says what
+    the reference values check.
 
-Image src is emitted relative to validation/index.html (e.g.
-"../example/cylinder_re100/000_dns/plot_snapshot.png"), which also works under
-the Pages artifact when example/* ships alongside validation/.
+Nothing is listed by hand. A stage without a reference, a summary, a description or
+a figure is not drawn, and validation/tests/test_gallery_complete.py fails for it. The
+page depends on tracked files only, not on the date or on the machine, so
+validation/index.html in git is the output of this script.
 
-Run:  python validation/build_gallery.py
+Image src is emitted relative to validation/index.html (for example
+"../example/cylinder_re100/000_dns/ref/snapshot.png"). The Pages artifact of
+.github/workflows/pages-validation.yml ships the png and gif files of example/
+next to validation/index.html, so the same paths work there.
+
+Run:  python validation/build_gallery.py [output.html]
 Open: xdg-open validation/index.html
 """
 from __future__ import annotations
-from dataclasses import dataclass
-from datetime import datetime
-from functools import lru_cache
-from pathlib import Path
+
 import html
+import json
 import os
 import re
-import subprocess
-
-_PNG_NOT_SET = object()  # sentinel for _render_card png_override default
-
-try:
-    from validation.catalog import (
-        families as catalog_families, cases_for, all_cases as catalog_all_cases,
-        family_can, CaseStatus, FlowFamily, MethodCase
-    )
-except ModuleNotFoundError:
-    from catalog import (
-        families as catalog_families, cases_for, all_cases as catalog_all_cases,
-        family_can, CaseStatus, FlowFamily, MethodCase
-    )
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / 'index.html'
 EXAMPLE = ROOT.parent / 'example'
 
+FIGURE_SUFFIXES = ('.png', '.gif')
 
-@dataclass(frozen=True)
-class Case:
-    path: str            # 'cylinder/baseflow/newton'
-    re_tag: str          # 'Re100' or 'Ra500'
-    mode: str            # 'Newton-GMRES (2.0)'
-    expected: str        # short physical expectation
-    status: str          # 'validated' | 'deferred'
-    fig_key: str         # case_id slug; canonical artifact filename prefix
-    flow_family: str = ''  # optional: overrides path.split('/')[0] for data-family
-    disc_lane: str = ''    # optional: overrides _classify lane for auto-discovered cases
+# A folder that holds a .par file is a stage when its path has a number NNN_.
+STAGE_NUMBER = re.compile(r'(?:^|/)(\d{3})_')
+# Path parts that never belong to a stage: templates, reference folders, build
+# folders, archives and the smoke test of the build (not a validation stage).
+NOT_STAGE_PARTS = frozenset(['_templates', 'ref', 'obj', 'ci_test', '__pycache__'])
 
-
-# Sections in display order. Each section has a heading + list[Case].
-SECTIONS: list[tuple[str, list[Case]]] = [
-    ('Cylinder · Baseflow', [
-        Case('cylinder/baseflow/boostconv',     'Re100', 'BoostConv (1.2)',          'converged steady state',                                  'validated', 'cylinder_baseflow_boostconv'),
-        Case('cylinder/baseflow/newton',        'Re100', 'Newton-GMRES (2.0)',       'converged steady state',                                  'validated', 'cylinder_baseflow_newton'),
-        Case('cylinder/baseflow/newton_dyn',    'Re100', 'Newton + ifdyntol (2.0)',  'converged steady state, fewer GMRES iters',               'validated', 'cylinder_baseflow_newton_dyn'),
-        Case('cylinder/baseflow/sfd',           'Re50',  'SFD baseline (1.1)',       'converged steady state',                                  'validated', 'cylinder_baseflow_sfd'),
-        Case('cylinder/baseflow/sfd_dyn',       'Re50',  'SFD + dyn-tol (1.1)',      'converged steady state',                                  'validated', 'cylinder_baseflow_sfd_dyn'),
-        Case('cylinder/baseflow/sfd_dyn_oifs',  'Re50',  'SFD + OIFS (1.1)',         'converged steady state',                                  'validated', 'cylinder_baseflow_sfd_dyn_oifs'),
-    ]),
-    ('Cylinder · Stability', [
-        Case('cylinder/stability/direct',       'Re100', 'Direct LNSE (3.1)',        'leading eigenvalue near sigma = 0.125 + 0.734i',          'validated', 'cylinder_stability_direct'),
-        Case('cylinder/stability/adjoint',      'Re100', 'Adjoint LNSE (3.2)',       'matches direct spectrum',                                 'validated', 'cylinder_stability_adjoint'),
-        Case('cylinder/stability/animate_modes','Re100', 'Animate modes (4.50)',     'snapshots per period',                                    'validated', 'cylinder_stability_animate_modes'),
-    ]),
-    ('Cylinder · Postproc', [
-        Case('cylinder/postproc/sensitivity_budget_wavemaker', 'Re100', 'Wavemaker / budget (4.0)', 'wm, sr/si, pr/pi, tr/ti fields', 'validated', 'cylinder_postproc_sensitivity_budget_wavemaker'),
-    ]),
-    ('Cylinder · DNS / smoke', [
-        Case('cylinder/dns',             'Re100', 'DNS (0.0)',                'vortex shedding past t=100', 'validated', 'cylinder_dns'),
-        Case('cylinder/ci_test',         'Re100', 'DNS 10-step smoke (0.0)',  '10-step build smoke',         'validated', 'cylinder_ci_test'),
-        Case('cylinder/moving_cylinder', 'Re100', 'DNS forced osc (0.0)',     'moving-mesh DNS subcase',     'validated', 'cylinder_moving_cylinder'),
-    ]),
-    ('Other geometries · Baseflow', [
-        Case('lid_driven',            'Re3600', 'Newton (2.0)',             'converged steady state',                'validated', 'lid_driven'),
-        Case('poiseuille_OTD',        'Re5000', 'OTD smoke',                'builds and runs to endTime=500',        'validated', 'poiseuille'),
-        Case('thermosyphon/baseflow',   'Ra500',  'Newton + thermal (2.0)',   'converged thermal steady state',        'validated', 'thermosyphon_baseflow'),
-        Case('naca0012',              'Re2000', 'Newton (2.0)',             'converged steady state',                'validated', 'naca0012'),
-        Case('flip_flop/baseflow',    'Re62',   'Newton-UPO (2.1)',         'converged UPO',                         'validated', 'flip_flop_baseflow'),
-        Case('tpjet/baseflow/newton', 'Re1900', 'Forced UPO (2.2)',         'converged forced UPO',                  'validated', 'tpjet_baseflow_newton'),
-    ]),
-    ('Other geometries · Stability', [
-        Case('thermosyphon/stability/direct',         'Ra500',  'Direct + thermal (3.1)', 'leading real eigenvalue (pitchfork above Ra_c=494)', 'validated', 'thermosyphon_stability_direct'),
-        Case('flip_flop/stability/direct_Floquet',  'Re62',   'Floquet direct (3.11)',  'leading multiplier just above unit circle',          'validated', 'flip_flop_stability_direct_Floquet'),
-        Case('tpjet/stability/direct_Floquet',      'Re1900', 'Floquet direct (3.11)',  'leading multiplier above unit circle (Re_c~1371)',   'validated', 'tpjet_stability_direct_Floquet'),
-    ]),
-    ('Deferred for v2.1', [
-        Case('cylinder/baseflow/newton_dyn_temp',         'Re100', 'Newton + thermal',         'thermal seed needed',         'deferred', 'cylinder_baseflow_newton_dyn_temp'),
-        Case('cylinder/baseflow/newton_dyn_upo',          'Re100', 'Newton-UPO',               'UPO did not converge on workstation budget', 'deferred', 'cylinder_baseflow_newton_upo'),
-        Case('cylinder/stability/direct_Floquet',         'Re100', 'Floquet direct',           'needs converged UPO',         'deferred', 'cylinder_stability_direct_Floquet'),
-        Case('cylinder/stability/adjoint_Floquet',        'Re100', 'Floquet adjoint',          'needs converged UPO',         'deferred', 'cylinder_stability_adjoint_Floquet'),
-        Case('cylinder/stability/animate_modes_with_UPO', 'Re100', 'Animate w/ UPO',           'needs converged UPO',         'deferred', 'cylinder_stability_animate_modes_with_UPO'),
-        Case('cylinder/otd',                              'Re100', 'OTD modes',                'NaN-at-init on 2128 mesh',    'deferred', 'cylinder_otd'),
-        Case('cylinder/modal',                            'Re100', 'POD/DMD/SPOD',             'needs DNS snapshots',         'deferred', 'cylinder_modal'),
-        Case('cylinder/RANS',                             'Re100', 'RANS baseflow',            'turbulence-model integration', 'deferred', 'cylinder_RANS'),
-        Case('back_fstep/baseflow',                       'Re500', 'SFD baseline',             'CFL emergency exit during sweep', 'deferred', 'back_fstep_baseflow'),
-        Case('back_fstep/transient_growth',               'Re500', 'Transient growth (3.3)',   'depends on baseflow',         'deferred', 'back_fstep_transient_growth'),
-        Case('cubic_cavity',                              'Re400', 'Newton',                   'mesh issues',                 'deferred', 'cubic_cavity'),
-        Case('cubic_cavity_upo',                          'Re400', 'Newton-UPO',               'UPO budget exceeded',         'deferred', 'cubic_cavity_upo'),
-        Case('tpjet/baseflow/tdf',                        'Re1900', 'TDF (1.3)',               'period harmonics tracking',   'deferred', 'tpjet_baseflow_tdf'),
-        Case('slot_FST',                                  'Re495', 'DNS with FST',             'IC bootstrap not in v2.0 sweep', 'deferred', 'slot_FST'),
-        Case('blasius',                                   'Re1000','OTD on Blasius',           'not in v2.0 sweep',           'deferred', 'blasius'),
-        Case('poiseuille_RANS',                           'Re5000','RANS Poiseuille',          'not in v2.0 sweep',           'deferred', 'poiseuille_RANS'),
-    ]),
+# First digit of the stage number -> lane. The lanes are the filter chips and the
+# sections inside a family, in page order.
+STAGE_LANE = {
+    '0': 'dns', '1': 'baseflow', '2': 'baseflow', '3': 'stability',
+    '4': 'postproc', '5': 'otd', '6': 'modal',
+}
+LANES = [
+    ('dns', 'DNS'),
+    ('baseflow', 'Base flow'),
+    ('stability', 'Stability'),
+    ('postproc', 'Post-processing'),
+    ('otd', 'OTD'),
+    ('modal', 'Modal decomposition'),
 ]
+# Base-flow stages split by the first digit of the stage number.
+BASEFLOW_GROUPS = {
+    '1': 'time-stepping methods',
+    '2': 'Newton methods',
+}
+
+# Example folder -> (title, one sentence). The dictionary order is the page order.
+# validation/tests/test_gallery_complete.py fails for a folder that is missing here.
+FAMILIES: dict[str, tuple[str, str]] = {
+    'cylinder_re100': (
+        'Cylinder, Re = 100',
+        'The reference family: the two-dimensional wake of a circular cylinder on one mesh of '
+        '2128 elements. DNS, the steady-state solvers (SFD, BoostConv, DMT, Newton), direct and '
+        'adjoint stability, transient growth, wavemaker, OTD and modal decomposition. BoostConv '
+        'runs at Re = 50 and transient growth at Re = 40.',
+    ),
+    'cylinder_re180': (
+        'Cylinder, Re = 180',
+        'The periodic cylinder wake below the three-dimensional secondary instability: Newton for '
+        'the periodic orbit, direct and adjoint Floquet stability, animation of the Floquet mode '
+        'and OTD along the orbit. The Floquet analysis is two-dimensional and finds the phase '
+        'mode only; modes A and B of Barkley and Henderson (1996) are three-dimensional.',
+    ),
+    'cylinder_re30_thermal': (
+        'Heated cylinder, Re = 30',
+        'The cylinder wake with an active temperature field (Richardson number 0.2): a DNS seed '
+        'and the Newton steady state.',
+    ),
+    'cylinder_re1m': (
+        'Cylinder, high-Re RANS',
+        'The cylinder wake with the k-tau RANS model: DNS, steady base flow by SFD, URANS and '
+        'direct stability with the eddy viscosity coupled or frozen.',
+    ),
+    'moving_cylinder_re100': (
+        'Moving cylinder, Re = 100',
+        'A cylinder in forced oscillation on a moving mesh.',
+    ),
+    'flip_flop_re62': (
+        'Flip-flop, Re = 62',
+        'Two side-by-side cylinders just above the critical Reynolds number: the unstable periodic '
+        'orbit, its direct and adjoint Floquet stability and the wavemaker.',
+    ),
+    'tpjet_re2005': (
+        'Triple-port jet, Re = 1900',
+        'The axisymmetric jet with harmonic forcing at St = 0.6: the forced periodic orbit and its '
+        'direct Floquet stability.',
+    ),
+    'thermosyphon_ra500': (
+        'Thermosyphon, Ra = 500',
+        'The buoyancy-driven annular thermosyphon just above the critical Rayleigh number: DNS, the '
+        'Newton steady state and direct stability.',
+    ),
+    'back_fstep_re500': (
+        'Backward-facing step, Re = 500',
+        'A stable but non-normal open shear flow: the Newton base flow and the optimal transient '
+        'growth at the horizons of Blackburn, Barkley and Sherwin (2008).',
+    ),
+    'lid_driven_re3600': (
+        'Lid-driven cavity, Re = 3600',
+        'The two-dimensional cavity of aspect ratio 1.5 with a regularized lid: DNS, the Newton '
+        'steady state, direct and adjoint stability.',
+    ),
+    'cubic_cavity_re1914': (
+        'Cubic cavity, Re = 1914',
+        'The three-dimensional lid-driven cavity just below the critical Reynolds number: the '
+        'steady state, direct and adjoint stability, transient growth, the wavemaker and OTD.',
+    ),
+    'cubic_cavity_re1920': (
+        'Cubic cavity, Re = 1920',
+        'The cubic cavity just above the critical Reynolds number: the unstable steady state and '
+        'its direct stability.',
+    ),
+    'cubic_cavity_re1950': (
+        'Cubic cavity, Re = 1950',
+        'The saturated limit cycle of the cubic cavity: its period, direct and adjoint Floquet '
+        'stability, a DNS check of the unstable pair, and POD and DMD of the cycle.',
+    ),
+    'naca0012_re2000': (
+        'NACA 0012, Re = 2000',
+        'The wake of a NACA 0012 airfoil: DNS, the Newton steady state with sponge, direct and '
+        'adjoint stability and the wavemaker.',
+    ),
+    'poiseuille_re5k': (
+        'Poiseuille channel, Re = 5000',
+        'OTD modes about the laminar channel profile, compared with theory.',
+    ),
+    'slot_fst_re495': (
+        'Slot jet with free-stream turbulence, Re = 495',
+        'DNS of a slot jet with a synthetic free-stream turbulence inflow.',
+    ),
+}
+
+# userParam01 -> mode of nekStab. The keys are the codes of src/mode_codes.f90 divided by 100;
+# validation/tests/test_gallery_complete.py compares the two lists.
+MODE_NAMES = {
+    '0': 'DNS',
+    '0.1': 'linearized DNS',
+    '1.1': 'selective frequency damping',
+    '1.2': 'BoostConv',
+    '1.3': 'dynamic mode tracking',
+    '1.4': 'time-delayed feedback',
+    '2': 'Newton, fixed point',
+    '2.1': 'Newton, periodic orbit',
+    '2.2': 'Newton, forced periodic orbit',
+    '3.1': 'direct eigenmodes',
+    '3.11': 'direct Floquet',
+    '3.2': 'adjoint eigenmodes',
+    '3.21': 'adjoint Floquet',
+    '3.3': 'transient growth',
+    '3.31': 'Floquet transient growth',
+    '4': 'all post-processing',
+    '4.1': 'energy budget',
+    '4.11': 'Floquet energy budget',
+    '4.2': 'wavemaker',
+    '4.3': 'base-flow sensitivity',
+    '4.41': 'force sensitivity, real part',
+    '4.42': 'force sensitivity, imaginary part',
+    '4.43': 'delta forcing',
+    '4.5': 'mode animation',
+    '4.51': 'animation with base-flow deformation',
+    '4.52': 'Floquet mode animation',
+    '5': 'OTD, frozen base flow',
+    '5.1': 'OTD, base flow advanced by the DNS',
+    '6': 'POD, DMD and SPOD',
+    '6.1': 'POD',
+    '6.2': 'DMD',
+    '6.3': 'SPOD',
+}
+
+# Names of the figure files of ref/ that a reader should not have to decode.
+CAPTIONS = {
+    'bf': 'Base flow',
+    'baseflow': 'Base flow',
+    'ic': 'Initial condition',
+    'residual': 'Residual',
+    'residual_vs_walltime': 'Residual against wall time',
+    'spectrum': 'Spectrum',
+    'mode': 'Leading mode',
+    'direct_mode': 'Direct mode',
+    'adjoint_mode': 'Adjoint mode',
+    'adjoint': 'Adjoint mode',
+    'wavemaker': 'Wavemaker',
+    'snapshot': 'Snapshot',
+    'signal': 'Probe signal',
+    'fft': 'Spectrum of the signal',
+    'phase': 'Phase portrait',
+    'upo_snapshot': 'Orbit snapshot',
+    'plot': 'Animation',
+}
 
 
-@lru_cache(maxsize=None)
-def _case_stats(case_path: str) -> dict:
-    """Read mesh elements (from .re2), MPI ranks (from slurm), wall time
-    (from logfile) for a case. Returns {} when any source missing."""
-    case_dir = EXAMPLE / case_path
-    out: dict = {}
-    if not case_dir.is_dir():
-        return out
+# Words of a figure file name that are written in capitals.
+ACRONYMS = {'dns': 'DNS', 'pod': 'POD', 'dmd': 'DMD', 'spod': 'SPOD', 'otd': 'OTD', 'svd': 'SVD',
+            'fft': 'FFT', 'ns': 'NS'}
 
-    # mesh elements: first 132 bytes of .re2 are ASCII header, second token = nelgt
-    re2 = next(case_dir.glob('*.re2'), None)
-    if re2 is not None:
+
+@dataclass
+class Stage:
+    """One stage folder of example/ with the files that the gallery reads."""
+
+    path: str                  # relative to example/, for example 'cylinder_re100/000_dns'
+    family: str                # first part of the path
+    number: str                # last stage number of the path, for example '310'
+    lane: str                  # key of LANES
+    re_tag: str                # 'Re 100', 'Ra 500' or ''
+    mode: str                  # userParam01 as a key of MODE_NAMES, or ''
+    summary: str               # one line: what the stage computes (ref/reference.json)
+    description: str           # what the reference values check (ref/reference.json)
+    quantities: dict           # quantities of ref/reference.json
+    produced: dict             # produced of ref/reference.json
+    figures: list[Path] = field(default_factory=list)
+    drawable: bool = False     # a summary, a description, a quantity and a figure: enough for a card
+    nelg: int | None = None    # elements of the mesh
+    ranks: str = ''            # MPI ranks of the run behind the reference
+    wall_s: float | None = None
+    casename: str = ''
+    has_slurm: bool = False
+    problems: list[str] = field(default_factory=list)
+
+
+def _stage_number(rel: str) -> str:
+    found = STAGE_NUMBER.findall(rel)
+    return found[-1] if found else ''
+
+
+def _read_par(folder: Path) -> tuple[str, str, str]:
+    """Return (case name, Reynolds number text, userParam01 key) of the .par files of a stage.
+
+    A stage with several .par files (a DNS phase and a Newton phase) shows a value only
+    when all files agree on it.
+    """
+    pars = sorted(folder.glob('*.par'))
+    if not pars:
+        return '', '', ''
+    texts = [p.read_text(encoding='utf-8', errors='replace') for p in pars]
+    # A negative viscosity is minus the Reynolds number in the .par convention.
+    reynolds = {
+        f'Re {-float(m.group(1)):g}'
+        for m in (re.search(r'^\s*viscosity\s*=\s*(-[0-9.eE+]+)', t, re.M) for t in texts) if m
+    }
+    modes = {
+        f'{float(m.group(1)):g}'
+        for m in (re.search(r'^\s*userParam01\s*=\s*([0-9.]+)', t, re.M | re.I) for t in texts) if m
+    }
+    return (
+        pars[0].stem,
+        reynolds.pop() if len(reynolds) == 1 else '',
+        modes.pop() if len(modes) == 1 else '',
+    )
+
+
+def _mesh_elements(folder: Path) -> int | None:
+    """Return the number of elements from the ASCII header of the .re2 file."""
+    re2 = next(iter(sorted(folder.glob('*.re2'))), None)
+    if re2 is None:
+        return None
+    with re2.open('rb') as handle:
+        tokens = handle.read(132).decode('ascii', errors='replace').split()
+    return int(tokens[1]) if len(tokens) >= 2 and tokens[1].isdigit() else None
+
+
+def _slurm_ranks(folder: Path) -> str:
+    slurm = folder / 'run.local.slurm'
+    if not slurm.is_file():
+        return ''
+    found = re.search(r'--ntasks[= ](\d+)', slurm.read_text(encoding='utf-8', errors='replace'))
+    return found.group(1) if found else ''
+
+
+def read_stage(folder: Path) -> Stage:
+    """Read one stage folder. Missing parts are listed in Stage.problems."""
+    rel = folder.relative_to(EXAMPLE).as_posix()
+    problems: list[str] = []
+    reference: dict = {}
+    ref_dir = folder / 'ref'
+    ref_file = ref_dir / 'reference.json'
+    if ref_file.is_file():
         try:
-            header = re2.read_bytes()[:132].decode('ascii', errors='replace')
-            toks = header.split()
-            if len(toks) >= 2 and toks[1].isdigit():
-                out['nelg'] = int(toks[1])
-        except OSError:
-            pass
-
-    # MPI ranks from --ntasks=N in slurm script
-    slurm = case_dir / 'run.local.slurm'
-    if slurm.exists():
-        try:
-            txt = slurm.read_text(errors='replace')
-            m = re.search(r'--ntasks[= ](\d+)', txt)
-            if m:
-                out['ntasks'] = int(m.group(1))
-        except OSError:
-            pass
-        out['has_slurm'] = True
+            reference = json.loads(ref_file.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as exc:
+            problems.append(f'ref/reference.json is not valid JSON ({exc})')
     else:
-        out['has_slurm'] = False
+        problems.append('no ref/reference.json')
+    summary = str(reference.get('summary', '')).strip()
+    if ref_file.is_file() and not summary:
+        problems.append('ref/reference.json has no summary')
+    description = str(reference.get('description', '')).strip()
+    if ref_file.is_file() and not description:
+        problems.append('ref/reference.json has no description')
+    quantities = reference.get('quantities', {})
+    if ref_file.is_file() and not quantities:
+        problems.append('ref/reference.json lists no quantity')
+    figures = sorted(
+        p for p in ref_dir.iterdir() if p.suffix.lower() in FIGURE_SUFFIXES
+    ) if ref_dir.is_dir() else []
+    if not figures:
+        problems.append('no figure in ref/')
+    if not (folder / 'README.md').is_file():
+        problems.append('no README.md')
+    casename, re_tag, mode = _read_par(folder)
+    if not re_tag:
+        # The viscosity of a buoyancy case is a Prandtl number: take Re or Ra from the folder name.
+        named = re.search(r'_(re|ra)(\d+)(?:_|$)', rel.split('/')[0])
+        re_tag = f'{named.group(1).capitalize()} {named.group(2)}' if named else ''
+    produced = reference.get('produced', {})
+    number = _stage_number(rel)
+    wall = produced.get('wall_s')
+    return Stage(
+        path=rel,
+        family=rel.split('/')[0],
+        number=number,
+        lane=STAGE_LANE.get(number[:1], 'other'),
+        re_tag=re_tag,
+        mode=mode,
+        summary=summary,
+        description=description,
+        quantities=quantities,
+        produced=produced,
+        figures=figures,
+        drawable=bool(summary and description and quantities and figures),
+        nelg=_mesh_elements(folder),
+        ranks=str(produced.get('ranks', produced.get('nproc', ''))) or _slurm_ranks(folder),
+        wall_s=float(wall) if isinstance(wall, int | float) else None,
+        casename=casename,
+        has_slurm=(folder / 'run.local.slurm').is_file(),
+        problems=problems,
+    )
 
-    # wall time: 'total elapsed time : 6.45376E+03 sec' near end of logfile
-    log = case_dir / 'logfile'
-    if log.exists():
-        try:
-            # tail-style read of last 8 KB
-            with log.open('rb') as f:
-                f.seek(0, 2)
-                size = f.tell()
-                f.seek(max(0, size - 8192))
-                tail = f.read().decode('utf-8', errors='replace')
-            m = re.search(r'total elapsed time\s*:\s*([0-9.E+\-]+)\s*sec', tail)
-            if m:
-                out['elapsed_sec'] = float(m.group(1))
-        except OSError:
-            pass
 
-    # case name from SESSION.NAME (first line)
-    sess = case_dir / 'SESSION.NAME'
-    if sess.exists():
-        try:
-            out['casename'] = sess.read_text().splitlines()[0].strip()
-        except OSError:
-            pass
+def _sort_key(stage: Stage) -> tuple[str, int, str]:
+    # Inside one stage number the fixed-tolerance variant ("fp") comes first, then the rest by name.
+    return (stage.number, 0 if stage.path.endswith('/fp') else 1, stage.path)
 
-    return out
+
+def discover_stages() -> list[Stage]:
+    """Return every stage folder of example/, in page order, with or without figures."""
+    stages: list[Stage] = []
+    seen: set[str] = set()
+    for par in sorted(EXAMPLE.rglob('*.par')):
+        folder = par.parent
+        rel = folder.relative_to(EXAMPLE).as_posix()
+        parts = rel.split('/')
+        if rel in seen or not STAGE_NUMBER.search(rel):
+            continue
+        if any(p in NOT_STAGE_PARTS or p.startswith('.') for p in parts):
+            continue
+        seen.add(rel)
+        stages.append(read_stage(folder))
+    families = list(FAMILIES)
+    stages.sort(key=lambda s: (
+        families.index(s.family) if s.family in families else len(families), s.family,
+        _sort_key(s),
+    ))
+    return stages
+
+
+def drawn_stages(stages: list[Stage]) -> list[Stage]:
+    """Return the stages that the page draws: the ones with a description, a quantity and a figure."""
+    return [s for s in stages if s.drawable]
 
 
 def _format_elapsed(sec: float) -> str:
@@ -183,464 +389,51 @@ def _format_elapsed(sec: float) -> str:
     return f'{sec / 3600:.2f} h'
 
 
-def _classify(case: Case) -> tuple[str, str]:
-    """Return (geometry, mode) for grouping. Geometry = top dir or flat name.
-    Mode = one of: baseflow, stability, postproc, dns, otd, modal, rans, other.
-    """
-    parts = case.path.split('/')
-    geom = parts[0]
-    if len(parts) >= 2:
-        seg = parts[1].lower()
-        if seg in ('baseflow', 'stability', 'postproc', 'modal'):
-            return geom, seg
-        if seg in ('otd', 'rans'):
-            return geom, seg
-        if seg in ('dns', 'ci_test', 'moving_cylinder'):
-            return geom, 'dns'
-        if 'growth' in seg:
-            return geom, 'stability'
-        return geom, seg
-    name = parts[0].lower()
-    if 'otd' in name:        return geom, 'otd'
-    if 'rans' in name:       return geom, 'rans'
-    if 'cavity' in name:     return geom, 'baseflow'
-    if 'slot' in name:       return geom, 'dns'
-    if name == 'blasius':    return geom, 'otd'
-    return geom, 'baseflow'
+def _format_number(value: object) -> str:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return str(value)
+    return str(value) if isinstance(value, int) else f'{value:.8g}'
 
 
-# Geometry display ordering — richer / canonical first
-GEOM_ORDER = [
-    'cylinder', 'flip_flop', 'tpjet', 'thermosyphon',
-    'naca0012', 'lid_driven', 'poiseuille_OTD',
-    'back_fstep', 'cubic_cavity', 'cubic_cavity_upo',
-    'blasius', 'slot_FST', 'poiseuille_RANS',
-]
-# Within a geometry, modes display in this order. Baseflow first (always open).
-MODE_ORDER = ['baseflow', 'stability', 'postproc', 'dns', 'otd', 'modal', 'rans', 'other']
-MODE_LABEL = {
-    'baseflow':  'Baseflow',
-    'stability': 'Stability',
-    'postproc':  'Postproc',
-    'dns':       'DNS',
-    'otd':       'OTD',
-    'modal':     'Modal (POD/DMD/SPOD)',
-    'rans':      'RANS',
-    'other':     'Other',
-}
-GEOM_LABEL = {
-    'cylinder':         'Cylinder',
-    'flip_flop':        'Flip-flop',
-    'tpjet':            'TPJet',
-    'thermosyphon':       'Thermosyphon',
-    'naca0012':         'NACA0012',
-    'lid_driven':       'Lid-driven cavity',
-    'poiseuille_OTD':   'Poiseuille (OTD)',
-    'back_fstep':       'Backward-facing step',
-    'cubic_cavity':     'Cubic cavity',
-    'cubic_cavity_upo': 'Cubic cavity (UPO)',
-    'blasius':          'Blasius',
-    'slot_FST':         'Slot jet + FST',
-    'poiseuille_RANS':  'Poiseuille (RANS)',
-}
-
-FAMILY_ORDER = [
-    'cylinder_re100', 'cylinder_re180', 'flip_flop', 'tpjet', 'thermosyphon',
-    'back_fstep', 'lid_driven_cavity', 'naca0012', 'poiseuille',
-    'moving_cylinder', 'cubic_cavity', 'slot_FST', 'blasius',
-    'cylinder_re1m',
-    # auto-discovered families (may appear when no catalog entry exists)
-    'cubic_cavity_re1914', 'cubic_cavity_re1950', 'cylinder_re30_thermal',
-]
-
-LANE_ORDER = ['dns', 'baseflow', 'transient_growth', 'stability_direct', 'direct',
-               'stability_adjoint', 'animation', 'floquet_direct', 'floquet_adjoint',
-               'wavemaker', 'otd', 'modal', 'rans']
-
-# ---------------------------------------------------------------------------
-# Auto-discovery: geometry dir -> catalog FlowFamily id
-# Fallback: the geometry dir string itself (creates a new section on first
-# discovery for families not in the catalog).
-# ---------------------------------------------------------------------------
-GEOM_FAMILY: dict[str, str] = {
-    # cubic_cavity variants
-    'cubic_cavity_re1914': 'cubic_cavity',
-    'cubic_cavity_re1950': 'cubic_cavity',
-    # lid-driven
-    'lid_driven_re3600': 'lid_driven_cavity',
-    # naca
-    'naca0012_re2000': 'naca0012',
-    # poiseuille
-    'poiseuille_re5k':  'poiseuille',
-    'poiseuille_re1e5': 'poiseuille',
-    # slot FST
-    'slot_fst_re495': 'slot_FST',
-    # flip-flop
-    'flip_flop_re62': 'flip_flop',
-    # thermosyphon
-    'thermosyphon_ra500': 'thermosyphon',
-    # tpjet
-    'tpjet_re2005': 'tpjet',
-    'tpjet':        'tpjet',
-    # backward-facing step
-    'back_fstep_re500': 'back_fstep',
-    # cylinder variants
-    'cylinder_re100':      'cylinder_re100',
-    'cylinder_re180':      'cylinder_re180',
-    'cylinder_re1m':       'cylinder_re1m',
-    'cylinder_re30_thermal': 'cylinder_re30_thermal',
-    # moving cylinder
-    'moving_cylinder_re100': 'moving_cylinder',
-}
-
-# NNN prefix -> discovery lane label (used for data-lane attribute)
-_STAGE_LANE: dict[str, str] = {
-    '0': 'dns',
-    '1': 'baseflow',
-    '2': 'baseflow',
-    '3': 'stability',
-    '4': 'postproc',
-    '5': 'otd',
-    '6': 'modal',
-}
-
-# Paths that must be excluded from auto-discovery (exact substrings)
-_DISCOVER_EXCLUDE = frozenset([
-    '_templates/', '/ref', '/obj', '.venv', 'ANIM', '.archive', 'site-packages',
-])
+def _tolerance_text(spec: dict) -> str:
+    if 'tol_rel' in spec:
+        return f'±{spec["tol_rel"]:g} rel'
+    if 'tol_abs' in spec:
+        return f'±{spec["tol_abs"]:g}'
+    return ''
 
 
-def _discover_lane(rel_subpath: str) -> str:
-    """Return discovery lane from the deepest NNN_ prefix in the path."""
-    # Find all NNN_ segments; use the last/deepest one.
-    segments = re.findall(r'(?:^|/)(\d{3})_', rel_subpath)
-    if not segments:
-        return 'other'
-    nnn = segments[-1]          # deepest NNN
-    return _STAGE_LANE.get(nnn[0], 'other')
+def _produced_text(produced: dict) -> str:
+    bits = []
+    if produced.get('nekstab'):
+        bits.append(f'nekStab {produced["nekstab"]}')
+    ranks = produced.get('ranks', produced.get('nproc'))
+    if ranks:
+        bits.append(f'{ranks} ranks')
+    for key in ('compiler', 'date'):
+        if produced.get(key):
+            bits.append(str(produced[key]))
+    return 'produced with ' + ' · '.join(bits) if bits else ''
 
 
-def _discover_re_tag(geom_dir: str) -> str:
-    """Derive Re/Ra tag from a geometry directory name (case-insensitive)."""
-    m = re.search(r'[Rr][Aa](\d+)', geom_dir)
-    if m:
-        return f'Ra{m.group(1)}'
-    m = re.search(r'[Rr][Ee](\w+)', geom_dir)
-    if m:
-        return f'Re{m.group(1)}'
-    return 'Re0'
-
-
-def _panel_caption_from_stem(stem: str) -> str:
-    """Title-case panel caption from a plot file stem (strip leading 'plot_'/'plot')."""
-    s = stem
-    if s.startswith('plot_'):
-        s = s[5:]
-    elif s.startswith('plot'):
-        s = s[4:]
-    s = s.replace('_', ' ').strip()
-    return s.title() if s else ''
-
-
-def discover_stage_folders() -> list[tuple[str, str, str, list]]:
-    """Scan example/ for stage folders not in the catalog.
-
-    Returns list of (family_id, rel_subpath, lane, panels) where:
-      - family_id: from GEOM_FAMILY or the geom dir name itself
-      - rel_subpath: path relative to example/
-      - lane: discovery lane string
-      - panels: list of (None, png_path_or_None, caption)
-    """
-    # Build catalog path set for deduplication
-    catalog_known: set[str] = set()
-    for mc in catalog_all_cases():
-        catalog_known.add(_case_subpath(mc.current_path))
-
-    seen_folders: set[str] = set()
-    results: list[tuple[str, str, str, list]] = []
-
-    for par_file in sorted(EXAMPLE.rglob('*.par')):
-        folder = par_file.parent
-        try:
-            rel = folder.relative_to(EXAMPLE).as_posix()
-        except ValueError:
-            continue
-
-        # Skip excluded paths
-        if any(ex in rel for ex in _DISCOVER_EXCLUDE):
-            continue
-
-        # Must contain a numbered stage segment NNN_
-        if not re.search(r'(^|/)\d{3}_', rel):
-            continue
-
-        # Skip duplicates (multiple .par files in same folder)
-        if rel in seen_folders:
-            continue
-        seen_folders.add(rel)
-
-        # Skip folders already in the catalog
-        if rel in catalog_known:
-            continue
-
-        # Determine geometry dir (first path segment)
-        parts = rel.split('/')
-        geom_dir = parts[0]
-        family_id = GEOM_FAMILY.get(geom_dir, geom_dir)
-
-        lane = _discover_lane(rel)
-
-        # Build panel list from plot*.png files in the folder
-        png_files = sorted(folder.glob('plot*.png'), key=lambda p: p.name)
-        if png_files:
-            panels = [
-                (None, p, _panel_caption_from_stem(p.stem))
-                for p in png_files
-            ]
-        else:
-            # No images yet: emit one placeholder panel
-            panels = [(None, None, '')]
-
-        results.append((family_id, rel, lane, panels))
-
-    # Sort by (family_id, NNN prefix of deepest stage segment, rel)
-    def _sort_key(item):
-        fid, rel, lane, _ = item
-        segs = re.findall(r'(?:^|/)(\d{3})_', rel)
-        nnn = segs[-1] if segs else '000'
-        return (fid, nnn, rel)
-
-    results.sort(key=_sort_key)
-    return results
-
-BLOCKED_STATUSES = {
-    CaseStatus.BLOCKED,
-    CaseStatus.NEEDS_DNS_SEED,
-    CaseStatus.NEEDS_SCALAR_CHECKPOINT,
-}
-PARTIAL_STATUSES = {
-    CaseStatus.PARTIAL,
-    CaseStatus.LOCAL_SMOKE,
-    CaseStatus.AMBIGUOUS,
-    CaseStatus.STALE,
-    CaseStatus.MISSING_IMAGE,
-}
-
-
-def _case_subpath(current_path: str) -> str:
-    return current_path.removeprefix('example/').strip('/')
-
-
-def _re_tag(mc: MethodCase) -> str:
-    params = mc.target_parameters
-    if params.Re is not None:
-        return f'Re{int(params.Re)}'
-    if mc.flow_family == 'thermosyphon' or params.geometry == 'thermosyphon':
-        return 'Ra500'
-    return 'Re0'
-
-
-def catalog_to_case(mc: MethodCase) -> Case:
-    if mc.status == CaseStatus.VALIDATED:
-        status = 'validated'
-    elif mc.status in BLOCKED_STATUSES:
-        status = 'blocked'
-    elif mc.status == CaseStatus.DEFERRED:
-        status = 'deferred'
-    else:
-        status = 'deferred'
-    return Case(
-        path=_case_subpath(mc.current_path),
-        re_tag=_re_tag(mc),
-        mode=mc.mode_name or '',
-        expected=mc.expected_behavior,
-        status=status,
-        fig_key=mc.case_id.replace('/', '_'),
-    )
-
-
-def _mode_text(mc: MethodCase) -> str:
-    if mc.mode_name and mc.legacy_uparam01:
-        return f'{mc.mode_name} ({mc.legacy_uparam01})'
-    if mc.mode_name:
-        return mc.mode_name
-    if mc.legacy_uparam01:
-        return f'uparam01 {mc.legacy_uparam01}'
-    return mc.method_lane.replace('_', ' ')
-
-
-def _status_group(status: CaseStatus) -> str:
-    if status == CaseStatus.VALIDATED:
-        return 'validated'
-    if status == CaseStatus.DEFERRED:
-        return 'deferred'
-    if status in BLOCKED_STATUSES:
-        return 'blocked'
-    if status in PARTIAL_STATUSES:
-        return 'partial'
-    return 'partial'
-
-
-def _status_counts(cases: tuple[MethodCase, ...] | list[MethodCase]) -> dict[str, int]:
-    counts = {'validated': 0, 'deferred': 0, 'blocked': 0, 'partial': 0}
-    for mc in cases:
-        counts[_status_group(mc.status)] += 1
-    return counts
-
-
-def _count_chips(counts: dict[str, int]) -> str:
-    bits: list[str] = []
-    if counts.get('validated'):
-        bits.append(f'<span class="c-ok">{counts["validated"]} validated</span>')
-    if counts.get('partial'):
-        bits.append(f'<span class="c-pending">{counts["partial"]} partial</span>')
-    if counts.get('deferred'):
-        bits.append(f'<span class="c-pending">{counts["deferred"]} deferred</span>')
-    if counts.get('blocked'):
-        bits.append(f'<span class="c-stale">{counts["blocked"]} blocked</span>')
-    return ''.join(bits)
-
-
-def _ordered_families() -> list[FlowFamily]:
-    family_by_id = {f.family_id: f for f in catalog_families()}
-    return (
-        [family_by_id[fid] for fid in FAMILY_ORDER if fid in family_by_id]
-        + [family_by_id[fid] for fid in sorted(family_by_id) if fid not in FAMILY_ORDER]
-    )
-
-
-def _git_version() -> str:
-    """Best-effort nekStab version: `git describe` w/ tags + dirty marker."""
-    repo = ROOT.parent
-    try:
-        desc = subprocess.check_output(
-            ['git', '-C', str(repo), 'describe', '--tags', '--always', '--dirty'],
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
-        branch = subprocess.check_output(
-            ['git', '-C', str(repo), 'rev-parse', '--abbrev-ref', 'HEAD'],
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
-        return f'{desc} ({branch})' if branch and branch != 'HEAD' else desc
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return 'unknown'
+def _figure_caption(figure: Path) -> str:
+    """Return the caption of a figure from its file name."""
+    stem = figure.stem
+    if stem in CAPTIONS:
+        return CAPTIONS[stem]
+    words = re.sub(r'(?<=[a-z])(?=\d)', ' ', stem.removeprefix('plot_')).replace('_', ' ').split()
+    text = ' '.join(ACRONYMS.get(w, w) for w in words)
+    return text[:1].upper() + text[1:]
 
 
 def _img_url(png: Path) -> str:
-    """URL for a resolved plot, relative to validation/index.html.
-    e.g. '../example/cylinder_re100/000_dns/plot_snapshot.png'. The same
-    relative path resolves under the Pages artifact (example/* ships next to
-    validation/) and from the repo working tree.
-    """
+    """URL of a figure, relative to validation/index.html."""
     return Path(os.path.relpath(png, ROOT)).as_posix()
 
 
-def _panel_slug(art_path: str, case_id: str) -> str:
-    """Panel token for an artifact: the canonical stem with the _Re/_Ra tag and
-    the case_id-slug prefix stripped, lower-cased (e.g.
-    'cylinder_dns_snapshot_Re50' with case 'cylinder/dns' -> 'snapshot').
-    Empty string for single-panel cases (-> plot.png). Mirrors
-    _panel_caption_from_path but returns the raw underscore token, not a title.
-    """
-    stem = re.sub(r'_R[aAeE]\d+$', '', Path(art_path).stem)
-    stem_parts = stem.split('_')
-    slug_parts = case_id.replace('/', '_').split('_')
-    common = 0
-    for sp, cp in zip(stem_parts, slug_parts):
-        if sp == cp:
-            common += 1
-        else:
-            break
-    return '_'.join(stem_parts[common:]).lower()
-
-
-def _find_png(case: Case) -> Path | None:
-    """Single-panel plot read in place: example/<case.path>/plot.png.
-    Returns None (-> grey hole) when the case has no such plot yet.
-    """
-    p = EXAMPLE / case.path / 'plot.png'
-    return p if p.exists() else None
-
-
-def _find_artifact_image(artifact, mc=None) -> "Path | None":
-    """Resolve a catalog artifact to its in-place plot under example/*.
-    The canonical artifact stem is '<fig_key>_<panel>_<ReNN>'; the plot lives
-    at '<current_path>/plot_<panel>.<ext>' (or 'plot.<ext>' single-panel).
-    Returns None (-> grey hole) when the plot is absent — not run yet, or the
-    plot filename / catalog current_path has drifted from the convention.
-    """
-    if mc is None:
-        return None
-    panel = _panel_slug(artifact.path, mc.case_id)
-    ext = Path(artifact.path).suffix or '.png'
-    fname = f'plot_{panel}{ext}' if panel else f'plot{ext}'
-    p = EXAMPLE / _case_subpath(mc.current_path) / fname
-    return p if p.exists() else None
-
-
-def _panel_caption_from_path(art_path: str, case_id: str) -> str:
-    """Derive a human-readable panel descriptor from the artifact filename.
-
-    Strips the _Re<N>/_Ra<N> suffix and extension, then strips the longest
-    common underscore-token prefix shared with the case_id slug. Title-cases
-    the remainder (e.g. 'field', 'direct_mode' -> 'Field', 'Direct Mode').
-    Returns empty string for single-panel cases where no suffix remains.
-    """
-    stem = Path(art_path).stem  # e.g. 'cylinder_postproc_wavemaker_field_Re50'
-    # Strip trailing _Re<N> or _Ra<N> (case-insensitive on Ra/Re)
-    stem = re.sub(r'_R[aAeE]\d+$', '', stem)
-    # The case_id slug (e.g. 'cylinder_postproc_sensitivity_budget_wavemaker')
-    slug = case_id.replace('/', '_')
-    # Find longest common prefix on underscore-split tokens
-    stem_parts = stem.split('_')
-    slug_parts = slug.split('_')
-    common = 0
-    for sp, cp in zip(stem_parts, slug_parts):
-        if sp == cp:
-            common += 1
-        else:
-            break
-    panel_parts = stem_parts[common:]
-    panel = ' '.join(panel_parts).strip()
-    return panel.title() if panel else ''
-
-
-def _is_stale(case: Case, png: Path) -> bool:
-    """A PNG is stale if its filename's Re/Ra tag doesn't match the case's."""
-    m = re.search(r'_(R[ae]\d+)\.png$', png.name)
-    return bool(m) and m.group(1) != case.re_tag
-
-
-def _evidence_role_css(role_value: str) -> str:
-    mapping = {
-        'reference_image': 'ev-image',
-        'dns_time_history': 'ev-dns',
-        'residual_history': 'ev-residual',
-        'spectrum': 'ev-spectrum',
-        'eigenvalue_table': 'ev-spectrum',
-        'mode_shape': 'ev-image',
-        'animation': 'ev-animation',
-        'checkpoint_stats': 'ev-checkpoint',
-        'provenance': 'ev-provenance',
-        'log': 'ev-log',
-    }
-    return mapping.get(role_value, 'ev-other')
-
-
-def _evidence_role_label(role_value: str) -> str:
-    mapping = {
-        'reference_image': 'IMG',
-        'dns_time_history': 'DNS-HX',
-        'residual_history': 'RESID',
-        'spectrum': 'SPEC',
-        'eigenvalue_table': 'EIG',
-        'mode_shape': 'MODE',
-        'animation': 'ANIM',
-        'checkpoint_stats': 'CKPT',
-        'provenance': 'PROV',
-        'log': 'LOG',
-    }
-    return mapping.get(role_value, role_value.upper()[:6])
+def _versions(stages: list[Stage]) -> str:
+    found = sorted({str(s.produced['nekstab']) for s in stages if s.produced.get('nekstab')})
+    return ', '.join(found)
 
 
 CSS = """
@@ -648,7 +441,6 @@ CSS = """
     /* surfaces */
     --bg:         #0e1116;
     --bg-card:    #1a1f2a;
-    --bg-defer:   #1a1410;
     --bg-subtle:  rgba(255, 255, 255, 0.025);
     /* text */
     --fg:         #d4d8e0;
@@ -716,7 +508,6 @@ h2 .counts {
 }
 /* status chips — work in any container (h2 counts, details summary, etc.) */
 .c-ok,
-.c-stale,
 .c-pending {
     display: inline-block;
     padding: 0.1em 0.55em;
@@ -725,7 +516,6 @@ h2 .counts {
     font-size: 0.95em;
 }
 .c-ok      { background: rgba(110, 224, 138, 0.14); color: var(--success); }
-.c-stale   { background: rgba(224, 184, 110, 0.14); color: var(--warning); }
 .c-pending { background: rgba(255, 255, 255, 0.05); color: var(--fg-mute); }
 :focus-visible {
     outline: 2px solid var(--accent);
@@ -766,27 +556,6 @@ h2 .counts {
     border-radius: 4px;
     font-size: 0.95em;
 }
-.legend {
-    display: flex;
-    gap: 1.5em;
-    font-size: 0.85em;
-    color: var(--fg-mute);
-    margin: 1em 0 2em;
-    flex-wrap: wrap;
-}
-.legend span::before {
-    display: inline-block;
-    width: 0.9em;
-    height: 0.9em;
-    margin-right: 0.4em;
-    vertical-align: -0.1em;
-    border-radius: 50%;
-    content: '';
-}
-.legend .ok::before      { background: var(--ok); }
-.legend .stale::before   { background: var(--stale); }
-.legend .pending::before { background: var(--pending); }
-
 /* Section nav chips (I3) */
 .section-nav {
     display: flex;
@@ -902,50 +671,6 @@ details.mode-section .counts {
 }
 details.mode-section > .grid { padding: 0.4em 1em 1em; }
 
-/* Deferred section as collapsible details (I2) */
-details.deferred-section {
-    margin: 2em 0;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.015);
-    overflow: hidden;
-}
-details.deferred-section > summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 0.9em 1.2em;
-    user-select: none;
-    display: flex;
-    align-items: baseline;
-    gap: 0.8em;
-    transition: background 0.15s ease-out;
-}
-details.deferred-section > summary::-webkit-details-marker { display: none; }
-details.deferred-section > summary::before {
-    content: '▸';
-    color: var(--fg-mute);
-    transition: transform 0.18s ease-out;
-    font-size: 0.9em;
-}
-details.deferred-section[open] > summary::before {
-    transform: rotate(90deg);
-}
-details.deferred-section > summary:hover {
-    background: rgba(255, 255, 255, 0.03);
-}
-details.deferred-section .summary-label {
-    color: var(--fg);
-    font-weight: 600;
-    font-size: 1.05em;
-}
-details.deferred-section .counts {
-    color: var(--fg-mute);
-    font-size: 0.85em;
-    font-weight: normal;
-}
-details.deferred-section > .grid {
-    padding: 0.5em 1.2em 1.2em;
-}
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
@@ -966,7 +691,6 @@ details.deferred-section > .grid {
     content-visibility: auto;
     contain-intrinsic-size: 0 380px;
 }
-.card.deferred { background: var(--bg-defer); }
 .card:hover {
     border-color: rgba(102, 204, 255, 0.4);
     transform: translateY(-3px);
@@ -989,46 +713,6 @@ details.deferred-section > .grid {
     .card { animation: none; }
     .card:hover { transform: none; }
 }
-.card a {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-}
-.card .img-wrap {
-    position: relative;
-    background: #fff;
-    height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.card img {
-    max-width: 100%;
-    max-height: 200px;
-    object-fit: contain;
-    display: block;
-    outline: 1px solid rgba(255, 255, 255, 0.1);
-    outline-offset: -1px;
-}
-.card .placeholder {
-    color: var(--pending);
-    font-size: 0.95em;
-    font-style: italic;
-}
-.card .badge {
-    position: absolute;
-    top: 0.5em;
-    right: 0.5em;
-    padding: 0.15em 0.55em;
-    font-size: 0.75em;
-    font-weight: 600;
-    border-radius: 4px;
-    background: rgba(0,0,0,0.65);
-    color: #fff;
-}
-.card .badge.ok      { background: var(--ok);      color: #06200d; }
-.card .badge.stale   { background: var(--stale);   color: #2b1d04; }
-.card .badge.pending { background: var(--pending); }
 .card .label {
     padding: 0.7em 0.9em 0.55em;
     font-size: 0.86em;
@@ -1064,8 +748,6 @@ details.deferred-section > .grid {
 .lightbox-nav-hint { position: absolute; top: 2vh; left: 50%; transform: translateX(-50%); color: #8088a0; font-size: 0.72em; white-space: nowrap; }
 .lightbox-close { position: absolute; top: 2vh; right: 2vw; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #d4d8e0; font-size: 2em; line-height: 1; width: 1.6em; height: 1.6em; border-radius: 50%; cursor: pointer; }
 .lightbox-close:hover { background: rgba(255,255,255,0.18); }
-button.img-wrap { all: unset; display: block; cursor: pointer; width: 100%; box-sizing: border-box; }
-button.img-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Multi-thumb strip inside a case card */
 .thumbs-strip {
     position: relative;
@@ -1077,14 +759,6 @@ button.img-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset
     background: var(--bg-subtle);
     border-top: 1px solid var(--border-faint);
     border-bottom: 1px solid var(--border-faint);
-}
-.thumbs-strip .strip-badge {
-    position: absolute;
-    top: 0.4em;
-    right: 0.4em;
-    z-index: 2;
-    font-size: 0.65em;
-    padding: 0.1em 0.4em;
 }
 button.thumb {
     all: unset;
@@ -1118,16 +792,6 @@ button.thumb:focus-visible {
     object-fit: contain;
     background: #0e1116;
     display: block;
-}
-.thumb-placeholder {
-    width: 100%;
-    height: 90px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--fg-dim);
-    font-size: 0.78em;
-    background: #0e1116;
 }
 .thumb-cap {
     font-size: 0.72em;
@@ -1451,17 +1115,6 @@ button.thumb:focus-visible {
     white-space: nowrap;
 }
 .badge-status.ev-image       { background: rgba(110,224,138,0.15); color: #6ee08a; }
-.badge-status.ev-residual    { background: rgba(102,204,255,0.15); color: #66ccff; }
-.badge-status.ev-spectrum    { background: rgba(110,138,224,0.15); color: #8e9ee0; }
-.badge-status.ev-animation   { background: rgba(224,184,110,0.15); color: #e0b86e; }
-.badge-status.ev-dns         { background: rgba(224,110,138,0.15); color: #e06e8a; }
-.badge-status.ev-checkpoint  { background: rgba(138,110,224,0.15); color: #8a6ee0; }
-.badge-status.ev-provenance  { background: rgba(110,200,200,0.15); color: #6ec8c8; }
-.badge-status.ev-log         { background: rgba(160,160,160,0.15); color: #a0a0a0; }
-.badge-status.ev-other       { background: rgba(100,100,100,0.15); color: #888; }
-.badge-status.ev-missing     { background: rgba(224,112,112,0.10); color: #e07070; border: 1px dashed rgba(224,112,112,0.4); }
-.badge-stale   { background: rgba(224,184,110,0.18); color: #e0b86e; border: 1px solid rgba(224,184,110,0.4); }
-.badge-blocked { background: rgba(224,112,112,0.18); color: #e07070; border: 1px solid rgba(224,112,112,0.4); }
 .card .provenance-row {
     font-size: 0.75em;
     color: var(--fg-dim);
@@ -1552,826 +1205,84 @@ a:focus-visible {
     outline-offset: 2px;
     border-radius: 4px;
 }
+
+/* Intro line, family blurb and the reference table of a card */
+p.intro {
+    color: var(--fg-mute);
+    font-size: 0.88em;
+    max-width: 62em;
+    margin: 0.6em 0 0;
+    text-wrap: pretty;
+}
+p.intro code {
+    font-family: ui-monospace, SF Mono, Monaco, Cascadia Code, monospace;
+    color: var(--accent);
+    font-size: 0.95em;
+}
+.card details.ref {
+    margin-top: 0.45em;
+    font-size: 0.82em;
+    color: var(--fg-mute);
+}
+.card details.ref > summary {
+    cursor: pointer;
+    color: var(--accent);
+    user-select: none;
+}
+.card details.ref .ref-desc {
+    margin: 0.5em 0 0.4em;
+    color: var(--fg);
+    line-height: 1.4;
+}
+.card table.ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+.card table.ref-table td {
+    padding: 0.15em 0.5em 0.15em 0;
+    vertical-align: top;
+    border-top: 1px solid var(--border-faint);
+}
+.card table.ref-table td.name {
+    font-family: ui-monospace, SF Mono, Monaco, monospace;
+    font-size: 0.92em;
+    word-break: break-word;
+}
+.card table.ref-table td.num {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--fg);
+}
 """
 
+LIGHTBOX_AND_HELP = (
+    '<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Figure viewer">'
+    '<div class="lightbox-backdrop"></div>'
+    '<button class="lightbox-close" aria-label="Close">&times;</button>'
+    '<img class="lightbox-img" alt="">'
+    '<div class="lightbox-caption"></div>'
+    '<div class="lightbox-nav-hint">&#8592; prev figure &middot; &#8594; next figure &middot; &#8593; prev stage '
+    '&middot; &#8595; next stage &middot; esc close</div>'
+    '</div>'
+    '<div class="kbd-help" id="kbd-help" role="dialog" aria-modal="true"'
+    ' aria-labelledby="kbd-help-title" aria-hidden="true">'
+    '<div class="kbd-panel">'
+    '<h3 id="kbd-help-title">Keyboard shortcuts</h3>'
+    '<dl>'
+    '<dt><kbd>?</kbd></dt><dd>Toggle this help</dd>'
+    '<dt><kbd>Esc</kbd></dt><dd>Close lightbox / help</dd>'
+    '<dt><kbd>g</kbd> then <kbd>1</kbd>&hellip;<kbd>9</kbd></dt>'
+    '<dd>Jump to N-th case</dd>'
+    '<dt><kbd>t</kbd></dt><dd>Scroll to top</dd>'
+    '<dt><kbd>r</kbd></dt><dd>Refresh queue panel</dd>'
+    '</dl>'
+    '<button id="kbd-help-close" type="button">close</button>'
+    '</div>'
+    '</div>'
+)
 
-def _should_ladder(active_cases) -> bool:
-    sfd = [mc for mc in active_cases if (mc.sort_prefix or '').startswith('1')]
-    newton = [mc for mc in active_cases if (mc.sort_prefix or '').startswith('2')]
-    return len(sfd) >= 2 or len(newton) >= 2
-
-
-def _render_ladder_group(pairs, label, _render_card_fn, step_offset=1):
-    bits = [f'<div class="mode-label" style="margin-top:0.8em">{html.escape(label)}</div>']
-    bits.append('<div class="ladder">')
-    for i, (c, mc) in enumerate(pairs, start=step_offset):
-        bits.append(
-            f'<div class="ladder-step">'
-            f'<div class="ladder-step__num">{i}</div>'
-            f'<div class="ladder-step__card">{_render_card_fn(c, mc)}</div>'
-            f'</div>'
-        )
-    bits.append('</div>')
-    return ''.join(bits)
-
-
-def _render_ladder_group_multi(triples, label, _render_card_fn, step_offset=1):
-    """Like _render_ladder_group but triples=(c, mc, art_or_None); expands multi-image cases."""
-    bits = [f'<div class="mode-label" style="margin-top:0.8em">{html.escape(label)}</div>']
-    bits.append('<div class="ladder">')
-    step = step_offset
-    for i, (c, mc, art) in enumerate(triples):
-        if art is not None:
-            png = _find_artifact_image(art, mc)
-            panel = _panel_caption_from_path(art.path, mc.case_id)
-        else:
-            png = None
-            panel = None
-        card_html = _render_card_fn(
-            c,
-            mc,
-            panel_caption=panel,
-            png_override=png,
-            panel_index=i,
-            panel_of=len(triples),
-        )
-        bits.append(
-            f'<div class="ladder-step">'
-            f'<div class="ladder-step__num">{step}</div>'
-            f'<div class="ladder-step__card">{card_html}</div>'
-            f'</div>'
-        )
-        step += 1
-    bits.append('</div>')
-    return ''.join(bits)
-
-
-def main() -> None:
-    now = datetime.now().strftime('%Y-%m-%d %H:%M')
-    version = _git_version()
-
-    catalog_cases = list(catalog_all_cases())
-    n_validated = sum(1 for c in catalog_cases if c.status == CaseStatus.VALIDATED)
-    n_deferred = sum(1 for c in catalog_cases if c.status == CaseStatus.DEFERRED)
-    n_blocked = sum(1 for c in catalog_cases if c.status in (
-        CaseStatus.BLOCKED, CaseStatus.NEEDS_DNS_SEED, CaseStatus.NEEDS_SCALAR_CHECKPOINT
-    ))
-    n_partial = sum(1 for c in catalog_cases if c.status in (
-        CaseStatus.PARTIAL, CaseStatus.LOCAL_SMOKE, CaseStatus.AMBIGUOUS,
-        CaseStatus.STALE, CaseStatus.MISSING_IMAGE, CaseStatus.COMPUTE_HEAVY
-    ))
-    n_total = len(catalog_cases)
-
-    parts: list[str] = []
-    parts.append('<!doctype html>')
-    parts.append('<html lang="en"><head>')
-    parts.append('<meta charset="utf-8">')
-    parts.append('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    parts.append('<meta name="color-scheme" content="dark">')
-    parts.append('<meta name="robots" content="noindex, nofollow">')
-    parts.append(f'<title>nekStab validation gallery — {n_total} cases</title>')
-    parts.append(f'<style>{CSS}</style>')
-    parts.append('</head><body>')
-    parts.append('<header class="page-head">')
-    parts.append('<h1>nekStab validation gallery</h1>')
-    parts.append(
-        f'<div class="meta">'
-        f'nekStab <code>{html.escape(version)}</code> &middot; '
-        f'{n_validated}/{n_total} validated catalog cases &middot; '
-        f'generated {now}'
-        f'</div>'
-    )
-    parts.append('</header>')
-    parts.append(
-        '<div class="legend">'
-        '<span class="ok">match (case Re/Ra)</span>'
-        '<span class="stale">stale (Re/Ra mismatch)</span>'
-        '<span class="pending">pending re-run</span>'
-        '</div>'
-    )
-    parts.append(
-        '<div class="status-summary" style="display:flex;gap:1em;flex-wrap:wrap;margin:0.5em 0 1em;">'
-        f'<span class="c-ok">{n_validated} validated</span>'
-        f'<span class="c-pending">{n_deferred} deferred</span>'
-        f'<span class="c-stale">{n_blocked} blocked / needs seed</span>'
-        f'<span class="c-pending">{n_partial} partial</span>'
-        f'<span style="color:var(--fg-mute);font-size:0.85em;">&middot; {n_total} total &middot; {now}</span>'
-        '</div>'
-    )
-
-    parts.append(
-        '<div class="filter-bar" id="filter-bar" aria-label="Filter cards">'
-        '<div class="filter-group">'
-        '<span class="filter-label">Status:</span>'
-        '<button class="filter-chip" aria-label="Filter by validated status" data-filter-group="status" data-filter-value="validated">validated</button>'
-        '<button class="filter-chip" aria-label="Filter by deferred status" data-filter-group="status" data-filter-value="deferred">deferred</button>'
-        '<button class="filter-chip" aria-label="Filter by blocked status" data-filter-group="status" data-filter-value="blocked">blocked</button>'
-        '</div>'
-        '<div class="filter-group">'
-        '<span class="filter-label">Lane:</span>'
-        '<button class="filter-chip" aria-label="Filter by baseflow lane" data-filter-group="lane" data-filter-value="baseflow">baseflow</button>'
-        '<button class="filter-chip" aria-label="Filter by stability lane" data-filter-group="lane" data-filter-value="stability">stability</button>'
-        '<button class="filter-chip" aria-label="Filter by postproc lane" data-filter-group="lane" data-filter-value="postproc">postproc</button>'
-        '<button class="filter-chip" aria-label="Filter by dns lane" data-filter-group="lane" data-filter-value="dns">dns</button>'
-        '<button class="filter-chip" aria-label="Filter by modal lane" data-filter-group="lane" data-filter-value="modal">modal</button>'
-        '<button class="filter-chip" aria-label="Filter by otd lane" data-filter-group="lane" data-filter-value="otd">otd</button>'
-        '</div>'
-        '<button class="filter-chip clear-btn" aria-label="Clear all filters" id="filter-clear">Clear filters</button>'
-        '</div>'
-    )
-
-    parts.append(
-        '<div class="queue-panel" id="queue-panel">'
-        '<div class="qhead">'
-        '<span class="qtitle">'
-        '<span class="status-dot" id="queue-status-dot" data-state="connecting" aria-hidden="true"></span>'
-        'Running jobs'
-        '</span>'
-        '<span class="tick" id="queue-tick">connecting&hellip;</span>'
-        '</div>'
-        '<div id="queue-body"><div class="empty">waiting for first poll&hellip;</div></div>'
-        '</div>'
-    )
-
-    def _render_card(c: Case, mc=None, panel_caption: str | None = None, png_override=_PNG_NOT_SET, panel_index: int = 0, panel_of: int = 1) -> str:
-        if png_override is _PNG_NOT_SET:
-            png = _find_png(c)
-        else:
-            png = png_override
-        if c.status == 'validated' and png is not None and not _is_stale(c, png):
-            state = 'ok'
-        elif c.status == 'blocked':
-            state = 'stale'
-        elif png is None:
-            state = 'pending'
-        elif _is_stale(c, png):
-            state = 'stale'
-        else:
-            state = 'pending'
-        card_classes = 'card'
-        if c.status != 'validated':
-            card_classes += ' deferred'
-        # Derive data attributes for filter chips
-        if mc is not None:
-            _fam_fallback = mc.flow_family
-        elif c.flow_family:
-            _fam_fallback = c.flow_family
-        else:
-            _fam_fallback = c.path.split('/')[0]
-        family_val = html.escape(_fam_fallback)
-        if mc is not None:
-            lane_raw = mc.method_lane
-        elif c.disc_lane:
-            lane_raw = c.disc_lane
-        else:
-            lane_raw = _classify(c)[1]
-        # Normalize method_lane values to display groups
-        _lane_map = {
-            'baseflow': 'baseflow', 'dns': 'dns', 'modal': 'modal',
-            'otd': 'otd', 'rans': 'rans', 'wavemaker': 'postproc',
-            'stability': 'stability', 'stability_direct': 'stability',
-            'stability_adjoint': 'stability',
-        }
-        if lane_raw in _lane_map:
-            lane_val = _lane_map[lane_raw]
-        elif 'floquet' in lane_raw or 'direct' in lane_raw or 'adjoint' in lane_raw or 'transient' in lane_raw or 'animation' in lane_raw:
-            lane_val = 'stability'
-        elif 'wavemaker' in lane_raw:
-            lane_val = 'postproc'
-        elif 'post' in lane_raw:
-            lane_val = 'postproc'
-        else:
-            lane_val = lane_raw
-        lane_val = html.escape(lane_val)
-        re_val = html.escape(c.re_tag)
-        case_id_val = html.escape(mc.case_id if mc is not None else c.path)
-        cap_text = f"{mc.case_id if mc is not None else c.path} · {panel_caption}" if panel_caption else (mc.case_id if mc is not None else c.path)
-        img_src_val = html.escape(_img_url(png)) if png is not None else ""
-        chunks: list[str] = [
-            f'<div class="{card_classes}"'
-            f' data-case-id="{case_id_val}"'
-            f' data-panel-index="{panel_index}"'
-            f' data-panel-of="{panel_of}"'
-            f' data-img-src="{html.escape(img_src_val)}"'
-            f' data-caption="{html.escape(cap_text)}"'
-            f' data-family="{family_val}"'
-            f' data-lane="{lane_val}"'
-            f' data-status="{html.escape(c.status)}"'
-            f' data-re="{re_val}">'
-        ]
-        caption = mc.current_path if mc is not None else c.path
-        if png is not None:
-            chunks.append(
-                f'<button class="img-wrap" aria-label="Open figure" '
-                f'data-img-src="{html.escape(_img_url(png))}" '
-                f'data-caption="{html.escape(cap_text)}">'
-            )
-        else:
-            chunks.append(
-                f'<button class="img-wrap" aria-label="Open figure" '
-                f'data-img-src="" data-caption="{html.escape(cap_text)}">'
-            )
-        badge_label = {'ok': 'OK', 'stale': 'STALE', 'pending': 'PENDING'}[state]
-        chunks.append(f'<span class="badge {state}">{badge_label}</span>')
-        if png is not None:
-            chunks.append(
-                f'<img loading="lazy" decoding="async" '
-                f'src="{html.escape(_img_url(png))}" alt="{html.escape(caption)}">'
-            )
-        else:
-            msg = 'pending re-run' if c.status == 'validated' else c.status
-            chunks.append(f'<div class="placeholder">{msg}</div>')
-        chunks.append('</button><div class="label">')
-        chunks.append(
-            f'<div class="copyable path" data-action="copy" data-copy="{html.escape(c.path)}">'
-            f'{html.escape(caption)}</div>'
-        )
-        label = mc.label if mc is not None else c.mode
-        mode_name = mc.mode_name if mc is not None else c.mode
-        legacy_uparam01 = mc.legacy_uparam01 if mc is not None else None
-        meta_bits = [c.re_tag, label]
-        if mode_name:
-            meta_bits.append(mode_name)
-        if legacy_uparam01:
-            meta_bits.append(f'uparam01 {legacy_uparam01}')
-        meta_text = ' · '.join(meta_bits)
-        chunks.append(
-            f'<div class="copyable meta-row" data-action="copy" data-copy="{html.escape(meta_text)}">'
-            f'{html.escape(c.re_tag)} &middot; {html.escape(label)}'
-            f'{(" &middot; " + html.escape(mode_name)) if mode_name else ""}'
-            f'{(" &middot; uparam01 " + html.escape(legacy_uparam01)) if legacy_uparam01 else ""}</div>'
-        )
-        if panel_caption:
-            chunks.append(
-                f'<div class="meta-row" style="color:var(--accent);font-size:0.82em;">'
-                f'{html.escape(panel_caption)}</div>'
-            )
-        chunks.append(
-            f'<div class="copyable expected" data-action="copy" data-copy="{html.escape(c.expected)}">'
-            f'{html.escape(c.expected)}</div>'
-        )
-        if mc is not None and mc.why_note:
-            chunks.append(
-                f'<div class="expected" style="color:var(--fg-dim);font-size:0.8em;'
-                f'font-style:italic;margin-top:0.15em">{html.escape(mc.why_note[:120])}</div>'
-            )
-        if mc is not None and mc.evidence_requirements:
-            badge_html_parts = []
-            for req in mc.evidence_requirements:
-                role_val = req.role.value
-                css_mod = _evidence_role_css(role_val)
-                label = _evidence_role_label(role_val)
-                req_cls = 'badge-status ' + css_mod
-                badge_html_parts.append(
-                    f'<span class="{req_cls}" title="{html.escape(role_val)}">{label}</span>'
-                )
-            if badge_html_parts:
-                chunks.append(
-                    '<div class="evidence-row">' + ''.join(badge_html_parts) + '</div>'
-                )
-        if mc is not None and any(getattr(a, 'freshness', None) == 'stale' for a in mc.artifacts):
-            chunks.append(
-                '<div class="evidence-row">'
-                '<span class="badge-status badge-stale" title="One or more artifacts are stale">STALE</span>'
-                '</div>'
-            )
-        if mc is not None and mc.blockers:
-            tooltip = html.escape(' | '.join(str(b)[:80] for b in mc.blockers))
-            chunks.append(
-                f'<div class="evidence-row">'
-                f'<span class="badge-status badge-blocked" title="{tooltip}">BLOCKED</span>'
-                f'</div>'
-            )
-        prov_parts = []
-        if mc is not None and mc.seed_parameters and mc.seed_parameters.seed_status:
-            prov_parts.append(f'seed: {html.escape(mc.seed_parameters.seed_status)}')
-        if mc is not None:
-            for a in mc.artifacts:
-                if a.role.value == 'provenance' and a.provenance:
-                    prov_parts.append(html.escape(a.provenance[:60]))
-                    break
-        if prov_parts:
-            chunks.append(
-                f'<div class="provenance-row">{" &middot; ".join(prov_parts)}</div>'
-            )
-        stats = _case_stats(c.path)
-        stat_bits: list[str] = []
-        if 'nelg' in stats:
-            stat_bits.append(f'<span class="stat"><b>{stats["nelg"]}</b> el</span>')
-        if 'ntasks' in stats:
-            stat_bits.append(f'<span class="stat"><b>{stats["ntasks"]}</b> mpi</span>')
-        if 'elapsed_sec' in stats:
-            stat_bits.append(
-                f'<span class="stat"><b>'
-                f'{html.escape(_format_elapsed(stats["elapsed_sec"]))}</b></span>'
-            )
-        if stat_bits:
-            chunks.append('<div class="stats">' + ''.join(stat_bits) + '</div>')
-        chunks.append('</div>')
-        casename = stats.get('casename', '')
-        has_slurm = stats.get('has_slurm', False)
-        chunks.append('<div class="actions">')
-        if casename:
-            chunks.append(f'<span class="casename">{html.escape(casename)}</span>')
-        else:
-            chunks.append('<span class="casename missing">no session</span>')
-        recompile_attrs = '' if casename else (
-            ' disabled data-static-disabled="1"'
-            ' title="case has no SESSION.NAME — cannot compile"'
-        )
-        resubmit_attrs = '' if has_slurm else (
-            ' disabled data-static-disabled="1"'
-            ' title="case has no Slurm script — cannot submit"'
-        )
-        elapsed_attr = ''
-        if 'elapsed_sec' in stats:
-            elapsed_attr = f' data-elapsed="{int(stats["elapsed_sec"])}"'
-        chunks.append('<div class="btn-group">')
-        chunks.append(
-            f'<button class="action-btn" data-action="recompile" '
-            f'aria-label="Recompile {html.escape(c.path)}" '
-            f'data-case="{html.escape(c.path)}"{elapsed_attr}{recompile_attrs}>'
-            f'recompile</button>'
-        )
-        chunks.append(
-            f'<button class="action-btn primary" data-action="resubmit" '
-            f'aria-label="Resubmit {html.escape(c.path)}" '
-            f'data-case="{html.escape(c.path)}"{elapsed_attr}{resubmit_attrs}>'
-            f'resubmit</button>'
-        )
-        chunks.append('</div></div>')
-        chunks.append(
-            f'<div class="job-status" data-case="{html.escape(c.path)}"'
-            f' aria-live="polite" aria-atomic="true"></div></div>'
-        )
-        return ''.join(chunks)
-
-    def _render_case_card(c: Case, mc, panels: list) -> str:
-        """One card per simulation with N thumbnails inside.
-
-        panels: list of (artifact, png_path, panel_caption) tuples.
-        Empty list -> single pending card (delegates to _render_card).
-        """
-        if not panels:
-            return _render_card(c, mc, panel_caption=None, png_override=None,
-                                panel_index=0, panel_of=1)
-        first_png = next((p[1] for p in panels if p[1] is not None), None)
-        if c.status == 'validated' and first_png is not None and not _is_stale(c, first_png):
-            state = 'ok'
-        elif c.status == 'blocked':
-            state = 'stale'
-        elif first_png is None:
-            state = 'pending'
-        elif _is_stale(c, first_png):
-            state = 'stale'
-        else:
-            state = 'pending'
-        card_classes = 'card'
-        if c.status != 'validated':
-            card_classes += ' deferred'
-        if mc is not None:
-            _fam_fallback2 = mc.flow_family
-        elif c.flow_family:
-            _fam_fallback2 = c.flow_family
-        else:
-            _fam_fallback2 = c.path.split('/')[0]
-        family_val = html.escape(_fam_fallback2)
-        if mc is not None:
-            lane_raw = mc.method_lane
-        elif c.disc_lane:
-            lane_raw = c.disc_lane
-        else:
-            lane_raw = _classify(c)[1]
-        _lane_map_local = {
-            'baseflow': 'baseflow', 'dns': 'dns', 'modal': 'modal',
-            'otd': 'otd', 'rans': 'rans', 'wavemaker': 'postproc',
-            'stability': 'stability', 'stability_direct': 'stability',
-            'stability_adjoint': 'stability',
-        }
-        if lane_raw in _lane_map_local:
-            lane_val = _lane_map_local[lane_raw]
-        elif ('floquet' in lane_raw or 'direct' in lane_raw or 'adjoint' in lane_raw
-              or 'transient' in lane_raw or 'animation' in lane_raw):
-            lane_val = 'stability'
-        elif 'wavemaker' in lane_raw or 'post' in lane_raw:
-            lane_val = 'postproc'
-        else:
-            lane_val = lane_raw
-        lane_val = html.escape(lane_val)
-        re_val = html.escape(c.re_tag)
-        case_id_val = html.escape(mc.case_id if mc is not None else c.path)
-        caption = mc.current_path if mc is not None else c.path
-
-        chunks: list[str] = [
-            f'<div class="{card_classes}"'
-            f' data-case-id="{case_id_val}"'
-            f' data-family="{family_val}"'
-            f' data-lane="{lane_val}"'
-            f' data-status="{html.escape(c.status)}"'
-            f' data-re="{re_val}">'
-        ]
-        chunks.append('<div class="label label-top">')
-        chunks.append(
-            f'<div class="copyable path" data-action="copy" data-copy="{html.escape(c.path)}">'
-            f'{html.escape(caption)}</div>'
-        )
-        label = mc.label if mc is not None else c.mode
-        mode_name = mc.mode_name if mc is not None else c.mode
-        legacy_uparam01 = mc.legacy_uparam01 if mc is not None else None
-        meta_bits = [c.re_tag, label]
-        if mode_name:
-            meta_bits.append(mode_name)
-        if legacy_uparam01:
-            meta_bits.append(f'uparam01 {legacy_uparam01}')
-        meta_text = ' · '.join(meta_bits)
-        chunks.append(
-            f'<div class="copyable meta-row" data-action="copy" data-copy="{html.escape(meta_text)}">'
-            f'{html.escape(c.re_tag)} &middot; {html.escape(label)}'
-            f'{(" &middot; " + html.escape(mode_name)) if mode_name else ""}'
-            f'{(" &middot; uparam01 " + html.escape(legacy_uparam01)) if legacy_uparam01 else ""}</div>'
-        )
-        chunks.append(
-            f'<div class="copyable expected" data-action="copy" data-copy="{html.escape(c.expected)}">'
-            f'{html.escape(c.expected)}</div>'
-        )
-        if mc is not None and mc.why_note:
-            chunks.append(
-                f'<div class="expected" style="color:var(--fg-dim);font-size:0.8em;'
-                f'font-style:italic;margin-top:0.15em">{html.escape(mc.why_note[:120])}</div>'
-            )
-        if mc is not None and mc.evidence_requirements:
-            badge_html_parts = []
-            for req in mc.evidence_requirements:
-                role_val = req.role.value
-                css_mod = _evidence_role_css(role_val)
-                lbl = _evidence_role_label(role_val)
-                req_cls = 'badge-status ' + css_mod
-                badge_html_parts.append(
-                    f'<span class="{req_cls}" title="{html.escape(role_val)}">{lbl}</span>'
-                )
-            if badge_html_parts:
-                chunks.append('<div class="evidence-row">' + ''.join(badge_html_parts) + '</div>')
-        if mc is not None and mc.blockers:
-            tooltip = html.escape(' | '.join(str(b)[:80] for b in mc.blockers))
-            chunks.append(
-                f'<div class="evidence-row">'
-                f'<span class="badge-status badge-blocked" title="{tooltip}">BLOCKED</span>'
-                f'</div>'
-            )
-        stats_local = _case_stats(c.path)
-        stat_bits: list[str] = []
-        if 'nelg' in stats_local:
-            stat_bits.append(f'<span class="stat"><b>{stats_local["nelg"]}</b> el</span>')
-        if 'ntasks' in stats_local:
-            stat_bits.append(f'<span class="stat"><b>{stats_local["ntasks"]}</b> mpi</span>')
-        if 'elapsed_sec' in stats_local:
-            stat_bits.append(
-                f'<span class="stat"><b>'
-                f'{html.escape(_format_elapsed(stats_local["elapsed_sec"]))}</b></span>'
-            )
-        if stat_bits:
-            chunks.append('<div class="stats">' + ''.join(stat_bits) + '</div>')
-        chunks.append('</div>')
-
-        # ----- Multi-panel thumbnail strip -----
-        badge_label = {'ok': 'OK', 'stale': 'STALE', 'pending': 'PENDING'}[state]
-        chunks.append(f'<div class="thumbs-strip"><span class="badge {state} strip-badge">{badge_label}</span>')
-        for i, (art, png, panel_caption) in enumerate(panels):
-            thumb_src = html.escape(_img_url(png)) if png is not None else ''
-            base_label = mc.case_id if mc is not None else c.path
-            thumb_cap = f'{base_label} · {panel_caption}' if panel_caption else base_label
-            chunks.append(
-                f'<button class="thumb" '
-                f'data-case-id="{case_id_val}" '
-                f'data-panel-index="{i}" '
-                f'data-panel-of="{len(panels)}" '
-                f'data-img-src="{html.escape(thumb_src)}" '
-                f'data-caption="{html.escape(thumb_cap)}" '
-                f'aria-label="Open panel {i+1} of {len(panels)}">'
-            )
-            if png is not None:
-                chunks.append(
-                    f'<img class="thumb-img" loading="lazy" decoding="async" '
-                    f'src="{thumb_src}" alt="{html.escape(thumb_cap)}">'
-                )
-            else:
-                chunks.append('<div class="thumb-placeholder">pending</div>')
-            if panel_caption:
-                chunks.append(
-                    f'<div class="thumb-cap">{html.escape(panel_caption)}</div>'
-                )
-            chunks.append('</button>')
-        chunks.append('</div>')
-
-        # ----- ACTIONS -----
-        casename = stats_local.get('casename', '')
-        has_slurm = stats_local.get('has_slurm', False)
-        chunks.append('<div class="actions">')
-        if casename:
-            chunks.append(f'<span class="casename">{html.escape(casename)}</span>')
-        else:
-            chunks.append('<span class="casename missing">no session</span>')
-        recompile_attrs = '' if casename else (
-            ' disabled data-static-disabled="1"'
-            ' title="case has no SESSION.NAME — cannot compile"'
-        )
-        resubmit_attrs = '' if has_slurm else (
-            ' disabled data-static-disabled="1"'
-            ' title="case has no Slurm script — cannot submit"'
-        )
-        elapsed_attr = ''
-        if 'elapsed_sec' in stats_local:
-            elapsed_attr = f' data-elapsed="{int(stats_local["elapsed_sec"])}"'
-        chunks.append('<div class="btn-group">')
-        chunks.append(
-            f'<button class="action-btn" data-action="recompile" '
-            f'aria-label="Recompile {html.escape(c.path)}" '
-            f'data-case="{html.escape(c.path)}"{elapsed_attr}{recompile_attrs}>'
-            f'recompile</button>'
-        )
-        chunks.append(
-            f'<button class="action-btn primary" data-action="resubmit" '
-            f'aria-label="Resubmit {html.escape(c.path)}" '
-            f'data-case="{html.escape(c.path)}"{elapsed_attr}{resubmit_attrs}>'
-            f'resubmit</button>'
-        )
-        chunks.append('</div></div>')
-        chunks.append(
-            f'<div class="job-status" data-case="{html.escape(c.path)}"'
-            f' aria-live="polite" aria-atomic="true"></div></div>'
-        )
-        return ''.join(chunks)
-
-    def _mc_panels(mc) -> list:
-        """Build [(art, png, panel_caption)] for all reference_image artifacts of a MethodCase."""
-        result = []
-        for art in mc.artifacts:
-            if art.role.value != 'reference_image':
-                continue
-            png = _find_artifact_image(art, mc)
-            panel = _panel_caption_from_path(art.path, mc.case_id)
-            result.append((art, png, panel))
-        return result
-
-    # ---------------------------------------------------------------------------
-    # Auto-discovery: scan example/ and group by family_id
-    # ---------------------------------------------------------------------------
-    discovered_all = discover_stage_folders()
-    # Group: family_id -> list of (rel_subpath, lane, panels)
-    discovered_by_fam: dict[str, list[tuple[str, str, list]]] = {}
-    for fam_id, rel, lane, panels in discovered_all:
-        discovered_by_fam.setdefault(fam_id, []).append((rel, lane, panels))
-
-    all_families = {f.family_id: f for f in catalog_families()}
-    ordered_fids = [fid for fid in FAMILY_ORDER if fid in all_families] + [
-        fid for fid in all_families if fid not in FAMILY_ORDER
-    ]
-    nav_chips: list[str] = []
-    for fid in ordered_fids:
-        fam = all_families[fid]
-        fam_cases = cases_for(fid)
-        n_total_fam = len(fam_cases)
-        n_val_fam = sum(1 for c in fam_cases if c.status == CaseStatus.VALIDATED)
-        nav_chips.append(
-            f'<a class="nav-chip" href="#family-{fid}" aria-label="Jump to {html.escape(fam.label)} family">'
-            f'{html.escape(fam.label)}'
-            f'<span class="count">{n_val_fam}/{n_total_fam}</span>'
-            f'</a>'
-        )
-    parts.append(
-        '<nav class="section-nav" id="family-nav" aria-label="Flow family navigation">'
-        + ''.join(nav_chips)
-        + '</nav>'
-    )
-
-    def _family_counter_chips(fam_cases) -> str:
-        n_val = sum(1 for c in fam_cases if c.status == CaseStatus.VALIDATED)
-        n_def = sum(1 for c in fam_cases if c.status == CaseStatus.DEFERRED)
-        n_blk = sum(1 for c in fam_cases if c.status in (
-            CaseStatus.BLOCKED, CaseStatus.NEEDS_DNS_SEED, CaseStatus.NEEDS_SCALAR_CHECKPOINT
-        ))
-        n_prt = sum(1 for c in fam_cases if c.status in (
-            CaseStatus.PARTIAL, CaseStatus.LOCAL_SMOKE, CaseStatus.AMBIGUOUS,
-            CaseStatus.STALE, CaseStatus.MISSING_IMAGE, CaseStatus.COMPUTE_HEAVY
-        ))
-        bits = []
-        if n_val:
-            bits.append(f'<span class="c-ok">{n_val} validated</span>')
-        if n_prt:
-            bits.append(f'<span class="c-pending">{n_prt} partial</span>')
-        if n_blk:
-            bits.append(f'<span class="c-stale">{n_blk} blocked</span>')
-        if n_def:
-            bits.append(f'<span class="c-pending">{n_def} deferred</span>')
-        return ''.join(bits)
-
-    for fid in ordered_fids:
-        fam = all_families[fid]
-        fam_cases = list(cases_for(fid))
-        active_cases = [c for c in fam_cases if c.status != CaseStatus.DEFERRED]
-        deferred_cases = [c for c in fam_cases if c.status == CaseStatus.DEFERRED]
-        active_cases = [mc for mc in active_cases if getattr(mc, 'gallery_visible', True)]
-        deferred_cases = [mc for mc in deferred_cases if getattr(mc, 'gallery_visible', True)]
-        active_cases.sort(key=lambda mc: LANE_ORDER.index(mc.method_lane) if mc.method_lane in LANE_ORDER else 999)
-        parts.append(
-            f'<section class="geom" id="family-{fid}" style="scroll-margin-top:4.5em">'
-            f'<h2>{html.escape(fam.label)} '
-            f'<span style="font-size:0.7em;color:var(--fg-dim);font-weight:normal">'
-            f'{html.escape(fam.geometry_kind)}</span> '
-            f'<span class="counts">{_family_counter_chips(fam_cases)}</span></h2>'
-        )
-        if fam.why_note:
-            parts.append(
-                f'<p style="color:var(--fg-mute);font-size:0.85em;font-style:italic;'
-                f'margin:0 0 1em">{html.escape(fam.why_note)}</p>'
-            )
-        if active_cases:
-            # DNS cases (lane='dns') render first, before SFD/Newton ladders.
-            # Per gallery design: DNS at top of each family.
-            dns_mcs = sorted(
-                [mc for mc in active_cases if mc.method_lane == 'dns'],
-                key=lambda m: (m.sort_prefix or '')
-            )
-            non_dns_active = [mc for mc in active_cases if mc.method_lane != 'dns']
-            if dns_mcs:
-                parts.append('<div class="grid">')
-                for mc in dns_mcs:
-                    c = catalog_to_case(mc)
-                    parts.append(_render_case_card(c, mc, _mc_panels(mc)))
-                parts.append('</div>')
-            if _should_ladder(non_dns_active):
-                sfd_mcs = sorted(
-                    [mc for mc in non_dns_active if (mc.sort_prefix or '').startswith('1')],
-                    key=lambda m: (m.sort_prefix or '')
-                )
-                newton_mcs = sorted(
-                    [mc for mc in non_dns_active if (mc.sort_prefix or '').startswith('2')],
-                    key=lambda m: (m.sort_prefix or '')
-                )
-                other_mcs = [
-                    mc for mc in non_dns_active
-                    if not (mc.sort_prefix or '').startswith('1')
-                    and not (mc.sort_prefix or '').startswith('2')
-                ]
-                if len(sfd_mcs) >= 2:
-                    parts.append(
-                        '<div class="mode-label" style="margin-top:0.8em">'
-                        'SFD variants — baseline → dynamic tolerance → OIFS'
-                        '</div><div class="ladder">'
-                    )
-                    for step_i, mc in enumerate(sfd_mcs, 1):
-                        c = catalog_to_case(mc)
-                        parts.append(
-                            f'<div class="ladder-step">'
-                            f'<div class="ladder-step__num">{step_i}</div>'
-                            f'<div class="ladder-step__card">{_render_case_card(c, mc, _mc_panels(mc))}</div>'
-                            f'</div>'
-                        )
-                    parts.append('</div>')
-                elif sfd_mcs:
-                    other_mcs = sfd_mcs + other_mcs
-                if len(newton_mcs) >= 2:
-                    parts.append(
-                        '<div class="mode-label" style="margin-top:0.8em">'
-                        'Newton variants — standard → UPO → forced'
-                        '</div><div class="ladder">'
-                    )
-                    for step_i, mc in enumerate(newton_mcs, 1):
-                        c = catalog_to_case(mc)
-                        parts.append(
-                            f'<div class="ladder-step">'
-                            f'<div class="ladder-step__num">{step_i}</div>'
-                            f'<div class="ladder-step__card">{_render_case_card(c, mc, _mc_panels(mc))}</div>'
-                            f'</div>'
-                        )
-                    parts.append('</div>')
-                elif newton_mcs:
-                    other_mcs = newton_mcs + other_mcs
-                if other_mcs:
-                    parts.append('<div class="grid">')
-                    for mc in other_mcs:
-                        c = catalog_to_case(mc)
-                        parts.append(_render_case_card(c, mc, _mc_panels(mc)))
-                    parts.append('</div>')
-            elif non_dns_active:
-                parts.append('<div class="grid">')
-                for mc in non_dns_active:
-                    c = catalog_to_case(mc)
-                    parts.append(_render_case_card(c, mc, _mc_panels(mc)))
-                parts.append('</div>')
-        if deferred_cases:
-            n_def = len(deferred_cases)
-            parts.append(
-                f'<details class="deferred-section">'
-                f'<summary><span class="summary-label">Deferred</span> '
-                f'<span class="counts">{n_def} case{"s" if n_def != 1 else ""}</span></summary>'
-                f'<div class="grid">'
-            )
-            for mc in deferred_cases:
-                img_arts = [a for a in mc.artifacts if a.role.value == 'reference_image']
-                if img_arts:
-                    for i, art in enumerate(img_arts):
-                        c = catalog_to_case(mc)
-                        png = _find_artifact_image(art, mc)
-                        panel = _panel_caption_from_path(art.path, mc.case_id)
-                        parts.append(_render_card(c, mc, panel_caption=panel, png_override=png, panel_index=i, panel_of=len(img_arts)))
-                else:
-                    c = catalog_to_case(mc)
-                    parts.append(_render_card(c, mc, panel_index=0, panel_of=1))
-            parts.append('</div></details>')
-
-        # ----- Auto-discovered stages for this family -----
-        disc_for_fam = discovered_by_fam.get(fid, [])
-        if disc_for_fam:
-            parts.append(
-                '<div class="mode-label" style="margin-top:1.2em">'
-                'Auto-discovered stages'
-                '</div>'
-            )
-            parts.append('<div class="grid">')
-            for rel, lane, panels in disc_for_fam:
-                geom_dir = rel.split('/')[0]
-                re_tag = _discover_re_tag(geom_dir)
-                has_png = any(p[1] is not None for p in panels)
-                disc_status = 'validated' if has_png else 'pending'
-                c = Case(
-                    path=rel,
-                    re_tag=re_tag,
-                    mode='',
-                    expected='auto-discovered stage',
-                    status=disc_status,
-                    fig_key=rel.replace('/', '_'),
-                    flow_family=fid,
-                    disc_lane=lane,
-                )
-                parts.append(_render_case_card(c, None, panels))
-            parts.append('</div>')
-
-        parts.append('</section>')
-
-    # ----- Sections for discovered families with no catalog entries -----
-    pure_disc_fids = sorted(
-        fid for fid in discovered_by_fam if fid not in all_families
-    )
-    for fid in pure_disc_fids:
-        disc_entries = discovered_by_fam[fid]
-        label = fid.replace('_', ' ').title()
-        n_disc = len(disc_entries)
-        parts.append(
-            f'<section class="geom" id="family-{html.escape(fid)}" style="scroll-margin-top:4.5em">'
-            f'<h2>{html.escape(label)} '
-            f'<span class="counts"><span class="c-pending">{n_disc} auto-discovered</span></span>'
-            f'</h2>'
-        )
-        parts.append(
-            '<div class="mode-label" style="margin-top:0.4em">'
-            'Auto-discovered stages'
-            '</div>'
-        )
-        parts.append('<div class="grid">')
-        for rel, lane, panels in disc_entries:
-            geom_dir = rel.split('/')[0]
-            re_tag = _discover_re_tag(geom_dir)
-            has_png = any(p[1] is not None for p in panels)
-            disc_status = 'validated' if has_png else 'pending'
-            c = Case(
-                path=rel,
-                re_tag=re_tag,
-                mode='',
-                expected='auto-discovered stage',
-                status=disc_status,
-                fig_key=rel.replace('/', '_'),
-                flow_family=fid,
-                disc_lane=lane,
-            )
-            parts.append(_render_case_card(c, None, panels))
-        parts.append('</div></section>')
-
-    parts.append(
-        '<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Figure viewer">'
-        '<div class="lightbox-backdrop"></div>'
-        '<button class="lightbox-close" aria-label="Close">&times;</button>'
-        '<img class="lightbox-img" alt="">'
-        '<div class="lightbox-caption"></div>'
-        '<div class="lightbox-nav-hint">&#8592; prev panel &middot; &#8594; next panel &middot; &#8593; prev case &middot; &#8595; next case &middot; esc close</div>'
-        '</div>'
-        '<div class="kbd-help" id="kbd-help" role="dialog" aria-modal="true"'
-        ' aria-labelledby="kbd-help-title" aria-hidden="true">'
-        '<div class="kbd-panel">'
-        '<h3 id="kbd-help-title">Keyboard shortcuts</h3>'
-        '<dl>'
-        '<dt><kbd>?</kbd></dt><dd>Toggle this help</dd>'
-        '<dt><kbd>Esc</kbd></dt><dd>Close lightbox / help</dd>'
-        '<dt><kbd>g</kbd> then <kbd>1</kbd>&hellip;<kbd>9</kbd></dt>'
-        '<dd>Jump to N-th geometry</dd>'
-        '<dt><kbd>t</kbd></dt><dd>Scroll to top</dd>'
-        '<dt><kbd>r</kbd></dt><dd>Refresh queue panel</dd>'
-        '</dl>'
-        '<button id="kbd-help-close" type="button">close</button>'
-        '</div>'
-        '</div>'
-    )
-    parts.append(r"""<script>
+SCRIPT = r"""<script>
 (function () {
     // ---- new lightbox (Phase 1) ----
     (function() {
@@ -2442,16 +1353,6 @@ def main() -> None:
                 show(thumbBtn.dataset.caseId, parseInt(thumbBtn.dataset.panelIndex||'0'));
                 return;
             }
-            // Legacy single-panel button (img-wrap inside a pending card).
-            const imgBtn = e.target.closest('button.img-wrap');
-            if (imgBtn) {
-                e.preventDefault();
-                const fresh = rebuild();
-                state.caseOrder = fresh.caseOrder;
-                state.byCase = fresh.byCase;
-                const card = imgBtn.closest('.card');
-                show(card.dataset.caseId, 0);
-            }
         });
         lbBackdrop.addEventListener('click', closeLb);
         lbClose.addEventListener('click', closeLb);
@@ -2475,8 +1376,6 @@ def main() -> None:
     document.body.addEventListener('click', function (e) {
         const el = e.target.closest('.copyable');
         if (!el) return;
-        // don't hijack clicks inside image buttons
-        if (e.target.closest('button.img-wrap')) return;
         e.preventDefault();
         e.stopPropagation();
         const text = el.dataset.copy || el.textContent;
@@ -2524,8 +1423,8 @@ def main() -> None:
             return "Can't reach server — is validation/serve.py running and tunnel up?";
         if (/Failed to fetch|NetworkError|TypeError/i.test(msg))
             return "Server unreachable — check the SSH tunnel.";
-        if (/403/.test(msg) && /catalog/i.test(msg))
-            return "Case isn't in the catalog — can't resubmit.";
+        if (/403/.test(msg) && /stage folder/i.test(msg))
+            return "Not a stage folder of example/ — can't resubmit.";
         if (/403/.test(msg) && /origin/i.test(msg))
             return "Origin blocked — open the gallery via http://localhost:8000/, not file://.";
         if (/409/.test(msg) || /already running/i.test(msg))
@@ -2731,6 +1630,10 @@ def main() -> None:
         queueStaticMode = true;
         const qp = document.getElementById('queue-panel');
         if (qp) qp.style.display = 'none';
+        // Without the server the buttons cannot work, so a reader of the static page does not see them.
+        document.querySelectorAll('.card .actions, .card .job-status').forEach(function (el) {
+            el.style.display = 'none';
+        });
         document.querySelectorAll('button.action-btn').forEach(function (b) {
             b.disabled = true;
             b.dataset.staticDisabled = '1';
@@ -2891,16 +1794,237 @@ def main() -> None:
         }
     })();
 })();
-</script>""")
+</script>"""
+
+
+def _reference_table(stage: Stage) -> str:
+    """Return the collapsed table of the reference values of a stage."""
+    rows = []
+    for name, spec in stage.quantities.items():
+        note = html.escape(str(spec.get('note', '')), quote=True)
+        source = html.escape(str(spec.get('source', '')), quote=True)
+        rows.append(
+            f'<tr><td class="name" title="{source}">{html.escape(name)}</td>'
+            f'<td class="num" title="{note}">{html.escape(_format_number(spec.get("value")))}</td>'
+            f'<td class="num">{html.escape(_tolerance_text(spec))}</td></tr>'
+        )
+    return (
+        '<details class="ref"><summary>Reference values</summary>'
+        f'<p class="ref-desc">{html.escape(stage.description)}</p>'
+        f'<table class="ref-table"><tbody>{"".join(rows)}</tbody></table>'
+        '</details>'
+    )
+
+
+def render_card(stage: Stage) -> str:
+    """Return the HTML of one stage card."""
+    path = html.escape(stage.path, quote=True)
+    lane = html.escape(stage.lane, quote=True)
+    re_tag = html.escape(stage.re_tag, quote=True)
+    n_checks = len(stage.quantities)
+    meta_bits = [b for b in (stage.re_tag, f'mode {stage.mode} · {MODE_NAMES[stage.mode]}'
+                             if stage.mode in MODE_NAMES else '') if b]
+    meta_text = ' · '.join(meta_bits)
+
+    chunks: list[str] = [
+        f'<div class="card" data-case-id="{path}" data-family="{html.escape(stage.family, quote=True)}"'
+        f' data-lane="{lane}" data-re="{re_tag}">',
+        '<div class="label label-top">',
+        f'<div class="copyable path" data-action="copy" data-copy="{path}">{html.escape(stage.path)}</div>',
+    ]
+    if meta_text:
+        chunks.append(
+            f'<div class="copyable meta-row" data-action="copy" data-copy="{html.escape(meta_text, quote=True)}">'
+            f'{html.escape(meta_text)}</div>'
+        )
+    chunks.append(
+        f'<div class="copyable expected" data-action="copy" data-copy="{html.escape(stage.summary, quote=True)}">'
+        f'{html.escape(stage.summary)}</div>'
+    )
+    chunks.append(
+        '<div class="evidence-row">'
+        f'<span class="badge-status ev-image" title="numbers that scripts/check_against_ref.py compares a run with">'
+        f'{n_checks} reference check{"" if n_checks == 1 else "s"}</span></div>'
+    )
+    chunks.append(_reference_table(stage))
+    produced = _produced_text(stage.produced)
+    if produced:
+        chunks.append(f'<div class="provenance-row">{html.escape(produced)}</div>')
+    stat_bits: list[str] = []
+    if stage.nelg is not None:
+        stat_bits.append(f'<span class="stat"><b>{stage.nelg}</b> el</span>')
+    if stage.ranks:
+        stat_bits.append(f'<span class="stat"><b>{html.escape(stage.ranks)}</b> mpi</span>')
+    if stage.wall_s is not None:
+        stat_bits.append(f'<span class="stat"><b>{html.escape(_format_elapsed(stage.wall_s))}</b></span>')
+    if stat_bits:
+        chunks.append('<div class="stats">' + ''.join(stat_bits) + '</div>')
+    chunks.append('</div>')
+
+    chunks.append('<div class="thumbs-strip">')
+    for index, figure in enumerate(stage.figures):
+        src = html.escape(_img_url(figure), quote=True)
+        caption = html.escape(f'{stage.path} · {_figure_caption(figure)}', quote=True)
+        chunks.append(
+            f'<button class="thumb" data-case-id="{path}" data-panel-index="{index}"'
+            f' data-panel-of="{len(stage.figures)}" data-img-src="{src}" data-caption="{caption}"'
+            f' aria-label="Open figure {index + 1} of {len(stage.figures)}">'
+            f'<img class="thumb-img" loading="lazy" decoding="async" src="{src}" alt="{caption}">'
+            f'<div class="thumb-cap">{html.escape(_figure_caption(figure))}</div></button>'
+        )
+    chunks.append('</div>')
+
+    elapsed = f' data-elapsed="{int(stage.wall_s)}"' if stage.wall_s is not None else ''
+    recompile = '' if stage.casename else ' disabled data-static-disabled="1" title="stage has no .par file"'
+    resubmit = '' if stage.has_slurm else (
+        ' disabled data-static-disabled="1" title="stage has no Slurm script, so it cannot be submitted"'
+    )
+    chunks.append('<div class="actions">')
+    chunks.append(f'<span class="casename">{html.escape(stage.casename)}</span>')
+    chunks.append('<div class="btn-group">')
+    chunks.append(
+        f'<button class="action-btn" data-action="recompile" aria-label="Recompile {path}"'
+        f' data-case="{path}"{elapsed}{recompile}>recompile</button>'
+    )
+    chunks.append(
+        f'<button class="action-btn primary" data-action="resubmit" aria-label="Resubmit {path}"'
+        f' data-case="{path}"{elapsed}{resubmit}>resubmit</button>'
+    )
+    chunks.append('</div></div>')
+    chunks.append(f'<div class="job-status" data-case="{path}" aria-live="polite" aria-atomic="true"></div>')
+    chunks.append('</div>')
+    return ''.join(chunks)
+
+
+def _grid(stages: list[Stage]) -> str:
+    return '<div class="grid">' + ''.join(render_card(s) for s in stages) + '</div>'
+
+
+def _ladder(stages: list[Stage]) -> str:
+    """Numbered steps, one full-width card per stage, for variants that follow each other."""
+    steps = [
+        f'<div class="ladder-step"><div class="ladder-step__num">{i}</div>'
+        f'<div class="ladder-step__card">{render_card(s)}</div></div>'
+        for i, s in enumerate(stages, start=1)
+    ]
+    return '<div class="ladder">' + ''.join(steps) + '</div>'
+
+
+def _mode_label(text: str, count: int) -> str:
+    return (
+        f'<div class="mode-label" style="margin-top:0.8em">{html.escape(text)}'
+        f'<span class="counts">{count}</span></div>'
+    )
+
+
+def render_family(family: str, stages: list[Stage]) -> str:
+    """Return the section of one example folder: its stages grouped by lane."""
+    title, blurb = FAMILIES.get(family, (family.replace('_', ' '), ''))
+    parts = [
+        f'<section class="geom" id="family-{html.escape(family, quote=True)}" style="scroll-margin-top:4.5em">',
+        f'<h2>{html.escape(title)} <span class="counts"><span class="c-ok">{len(stages)} '
+        f'stage{"" if len(stages) == 1 else "s"}</span></span></h2>',
+    ]
+    if blurb:
+        parts.append(
+            '<p style="color:var(--fg-mute);font-size:0.85em;font-style:italic;margin:0 0 1em">'
+            f'{html.escape(blurb)}</p>'
+        )
+    for lane, lane_label in LANES:
+        group = [s for s in stages if s.lane == lane]
+        if not group:
+            continue
+        if lane != 'baseflow':
+            parts.append(_mode_label(lane_label, len(group)))
+            parts.append(_grid(group))
+            continue
+        subgroups = [(key, [s for s in group if s.number[:1] == key]) for key in BASEFLOW_GROUPS]
+        for key, members in subgroups:
+            if not members:
+                continue
+            label = lane_label if len([m for _, m in subgroups if m]) == 1 else (
+                f'{lane_label}: {BASEFLOW_GROUPS[key]}'
+            )
+            parts.append(_mode_label(label, len(members)))
+            parts.append(_ladder(members) if len(members) >= 2 else _grid(members))
+    parts.append('</section>')
+    return ''.join(parts)
+
+
+def build_page() -> str:
+    """Return the HTML of the gallery for the stage folders in example/."""
+    stages = drawn_stages(discover_stages())
+    families = [f for f in FAMILIES if any(s.family == f for s in stages)]
+    families += sorted({s.family for s in stages} - set(FAMILIES))
+    n_checks = sum(len(s.quantities) for s in stages)
+    versions = _versions(stages)
+
+    parts: list[str] = [
+        '<!doctype html>',
+        '<html lang="en"><head>',
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        '<meta name="color-scheme" content="dark">',
+        '<meta name="robots" content="noindex, nofollow">',
+        f'<title>nekStab validation gallery — {len(stages)} stages</title>',
+        f'<style>{CSS}</style>',
+        '</head><body>',
+        '<header class="page-head">',
+        '<h1>nekStab validation gallery</h1>',
+        '<div class="meta">'
+        + (f'references produced with nekStab <code>{html.escape(versions)}</code> &middot; ' if versions else '')
+        + f'{len(stages)} stages in {len(families)} cases &middot; {n_checks} reference checks'
+        '</div>',
+        '<p class="intro">Each card is one stage folder of <code>example/</code>. The figures are the files of '
+        'its <code>ref/</code> folder. The reference values are the numbers that '
+        '<code>scripts/check_against_ref.py</code> compares a new run with. Open a figure to enlarge it; '
+        'the arrow keys move between figures.</p>',
+        '</header>',
+        '<div class="filter-bar" id="filter-bar" aria-label="Filter cards">'
+        '<div class="filter-group"><span class="filter-label">Lane:</span>'
+        + ''.join(
+            f'<button class="filter-chip" aria-label="Filter by {label} lane" data-filter-group="lane"'
+            f' data-filter-value="{lane}">{html.escape(label.lower())}</button>'
+            for lane, label in LANES
+        )
+        + '</div>'
+        '<button class="filter-chip clear-btn" aria-label="Clear all filters" id="filter-clear">Clear filters</button>'
+        '</div>',
+        '<div class="queue-panel" id="queue-panel"><div class="qhead"><span class="qtitle">'
+        '<span class="status-dot" id="queue-status-dot" data-state="connecting" aria-hidden="true"></span>'
+        'Running jobs</span><span class="tick" id="queue-tick">connecting&hellip;</span></div>'
+        '<div id="queue-body"><div class="empty">waiting for first poll&hellip;</div></div></div>',
+        '<nav class="section-nav" id="family-nav" aria-label="Flow family navigation">'
+        + ''.join(
+            f'<a class="nav-chip" href="#family-{html.escape(f, quote=True)}"'
+            f' aria-label="Jump to {html.escape(FAMILIES.get(f, (f,))[0], quote=True)}">'
+            f'{html.escape(FAMILIES.get(f, (f,))[0])}'
+            f'<span class="count">{sum(1 for s in stages if s.family == f)}</span></a>'
+            for f in families
+        )
+        + '</nav>',
+    ]
+    for family in families:
+        parts.append(render_family(family, [s for s in stages if s.family == family]))
+    parts.append(LIGHTBOX_AND_HELP)
+    parts.append(SCRIPT)
     parts.append('</body></html>')
-    OUT.write_text('\n'.join(parts), encoding='utf-8')
-    n_discovered = len(discovered_all)
-    n_pure_disc_fams = len(pure_disc_fids)
-    print(f'Wrote {OUT}')
-    print(f'  total cases: {n_total} ({n_validated} validated, {n_deferred} deferred, {n_blocked} blocked)')
-    print(f'  families: {len(ordered_fids)} catalog + {n_pure_disc_fams} auto-discovered-only')
-    print(f'  auto-discovered stage folders: {n_discovered}')
+    return '\n'.join(parts) + '\n'
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    out = Path(argv[0]) if argv else OUT
+    stages = discover_stages()
+    out.write_text(build_page(), encoding='utf-8')
+    drawn = drawn_stages(stages)
+    print(f'Wrote {out}')
+    print(f'  stages drawn: {len(drawn)} of {len(stages)} in {len({s.family for s in drawn})} cases')
+    for stage in stages:
+        for problem in stage.problems:
+            print(f'  not drawn or incomplete: {stage.path}: {problem}')
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

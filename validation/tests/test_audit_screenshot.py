@@ -172,8 +172,10 @@ def test_index_has_copyable() -> None:
     assert soup().select(".copyable")
 
 
-def test_shots_dir_structure() -> None:
-    assert (VALIDATION_DIR / "shots").is_dir()
+def test_audit_script_writes_to_the_shots_folder() -> None:
+    # The folder validation/shots/ is created by the audit script and is not tracked.
+    source = (VALIDATION_DIR / "audit_screenshot.py").read_text()
+    assert "parent / 'shots'" in source
 
 
 def test_family_nav_has_chips() -> None:

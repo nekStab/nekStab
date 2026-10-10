@@ -290,8 +290,10 @@ utilities, and `make_case_ref.py` to classify case files and build
 
 The validation evidence is published as a static gallery
 (`validation/index.html` + figures) deployed to GitHub Pages at
-https://nekstab.github.io/nekStab/validation/, catalog-driven and
-checked by a Playwright test suite.
+https://nekstab.github.io/nekStab/validation/. `validation/build_gallery.py`
+builds it from the stage folders of `example/` (figures of `ref/`, quantities
+of `ref/reference.json`); `validation/tests/test_gallery_complete.py` and a
+Playwright test suite check it.
 
 ### String-based mode selection (new in 2.0)
 

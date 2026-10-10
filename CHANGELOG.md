@@ -58,6 +58,22 @@ description for the 2.0 series; entries here are the per-tag deltas.
   numeric value, a source and exactly one tolerance.
 
 ### Changed
+- The validation gallery is built from the stage folders of `example/`
+  (`python validation/build_gallery.py`). A card shows the figures of the
+  `ref/` folder of a stage and the quantities of its `ref/reference.json`,
+  with the new keys `summary` (one line) and `description` (what the values
+  check). A stage without a reference, a summary, a figure or a README is not
+  drawn, and `validation/tests/test_gallery_complete.py` fails for it. The
+  test also fails for a deferred, blocked or pending card, a link that does not
+  resolve, and a `validation/index.html` that differs from the generator
+  output. The page no longer carries a date or a machine name, so the file in
+  git is the output of the script. Before, the cards came from a hand-written
+  case catalog. Almost every entry of it named a figure file that no longer
+  existed, so most cards read "pending re-run". The catalog
+  (`validation/catalog.py`, `catalog_check.py`, `scripts/evidence_report.py`) and its
+  tests are removed. `validation/serve.py` allows the stage folders for the
+  recompile and resubmit buttons; before, its list named folders that were
+  gone.
 - A `userParam01` that is not a mode code stops the run with an error that
   names the value. Before, `3.15` or `7.3` matched no mode and the run
   fell back to DNS with a warning, and `3.104` was read as `3.1`. A value

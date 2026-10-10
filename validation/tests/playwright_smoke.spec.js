@@ -62,14 +62,20 @@ test('family nav is visible with nav chips', async ({ page }) => {
 test('filter chips are clickable and activate', async ({ page }) => {
     await openGallery(page);
 
-    // Click the first status filter chip
-    const statusChip = page.locator('.filter-chip[data-filter-group="status"]').first();
-    await expect(statusChip).toBeVisible();
-    await statusChip.click();
+    // Click the first lane filter chip
+    const laneChip = page.locator('.filter-chip[data-filter-group="lane"]').first();
+    await expect(laneChip).toBeVisible();
+    await laneChip.click();
     await page.waitForTimeout(150);
 
-    // The chip should now have class 'active'
-    await expect(statusChip).toHaveClass(/active/);
+    // The chip should now have class 'active' and the cards of the other lanes are hidden
+    await expect(laneChip).toHaveClass(/active/);
+    const hidden = await page.locator('.card.filtered-out').count();
+    expect(hidden, 'Expected the lane filter to hide the cards of other lanes').toBeGreaterThan(0);
+
+    // Clearing the filters shows every card again
+    await page.locator('#filter-clear').click();
+    await expect(page.locator('.card.filtered-out')).toHaveCount(0);
 });
 
 test('copy action fires on .copyable click', async ({ page, context }) => {

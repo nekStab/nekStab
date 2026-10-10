@@ -43,12 +43,19 @@ tolerance.
 ```json
 {
   "case": "cylinder_re100/110_baseflow_sfd/akervik",
+  "summary": "Steady base flow of the cylinder wake at Re = 100 by selective frequency damping.",
+  "description": "What the quantities check, and where the values come from.",
   "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran-13", "date": "2026-06-08"},
   "quantities": {
     "final_residual": {"value": 9.99e-11, "tol_rel": 5e-2, "source": "residu.dat:col2:last"}
   }
 }
 ```
+
+`summary` is the one line on the card of the stage in the validation gallery: what the stage
+computes. `description` says what the quantities check. Both are required, and so is at least one
+figure in `ref/` and a `README.md` in the stage folder: `validation/tests/test_gallery_complete.py`
+fails for a stage folder without them. Run `python validation/build_gallery.py` after a change.
 
 Each quantity names its `source` (how to extract it from a fresh run), an expected
 `value`, and a tolerance (`tol_rel` relative or `tol_abs` absolute). Typical

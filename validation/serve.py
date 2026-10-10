@@ -10,7 +10,7 @@ exposes:
 
 Security model: binds 127.0.0.1 only. Reachable only via SSH port-forward
 or local browser. Cases that can be (re)submitted are restricted to the
-allow-list loaded from build_gallery.SECTIONS.
+stage folders of example/ that build_gallery.discover_stages() lists.
 
 Run:
     python3 validation/serve.py            # default port 8000
@@ -32,9 +32,9 @@ REPO = ROOT.parent
 EXAMPLE = REPO / 'example'
 
 sys.path.insert(0, str(ROOT))
-from build_gallery import SECTIONS  # noqa: E402
+from build_gallery import discover_stages  # noqa: E402
 
-ALLOWED: set[str] = {c.path for _, cases in SECTIONS for c in cases}
+ALLOWED: set[str] = {stage.path for stage in discover_stages()}
 
 # In-memory job state: token -> {state, jobid, case, log, slurm_state}
 JOBS: dict[str, dict] = {}
@@ -90,13 +90,15 @@ def _slurm_state(jobid: str) -> str:
 
 
 def _read_casename(case_dir: Path) -> str | None:
+    """Case name for mks: first line of SESSION.NAME, else the name of the .par file."""
     sess = case_dir / 'SESSION.NAME'
-    if not sess.exists():
-        return None
-    try:
-        return sess.read_text().splitlines()[0].strip()
-    except OSError:
-        return None
+    if sess.exists():
+        try:
+            return sess.read_text().splitlines()[0].strip()
+        except (OSError, IndexError):
+            pass
+    pars = sorted(case_dir.glob('*.par'))
+    return pars[0].stem if pars else None
 
 
 def _run_mks(token: str, case_dir: Path, casename: str) -> bool:
@@ -155,7 +157,7 @@ def _action_worker(token: str, case: str, action: str) -> None:
     casename = _read_casename(case_dir)
 
     if action in ('recompile', 'recompile_submit') and not casename:
-        _update_job(token, state='error', log='no SESSION.NAME (need it for mks)')
+        _update_job(token, state='error', log='no SESSION.NAME or .par file (need the case name for mks)')
         return
     if action in ('resubmit', 'recompile_submit') and not slurm.exists():
         _update_job(token, state='error', log='no run.local.slurm')
@@ -203,7 +205,7 @@ def _live_queue() -> dict:
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         # Serve the repo root so the gallery (validation/index.html) and the
-        # in-place plots it references ("../example/.../plot_*.png") both
+        # figures it references ("../example/.../ref/*.png") both
         # resolve under one root, matching the Pages artifact layout.
         super().__init__(*args, directory=str(REPO), **kwargs)
 
@@ -295,7 +297,7 @@ class Handler(SimpleHTTPRequestHandler):
         if action not in self._ACTIONS:
             return self._json(400, {'error': f'unknown action: {action}'})
         if not isinstance(case, str) or case not in ALLOWED:
-            return self._json(403, {'error': f'case not in catalog: {case}'})
+            return self._json(403, {'error': f'case is not a stage folder of example/: {case}'})
 
         # Path traversal defense (#2)
         case_dir = self._case_dir_safe(case)

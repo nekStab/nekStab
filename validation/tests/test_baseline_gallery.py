@@ -1,17 +1,12 @@
 """Baseline regression test for validation/build_gallery.py.
 
-Locks down the current gallery behavior so the upcoming catalog rewrite
-has a known reference.
-
 Asserts:
 
 * validation/build_gallery.py, validation/serve.py, and
   validation/audit_screenshot.py compile (`py_compile`);
-* `python3 validation/build_gallery.py` exits 0 and writes
-  validation/index.html;
-* the rendered HTML contains at least one validated card, at least one
-  deferred card, at least one figure image, and at least one
-  recompile/resubmit action button.
+* `python3 validation/build_gallery.py <file>` exits 0 and writes the page;
+* the rendered HTML contains at least one card, no deferred card, at least one
+  figure image, and at least one recompile/resubmit action button.
 
 The assertions check behavior (class/attribute presence), not whitespace,
 so deliberate layout tweaks should not break this test.
@@ -45,9 +40,10 @@ def test_scripts_compile() -> None:
         py_compile.compile(str(path), doraise=True)
 
 
-def test_gallery_build_runs() -> None:
+def test_gallery_build_runs(tmp_path: Path) -> None:
+    out = tmp_path / "index.html"
     result = subprocess.run(
-        [sys.executable, str(VALIDATION_DIR / "build_gallery.py")],
+        [sys.executable, str(VALIDATION_DIR / "build_gallery.py"), str(out)],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -57,13 +53,13 @@ def test_gallery_build_runs() -> None:
         f"build_gallery.py exited {result.returncode}\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
-    assert INDEX_HTML.is_file(), "validation/index.html not produced"
+    assert out.is_file(), "the page was not produced"
 
 
 def test_gallery_baseline_assertions() -> None:
     html = INDEX_HTML.read_text(encoding="utf-8")
 
-    validated_cards = re.findall(r'<div class="card"(?:\s|>)', html)
+    cards = re.findall(r'<div class="card"(?:\s|>)', html)
     deferred_cards = re.findall(r'<div class="card deferred"(?:\s|>)', html)
     # Plots are read in place from example/*; src is relative to validation/index.html.
     figure_images = re.findall(r'<img [^>]*src="\.\./example/[^"]+"', html)
@@ -71,8 +67,8 @@ def test_gallery_baseline_assertions() -> None:
         r'data-action="(?:recompile|resubmit)"', html
     )
 
-    assert validated_cards, "no validated cards found"
-    assert deferred_cards, "no deferred cards found"
+    assert cards, "no cards found"
+    assert not deferred_cards, "the page has a deferred card"
     assert figure_images, "no figure images found"
     assert action_buttons, "no recompile/resubmit action buttons found"
 

@@ -1,65 +1,60 @@
-"""Tests for evidence badges, stale flags, blockers, and provenance rendering.
+"""Tests for the parts of a card of the gallery: reference badge and table, provenance line, navigation."""
 
-"""
 from __future__ import annotations
-import subprocess
+
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 VALIDATION_DIR = REPO_ROOT / "validation"
-INDEX_HTML = VALIDATION_DIR / "index.html"
+sys.path.insert(0, str(VALIDATION_DIR))
+
+import build_gallery as gallery  # noqa: E402
 
 
+@lru_cache(maxsize=1)
 def _build() -> str:
-    result = subprocess.run(
-        [sys.executable, str(VALIDATION_DIR / "build_gallery.py")],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    assert result.returncode == 0, (
-        f"build_gallery.py failed: {result.stderr}"
-    )
-    return INDEX_HTML.read_text(encoding="utf-8")
+    return gallery.build_page()
 
 
-def test_evidence_badges_present() -> None:
+def test_reference_badge_on_every_card() -> None:
     html = _build()
-    count = html.count('badge-status')
-    assert count > 0, f"expected badge-status badges, found 0"
+    assert html.count('class="badge-status') == html.count('<div class="card"')
+    assert html.count('class="badge-status') > 0
 
 
-def test_badge_blocked_present() -> None:
+def test_reference_table_on_every_card() -> None:
     html = _build()
-    count = html.count('badge-blocked')
-    assert count > 0, f"expected at least one badge-blocked pill"
-
-
-def test_badge_stale_class_in_css() -> None:
-    html = _build()
-    assert '.badge-stale' in html, "CSS class .badge-stale not found in output"
+    assert html.count('<details class="ref">') == html.count('<div class="card"')
+    assert 'class="ref-table"' in html
 
 
 def test_evidence_row_div_present() -> None:
-    html = _build()
-    count = html.count('class="evidence-row"')
-    assert count > 0, f"expected evidence-row divs, found 0"
+    assert 'class="evidence-row"' in _build()
 
 
 def test_provenance_row_present() -> None:
-    html = _build()
-    count = html.count('class="provenance-row"')
-    assert count > 0, f"expected provenance-row divs, found 0"
+    assert 'class="provenance-row"' in _build()
 
 
 def test_filter_chips_still_present() -> None:
     html = _build()
-    assert 'section-nav' in html or 'family-nav' in html, \
-        "section-nav / family-nav missing — filter chips broken"
+    assert 'id="filter-bar"' in html
+    assert 'data-filter-group="lane"' in html
 
 
 def test_family_nav_still_present() -> None:
-    html = _build()
-    assert 'id="family-nav"' in html, "family-nav missing — family nav broken"
+    assert 'id="family-nav"' in _build()
+
+
+def test_build_is_deterministic() -> None:
+    assert gallery.build_page() == gallery.build_page()
+
+
+def test_quantity_values_are_formatted() -> None:
+    assert gallery._format_number(0.1247875) == "0.1247875"
+    assert gallery._format_number(8.496308e-06) == "8.496308e-06"
+    assert gallery._format_number(12) == "12"
+    assert gallery._tolerance_text({"tol_rel": 0.05}) == "±0.05 rel"
+    assert gallery._tolerance_text({"tol_abs": 1e-3}) == "±0.001"
