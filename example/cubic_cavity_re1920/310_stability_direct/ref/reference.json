@@ -1,0 +1,40 @@
+{
+  "case": "cubic_cavity_re1920/310_stability_direct",
+  "summary": "Leading eigenpairs of the steady cubic cavity flow at Re = 1920. One pair is unstable: sigma = +5.84e-4, omega = 0.5868.",
+  "description": "Direct stability (mode 3.1) about the steady flow of 210_baseflow_newton/fp at Re = 1920, uniform lid. The leading pair has a positive growth rate, so the steady flow is unstable: Re = 1920 lies above the first Hopf bifurcation. The expected values are those of the run named under produced, not literature values. The frequency of the leading pair agrees with St = 0.0934 of the thesis (Table 4.1): 2 pi St = 0.5869. The leading pair of the same flow at Re = 1914 has sigma = -1.8296e-4 and omega = 0.58684 (cubic_cavity_re1914/310_stability_direct), so the tolerance of 2e-5 on sigma fails that stage and any run at a wrong Reynolds number (d sigma / d Re = 1.3e-4 per unit of Re). The second pair is stable, sigma = -0.0211, omega = 0.561; it checks that the unstable pair is the only one.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "3.1 (direct)",
+    "ranks": "40",
+    "k_dim": "120",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-10",
+    "wall_s": 2228.58
+  },
+  "quantities": {
+    "leading_sigma": {
+      "source": "Spectre_NSd_conv.dat:col1:first",
+      "value": 0.0005844761,
+      "tol_abs": 2e-05,
+      "note": "Growth rate of the leading pair (positive: unstable)."
+    },
+    "leading_omega": {
+      "source": "Spectre_NSd_conv.dat:col2:first",
+      "value": 0.586787,
+      "tol_abs": 0.0001,
+      "note": "Frequency of the leading pair."
+    },
+    "second_sigma": {
+      "source": "Spectre_NSd_conv.dat:col1:row3",
+      "value": -0.02105958,
+      "tol_abs": 0.001,
+      "note": "Growth rate of the second pair (third row of the file): stable."
+    },
+    "second_omega": {
+      "source": "Spectre_NSd_conv.dat:col2:row3",
+      "value": 0.5608464,
+      "tol_abs": 0.002,
+      "note": "Frequency of the second pair."
+    }
+  }
+}

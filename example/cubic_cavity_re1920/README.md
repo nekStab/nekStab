@@ -27,6 +27,12 @@ The lid is not regularized.
 3. `310_stability_direct/`: copy the Newton `BF_cav0.f00001` here and run. The Arnoldi window is
    `endTime` = 2.0 and `k_dim` = 120.
 
+## Result
+
+The leading pair of the steady flow has sigma = +5.84e-4 and omega = 0.5868 (St = 0.0934): one unstable
+pair, the second pair has sigma = -0.0211. At Re = 1914 the same pair has sigma = -1.83e-4
+(`../cubic_cavity_re1914/310_stability_direct/`).
+
 ## References
 
 - Schuh-Frantz thesis (2022), chapter 4, Table 4.1: Re_c = 1916.63, St = 0.0934 at aspect

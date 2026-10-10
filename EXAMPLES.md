@@ -85,6 +85,7 @@ single steady or periodic operator.
 | `example/thermosyphon_ra500/` | Buoyancy-driven thermosyphon, Ra = 500 | DNS, Newton thermal baseflow, direct stability (linear and finite-difference) |
 | `example/lid_driven_re3600/` | 2D lid-driven cavity, Re = 3600 | DNS, Newton, direct/adjoint stability |
 | `example/cubic_cavity_re1914/` | 3D cubic cavity, Re = 1914 | DNS, Newton (steady), direct/adjoint stability (stable flow), OTD |
+| `example/cubic_cavity_re1920/` | 3D cubic cavity, Re = 1920 (above the first Hopf bifurcation) | DNS at Re = 1900, Newton (unstable steady flow), direct stability (one unstable pair) |
 | `example/cubic_cavity_re1950/` | 3D cubic cavity, Re = 1950 | DNS, DNS period estimate, direct and adjoint Floquet stability (unstable limit cycle, pair outside the unit circle), DNS check of the unstable pair, POD/DMD |
 | `example/naca0012_re2000/` | NACA 0012 airfoil, Re = 2000 | DNS, Newton, direct/adjoint stability, wavemaker |
 | `example/poiseuille_re5k/` | Channel flow, Re = 5000 | OTD |
@@ -130,6 +131,9 @@ this repository.
 | `example/cubic_cavity_re1914/210_baseflow_newton/fp/` | 1914 | Newton-GMRES (2.0) | converged steady state, residual 8.4e-11 |
 | `example/cubic_cavity_re1914/310_stability_direct/` | 1914 | Direct LNSE (3.1) | T1 pair sigma = -1.8e-4, omega = 0.5868 (St = 0.0934, thesis) |
 | `example/cubic_cavity_re1914/320_stability_adjoint/` | 1914 | Adjoint LNSE (3.2) | matches the direct pair to 2e-4 in sigma |
+| `example/cubic_cavity_re1920/000_dns/` | 1900 | DNS (0.0) | flow close to its steady state at t = 100 |
+| `example/cubic_cavity_re1920/210_baseflow_newton/fp/` | 1920 | Newton-GMRES (2.0) | converged unstable steady state, 12 iterations, residual 9.7e-11 |
+| `example/cubic_cavity_re1920/310_stability_direct/` | 1920 | Direct LNSE (3.1) | one unstable pair: sigma = +5.84e-4, omega = 0.5868 |
 | `example/cylinder_re100/330_transient_growth/` | 40 | Transient growth (3.3) | G(40) = 275; G(tau) peaks between tau = 60 and 80 |
 | `example/cylinder_re180/000_dns_seed/` | 180 | DNS (0.0) | limit cycle, T = 5.1901 from the wake probe |
 | `example/cylinder_re180/210_baseflow_newton/` | 180 | Newton-UPO (2.1) | converged UPO, T = 5.189628, residual 7.8e-10 (no filter) |

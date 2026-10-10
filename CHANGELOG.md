@@ -52,6 +52,12 @@ description for the 2.0 series; entries here are the per-tag deltas.
   of the DNS frequency 1.0417; the steady flow gives omega = 0.7337. Marquet &
   Carini (2020, arXiv:2008.10002) give 0.0020 and 1.0322 for the mean flow at
   Re = 100.
+- `example/cubic_cavity_re1920`: the 3D cubic cavity at Re = 1920, above the first
+  Hopf bifurcation. A DNS at Re = 1900 gives the start field, Newton-GMRES finds
+  the unstable steady flow in 12 iterations, and the direct stability stage finds
+  one unstable pair, sigma = +5.84e-4, omega = 0.5868. At Re = 1914 the same pair
+  has sigma = -1.83e-4; linear interpolation of the two puts the zero at
+  Re = 1915.4 on this mesh (1916.63 in the thesis).
 - `scripts/compiler_battery.py` exports the tracked files of an example stage,
   builds it under nine compiler profiles (gfortran at -O0, -O2 and -O3, a
   portable build, floating-point traps and signalling NaN; ifx at -O0, the
