@@ -42,35 +42,42 @@ default stopped at t = 1640, where Re λ1 was −7.4e-4 against −4.9e-4 at the
 `endTime = 5000`. The first eigenvalue approaches its exact value as exp(−2 gap t), with the
 gap 1.26e-3 between mode 1 and the pair: the error falls by a factor 12 per 1000 time units.
 
-## Result (Jean Zay, 4 ranks, `ifort`, 698 s)
+## Result (Jean Zay, 4 ranks, `ifort`, 654 s)
 
 | t | Re λ1 | Re λ1 + ν (π/2)² | Re λ2 | Re λ3 | running exponent of mode 1 |
 |---|---|---|---|---|---|
-| 500 | -1.2935e-03 | -8.00e-04 | -1.5143e-03 | -1.9566e-03 | -5.1886e-03 |
-| 1000 | -1.1110e-03 | -6.18e-04 | -1.1793e-03 | -1.9665e-03 | -3.2735e-03 |
-| 2000 | -6.0470e-04 | -1.11e-04 | -1.5979e-03 | -1.8228e-03 | -2.0574e-03 |
-| 3000 | -5.0328e-04 | -9.80e-06 | -1.7400e-03 | -1.7564e-03 | -1.5503e-03 |
-| 4000 | -4.9428e-04 | -7.99e-07 | -1.7531e-03 | -1.7693e-03 | -1.2870e-03 |
-| 5000 | -4.9354e-04 | -6.47e-08 | -1.7514e-03 | -1.7527e-03 | -1.1283e-03 |
+| 500 | -1.5125e-03 | -1.02e-03 | -1.7874e-03 | -3.9717e-03 | -5.4084e-03 |
+| 1000 | -1.1778e-03 | -6.84e-04 | -1.7118e-03 | -1.7338e-03 | -3.3825e-03 |
+| 2000 | -6.0437e-04 | -1.11e-04 | -1.6473e-03 | -1.7438e-03 | -2.1115e-03 |
+| 3000 | -5.0325e-04 | -9.77e-06 | -1.7409e-03 | -1.7493e-03 | -1.5862e-03 |
+| 4000 | -4.9428e-04 | -7.96e-07 | -1.7492e-03 | -1.7498e-03 | -1.3139e-03 |
+| 5000 | -4.9354e-04 | -6.45e-08 | -1.7499e-03 | -1.7499e-03 | -1.1499e-03 |
 
-At t = 5000 the first eigenvalue is within 1.3e-4 (relative) of −ν (π/2)², and the two entries of
-the pair are 0.06 % and 0.14 % from the Orr-Sommerfeld real part. A longer run (10000 time units,
-4 ranks of a workstation, `gfortran`) brings the first eigenvalue to within 2e-10 of the exact value
-from t = 7440. Between t = 5000 and 10000 the entries of the pair move slowly and stay within
-1.0 % of the Orr-Sommerfeld value, and their mean within 0.55 % of it. The same eigenvalues come
-out on Jean Zay and on the workstation to five digits from t = 500 to 4000.
+At t = 5000 the first eigenvalue is within 1.3e-4 (relative) of −ν (π/2)², and both entries of
+the pair are 2.7e-4 from the Orr-Sommerfeld real part. A run to t = 10000 (Jean Zay, 4 ranks,
+21 min) brings the first eigenvalue to within 2e-10 of the exact value from t = 7219. From
+t = 5000 to 10000 the entries of the pair, and their mean, stay within 2.8e-4 of the
+Orr-Sommerfeld value. The offset of 2.7e-4 does not change in that interval; it was not traced to
+the mesh by a run at another resolution.
+
+![real parts of the eigenvalues of the reduced operator and the error of the first eigenvalue](ref/otd_eigenvalues.png)
+
+![the three basis fields at the last output](ref/otd_modes.png)
 
 The running exponents of `otd_ftle.dat` average from t = 0 and still carry the start: they are
-−5.2e-3 at t = 500 and −1.1e-3 at t = 5000 for mode 1. Read `otd_eigenvalues.dat` for this
+−5.4e-3 at t = 500 and −1.1e-3 at t = 5000 for mode 1. Read `otd_eigenvalues.dat` for this
 stage. An earlier reference compared the running exponents at t = 500 with −1.511e-3 and −1.772e-3.
-It did not reproduce: Jean Zay and the workstation both give −5.19e-3 and −6.49e-3 there.
+It did not reproduce: Jean Zay gives −5.41e-3 and −5.48e-3 there.
 
 ## Reference
 
 `ref/reference.json` compares the last row of `otd_eigenvalues.dat` with the exact value −ν (π/2)²
-(tolerance 1e-3 relative) and with the Orr-Sommerfeld real part (tolerance 0.5 % relative, for
-each of the two entries of the pair). The values are not read back from an OTD run. The
-tolerance of the pair belongs to the end time t = 5000: the entries move by up to 1 % later.
+and with the Orr-Sommerfeld real part (for each of the two entries of the pair), at a relative
+tolerance of 5e-4 for all three. The values are not read back from an OTD run. The tolerance
+fails the pair of an earlier version of the reduced operator (−1.7514e-3 and −1.7527e-3 at
+t = 5000, 6.1e-4 and 1.4e-3 from the Orr-Sommerfeld value). In the run to t = 10000 the pair is
+inside the tolerance from t = 4174 on and the first eigenvalue from t = 4466 on, so the end
+time of 5000 leaves a margin of 530 time units for the first eigenvalue.
 `python3 plot.py` writes `plot_otd_eigenvalues.png` (eigenvalues against time and the error of
 the first eigenvalue) and `plot_otd_modes.png` (the three basis fields at the last output).
 

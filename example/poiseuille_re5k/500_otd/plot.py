@@ -35,7 +35,7 @@ RE = 5000.0
 EXACT_1 = -(np.pi**2) / (
     4.0 * RE
 )  # u = cos(pi y / 2) decays by viscosity alone: -nu (pi/2)^2
-TOL_1 = 1.0e-3 * abs(EXACT_1)  # tol_rel of the first quantity in ref/reference.json
+TOL_1 = 5.0e-4 * abs(EXACT_1)  # tol_rel of the first quantity in ref/reference.json
 T_FROM = 200.0  # start of the eigenvalue curves
 
 
