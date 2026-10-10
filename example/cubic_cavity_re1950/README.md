@@ -21,8 +21,8 @@ velocity (no regularisation of the edge singularity).
 
 ## Workflow (DNS-orbit Floquet, no Newton)
 1. **`000_dns/`** — settle onto the limit cycle from a near-periodic start.
-2. **`000_dns_period/`** — long DNS + centre probe + FFT for a sharp period
-   `T = 10.789`; stamp an on-orbit snapshot as the Floquet base flow.
+2. **`000_dns_period/`** — long DNS + centre probe + harmonic fit for a sharp
+   period `T = 10.789`; stamp an on-orbit snapshot as the Floquet base flow.
 3. **`311_stability_direct_floquet/`** — direct Floquet (`userParam01 = 3.11`)
    over one period `T`. **`321_stability_adjoint_floquet/`** — the adjoint run.
 4. **`350_dns_unstable_orbit/`** — DNS of 2000 time units from the orbit plus
