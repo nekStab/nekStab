@@ -112,6 +112,7 @@ this repository.
 | `example/cylinder_re100/320_stability_adjoint/` | 100 | Adjoint LNSE (3.2) | matches direct spectrum |
 | `example/cylinder_re100/410_postproc_animate_modes/` | 100 | Mode animation (4.50) | snapshots per period |
 | `example/cylinder_re100/411_postproc_wavemaker/` | 100 | Wavemaker (4.0) | wm, sr/si, pr/pi, tr/ti fields |
+| `example/cylinder_re100/500_otd/` | 100 | OTD (5.0), 2 modes | reduced-operator eigenvalues and exponents equal sigma = 0.12479 of the direct stage to 3.5e-5, the time-step error of that stage |
 | `example/cylinder_re100/000_dns/` | 100 | DNS (0.0) | vortex shedding |
 | `example/cylinder_re100/000_dns/ci_test/` | 100 | DNS smoke (0.0) | 10-step smoke |
 | `example/moving_cylinder_re100/000_dns/` | 100 | DNS forced osc (0.0) | DNS subcase |

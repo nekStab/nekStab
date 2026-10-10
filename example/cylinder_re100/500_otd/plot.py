@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """plot.py: OTD about the steady cylinder wake at Re = 100, seeded with the leading eigenmode.
 
-(a) finite-time Lyapunov exponents of the two OTD modes against time, with the
-    growth rate sigma of 310_stability_direct as a guide line;
-(b) drift of the exponents per time step (otd_residuals.dat), the quantity the
+(a) eigenvalues of the reduced operator of the two OTD modes against time
+    (otd_eigenvalues.dat), with the growth rate sigma of 310_stability_direct as a guide line;
+(b) finite-time Lyapunov exponents of the two modes (otd_ftle.dat), with the same guide line;
+(c) drift of the exponents per print step (otd_residuals.dat), the quantity the
     convergence test of the run reads.
 
 OUTPUT: plot_otd.png
@@ -30,34 +31,44 @@ def sigma_from_310() -> float | None:
 
 
 def main() -> None:
+    eig = np.loadtxt(CASE_DIR / "otd_eigenvalues.dat")
     ftle = np.loadtxt(CASE_DIR / "otd_ftle.dat")
     resid = np.loadtxt(CASE_DIR / "otd_residuals.dat")
     sigma = sigma_from_310()
 
-    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.2), constrained_layout=True)
+    fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.2), constrained_layout=True)
+    styles = [(3.0, "o", "mode 1"), (1.6, "s", "mode 2")]
 
-    ax = axes[0]
-    styles = [(3.0, "o", "FTLE 1"), (1.6, "s", "FTLE 2")]
-    for col, (lw, marker, label) in enumerate(styles, start=1):
-        ax.plot(
-            ftle[:, 0],
-            ftle[:, col],
-            lw=lw,
-            marker=marker,
-            ms=3.5,
-            markevery=max(1, len(ftle) // 12),
-            label=label,
-        )
-    if sigma is not None:
-        ax.axhline(
-            sigma, color="k", lw=0.8, ls="--", label=rf"$\sigma$ of 310 ({sigma:.6f})"
-        )
-    ax.set_xlabel(r"$t$ (convective time units)")
-    ax.set_ylabel(r"finite-time exponent ($1/t_c$)")
-    ax.set_title("(a) Exponents of the OTD modes", loc="left", fontsize=9)
-    ax.legend(frameon=True, fontsize=8)
+    # The values differ from sigma by about 3e-5, so the tick labels carry all digits.
+    for ax, data, title in (
+        (axes[0], eig, "(a) Eigenvalues of the reduced operator"),
+        (axes[1], ftle, "(b) Exponents of the OTD modes"),
+    ):
+        for col, (lw, marker, label) in enumerate(styles, start=1):
+            ax.plot(
+                data[:, 0],
+                data[:, col],
+                lw=lw,
+                marker=marker,
+                ms=3.5,
+                markevery=max(1, len(data) // 12),
+                label=label,
+            )
+        if sigma is not None:
+            ax.axhline(
+                sigma,
+                color="k",
+                lw=0.8,
+                ls="--",
+                label=rf"$\sigma$ of 310 ({sigma:.7f})",
+            )
+        ax.ticklabel_format(axis="y", useOffset=False)
+        ax.set_xlabel(r"$t$ (convective time units)")
+        ax.set_ylabel(r"exponent ($1/t_c$)")
+        ax.set_title(title, loc="left", fontsize=9)
+        ax.legend(frameon=True, fontsize=8)
 
-    ax = axes[1]
+    ax = axes[2]
     for col, (lw, marker, label) in enumerate(styles, start=1):
         ax.semilogy(
             resid[:, 0],
@@ -70,7 +81,7 @@ def main() -> None:
         )
     ax.set_xlabel(r"$t$ (convective time units)")
     ax.set_ylabel(r"$|\Delta\,\mathrm{FTLE}|$ per print step ($1/t_c$)")
-    ax.set_title("(b) Drift of the exponents", loc="left", fontsize=9)
+    ax.set_title("(c) Drift of the exponents", loc="left", fontsize=9)
     ax.legend(frameon=True, fontsize=8)
 
     out = CASE_DIR / "plot_otd.png"

@@ -35,37 +35,66 @@ the operator of the 310 stage, which has no sponge, and the exponents do not mat
 
 ## Result (seeded start)
 
-Growth rate of the leading pair in `310_stability_direct`: sigma = 0.124788.
+Growth rate of the leading pair in `310_stability_direct`: sigma = 0.1247875 (`Spectre_NSd.dat`).
+Observed on Jean Zay (8 ranks, 22 s, `ifort`):
 
-| quantity | value |
-|---|---|
-| eigenvalues of `Lr` at t = 0 (`otd_eigenvalues.dat`, first row) | 0.124779, 0.124776 |
-| FTLE at the end of the run, t = 18.2 (`otd_ftle.dat`, last row) | 0.124777, 0.124519 |
+| quantity | value | difference to sigma |
+|---|---|---|
+| eigenvalues of `Lr` at t = 0 (`otd_eigenvalues.dat`, first row) | 0.1247557, 0.1247531 | -3.2e-5, -3.4e-5 |
+| FTLE at the end of the run, t = 5.06, step 500 (`otd_ftle.dat`, last row) | 0.1247545, 0.1247551 | -3.3e-5, -3.2e-5 |
 
-The basis starts on the invariant subspace of the pair and stays on it. The reduced
-operator has real eigenvalues (the rotation at omega = 0.7337 is carried by the basis), and
-their sum over the two modes is 2 sigma. The run ends by the convergence test of the
-driver (see below) before `endTime = 30`.
+The basis starts on the invariant subspace of the pair and stays on it. The two eigenvalues of
+`Lr` differ by 1.2e-5 at most (the rotation at omega = 0.7337 is carried by the basis), and
+their mean stays between 0.124746 and 0.124763 for the whole run. The run ends by the
+convergence test of the driver (see below) at step 500, before `endTime = 30`.
 
 `ref/reference.json` compares all four values with sigma of the 310 stage, not with a value
-read back from an OTD run. `python3 plot.py` writes `plot_otd.png`.
+read back from an OTD run, at a tolerance of 1e-4 (8e-4 of sigma). `python3 plot.py` writes
+`plot_otd.png`; `ref/otd.png` is that figure from the run above.
+
+![eigenvalues of the reduced operator, exponents of the modes and their drift](ref/otd.png)
+
+### Why the values lie 3.3e-5 below sigma
+
+The 310 stage does not give the growth rate of the spatial operator. It gives the growth rate
+of its own map: one period of the leading mode, `endTime = 1`, integrated with the time step
+`dt = 1/99` (`dt = 0` in the `.par` of the stage, so the solver takes the step from a CFL
+number of 0.5). The OTD reads the spatial operator on the current fields and does not depend on
+`dt` in that way. Running the 310 stage with a smaller `dt` shows the difference:
+
+| `dt` of the 310 stage | sigma | sigma minus the value at `dt = 1/792` |
+|---|---|---|
+| 1/99 (as shipped) | 0.1247875 | +3.5e-5 |
+| 1/198 | 0.1247611 | +8.3e-6 |
+| 1/396 | 0.1247545 | +1.7e-6 |
+| 1/792 | 0.1247528 | 0 |
+
+The difference falls by 4.2 and then 4.9 for each halving of `dt`, close to the factor 4 of an
+error that grows with `dt` squared. Extrapolating the last three rows with that factor gives
+0.124752 for `dt` going to 0. The OTD values lie within 4e-6 of it (table above), and so does
+the white-noise run below (0.124752). The stage therefore compares the OTD with the 310 stage
+to the accuracy of the time step of the 310 stage. The tolerance of 1e-4 is three times that
+offset. It still fails a defect met while the stage was built: the second exponent was 0.124519
+(2.7e-4 low) when the product of the forcing with the basis took arrays of `nv` points instead
+of `lelv*lxyz` points.
 
 ### White-noise start (`OTD_SEED=0`, `endTime = 200`)
 
-The mean of the diagonal of `Lr` over windows of 20 time units, mode 1 and mode 2:
+The mean of the diagonal of `Lr` over windows of the run, mode 1 and mode 2:
 
 | window | mode 1 | mode 2 | mean |
 |---|---|---|---|
-| 30 to 40 | 0.1532 | 0.1485 | 0.1509 |
-| 40 to 60 | 0.1432 | 0.1365 | 0.1398 |
-| 60 to 80 | 0.1275 | 0.1241 | 0.1258 |
-| 80 to 100 | 0.1250 | 0.1244 | 0.12466 |
-| 100 to 200 | 0.12478 | 0.12458 | 0.12468 |
+| 30 to 40 | 0.15328 | 0.14282 | 0.14805 |
+| 40 to 60 | 0.14313 | 0.13403 | 0.13858 |
+| 60 to 80 | 0.12744 | 0.12533 | 0.12639 |
+| 80 to 100 | 0.12495 | 0.12473 | 0.12484 |
+| 100 to 200 | 0.124757 | 0.124748 | 0.124752 |
 
-From random fields the basis reaches the leading pair after about 100 convective time units
-and then holds sigma to 1e-3 relative. The running FTLE of `otd_ftle.dat` is still 0.106 and
-0.108 at t = 200, because it averages over the transient from t = 0. Use a window mean, or
-`otd_FTLEPeriod`, to read the exponent of a run that starts from noise.
+From random fields the basis reaches the leading pair after about 100 convective time units.
+Then the mean of the two entries equals the growth rate of the spatial operator, 0.124752. The
+running FTLE of `otd_ftle.dat` is still 0.1042 and 0.1059 at t = 200, because it averages over
+the transient from t = 0. Use a window mean, or `otd_FTLEPeriod`, to read the exponent of a run
+that starts from noise.
 
 ## Why the other OTD defaults stay
 
@@ -86,11 +115,12 @@ a larger `otd_minSteps` in `nekStab_usrchk`.
 
 ## Files
 
+- `plot.py` — reads `otd_eigenvalues.dat`, `otd_ftle.dat` and `Spectre_NSd.dat` of the 310 stage; writes `plot_otd.png`
 - `otd_eigenvalues.dat` — time, real parts of the eigenvalues of `Lr`
 - `otd_growth_rates.dat` — time, eigenvalues of the symmetric part of `Lr`
 - `otd_ftle.dat` — time, FTLE of each mode
 - `otd_residuals.dat` — time, change of the FTLE per print step
-- `plot_otd.png` — figure from `python3 plot.py`
+- `ref/reference.json`, `ref/otd.png` — regression values and figure
 
 ## Reference
 
