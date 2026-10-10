@@ -89,6 +89,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   numeric value, a source and exactly one tolerance.
 
 ### Changed
+- `validation/validate.py` (with `validation/tests/test_validate.py`) and
+  `example/collect_plots.py` are removed. Both listed example directories of an
+  earlier layout that no longer exist. A stage is checked with
+  `scripts/check_against_ref.py` against its `ref/reference.json`; the page of
+  references and figures is built by `validation/build_gallery.py`, and
+  `validation/tests/test_gallery_complete.py` fails for a stage without a
+  reference, figure or README. The Examples and Validation sections of `DOC.md`
+  describe the current layout.
 - The validation gallery is built from the stage folders of `example/`
   (`python validation/build_gallery.py`). A card shows the figures of the
   `ref/` folder of a stage and the quantities of its `ref/reference.json`,

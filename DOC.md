@@ -1326,125 +1326,75 @@ genmap
 
 ## Examples
 
-### Available Test Cases
+### Layout
 
-| Directory | Flow | Features Demonstrated |
-|-----------|------|----------------------|
-| `cylinder/` | Circular cylinder wake | DNS, Newton, stability, Floquet, wavemaker, OTD, POD/DMD/SPOD, RANS |
-| `back_fstep/` | Backward-facing step | Newton base flow, transient growth |
-| `blasius/` | Flat plate boundary layer | TS waves |
-| `cubic_cavity/` | 3D cubic cavity | 3D stability |
-| `cubic_cavity_upo/` | 3D cubic cavity | Newton-GMRES periodic orbit |
-| `flip_flop/` | Side-by-side cylinders | Neimark-Sacker, Floquet |
-| `lid_driven/` | Lid-driven cavity | Confined flow bifurcations |
-| `naca0012/` | Airfoil at incidence | Newton base flow |
-| `naca0012_Re2500/` | Airfoil at incidence | Direct stability |
-| `parque/` | Wind farm / actuator disks | RANS wake simulation |
-| `poiseuille/` | Channel flow | Canonical stability / parity reference |
-| `poiseuille_OTD/` | Plane Poiseuille flow | OTD and FTLE tracking |
-| `poiseuille_RANS/` | Turbulent channel flow | RANS base flow and finite-difference stability |
-| `slot_FST/` | Flat plate + FST | Free-stream turbulence inflow |
-| `thermosyphon/` | Buoyancy-driven convection | Pitchfork + Hopf bifurcations |
-| `torus/` | Toroidal pipe | Direct stability on baseline torus mesh |
-| `torus2/` | Toroidal pipe | Direct stability on variant mesh |
-| `torus_full/` | Toroidal pipe | Direct stability on full torus geometry |
-| `torus_pulsed/` | Toroidal pipe | Newton-GMRES forced periodic orbit |
-| `tpjet/` | Forced jet | Floquet period-doubling |
+`example/` holds one folder per flow, such as `cylinder_re100` or `cubic_cavity_re1950`. Each flow folder holds numbered stages, for example `cylinder_re100/310_stability_direct`. The first digit of the number names the kind of stage:
 
-### Cylinder Workflow
+| First digit | Kind of stage | Examples |
+|---|---|---|
+| 0 | DNS | `000_dns` |
+| 1 | base flow by time stepping | SFD, BoostConv, DMT, TDF, mean flow |
+| 2 | base flow by Newton | `210_baseflow_newton` |
+| 3 | stability | direct, adjoint, Floquet, transient growth |
+| 4 | post-processing | wavemaker, energy budget, mode animation |
+| 5 | OTD | `500_otd` |
+| 6 | modal decomposition | POD, DMD, SPOD, DMT filter bank |
 
-```
-example/cylinder/
-├── dns/           # 1. Verify mesh with DNS
-├── baseflow/
-│   ├── newton/    # 2. Compute steady base flow
-│   └── sfd/       # (alternative method)
-├── stability/
-│   ├── direct/    # 3. Direct eigenmodes
-│   └── adjoint/   # 4. Adjoint eigenmodes
-└── postproc/
-    └── sensitivity_budget_wavemaker/
-```
+A stage folder is a complete case: `.par`, `.usr`, `SIZE`, the mesh (`.re2`, `.ma2`), `run.local.slurm`, a `README.md`, a `plot.py` and a `ref/` folder with `reference.json` and the figures. The field files (base flows, restart files, modes) are not tracked. A stage that needs the field of an earlier stage says so in its README, and its run script copies the file from the sibling folder. [`EXAMPLES.md`](EXAMPLES.md) gives the rationale of each kind of stage, the case catalog and the verified results.
 
-### Running a Complete Analysis
+### Available Cases
+
+| Directory | Flow |
+|-----------|------|
+| `cylinder_re100/` | 2D cylinder wake, Re = 100: the full pipeline from DNS to modal decomposition |
+| `cylinder_re180/` | Periodic cylinder wake, Re = 180: Newton for the orbit, Floquet, OTD |
+| `cylinder_re30_thermal/` | Heated cylinder wake, Re = 30 |
+| `cylinder_re1m/` | RANS cylinder wake, Re = 1e6 (experimental, not validated) |
+| `moving_cylinder_re100/` | Cylinder in forced oscillation on a moving mesh, Re = 100 |
+| `flip_flop_re62/` | Side-by-side cylinders, Re = 62 |
+| `tpjet_re2000/` | Harmonically forced jet, Re = 2000 |
+| `thermosyphon_ra500/` | Buoyancy-driven annular thermosyphon, Ra = 500 |
+| `back_fstep_re500/` | Backward-facing step, Re = 500 |
+| `lid_driven_re3600/` | 2D lid-driven cavity, Re = 3600 |
+| `cubic_cavity_re1914/`, `cubic_cavity_re1920/`, `cubic_cavity_re1950/` | 3D lid-driven cubic cavity below, just above and above the first Hopf bifurcation |
+| `naca0012_re2000/` | NACA 0012 airfoil, Re = 2000 |
+| `poiseuille_re5k/` | Channel flow, Re = 5000 |
+| `slot_fst_re495/` | Slot jet with free-stream turbulence |
+
+### Running a Stage
 
 ```bash
-# 1. DNS verification
 cd example/cylinder_re100/000_dns
-mks 1cyl && nekbmpi 1cyl 4
-# Check: flow develops vortex shedding
-
-# 2. Base flow
-cd ../baseflow/newton
-cp ../dns/rst_1cyl0.f00001 .  # Use DNS snapshot as initial guess
-# Edit 1cyl.par: userParam01 = 2.0
-mks 1cyl && nekbmpi 1cyl 4
-# Check: residual → 0, output BF_1cyl0.f00001
-
-# 3. Direct stability
-cd ../stability/direct
-ln -s ../../baseflow/newton/BF_1cyl0.f00001 .
-# Edit 1cyl.par: userParam01 = 3.1
-mks 1cyl && nekbmpi 1cyl 4
-# Check: eigenvalues in logfile, modes in dRe*, dIm*
-
-# 4. Adjoint stability
-cd ../adjoint
-ln -s ../../baseflow/newton/BF_1cyl0.f00001 .
-# Edit 1cyl.par: userParam01 = 3.2
-mks 1cyl && nekbmpi 1cyl 4
-
-# 5. Wavemaker
-cd ../../postproc/sensitivity_budget_wavemaker
-ln -s ../../stability/direct/dRe* ../../stability/direct/dIm* .
-ln -s ../../stability/adjoint/aRe* ../../stability/adjoint/aIm* .
-# Edit 1cyl.par: userParam01 = 4.2
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl                                    # compile; the argument is the name of the .par and .usr
+sbatch run.local.slurm                      # or: SLURM_NTASKS=8 bash run.local.slurm
+python3 plot.py                             # figures of the run
+python3 ../../../scripts/check_against_ref.py .   # compare the run with ref/reference.json
 ```
+
+The README of the flow gives the order of the stages. The stage `210_baseflow_newton` of a flow starts from a DNS field, the stability stages from the base flow that it writes, the wavemaker from the direct and the adjoint modes, and so on. Each stage needs at least `lpmin` ranks (the value in its `SIZE`).
 
 ### Plot Utilities
 
-Shared plotting helpers now live in `example/nekplot.py`. It provides reusable field I/O, interpolation, residual-history plots, spectra plots, and OTD diagnostics for the example scripts.
-
-To gather per-case `plot.png` outputs into one validation folder:
-
-```bash
-python example/collect_plots.py
-python example/collect_plots.py --generate
-python example/collect_plots.py --list
-```
-
-The collector writes consolidated figures to `validation/figures/`.
+Shared plotting helpers live in `example/nekplot.py`: field input, interpolation, residual histories, spectra and OTD diagnostics. The `plot.py` of a stage writes `plot_*.png`. The figures that the validation page shows are the files of the `ref/` folder of the stage.
 
 ---
 
 ## Validation
 
-### Automated Validation Suite
+### Checks
 
-The repository now ships with `validation/validate.py`, which combines literature-facing validation checks with broad example coverage.
+Each stage has its own check:
 
 ```bash
-./validation/validate.py
-./validation/validate.py --short
-./validation/validate.py --check-only
-./validation/validate.py --dry-run
-./validation/validate.py --list
-./validation/validate.py --nprocs 8 cylinder
-./validation/validate.py --compile-all
+python3 scripts/check_against_ref.py example/cylinder_re100/310_stability_direct/direct
 ```
 
-Validation is split into two tiers:
-- **Short tier**: AMR-oriented literature checks for `cylinder`, `thermosyphon`, `flipflop_bf`, `flipflop_floquet`, `backstep`, `tpjet_bf`, and `tpjet_floquet`
-- **Full tier**: compile/run coverage across the cases currently listed in `validation/validate.py`, spanning cylinder variants plus `back_fstep`, `thermosyphon`, `flip_flop`, `tpjet`, `lid_driven`, `cubic_cavity`, `naca0012`, `poiseuille_OTD`, and `slot_FST`
+`check_against_ref.py` reads `ref/reference.json` of the stage, extracts each listed quantity from the files of the run (a column of a data file, or a statistic of a field file) and compares it with the stored value within the stored relative or absolute tolerance. It fails when a quantity is outside its tolerance, when the log of the run shows a NaN or an error, and when the reference lists no quantity. The stored values are regression values of this repository unless the reference names a literature or analytical source.
 
-Operational behavior of `validation/validate.py`:
-- Auto-detects CPU topology and prefers physical cores
-- Reads `SIZE` (`lelg`, `lpmin`) to choose a mesh-aware MPI rank count
-- Materializes missing prerequisites from `NEKSTAB_DATA_ROOT` when set, otherwise from the default `$HOME/.data_baptiste.nosync`, before deciding whether to skip a case
-- Skips a case only when required restart/base-flow files are missing both locally and in the configured external data roots
-- Treats missing post-run `copies_to` artifacts as a validation failure so downstream dependent cases are not left with silent gaps
-- `--compile-all` scans `example/`, ignores hidden placeholder `.usr` files and non-case directories, runs clean builds, writes `build.log`, and surfaces the first compiler error when a build fails
+Further checks:
+- `validation/build_gallery.py` writes `validation/index.html`, the page of references and figures ([nekstab.github.io/nekStab/validation](https://nekstab.github.io/nekStab/validation/)). The test `validation/tests/test_gallery_complete.py` fails for a stage without a reference, summary, description, figure or README, and for a page that is out of date.
+- `scripts/compiler_battery.py` builds and runs stages under nine compiler profiles and tabulates the spread of the reference quantities.
+- `validation/tests/` holds the unit tests of the Ritz value selection, the DMT filters, the mode selector and the file readers (`pytest`).
 
 The following validation cases are documented in [Frantz et al. (2023)](https://doi.org/10.1115/1.4056808). Each demonstrates a specific bifurcation type and has been verified against published literature.
 
