@@ -1,0 +1,50 @@
+{
+  "case": "cubic_cavity_re1920/210_baseflow_newton/fp",
+  "summary": "Steady base flow of the cubic cavity at Re = 1920, above the critical Reynolds number, by Newton-GMRES.",
+  "description": "3D cubic cavity steady base flow at Re=1920 (above Re_c = 1916.63, so unstable), uniform lid, Newton-GMRES from the last DNS field at Re=1900. Regression values of this repository, not literature values.",
+  "produced": {
+    "ranks": "40",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "2.0 (Newton-GMRES fixed point)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-10"
+  },
+  "quantities": {
+    "newton_first_residual": {
+      "source": "residu_newton.dat:col7:first",
+      "value": 8.496308e-06,
+      "tol_rel": 0.05,
+      "note": "Squared residual of the seed (the last field of 000_dns), column 7, first row. The tolerance of the run is 1e-10. A run that starts from a converged field fails this check."
+    },
+    "newton_iterations": {
+      "source": "residu_newton.dat:col1:last",
+      "value": 12,
+      "tol_abs": 2,
+      "note": "Newton iterations to the tolerance."
+    },
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 0.0,
+      "tol_abs": 1e-10,
+      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8)."
+    },
+    "bf_vx_norm": {
+      "source": "BF_cav0.f00001:field:vx.norm",
+      "value": 101.228,
+      "tol_rel": 1e-3,
+      "note": "Norm of vx of the converged base flow."
+    },
+    "bf_vy_norm": {
+      "source": "BF_cav0.f00001:field:vy.norm",
+      "value": 60.7436,
+      "tol_rel": 1e-3,
+      "note": "Norm of vy of the converged base flow."
+    },
+    "bf_vz_norm": {
+      "source": "BF_cav0.f00001:field:vz.norm",
+      "value": 8.11644,
+      "tol_rel": 1e-3,
+      "note": "Norm of vz of the converged base flow; vz is zero in a 2D flow, so this checks the 3D structure."
+    }
+  }
+}
