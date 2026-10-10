@@ -37,7 +37,7 @@ downstream in the wake.
 isothermal suite.
 
 ## Latest Result
-Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../210_baseflow_newton/fp`:
+Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../210_baseflow_newton/fp`:
 
 - 2 eigenvalues converged with residual <= 6.1e-7
 - Leading mode: sigma = 0.1247881, omega = 0.7336846 (matches the direct sigma to 6e-7)

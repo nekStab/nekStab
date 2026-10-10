@@ -26,7 +26,7 @@ python3 scripts/check_against_ref.py example/cubic_cavity_re1914/411_postproc_wa
 ```
 
 ## Result
-Gate run, Jean Zay, 2026-10-10, 16 ranks, with the modes of the gate runs of 310 and 320:
+Run on Jean Zay, 2026-10-10, 16 ranks, with the modes of the runs of 310 and 320:
 - The wavemaker `wm_cav0.f00001` has its maximum, 45.0, at (x, y, z) = (-0.365, -0.244, 0). A second maximum,
   44.8, lies at (-0.307, 0.333, 0), so the position of the global maximum is not a stable quantity.
 - On the plane z = 0 the wavemaker forms a band along the left wall and the bottom wall, with a second

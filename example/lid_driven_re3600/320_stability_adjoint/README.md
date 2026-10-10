@@ -10,7 +10,7 @@ so this stage checks the adjoint: at `lx1 = 12` the leading eigenvalue, −0.016
 of the direct −0.016793, and the pair is −0.04197 ± 0.77165 i against −0.04198 ± 0.77165 i.
 `ref/reference.json` compares the adjoint eigenvalues with the direct ones.
 
-Gate run of 2026-10-09 (Jean Zay, `ifort`, 4 ranks, base flow of the 210 run of that day): wall time 609 s.
+Run of 2026-10-09 (Jean Zay, `ifort`, 4 ranks, base flow of the 210 run of that day): wall time 609 s.
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged eigenvalues,
 growth rate against frequency) and `plot_mode.png` (vy of the leading adjoint mode); `ref/` holds copies as
 `bf.png`, `spectrum.png` and `mode.png`.

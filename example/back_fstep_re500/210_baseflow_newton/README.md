@@ -38,7 +38,7 @@ phase-1 file when it ends:
 
 The converged steady base flow is written to `BF_bfs0.f00001`.
 
-## Convergence record (gate run 2026-10-09, Jean Zay, ifort 2021.9, 8 ranks)
+## Convergence record (run of 2026-10-09, Jean Zay, ifort 2021.9, 8 ranks)
 DNS Phase 1 relaxes monotonically; the t=300 and t=400 fields differ by 2.5e-2
 (relative l2 norm of the velocity; slow recirculation-bubble tail — exactly the
 mode Newton kills fast). Newton Phase 2 moves the t=400 field by a further

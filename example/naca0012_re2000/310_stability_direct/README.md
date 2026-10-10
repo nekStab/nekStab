@@ -31,7 +31,7 @@ sbatch run.local.slurm     # 8 ranks
 Outputs: leading direct eigenmodes `dRenaca00120.f0000{1..6}` (written by the run;
 field files are gitignored, not tracked).
 
-Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): σ = -0.0665382, ω = 8.00579, wall time 1793 s.
+Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): σ = -0.0665382, ω = 8.00579, wall time 1793 s.
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged
 eigenvalues, growth rate against frequency) and `plot_mode.png` (vy of the leading mode); `ref/` holds
 copies as `bf.png`, `spectrum.png` and `mode.png`.

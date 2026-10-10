@@ -11,7 +11,7 @@ gives the same spectrum; the regularized lid has no corner singularity, so the a
 is valid. `ref/reference.json` holds the values of this run. The spectrum depends on the
 resolution (`../README.md`).
 
-Gate run of 2026-10-09 (Jean Zay, `ifort`, 4 ranks, base flow of the 210 run of that day): wall time 619 s.
+Run of 2026-10-09 (Jean Zay, `ifort`, 4 ranks, base flow of the 210 run of that day): wall time 619 s.
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged eigenvalues,
 growth rate against frequency) and `plot_mode.png` (vy of the leading direct mode); `ref/` holds copies as
 `bf.png`, `spectrum.png` and `mode.png`.

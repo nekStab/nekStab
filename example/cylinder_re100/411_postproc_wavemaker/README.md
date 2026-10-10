@@ -35,7 +35,7 @@ python3 plot.py
 - `tr_1cyl0.f00001`, `ti_1cyl0.f00001` — transport real/imag parts
 
 ## Latest Result
-Gate run 2026-10-09 on 8 ranks (Jean Zay, ifort 2021.9), with the modes of the gate runs of the two
+Run of 2026-10-09 on 8 ranks (Jean Zay, ifort 2021.9), with the modes of the runs of the two
 stability stages:
 
 - Run completes in 1.4 s (pure field arithmetic on pre-computed modes)

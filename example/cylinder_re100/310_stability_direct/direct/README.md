@@ -38,7 +38,7 @@ mode (Barkley & Henderson 1996).
 isothermal suite.
 
 ## Latest Result
-Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../../210_baseflow_newton/fp`:
+Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../../210_baseflow_newton/fp`:
 
 - 2 eigenvalues converged with residual ≤ 3.1e-7
 - Leading mode: σ = 0.1247875, ω = 0.7336851  (St = 0.1168)

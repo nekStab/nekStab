@@ -62,7 +62,7 @@ from the Newton value.
   (10 and 10, 10 and 5, 30 and 5) gave the same time of convergence to every digit.
 - The gate sets the accuracy of the field. Going from 1e-6 to 1e-8 costs 46 % more time for the default and 73 % more for 30 and 5. The norm then
   agrees with Newton to 8.0e-7 and 3.4e-6.
-- Wall times of single runs vary by tens of percent on Jean Zay (the default needed 9 ms per time step in the gate run and 13 ms in the run with the
+- Wall times of single runs vary by tens of percent on Jean Zay (the default needed 9 ms per time step in the run with the gate 1e-6 and 13 ms in the run with the
   gate 1e-8). Compare the number of time steps, not the wall time.
 
 ## Why Re = 50

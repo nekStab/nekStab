@@ -34,7 +34,7 @@ sbatch --export=ALL,NEK_DRY_RUN=1 run.local.slurm
 ```
 
 ## Latest Result
-Gate run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): the run starts from `rst_1cyl0.f00001` (t = 100) and ends at
+Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): the run starts from `rst_1cyl0.f00001` (t = 100) and ends at
 `endTime = 200` after 10 593 time steps. Wall time 158 s.
 
 - Outputs: 20 snapshots `1cyl0.f00001` to `1cyl0.f00020` (one every 5 time units), `lift_drag.dat` and the probe
