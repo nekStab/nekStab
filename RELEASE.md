@@ -9,7 +9,7 @@ maintainability, numerical robustness, and HPC performance.
 
 ### Architecture
 
-- All source wrapped in Fortran modules (33 `.f90` files, was loose `.f`)
+- All source wrapped in Fortran modules (39 `.f90` files, was loose `.f`)
 - `nekstab_nek_bridge` module isolates all Nek5000 common-block imports
 - `mode_config` module: 3-priority mode resolution (string > flags > uparam)
 - `NEKSTAB.inc`: single include for all nekStab common-block variables
@@ -193,6 +193,7 @@ wrong eigenvalues.
 | Animate mode | 4.50 | `animate_mode` | Reconstruct eigenmode as time series |
 | Animate BF deform | 4.51 | `animate_bf_deform` | Base flow + eigenmode deformation |
 | Animate Floquet | 4.52 | `animate_floquet` | Floquet mode animation |
+| OTD, evolving base flow | 5.1 | `otd_dns` | Optimally Time-Dependent modes with the base flow advanced by the DNS, for orbits and unsteady flows |
 | POD | 6.1 | `pod` | Proper Orthogonal Decomposition |
 | DMD | 6.2 | `dmd` | Dynamic Mode Decomposition |
 | SPOD | 6.3 | `spod` | Spectral POD (Welch + CSD) |
@@ -340,7 +341,9 @@ Priority: string > if-flags > uparam(1).  All three methods remain supported.
 
 - `makefile_nekStab` with level-based dependency ordering
 - `makeneks` archives all `.o` into `libnek5000.a`
-- `.f90` compiled with `-ffixed-form -ffixed-line-length-none`
+- `nekstab_nek_bridge.f90`, `main.f90` and `usr_wrappers.f90` compile in fixed
+  form (`-ffixed-form -ffixed-line-length-none`); every other `.f90` file
+  compiles in free form
 - Non-interactive builds survive configuration changes (rc3): `makeneks`
   pre-handles the makenek `.state` mismatch and answers the rebuild
   prompt itself, so Slurm/CI shells no longer die at an interactive
@@ -397,6 +400,7 @@ whose reference runs are still pending.
 ### Mode 1 — Base flow computation
 - **1.1**: Selective Frequency Damping (SFD)
 - **1.2**: BoostConv acceleration
+- **1.3**: Dynamic Mode Tracking (DMT)
 - **1.4**: Time-Delayed Feedback (TDF)
 
 ### Mode 2 — Newton-Krylov
@@ -426,7 +430,8 @@ whose reference runs are still pending.
 - **4.52**: Animate Floquet mode
 
 ### Mode 5 — OTD
-- **5.0**: Optimally Time-Dependent modes
+- **5.0**: Optimally Time-Dependent modes, frozen base flow
+- **5.1**: Optimally Time-Dependent modes, base flow advanced by the DNS
 
 ### Mode 6 — Modal analysis
 - **6.0**: POD + DMD + SPOD (all)
