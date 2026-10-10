@@ -165,6 +165,20 @@ description for the 2.0 series; entries here are the per-tag deltas.
   orthogonal. The same call pattern in `otd_compute_OTD_modes` (it fills only
   the fields that the disabled `otd_outpost_OTD_modes` writes) is fixed too.
   Both products are `dgemm` calls with the storage spacing.
+- The viscous term of the OTD reduced operator is the weak form that the time
+  stepper uses. `otd_construct_diffusive_terms` computed `nu grad^2 u` as two
+  applications of the gradient inside each element, without a sum over the
+  element faces, while the stepper works with the stiffness matrix; the two
+  differ by the jump of the normal derivative across the faces. On the 1000
+  elements of `cubic_cavity_re1914` at `lx1 = 6` the mean of the two diagonal
+  entries of `Lr` was -4.0e-3 at t = 0, where the growth rate of the 310
+  eigenpair on which the basis starts is -1.8e-4 (the mean is half the trace of
+  `Lr` on the plane; each entry alone rotates with the pair). The term is
+  `-nu A u / B` with `axhelm` now, and the mean is -1.832e-4 at t = 0. In 2D the
+  change is small: the two entries of `cylinder_re100/500_otd` at t = 0 are
+  0.124756 and 0.124753, against 0.124779 and 0.124776 before (sigma of 310:
+  0.124788). `otd_compute_laplacian` stays in the module and is no longer
+  called.
 - The convergence residual of SFD (`residu.dat`, column 2) and of the TDF mode is
   the root mean square over the domain again. The multi-field change of
   2026-06-21 replaced `normvc` by `k_norm`, the integral norm, which grows with

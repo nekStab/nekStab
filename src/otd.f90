@@ -847,17 +847,31 @@ contains
       real, dimension(lx1*ly1*lz1*lelv), intent(in) :: uxp, uyp, uzp
       integer, intent(in) :: ipert
       integer :: active_count
+      real, dimension(lx1*ly1*lz1*lelv), save :: helm2
 
       ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §2.5.
-      ! otd_compute_laplacian returns grad^2 u; multiplying by vdiff applies
-      ! the viscous coefficient, i.e. 1/Re for constant-viscosity cases.
+      ! The viscous term is -vdiff*A*u/B, with A the stiffness matrix that the
+      ! time stepper uses (axhelm) and B the mass matrix. For constant viscosity
+      ! this is vdiff*grad^2 u, that is 1/Re. otd_construct_linear_operator
+      ! multiplies the sum of all terms by B, so the Gram matrix holds the
+      ! operator that advances the perturbations.
+      !  The strong form (otd_compute_laplacian: gradm1 twice, without a sum over
+      !  the element faces) differs from this weak form by the jumps of the normal
+      !  derivative across the faces. On the 1000 elements of cubic_cavity_re1914
+      !  at lx1 = 6 it moved the mean of the two diagonal entries of Lr by -0.0038.
+      !  The growth rate of the 310 eigenpair, which these entries should give,
+      !  is -1.8e-4.
       active_count = lx1*ly1*lz1*nelv
-      call otd_compute_laplacian(diffx(1, ipert), uxp)
-      call otd_compute_laplacian(diffy(1, ipert), uyp)
-      if (if3d) call otd_compute_laplacian(diffz(1, ipert), uzp)
-      call col2(diffx(1, ipert), vdiff, active_count)
-      call col2(diffy(1, ipert), vdiff, active_count)
-      if (if3d) call col2(diffz(1, ipert), vdiff, active_count)
+      call rzero(helm2, lx1*ly1*lz1*lelv)
+      call axhelm(diffx(1, ipert), uxp, vdiff, helm2, 1, 1)
+      call axhelm(diffy(1, ipert), uyp, vdiff, helm2, 1, 1)
+      if (if3d) call axhelm(diffz(1, ipert), uzp, vdiff, helm2, 1, 1)
+      call chsign(diffx(1, ipert), active_count)
+      call chsign(diffy(1, ipert), active_count)
+      if (if3d) call chsign(diffz(1, ipert), active_count)
+      call invcol2(diffx(1, ipert), bm1, active_count)
+      call invcol2(diffy(1, ipert), bm1, active_count)
+      if (if3d) call invcol2(diffz(1, ipert), bm1, active_count)
 
    end subroutine otd_construct_diffusive_terms
 
