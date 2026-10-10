@@ -1,0 +1,35 @@
+[GENERAL]
+# Seed: the orbit of the Re = 1900 jet of the AMR paper (polynomial order 5, as this run). The Reynolds number of
+# the run is 2000, so the seed is close to the orbit but not on it.
+startFrom = BF_Re1900_tpjet0.f00001
+stopAt = endTime
+endTime = 600
+
+userParam01 = 1.4  # TDF: time-delayed feedback
+userParam05 = 0.600000  # forced frequency St_D; the delay of the feedback is the forcing period 1/St_D
+userParam07 = 1
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+dealiasing = yes
+
+[PROBLEMTYPE]
+axiSymmetry = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -2000.0  # Re = 2000 (AMR paper)

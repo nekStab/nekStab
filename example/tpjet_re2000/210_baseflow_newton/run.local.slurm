@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH --job-name=tpjet_bf-D5
+#SBATCH --nodes=1
+#SBATCH --ntasks=16
+#SBATCH --mem-per-cpu=2000
+#SBATCH --time=03:00:00
+#SBATCH --output=logfile
+#SBATCH --error=logfile
+
+set -euo pipefail
+printf "%s\n%s/\n" "tpjet" "$(pwd)" > SESSION.NAME
+mpiexec -np "$SLURM_NTASKS" ./nek5000
