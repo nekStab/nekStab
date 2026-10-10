@@ -1,0 +1,44 @@
+{
+  "case": "cubic_cavity_re1914/500_otd",
+  "summary": "Two OTD modes on the steady flow of the cubic lid-driven cavity at Re = 1914, started on the eigenplane of the leading pair of 310_stability_direct. The basis must stay on that plane, and the mean of the two diagonal entries of the reduced operator must equal the growth rate of the pair.",
+  "description": "The base flow is the steady flow of 210_baseflow_newton, frozen (userParam01 = 5). lpert = 2, and the seeds are the real and imaginary parts of the leading eigenmode of 310_stability_direct, so the basis starts on the invariant plane of the pair sigma = -1.829623e-4, omega = 0.586836 (Spectre_NSd.dat). Every expected value below comes from that stage, not from a run of this one. The two diagonal entries of the reduced operator Lr rotate with the pair (they swing between +0.16 and -0.16), so only their mean is compared with sigma. plot.py writes otd_summary.dat: the mean of the entries at t = 0 and at the end, the spread of that mean after t = 0, the mean of the two running exponents at the end and the sine of the largest principal angle between the OTD basis and the plane of the eigenpair (energy inner product, GLL quadrature). Observed on Jean Zay with 40 ranks (25 or 26 of the 65 elements per rank that SIZE allows): the mean of the entries is -1.8320e-4 from t = 0 to t = 30 (2.4e-7 below sigma, spread 8.6e-7), the mean of the running exponents -1.8323e-4, the sine 4.7e-7. Each tolerance fails a defect that a run of this stage met: a forcing product that assumes the storage spacing of the basis equals the number of local elements gave sine 0.35; the viscous term in strong form gave a mean of -4.0e-3 at t = 0; the gradient of the pressure that mappr averages across the element faces moved the mean to -3.86e-4 after the first step.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-10",
+    "ranks": "40",
+    "mode": "userParam01=5 (frozen base flow), lpert = 2, seeds from 310_stability_direct, endTime = 30",
+    "compiler": "ifort 2021.9 (Jean Zay)"
+  },
+  "quantities": {
+    "entries_mean_start": {
+      "source": "otd_summary.dat:col3:first",
+      "value": -0.0001829623,
+      "tol_abs": 2e-6,
+      "note": "Mean of the two diagonal entries of Lr at t = 0 equals sigma of 310 (observed -1.8320e-4)."
+    },
+    "entries_mean_final": {
+      "source": "otd_summary.dat:col4:first",
+      "value": -0.0001829623,
+      "tol_abs": 2e-6,
+      "note": "Same mean at the end of the run (observed -1.8320e-4: it does not move from t = 0)."
+    },
+    "entries_mean_spread": {
+      "source": "otd_summary.dat:col5:first",
+      "value": 0.0,
+      "tol_abs": 1e-5,
+      "note": "The trace of Lr on an invariant plane does not change in time (observed 8.6e-7)."
+    },
+    "ftle_mean_final": {
+      "source": "otd_summary.dat:col6:first",
+      "value": -0.0001829623,
+      "tol_abs": 2e-6,
+      "note": "Mean of the two running exponents at the end of the run (observed -1.8323e-4)."
+    },
+    "plane_sine_final": {
+      "source": "otd_summary.dat:col7:first",
+      "value": 0.0,
+      "tol_abs": 1e-5,
+      "note": "Sine of the largest principal angle between the OTD basis written at the end and the eigenplane of 310 (observed 4.7e-7)."
+    }
+  }
+}
