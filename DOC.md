@@ -1570,6 +1570,24 @@ For base flow **U**(x), perturbation **u'**(x,t) satisfies:
 ∇·u' = 0
 ```
 
+### Moving Mesh
+
+With `motion = user` in `[MESH]` the `.usr` sets the mesh velocity **w** (`wx`, `wy`, `wz`) in `userchk` and in
+`nekStab_usrchk`, and Nek5000 solves the base flow on the moving mesh in the arbitrary Lagrangian-Eulerian form
+
+```
+d(B u)/dt = B div(w u) - B (u·∇)u - ∇p + ν A u + B f
+```
+
+where B is the mass matrix of the current mesh. The Nek5000 routine `admeshv` adds `B div(w u)` to the base flow. The
+perturbation solver of Nek5000 has no matching term, and the mesh velocity does not depend on the flow, so nekStab adds
+`B div(w u')` to the forcing of every perturbation (`ale_mesh_velocity_term` in `src/forcing.f90`, called from
+`nekStab_forcing`). With it the linearized map is the derivative of the nonlinear map: the direct modes (0.1, 2.x,
+3.1 and 3.11) run on a moving mesh. The linearized maps call `nekStab_usrchk` before each step, so it has to set **w**
+with the same routine as `userchk`, and a periodic mesh motion has to close after one period for the Newton and Floquet
+modes (`example/moving_cylinder_re100/`). The adjoint, transient-growth and OTD modes have no mesh-velocity term and
+stop at start-up on a moving mesh.
+
 ### Matrix-Free Eigenvalue Problem
 
 Seeking **u'** = **q̂** exp(σt), the eigenvalue problem is:

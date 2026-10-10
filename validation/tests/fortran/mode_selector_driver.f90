@@ -67,6 +67,7 @@ contains
       case ('ifEnergyBudget'); ifEnergyBudget = .true.
       case ('ifWavemaker'); ifWavemaker = .true.
       case ('ifotdDNS'); ifotdDNS = .true.
+      case ('ifmvbd'); ifmvbd = .true.
       case default
          write (6, '(a)') 'driver: unknown flag '//name
          stop 4

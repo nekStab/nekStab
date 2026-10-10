@@ -29,7 +29,7 @@ module nekstab_mode_config
                                  ifEnergyBudget, ifWavemaker, ifBFSensitivity, &
                                  ifForceSensReal, ifForceSensImag, ifDeltaForcing, &
                                  ifAnimateMode, ifAnimateBFDeform, ifAnimateFloquet, &
-                                 ifotd, ifotdDNS, ifpod, ifdmd, ifspod
+                                 ifotd, ifotdDNS, ifpod, ifdmd, ifspod, ifmvbd
    use nekstab_mode_codes, only: MODE_DNS, MODE_LINDNS, MODE_SFD, MODE_BOOSTCONV, &
                                  MODE_DMT, MODE_TDF, MODE_NEWTON_FP, MODE_NEWTON_PO, &
                                  MODE_NEWTON_POT, MODE_DIRECT, MODE_FLOQUET_DIRECT, &
@@ -479,6 +479,14 @@ contains
                                  isFloquetAdjoint .or. isFloquetTransientGrowth .or. &
                                  ifEnergyBudget)) then
          call nekStab_error('ifFloquet set without base mode (direct/adjoint/TG)')
+      end if
+
+      !  The direct linearized solver has the mesh-velocity term of a moving mesh
+      !  (ale_mesh_velocity_term). The adjoint equations and the reduced operator
+      !  of the OTD do not.
+      if (ifmvbd .and. (isAdjoint .or. isFloquetAdjoint .or. &
+                        isTransientGrowth .or. isFloquetTransientGrowth .or. ifotd)) then
+         call nekStab_error('adjoint, transient growth and OTD modes do not support a moving mesh (mesh motion in the par file)')
       end if
 
       !  Check for no mode selected

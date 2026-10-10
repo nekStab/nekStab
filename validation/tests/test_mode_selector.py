@@ -206,6 +206,28 @@ def test_orphan_floquet_flag_stops_the_run(driver):
     assert "ifFloquet" in out
 
 
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("-", "isAdjoint", "ifmvbd"),
+        ("-", "isAdjoint", "ifFloquet", "ifmvbd"),
+        ("-", "isTransientGrowth", "ifmvbd"),
+        ("-", "ifotdDNS", "ifmvbd"),
+    ],
+)
+def test_moving_mesh_stops_the_modes_without_a_mesh_velocity_term(driver, args):
+    status, _, _, out = resolve(driver, 0, *args)
+    assert status == 3, out
+    assert "moving mesh" in out
+
+
+@pytest.mark.parametrize("args", [("-", "isDirect", "ifmvbd"), ("-", "isDirect", "ifFloquet", "ifmvbd")])
+def test_moving_mesh_keeps_the_direct_modes(driver, args):
+    status, got, _, out = resolve(driver, 0, *args)
+    assert status == 0, out
+    assert "ifmvbd" not in got
+
+
 def test_every_example_userparam01_is_a_mode(driver):
     # Every numeric userParam01 in a shipped .par file must decode.
     seen = set()

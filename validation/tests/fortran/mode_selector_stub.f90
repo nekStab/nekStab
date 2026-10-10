@@ -9,7 +9,7 @@ module nekstab_nek_bridge
    real(8) :: uparam(20) = 0.0d0
    real(8) :: thermal_buoyancy_coeff = 0.0d0
    character(len=32) :: nekstab_mode = ''
-   logical :: ifbuoyancy = .false.
+   logical :: ifbuoyancy = .false., ifmvbd = .false.
    logical :: ifDNS = .false., ifLinDNS = .false., ifSFD = .false.
    logical :: ifBoostConv = .false., ifTDF = .false., ifDMT = .false.
    logical :: ifFloquet = .false.

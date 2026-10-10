@@ -28,10 +28,13 @@ module nekstab_forcing_mod
                                  xRspg, yRspg, zRspg, ifotd, otdfx, otdfy, otdfz, &
                                  lx1, ly1, lz1, lelv, xm1, ym1, zm1, fct, nid, bm1s, &
                                  ifto, ifpo, ldim, ndim, xmn, xmx, ymn, ymx, zmn, zmx, &
-                                 nfield
+                                 nfield, ifmvbd, nelv, bm1
    use nekstab_reynolds, only: reynolds_add
    implicit none
    private
+   ! Mesh-velocity term of the perturbation equation, one column per velocity
+   ! component, and the work array of divws (see ale_mesh_velocity_term).
+   real, allocatable, save :: ale_term(:, :), ale_work(:)
    public :: nekStab_forcing, nekStab_forcing_temp, &
              nekStab_set_buoyancy, nekStab_qvol, &
              activate_sponge, spng_init, spng_set, fringe_step
@@ -127,6 +130,16 @@ contains
          if (if3D) ffz = ffz - otdfz(ip, jp)
       end if
 
+      ! Mesh velocity of a moving mesh: Nek5000 adds B div(w u) to the base flow
+      ! only. The first grid point of a forcing evaluation computes it for the
+      ! whole perturbation field.
+      if (ifmvbd .and. jp /= 0) then
+         if (ix == 1 .and. iy == 1 .and. iz == 1 .and. iel == 1) call ale_mesh_velocity_term()
+         ffx = ffx + ale_term(ip, 1)
+         ffy = ffy + ale_term(ip, 2)
+         if (if3D) ffz = ffz + ale_term(ip, 3)
+      end if
+
       ! Frozen Reynolds-stress force: state-independent, so only on the
       ! jp == 0 residual. It is present in every finite-difference
       ! evaluation and cancels in the difference; an analytic
@@ -134,6 +147,49 @@ contains
       if (jp == 0) call reynolds_add(ffx, ffy, ffz, ix, iy, iz, iel)
 
    end subroutine nekStab_forcing
+
+!-----------------------------------------------------------------------
+! ale_mesh_velocity_term — Mesh-velocity term of a perturbation on a moving mesh
+!
+! Purpose:
+!   On a moving mesh Nek5000 solves the base flow in the arbitrary
+!   Lagrangian-Eulerian form
+!      d(B u)/dt = B div(w u) - B (u.grad) u + ...
+!   with the mesh velocity w. The routine admeshv adds the term B div(w u).
+!   The perturbation solver of Nek5000 has the convection by the base flow
+!   and the mass matrices of the earlier steps, but not this term. Without
+!   it the linearized map is not the derivative of the nonlinear map: a
+!   Newton iteration on the periodic orbit of a moving cylinder stalls, and
+!   the Floquet multipliers are wrong. The mesh velocity does not depend on
+!   the flow, so the term of the perturbation u' is B div(w u').
+!
+!   divws returns B div(w u'_i). The forcing is multiplied by B again in
+!   makeufp, so this routine divides by B. nekStab_forcing adds the result
+!   to the forcing of the perturbation jp.
+!
+!   The routine runs at the first grid point of a forcing evaluation. There
+!   the perturbation, the mesh velocity and the metric terms have the values
+!   that admeshv uses for the base flow in the same step.
+!-----------------------------------------------------------------------
+   subroutine ale_mesh_velocity_term()
+      integer :: n
+
+      n = nx1*ny1*nz1*nelv
+      if (.not. allocated(ale_term)) then
+         allocate (ale_term(lx1*ly1*lz1*lelv, 3), ale_work(lx1*ly1*lz1*lelv))
+      end if
+      ale_term = 0.0d0
+
+      call divws(ale_term(1, 1), vxp(1, jp), ale_work, nelv, 1)
+      call divws(ale_term(1, 2), vyp(1, jp), ale_work, nelv, 2)
+      call invcol2(ale_term(1, 1), bm1, n)
+      call invcol2(ale_term(1, 2), bm1, n)
+      if (if3D) then
+         call divws(ale_term(1, 3), vzp(1, jp), ale_work, nelv, 3)
+         call invcol2(ale_term(1, 3), bm1, n)
+      end if
+
+   end subroutine ale_mesh_velocity_term
 
 !-----------------------------------------------------------------------
 ! nekStab_qvol — Temperature forcing callback for adjoint buoyancy

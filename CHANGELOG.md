@@ -154,6 +154,26 @@ description for the 2.0 series; entries here are the per-tag deltas.
   instead of -0.0665.
 
 ### Fixed
+- The direct linearized solver has the mesh-velocity term of a moving mesh. With
+  `motion = user` Nek5000 solves the base flow with the term B div(w u) (`admeshv`, w
+  the mesh velocity), and its perturbation solver does not add the term for the
+  perturbation, so the linearized map was not the derivative of the nonlinear map.
+  `nekStab_forcing` now adds B div(w u') to the forcing of every perturbation
+  (`ale_mesh_velocity_term` in `forcing.f90`; `divws`, divided by B because the forcing is
+  multiplied by B again). On the cylinder in forced transverse oscillation at Re = 100
+  (`moving_cylinder_re100`, A = 1.08, f = 0.1643), Newton-GMRES for the forced orbit
+  took the squared residual from 3.7e-3 to 6.5e-4, 2.6e-4, 9.9e-5, 4.3e-5, 3.8e-5 and
+  1.9e-5 in seven iterations (factors 0.18 to 0.88) and was stopped there, with the
+  GMRES solves needing more and more vectors. It now reaches 9e-10 in 11 iterations,
+  with a factor 0.12 to 0.25 per iteration; the dynamic solver tolerance stops each linear
+  solve at one fifth of the current residual. A check with 30 Arnoldi steps on the field of
+  the forced DNS gives the same leading Floquet multipliers for the linearized map and for
+  finite differences of the nonlinear map: 0.931905 and 0.931920 for the leading one, and
+  a distance of at most 4.4e-4 over the eight leading ones. The solver without the term
+  gives a pair of modulus 0.78 in place of 0.93, and its eight leading estimates lie 0.06
+  to 0.18 from the correct ones. The adjoint, transient-growth and OTD modes have no
+  mesh-velocity term; they stop at start-up when the mesh moves
+  (`nekStab_validate_mode`).
 - OTD modes after the first were forced with a shifted field whenever a rank held
   fewer elements than `lelt` in `SIZE`, which is the normal case (`lelt` is set
   for the smallest number of ranks of a case: 1000 elements on 16 ranks leave 62
