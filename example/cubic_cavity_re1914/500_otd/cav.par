@@ -1,13 +1,15 @@
 [GENERAL]
-# TEMPLATE: any reasonable initial field (DNS snapshot or baseflow)
-# startFrom =            # cold start
+startFrom = BF_cav0.f00001 # steady base flow of 210_baseflow_newton/fp, frozen
 
 stopAt = endTime
-endTime = 100.0          # OTD evolves alongside DNS
+endTime = 30.0           # about 2.8 periods of the leading pair (omega = 0.587)
 
-userParam01 = 5          # 5 = OTD (optimally time-dependent modes)
-userParam02 = 4          # TEMPLATE: number of OTD modes to evolve
-# Additional OTD-specific knobs live in src/otd.f90 — see comments there.
+userParam01 = 5          # 5 = OTD (optimally time-dependent modes), base flow frozen
+# The OTD basis size is lpert in SIZE (compile time). The sponge parameters
+# (userParam08 to 10) are zero, as in 310_stability_direct.
+userParam08 = 0          # sponge left
+userParam09 = 0          # sponge right
+userParam10 = 0          # sponge strength
 
 dt = 0
 variableDt = yes

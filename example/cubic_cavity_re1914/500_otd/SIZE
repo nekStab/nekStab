@@ -24,7 +24,7 @@
       parameter (lelr=lelt)            ! max number of local elements per restart file
       parameter (lhis=2)              ! max history/monitoring points
       parameter (maxobj=1)             ! max number of objects
-      parameter (lpert=1)              ! max number of perturbations
+      parameter (lpert=2)              ! OTD basis size: two modes hold the invariant subspace of the leading complex pair
       parameter (toteq=1)              ! max number of conserved scalars in CMT
       parameter (nsessmax=1)           ! max sessions to NEKNEK
       parameter (lxo=lx1)              ! max GLL points on output (lxo>=lx1)

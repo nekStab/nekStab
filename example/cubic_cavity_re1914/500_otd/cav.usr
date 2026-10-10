@@ -13,13 +13,21 @@
       include 'TOTAL'
 
       if (istep.eq.0) then !change defaults
-        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 4 ; call bcast(schur_tgt,isize)
-        maxmodes = 2 ; call bcast(maxmodes,isize)
+c       No sponge, as in 310_stability_direct. The base flow is steady and frozen,
+c       so the OTD operator is then the operator of the 310 stage, and the
+c       eigenvalues of the reduced operator can be compared with its spectrum.
+        spng_st = 0.0d0 ; call bcast(spng_st,wdsize)
+
+c       Run to endTime. The convergence test compares the running average of the
+c       exponents between two print steps, and that changes little long before
+c       the exponents have converged.
+        otd_convTol = 0.0d0 ; call bcast(otd_convTol,wdsize)
+        otd_printStep = 100 ; call bcast(otd_printStep,isize)
+        otd_gsStep = 10 ; call bcast(otd_gsStep,isize)
+
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
-        ifdyntol = .true. ; call bcast(ifdyntol,lsize)
       endif
 
       end
@@ -43,18 +51,25 @@
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
-      integer e
+      integer e, ijke
 
+      e = gllel(ieg)
       if (JP.eq.0) then         ! velocity
-         e = gllel(ieg)
-         ux = 1.0d0 ! uniform lid, as in the thesis (no regularisation of the edge singularity)
-         uy = 0.0d0
-         uz = 0.0d0
+c        The OTD driver loads BF_cav0.f00001 into ubic, vbic and wbic before it
+c        calls setics. A uniform field here replaces that base flow.
+         ux = ubic(ix,iy,iz,e)
+         uy = vbic(ix,iy,iz,e)
+         uz = wbic(ix,iy,iz,e)
          temp = 0.0d0
       else                      ! perturbation
-         ux = 0.0d0
-         uy = 0.0d0
-         uz = 0.0d0
+c        The OTD driver fills vxpic, vypic and vzpic (white noise or a restart)
+c        and calls setics. Zero fields here make the whole OTD basis zero:
+c        the Gram matrix is zero, the FTLE stay zero and the run reports
+c        convergence at once.
+         ijke = ix + lx1*((iy - 1) + ly1*((iz - 1) + lz1*(e - 1)))
+         ux = vxpic(ijke, jp)
+         uy = vypic(ijke, jp)
+         uz = vzpic(ijke, jp)
          temp = 0.0d0
       endif
 
