@@ -1,0 +1,4 @@
+# Optimal energy gain G(tau) of the cubic cavity at Re = 1914, one run of this stage per horizon (endTime = tau)
+# k_dim = 30, Jean Zay; tau = 10 is the run of this folder
+tau,G
+10,229.1873
