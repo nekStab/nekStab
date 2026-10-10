@@ -148,6 +148,23 @@ description for the 2.0 series; entries here are the per-tag deltas.
   instead of -0.0665.
 
 ### Fixed
+- OTD modes after the first were forced with a shifted field whenever a rank held
+  fewer elements than `lelt` in `SIZE`, which is the normal case (`lelt` is set
+  for the smallest number of ranks of a case: 1000 elements on 16 ranks leave 62
+  or 63 per rank against `lelt = 65`). `otd_generate_forces` formed the product
+  of the basis with the reduced operator, `sum_j V(:,j) Lr(j,k)`, with `mxm`
+  and the number of active points as column spacing, but the basis arrays are
+  spaced by the compile-time number of points. Mode k received the terms of the
+  modes before it shifted by several elements, and no forcing on its last
+  elements. In `cubic_cavity_re1914/500_otd` the second mode left the eigenplane
+  of the 310 stage by 20 degrees (sine 0.35) within 3 time units; the same run
+  with `lelt` equal to the elements per rank, or with this fix, keeps the basis
+  on the plane to 1e-6. Mode 1, and runs with one mode, were not affected. The
+  cylinder wake stages lost little: the shifted terms, `Lr(j,k) + Lr(k,j)` for
+  j < k, vanish when the real and the imaginary part of the seed are
+  orthogonal. The same call pattern in `otd_compute_OTD_modes` (it fills only
+  the fields that the disabled `otd_outpost_OTD_modes` writes) is fixed too.
+  Both products are `dgemm` calls with the storage spacing.
 - The convergence residual of SFD (`residu.dat`, column 2) and of the TDF mode is
   the root mean square over the domain again. The multi-field change of
   2026-06-21 replaced `normvc` by `k_norm`, the integral norm, which grows with

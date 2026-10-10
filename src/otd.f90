@@ -276,7 +276,7 @@ contains
    subroutine otd_compute_OTD_modes
 
       real :: saved_Lr(lpert, lpert)
-      integer :: active_count, row, col
+      integer :: active_count, storage_count, row, col
       character(len=20) :: real_fmt, int_fmt
 
       ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.5.
@@ -342,14 +342,23 @@ contains
       ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.5.
       ! Project the physical OTD basis fields onto the sorted eigendirections:
       ! real parts use EVRR, imaginary parts use EVRI.
+      !  The columns of vxp are storage_count entries apart, not active_count
+      !  (see otd_generate_forces), so dgemm gets the column spacing explicitly.
       active_count = lx1*ly1*lz1*nelv
-      call mxm(vxp, active_count, EVRr, lpert, OTDmrx, npert)
-      call mxm(vxp, active_count, EVRi, lpert, OTDmix, npert)
-      call mxm(vyp, active_count, EVRr, lpert, OTDmry, npert)
-      call mxm(vyp, active_count, EVRi, lpert, OTDmiy, npert)
+      storage_count = lx1*ly1*lz1*lelv
+      call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                 vxp, storage_count, EVRr, lpert, 0.0d0, OTDmrx, storage_count)
+      call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                 vxp, storage_count, EVRi, lpert, 0.0d0, OTDmix, storage_count)
+      call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                 vyp, storage_count, EVRr, lpert, 0.0d0, OTDmry, storage_count)
+      call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                 vyp, storage_count, EVRi, lpert, 0.0d0, OTDmiy, storage_count)
       if (if3d) then
-         call mxm(vzp, active_count, EVRr, lpert, OTDmrz, npert)
-         call mxm(vzp, active_count, EVRi, lpert, OTDmiz, npert)
+         call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                    vzp, storage_count, EVRr, lpert, 0.0d0, OTDmrz, storage_count)
+         call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                    vzp, storage_count, EVRi, lpert, 0.0d0, OTDmiz, storage_count)
       end if
 
    end subroutine otd_compute_OTD_modes
@@ -501,13 +510,30 @@ contains
 !-----------------------------------------------------------------------
    subroutine otd_generate_forces
 
-      integer :: active_count
+      integer :: active_count, storage_count
 
       ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.4.
+      ! OTDf(:,k) = sum_j V(:,j) otd_Lr(j,k).
+      !  The columns of VXP are storage_count = lx1*ly1*lz1*lelv entries apart.
+      !  lelv is the compile-time element count, and nelv can be smaller.
+      !  The routine mxm takes the column spacing from its row count,
+      !  active_count = lx1*ly1*lz1*nelv. With nelv < lelv it read and wrote
+      !  every mode but the first at the wrong offset. Mode k then received the
+      !  terms j < k of otd_Lr shifted by (k-j)*(lelv-nelv) elements, and no forcing
+      !  on its last (k-1)*(lelv-nelv) elements. On 16 ranks (nelv 62 or 63,
+      !  lelv 65) the second mode of cubic_cavity_re1914/500_otd left the
+      !  eigenplane of the 310 stage by 20 degrees. The routine dgemm takes the
+      !  column spacing as an argument.
       active_count = lx1*ly1*lz1*nelv
-      call mxm(VXP, active_count, otd_Lr, lpert, OTDfx, npert)
-      call mxm(VYP, active_count, otd_Lr, lpert, OTDfy, npert)
-      if (if3d) call mxm(VZP, active_count, otd_Lr, lpert, OTDfz, npert)
+      storage_count = lx1*ly1*lz1*lelv
+      call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                 VXP, storage_count, otd_Lr, lpert, 0.0d0, OTDfx, storage_count)
+      call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                 VYP, storage_count, otd_Lr, lpert, 0.0d0, OTDfy, storage_count)
+      if (if3d) then
+         call dgemm('N', 'N', active_count, npert, npert, 1.0d0, &
+                    VZP, storage_count, otd_Lr, lpert, 0.0d0, OTDfz, storage_count)
+      end if
 
    end subroutine otd_generate_forces
 
