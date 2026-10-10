@@ -1,31 +1,39 @@
 {
   "case": "cubic_cavity_re1914/000_dns",
-  "description": "DNS of the cubic cavity at Re = 1914 from rest to t = 100 (the flow is steady by then). The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot to the stated tolerance. The values are those of the run named under produced.",
+  "summary": "DNS of the cubic cavity at Re = 1914 from rest to t = 100. It gives the start field of the Newton stage.",
+  "description": "DNS of the cubic cavity at Re = 1914 from rest to t = 100. The flow is close to the steady state but still oscillates (README). The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot and the last probe value. The values are those of the run named under produced.",
   "produced": {
+    "ranks": "16",
     "nekstab": "v2.0.0",
-    "date": "2026-10-09",
-    "compiler": "ifort 2021.9 (Jean Zay)"
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-09"
   },
   "quantities": {
     "last_snapshot_time": {
       "source": "cav0.f00010:field:time",
       "value": 100.0,
-      "tol_abs": 0.5
+      "tol_abs": 0.001
     },
     "snapshot_vx_max": {
       "source": "cav0.f00010:field:vx.max",
       "value": 1.00239,
-      "tol_rel": 0.01
+      "tol_rel": 0.001
     },
     "snapshot_vx_norm": {
       "source": "cav0.f00010:field:vx.norm",
       "value": 100.9503,
-      "tol_rel": 0.01
+      "tol_rel": 0.001
     },
     "snapshot_vy_norm": {
       "source": "cav0.f00010:field:vy.norm",
       "value": 60.46442,
-      "tol_rel": 0.02
+      "tol_rel": 0.001
+    },
+    "probe_vy_final": {
+      "source": "cav.his:col3:last",
+      "value": -0.03141437,
+      "tol_abs": 1e-05,
+      "note": "Last value of vy at the probe (0.25, 0.25, 0), column 3 of cav.his."
     }
   }
 }

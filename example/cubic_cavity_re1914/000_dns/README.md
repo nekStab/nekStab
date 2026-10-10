@@ -12,7 +12,7 @@ slowly and is still present at t = 100. The last field, `cav0.f00010`, is the se
 Run: `sbatch run.local.slurm`.
 
 ## Reference
-`ref/reference.json` checks the last snapshot, `cav0.f00010`: its time stamp (t = 100), the maximum and the norm of `vx` (1 %) and the norm of `vy` (2 %).
+`ref/reference.json` checks the time stamp of the last snapshot `cav0.f00010` (t = 100), the maximum of `vx`, the norms of `vx` and `vy` (all 1e-3) and the last value of the probe signal `vy` at (0.25, 0.25, 0) (1e-5). The probe value follows the whole trajectory, including the start-up oscillation.
 
 ## Figure
 `python3 plot.py` writes `plot_dns.png`: (a) the probe signal at (0.25, 0.25, 0) and (b) the speed on the plane z = 0 of the last snapshot. The copy `ref/dns.png` is the figure of the gate run.
