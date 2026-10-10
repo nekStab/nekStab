@@ -9,6 +9,8 @@ DNS stage for the moving-cylinder Re=100 case.
 - Reynolds number: `viscosity = -100.0`
 - Motion/forcing parameters: preserved from the family-root `1cyl.par`
   (`userParam05 = 0.0`, `userParam06 = 0.1643000`)
+- With `userParam05 = 0` the cylinder does not move: this stage is the static DNS of the case, with the sponge and the
+  filter of the DNS settings. The forced run is `../010_dns_forced/`.
 - Runtime: the case `.usr` sets the final time to `100 / userParam06`
   periods and writes every `10 / userParam06` periods
 - History probe: `(5, 0, 0)`, copied from the family-root `1cyl.his`

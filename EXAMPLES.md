@@ -116,7 +116,7 @@ this repository.
 | `example/cylinder_re100/500_otd/` | 100 | OTD (5.0), 2 modes | reduced-operator eigenvalues and exponents equal sigma = 0.12479 of the direct stage to 3.5e-5, the time-step error of that stage |
 | `example/cylinder_re100/000_dns/` | 100 | DNS (0.0) | vortex shedding |
 | `example/cylinder_re100/000_dns/ci_test/` | 100 | DNS smoke (0.0) | 10-step smoke |
-| `example/moving_cylinder_re100/000_dns/` | 100 | DNS forced osc (0.0) | DNS subcase |
+| `example/moving_cylinder_re100/000_dns/` | 100 | DNS (0.0) | static cylinder (amplitude 0) on the mesh of the moving-cylinder case: St = 0.1663 |
 | `example/lid_driven_re3600/210_baseflow_newton/fp/` | 3600 | Newton (2.0) | converged steady state |
 | `example/poiseuille_re5k/500_otd/` | 5000 | OTD (5.0), 3 modes | eigenvalues of the reduced operator: -nu (pi/2)^2 to 1.3e-4 and the Orr-Sommerfeld real part -1.7503e-3 to 2.8e-4 (relative) |
 | `example/cubic_cavity_re1914/500_otd/` | 1914 | OTD (5.0), 2 modes | basis stays on the eigenplane of the 310 pair (sine below 1e-6 for 2.8 periods); the mean of the two entries of the reduced operator equals sigma = -1.83e-4 to 1e-6 |
