@@ -2,6 +2,12 @@
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 
+## Status: experimental
+
+This case is not validated. Its stages have no `ref/` baseline, they were not rerun for this release, and the
+validation gallery does not list them. The numbers below come from earlier runs on this mesh and are not checked by
+any test. Use the case as a starting point for RANS stability work, not as a check of the code.
+
 ## Case note
 
 This directory is the high-Reynolds-number cylinder. The point of the case is the gap between a base flow and a mean flow. That gap is small near onset and large far above it. Thesis source for the cylinder wake: chapter 2, `sec:ex:1cyl`. Method source: chapter 2, `Large-scale eigensolvers`.

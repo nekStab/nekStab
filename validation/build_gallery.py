@@ -45,6 +45,8 @@ STAGE_NUMBER = re.compile(r'(?:^|/)(\d{3})_')
 # Path parts that never belong to a stage: templates, reference folders, build
 # folders, archives and the smoke test of the build (not a validation stage).
 NOT_STAGE_PARTS = frozenset(['_templates', 'ref', 'obj', 'ci_test', '__pycache__'])
+# Cases that stay in example/ as unvalidated work: no card, and the completeness test asks for nothing.
+EXPERIMENTAL_FAMILIES = frozenset(['cylinder_re1m'])
 
 # First digit of the stage number -> lane. The lanes are the filter chips and the
 # sections inside a family, in page order.
@@ -88,24 +90,20 @@ FAMILIES: dict[str, tuple[str, str]] = {
         'The cylinder wake with an active temperature field (Richardson number 0.2): a DNS seed '
         'and the Newton steady state.',
     ),
-    'cylinder_re1m': (
-        'Cylinder, high-Re RANS',
-        'The cylinder wake with the k-tau RANS model: DNS, steady base flow by SFD, URANS and '
-        'direct stability with the eddy viscosity coupled or frozen.',
-    ),
     'moving_cylinder_re100': (
         'Moving cylinder, Re = 100',
-        'A cylinder in forced oscillation on a moving mesh.',
+        'A cylinder in forced transverse oscillation on a moving mesh: the lock-in of the wake, its '
+        'periodic orbit by Newton, the Floquet multiplier of that orbit and the DMT filter bank on the orbit.',
     ),
     'flip_flop_re62': (
         'Flip-flop, Re = 62',
         'Two side-by-side cylinders just above the critical Reynolds number: the unstable periodic '
         'orbit, its direct and adjoint Floquet stability and the wavemaker.',
     ),
-    'tpjet_re2005': (
-        'Triple-port jet, Re = 1900',
-        'The axisymmetric jet with harmonic forcing at St = 0.6: the forced periodic orbit and its '
-        'direct Floquet stability.',
+    'tpjet_re2000': (
+        'Harmonically forced jet, Re = 2000',
+        'The axisymmetric jet with harmonic forcing at St = 0.6: the forced periodic orbit by '
+        'time-delayed feedback and by Newton, and its direct and adjoint Floquet stability.',
     ),
     'thermosyphon_ra500': (
         'Thermosyphon, Ra = 500',
@@ -135,7 +133,7 @@ FAMILIES: dict[str, tuple[str, str]] = {
     'cubic_cavity_re1950': (
         'Cubic cavity, Re = 1950',
         'The saturated limit cycle of the cubic cavity: its period, direct and adjoint Floquet '
-        'stability, a DNS check of the unstable pair, and POD and DMD of the cycle.',
+        'stability, a DNS check of the unstable pair, POD and DMD of the cycle, and the DMT filter bank on the cycle.',
     ),
     'naca0012_re2000': (
         'NACA 0012, Re = 2000',
@@ -187,6 +185,7 @@ MODE_NAMES = {
     '6.1': 'POD',
     '6.2': 'DMD',
     '6.3': 'SPOD',
+    '6.4': 'DMT filter bank',
 }
 
 # Names of the figure files of ref/ that a reader should not have to decode.
@@ -365,6 +364,8 @@ def discover_stages() -> list[Stage]:
         if rel in seen or not STAGE_NUMBER.search(rel):
             continue
         if any(p in NOT_STAGE_PARTS or p.startswith('.') for p in parts):
+            continue
+        if parts[0] in EXPERIMENTAL_FAMILIES:
             continue
         seen.add(rel)
         stages.append(read_stage(folder))
