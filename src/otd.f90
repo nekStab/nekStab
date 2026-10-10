@@ -214,13 +214,17 @@ contains
       integer :: mode, row, active_count, storage_count
 
       ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.2.
-      ! Build the linearized Navier-Stokes action on each OTD basis vector:
-      !   L_NS(u_j) = (1/Re) grad^2 u_j - grad p_j
-      !             - (Ub.grad) u_j - (u_j.grad) Ub.
+      ! Build the linearized Navier-Stokes action on each OTD basis vector, without the pressure gradient:
+      !   L_NS(u_j) = (1/Re) grad^2 u_j - (Ub.grad) u_j - (u_j.grad) Ub.
+      ! After a step every basis vector satisfies the discrete incompressibility constraint of the stepper,
+      ! (q, div u_i) = 0 for all q of the pressure space, so the pressure gradient adds
+      ! (p_j, div u_i) = 0 to <L_NS(u_j), u_i>. A run measured it at 1e-13 of the entries.
+      ! The gradient of the pressure that mappr averages across element faces is not that quantity:
+      ! the averaged pressure is outside the pressure space, and the term moved the mean of the
+      ! two entries of Lr by -2.0e-4 on the cubic cavity at Re = 1914 (sigma = -1.83e-4).
       do mode = 1, npert
          call otd_construct_convective_terms( &
             vxp(1, mode), vyp(1, mode), vzp(1, mode), mode)
-         call otd_construct_pressure_gradient_terms(prp(1, mode), mode)
          call otd_construct_diffusive_terms( &
             vxp(1, mode), vyp(1, mode), vzp(1, mode), mode)
       end do
@@ -231,12 +235,12 @@ contains
       do mode = 1, npert
          do row = 1, active_count
             otd_Lux(row, mode) = &
-               diffx(row, mode) - gradpx(row, mode) - convx(row, mode)
+               diffx(row, mode) - convx(row, mode)
             otd_Luy(row, mode) = &
-               diffy(row, mode) - gradpy(row, mode) - convy(row, mode)
+               diffy(row, mode) - convy(row, mode)
             if (if3d) then
                otd_Luz(row, mode) = &
-                  diffz(row, mode) - gradpz(row, mode) - convz(row, mode)
+                  diffz(row, mode) - convz(row, mode)
             end if
          end do
       end do
@@ -824,7 +828,9 @@ contains
 
 !-----------------------------------------------------------------------
 ! otd_construct_pressure_gradient_terms — pressure gradient of
-!   perturbation field
+!   perturbation field. otd_construct_linear_operator does not call it
+!   (see the comment there): the gradient of the averaged pressure is not
+!   the pressure term of the stepper.
 !-----------------------------------------------------------------------
    subroutine otd_construct_pressure_gradient_terms(prpert, ipert)
 

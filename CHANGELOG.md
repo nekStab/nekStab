@@ -179,6 +179,22 @@ description for the 2.0 series; entries here are the per-tag deltas.
   0.124756 and 0.124753, against 0.124779 and 0.124776 before (sigma of 310:
   0.124788). `otd_compute_laplacian` stays in the module and is no longer
   called.
+- The reduced operator of the OTD has no pressure term any more. The stepper keeps the
+  pressure in the polynomials of degree N-2 inside each element, without continuity,
+  and its incompressibility constraint makes every basis vector orthogonal to that
+  space, so the pressure gradient adds `(p, div u) = 0` to every entry of `Lr`.
+  `otd_construct_linear_operator` added the gradient of the pressure that `mappr`
+  maps to the velocity mesh and averages across the element faces, which is outside
+  that space. On `cubic_cavity_re1914/500_otd` the stepper's weak pressure term of
+  the basis was 1e-13 of the entries, and the averaged gradient gave -1.9e-4 and
+  -2.1e-4 for the two modes: the mean of the two entries moved from -1.83e-4 (the
+  growth rate of the 310 eigenpair) to -3.86e-4 after the first step. Without the
+  term the mean stays within 1e-6 of the growth rate over the first four steps. The
+  basis stayed on the eigenplane of the 310 stage with the term as well (sine 8e-7):
+  the term changes the mixing of the basis inside its subspace, the entries and the
+  exponents of `otd_ftle.dat`. In the 2D wake of `cylinder_re100/500_otd` the term
+  was 1e-7. `otd_construct_pressure_gradient_terms` stays in the module and is no
+  longer called.
 - The convergence residual of SFD (`residu.dat`, column 2) and of the TDF mode is
   the root mean square over the domain again. The multi-field change of
   2026-06-21 replaced `normvc` by `k_norm`, the integral norm, which grows with
