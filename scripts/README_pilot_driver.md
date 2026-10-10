@@ -32,7 +32,5 @@ Both scripts use `fcntl.flock` for atomic read/write so concurrent submits are s
 
 ## What is NOT in scope yet
 
-- `validation/catalog.py` status field is not auto-updated; that cross-linking
-  is planned for a future phase.
 - No automatic re-submission on failure.
 - No email/webhook notifications.
