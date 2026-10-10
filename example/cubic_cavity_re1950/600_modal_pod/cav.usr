@@ -30,8 +30,8 @@
         modal_dt = 0.5d0
         call bcast(modal_dt, wdsize)
 
-!       Number of modes to save
-        modal_nsave = 1
+!       Number of modes to save: the leading pair holds 94 % of the energy of the cycle
+        modal_nsave = 2
         call bcast(modal_nsave, isize)
 
 !       Which methods to run

@@ -30,8 +30,9 @@
         modal_dt = 0.5d0
         call bcast(modal_dt, wdsize)
 
-!       Number of modes to save
-        modal_nsave = 1
+!       Number of modes to save: all 20 of the rank. The list is sorted by |mu|, not by frequency, so plot.py
+!       picks the mode at the frequency of the cycle from dmd_spectrum.dat
+        modal_nsave = 20
         call bcast(modal_nsave, isize)
 
 !       Which methods to run
