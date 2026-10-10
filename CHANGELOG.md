@@ -42,6 +42,16 @@ description for the 2.0 series; entries here are the per-tag deltas.
   310), beta = 1 and chi = 0.5 the residual falls below 1e-7 at t = 766, and
   the field agrees with the Newton solution to 4e-5. The README states that DMT
   filters one frequency band, so a steady flow is the only state without force.
+- `example/cylinder_re100/140_baseflow_meanflow` and
+  `315_stability_direct_meanflow`: the mean flow of the shedding Re = 100 wake
+  and the direct stability about it. The DNS averages velocity and pressure over
+  25 whole periods, found from the upward zero crossings of the integral of v over
+  the domain, writes the mean as a base-flow file and stops. The mean flow has a
+  recirculation length of 1.42 diameters; the steady flow has 6.15. The leading
+  eigenvalue about the mean flow is sigma = 0.0022, omega = 1.0290, within 1.2 %
+  of the DNS frequency 1.0417; the steady flow gives omega = 0.7337. Marquet &
+  Carini (2020, arXiv:2008.10002) give 0.0020 and 1.0322 for the mean flow at
+  Re = 100.
 - `scripts/compiler_battery.py` exports the tracked files of an example stage,
   builds it under nine compiler profiles (gfortran at -O0, -O2 and -O3, a
   portable build, floating-point traps and signalling NaN; ifx at -O0, the

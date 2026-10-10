@@ -1,0 +1,51 @@
+{
+  "case": "cylinder_re100/315_stability_direct_meanflow",
+  "summary": "Leading eigenvalue of the Re = 100 cylinder wake about its mean flow: nearly marginal, at the shedding frequency.",
+  "description": "Direct eigensolver (userParam01 = 3.1) about the mean flow of 140_baseflow_meanflow. The leading pair has the growth rate 0.0022 and the angular frequency 1.0290, 1.2 % below the frequency 1.0417 of the DNS; the steady flow of 310_stability_direct has 0.1248 and 0.7337. Marquet & Carini (2020, arXiv:2008.10002, Table 2) give 0.0020 and 1.0322 for the mean flow at Re = 100, and 0.1257 and 0.7389 for the steady flow. The first two values below are the regression values of this repository, the next two the published values, the fifth the DNS frequency of stage 140.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-10",
+    "ranks": "8",
+    "compiler": "ifx on nexus-dev",
+    "mode": "direct eigensolver (userParam01 = 3.1)",
+    "wall_s": 179.65
+  },
+  "quantities": {
+    "leading_growth": {
+      "source": "Spectre_NSd.dat:col1:first",
+      "value": 0.002170645,
+      "tol_abs": 0.0005,
+      "note": "Growth rate of the leading eigenvalue about the mean flow. The steady flow has 0.1248."
+    },
+    "leading_freq": {
+      "source": "Spectre_NSd.dat:col2:first",
+      "value": 1.029039,
+      "tol_abs": 0.002,
+      "note": "Angular frequency of the leading eigenvalue about the mean flow. The steady flow has 0.7337."
+    },
+    "growth_published": {
+      "source": "Spectre_NSd.dat:col1:first",
+      "value": 0.0020,
+      "tol_abs": 0.002,
+      "note": "Mean-flow growth rate at Re = 100 of Marquet & Carini (2020), Table 2."
+    },
+    "freq_published": {
+      "source": "Spectre_NSd.dat:col2:first",
+      "value": 1.0322,
+      "tol_rel": 0.01,
+      "note": "Mean-flow angular frequency at Re = 100 of Marquet & Carini (2020), Table 2."
+    },
+    "freq_dns": {
+      "source": "Spectre_NSd.dat:col2:first",
+      "value": 1.04174,
+      "tol_rel": 0.02,
+      "note": "Angular frequency of the DNS of 140_baseflow_meanflow, 2 pi / 6.03142. The mean flow predicts the frequency of the shedding within 2 %; the steady flow is 30 % low."
+    },
+    "leading_residual": {
+      "source": "Spectre_NSd.dat:col3:first",
+      "value": 0.0,
+      "tol_abs": 1e-05,
+      "note": "Residual of the leading eigenpair; the solver stops at 1e-6 or below for the pair it reports as converged."
+    }
+  }
+}

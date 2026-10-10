@@ -23,7 +23,9 @@ Re_c = 46.6). The Reynolds number of a stage is the (negative) `viscosity` in it
 | `110_baseflow_sfd/` | steady base flow by selective frequency damping, six variants: the Akervik and the Casacuberta form, each plain, with dynamic tolerance (`_dyn`), and with dynamic tolerance and OIFS time stepping (`_dyn_oifs`) |
 | `120_baseflow_boostconv/` | steady base flow by BoostConv |
 | `210_baseflow_newton/` | steady base flow by Newton-GMRES, `fp` (fixed tolerance) and `dyn` (dynamic tolerance) |
+| `140_baseflow_meanflow/` | mean flow of the shedding wake, averaged over 25 whole periods; the DNS stops when the average closes |
 | `310_stability_direct/direct/` | direct eigenvalue problem of the steady wake |
+| `315_stability_direct_meanflow/` | direct eigenvalue problem of the mean flow: growth rate near zero, frequency of the shedding |
 | `320_stability_adjoint/` | adjoint eigenvalue problem |
 | `330_transient_growth/` | optimal transient growth of the stable wake at Re = 40 |
 | `410_postproc_animate_modes/`, `411_postproc_wavemaker/` | mode animation, wavemaker |

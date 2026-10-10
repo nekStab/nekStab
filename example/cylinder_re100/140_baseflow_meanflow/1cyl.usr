@@ -1,0 +1,156 @@
+! -----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+      include 'AVG'          ! /chkavg/ uavg, vavg, wavg, tavg, pavg of avg_all
+
+      real tstart
+      integer ncycle
+      parameter (tstart = 200.0d0)  ! the average cannot open before this time
+      parameter (ncycle = 25)       ! number of shedding periods in the average
+
+      real glsc2, sigint, sigprev, tcross, tcfirst, tclast, topen, tclose
+      integer icross, ntot
+      logical ifwindow, ifwfinal, ifwdone, ifhaveold
+      save    sigint, tcfirst, tclast, topen, icross
+      save    ifwindow, ifwdone, ifhaveold
+      data    icross /0/, ifwindow /.false./, ifwdone /.false./
+      data    ifhaveold /.false./, sigint /0.0d0/
+
+      call nekStab
+      call hpts
+
+c     The wake is periodic, so a mean over a whole number of periods holds no trace of the
+c     oscillation. The integral of vy over the domain oscillates at the shedding frequency,
+c     with one upward zero crossing per period. The average opens at the first crossing
+c     after tstart and closes at the crossing ncycle periods later, the sample of that
+c     step included. Then the mean flow is written and the run stops.
+      ifwfinal = .false.
+      ntot    = lx1*ly1*lz1*nelv
+      sigprev = sigint
+      sigint  = glsc2(vy,bm1,ntot)
+      if (ifhaveold .and. .not.ifwdone .and. time.ge.tstart .and.
+     $    sigprev.lt.0.0d0 .and. sigint.ge.0.0d0) then
+         icross = icross + 1
+         tcross = time - dt*sigint/(sigint-sigprev)  ! linear inside the step
+         if (icross.eq.1) then
+            ifwindow = .true.
+            topen    = time
+            tcfirst  = tcross
+         endif
+         if (icross.eq.ncycle+1) then
+            ifwfinal = .true.
+            tclose   = time
+            tclast   = tcross
+         endif
+      endif
+      ifhaveold = .true.
+
+      if (ifwindow) call avg_all
+
+      if (ifwfinal) then
+c        Mean velocity and pressure through the standard outpost path, in single precision.
+c        The file BFA1cyl0.f00001 is the base flow of the stability stage that follows.
+         param(63) = 0.0d0 ; call bcast(param(63),wdsize)
+         call outpost2(uavg,vavg,wavg,pavg,tavg,0,'BFA')
+c        The window and the period measured on it: the crossing times are interpolated.
+         if (nid.eq.0) then
+            open (unit=780, file='meanflow_window.dat', status='replace')
+            write (780,'(a)') '# t_open  t_close  n_periods  period  strouhal'
+            write (780,'(2f12.5,i6,2f14.8)') topen, tclose, ncycle,
+     $         (tclast-tcfirst)/ncycle, ncycle/(tclast-tcfirst)
+            close (780)
+            write (6,'(a,2f10.3,a,i3,a,f10.6)') ' mean flow over t =',
+     $         topen, tclose, ' :', ncycle, ' periods of',
+     $         (tclast-tcfirst)/ncycle
+         endif
+         ifwindow = .false.
+         ifwdone  = .true.
+         lastep   = 1
+      endif
+
+      if (lastep.eq.1 .and. .not.ifwdone) then
+         if (nid.eq.0) write (6,*) 'ERROR: the average did not close'
+         call exitt
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if (istep.eq.0) then !change defaults
+
+c       No sponge: the steady base flow of the stages 210 and 310 has none either, so the
+c       mean flow and that base flow belong to the same equations.
+
+c       The running average never reaches its own dump interval, so it is one average
+c       over the whole window.
+        param(68) = 100000000 ; call bcast(param(68),wdsize)
+
+        k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
+        schur_tgt = 0 ; call bcast(schur_tgt,isize)
+        maxmodes = 10 ; call bcast(maxmodes,isize)
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
+
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+! -----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (JP.eq.0) then         ! velocity
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (JP.eq.0) then         ! velocity
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      end
