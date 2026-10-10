@@ -137,6 +137,7 @@ this repository.
 | `example/cylinder_re100/330_transient_growth/` | 40 | Transient growth (3.3) | G(40) = 275; G(tau) peaks between tau = 60 and 80 |
 | `example/cylinder_re180/000_dns_seed/` | 180 | DNS (0.0) | limit cycle, T = 5.1901 from the wake probe |
 | `example/cylinder_re180/210_baseflow_newton/` | 180 | Newton-UPO (2.1) | converged UPO, T = 5.189628, residual 7.8e-10 (no filter) |
+| `example/cylinder_re180/500_otd/` | 180 | OTD about the orbit (5.1), 1 mode | the exponent per period of the mode falls to the exponent 0 of the phase mode: 6.7e-6 after 50 periods |
 | `example/cylinder_re180/311_stability_direct_floquet/` | 180 | Floquet direct (3.11) | trivial multiplier 1 + 1.8e-6; next multipliers 0.880, 0.872 (real) |
 | `example/cylinder_re180/321_stability_adjoint_floquet/` | 180 | Floquet adjoint (3.21) | trivial multiplier 1 + 1.9e-6; next multipliers 0.878, 0.871, 0.857, 0.845; first two match direct |
 

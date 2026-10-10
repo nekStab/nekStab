@@ -32,40 +32,42 @@ before the exponent has converged (the explanation is in
 
 ## Result (white-noise start, 50 periods)
 
-Run on 8 ranks of c8 (`ifx`), 5744 s.
+Run on 8 ranks of Jean Zay (`ifort`), 3253 s.
 
 | period | t at the end | exponent of the period |
 |---|---|---|
-| 1 | 5.19 | -1.07e-1 |
+| 1 | 5.19 | -1.33e-1 |
 | 10 | 51.90 | +2.85e-2 |
-| 20 | 103.79 | +3.20e-2 |
-| 30 | 155.69 | -9.26e-2 |
+| 20 | 103.80 | +3.13e-2 |
+| 30 | 155.69 | -9.15e-2 |
 | 32 | 166.07 | -2.42e-1 |
 | 36 | 186.83 | -1.17e-3 |
-| 37 | 192.02 | -1.45e-4 |
-| 38 | 197.21 | -1.29e-5 |
-| 40 | 207.59 | +6.69e-6 |
-| 45 | 233.53 | +1.76e-5 |
-| 50 | 259.48 | +1.45e-5 |
+| 37 | 192.02 | -1.59e-4 |
+| 38 | 197.21 | -2.70e-5 |
+| 40 | 207.59 | -1.91e-6 |
+| 45 | 233.53 | +9.49e-6 |
+| 50 | 259.48 | +6.73e-6 |
 
-The first 36 periods (190 time units) are the transient of the white-noise start: the
+The first 37 periods (190 time units) are the transient of the white-noise start: the
 exponent of a period is the growth of the current basis vector, and that vector is not yet
-the phase mode. From period 38 on, the exponent stays below 2.1e-5 in absolute value, so it
-agrees with the exponent 0 of the phase mode to that level. The transient depends on the
-start field.
+the phase mode. From period 38 on, the exponent stays below 2.7e-5 in absolute value (below 1.1e-5
+from period 39 on), so it agrees with the exponent 0 of the phase mode to that level. The
+transient depends on the start field.
+
+![exponent of the OTD mode for each period, and its absolute value](ref/otd.png)
 
 The running exponent of `otd_ftle.dat` averages from t = 0, so it still carries the
 transient: it is -5.9e-3 at t = 260. Read `otd_ftle_period.dat` for this stage.
 
 `ref/reference.json` compares the exponent of the last period with 0, the exact value of the
 phase mode, with a tolerance of 1e-4. The value is not read back from an OTD run.
-`python3 plot.py` writes `plot_otd.png`.
+`python3 plot.py` writes `plot_otd.png`; `ref/otd.png` is that figure from the run above.
 
 ## Run
 
 ```bash
 mks 1cyl
-sbatch run.local.slurm      # 8 ranks, about 1.6 h on c8
+sbatch run.local.slurm      # 8 ranks, 54 min on Jean Zay
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

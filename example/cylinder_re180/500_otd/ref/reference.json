@@ -3,10 +3,10 @@
   "summary": "One OTD mode on the Re = 180 periodic orbit, with the base flow advanced by the DNS. Its exponent is that of the phase mode, zero.",
   "produced": {
     "nekstab": "v2.0.0",
-    "date": "2026-10-09",
+    "date": "2026-10-10",
     "ranks": 8,
     "mode": "userParam01=5.1 (base flow advanced by the DNS), lpert = 1, white-noise start, endTime = 260 (50 periods)",
-    "compiler": "ifx"
+    "compiler": "ifort 2021.9 (Jean Zay)"
   },
   "quantities": {
     "otd_period_exponent_final": {
@@ -15,5 +15,5 @@
       "tol_abs": 1.0e-4
     }
   },
-  "description": "The expected value is the largest Floquet exponent of the Re = 180 Newton orbit of 210_baseflow_newton: the phase mode, multiplier 1, exponent 0 (311_stability_direct_floquet gives 3.4e-6), not a value read back from an OTD run. The exponent of the single OTD mode in the last period (t = 254.3 to 259.5) was 1.454e-5. It is a transient before that: it was -0.107 in the first period, +0.04 around t = 70 and -0.24 around t = 166, and it first stays below 1e-4 in absolute value at t = 197 (period 38)."
+  "description": "The expected value is the largest Floquet exponent of the Re = 180 Newton orbit of 210_baseflow_newton: the phase mode, multiplier 1, exponent 0 (311_stability_direct_floquet gives 3.4e-6), not a value read back from an OTD run. The exponent of the single OTD mode in the last period (t = 254.3 to 259.5) was 6.7e-6. It is a transient before that: it was -0.133 in the first period, +0.04 around t = 70 and -0.24 around t = 166, and it first stays below 1e-4 in absolute value at t = 197 (period 38)."
 }
