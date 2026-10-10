@@ -1,5 +1,7 @@
 {
   "case": "cylinder_re100/310_stability_direct/direct",
+  "summary": "Leading eigenvalues of the Re = 100 cylinder wake about its steady base flow: the unstable von Kármán pair.",
+  "description": "Regression values of this repository: the leading eigenvalue pair of the steady Re = 100 cylinder wake, row 1 of Spectre_NSd.dat (growth rate 0.1247875, angular frequency 0.7336851, St = 0.1168).",
   "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-08"},
   "quantities": {
     "leading_eig_growth": {"value": 0.1247875e+00, "tol_abs": 1e-3, "source": "Spectre_NSd.dat:col1:first"},

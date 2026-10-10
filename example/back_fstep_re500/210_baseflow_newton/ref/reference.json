@@ -1,5 +1,6 @@
 {
   "case": "back_fstep_re500/210_baseflow_newton",
+  "summary": "Steady base flow of the backward-facing step at Re = 500: DNS to settle, then Newton-GMRES.",
   "description": "Backward-facing step steady base flow at Re=500 via DNS settle and Newton-GMRES (two phases in run.local.slurm). Regression values of this repository, reproduced on Jean Zay (ifort, 8 ranks) and in the June run.",
   "produced": {
     "ranks": "8",

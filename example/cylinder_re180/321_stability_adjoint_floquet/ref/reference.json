@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re180/321_stability_adjoint_floquet",
+  "summary": "Adjoint Floquet analysis of the Re = 180 periodic orbit. The multipliers match the direct analysis.",
   "produced": {
     "date": "2026-10-06",
     "ranks": 16,

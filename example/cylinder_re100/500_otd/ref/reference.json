@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/500_otd",
+  "summary": "OTD basis of two modes on the frozen steady wake at Re = 100. The growth rates are compared with the leading eigenvalue of the direct stage.",
   "produced": {
     "nekstab": "v2.0.0",
     "date": "2026-10-09",

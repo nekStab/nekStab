@@ -1,5 +1,6 @@
 {
   "case": "naca0012_re2000/411_postproc_wavemaker",
+  "summary": "Wavemaker, base-flow sensitivity and energy budget of the NACA 0012 modes at Re = 2000.",
   "description": "NACA 0012 Re=2000 mode-4 post-processing: wavemaker maximum and location from wm_naca00120.f00001",
   "produced": {
     "date": "2026-06-11",

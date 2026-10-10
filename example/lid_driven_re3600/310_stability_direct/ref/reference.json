@@ -1,5 +1,6 @@
 {
   "case": "lid_driven_re3600/310_stability_direct",
+  "summary": "Leading eigenvalues of the lid-driven cavity at Re = 3600: a stable real eigenvalue and a stable complex pair.",
   "description": "Leading eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12), direct problem. The flow is linearly stable: a real eigenvalue -0.01679 and a complex pair -0.04198 +- 0.77165 i. The values depend on the resolution (table in the family README); the tolerance of 1e-4 is below the change between lx1 = 10 and 12.",
   "produced": {
     "nekstab": "v2.0.0",

@@ -1,5 +1,6 @@
 {
   "case": "cubic_cavity_re1914/320_stability_adjoint",
+  "summary": "Leading adjoint eigenpair of the steady cubic cavity flow at Re = 1914. It equals the direct pair.",
   "description": "Leading pair (T1) of the adjoint at Re=1914, uniform lid; equals the direct pair to 2e-4 in sigma",
   "produced": {
     "ranks": "16",

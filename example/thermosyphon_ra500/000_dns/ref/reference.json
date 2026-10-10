@@ -1,5 +1,6 @@
 {
   "case": "thermosyphon_ra500/000_dns",
+  "summary": "DNS of the thermosyphon at Ra = 500, Pr = 5, from rest to t = 200.",
   "description": "DNS of the thermosyphon at Ra = 500, Pr = 5, from rest to t = 200. The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot to the stated tolerance. The values are those of the run named under produced.",
   "produced": {
     "nekstab": "v2.0.0",

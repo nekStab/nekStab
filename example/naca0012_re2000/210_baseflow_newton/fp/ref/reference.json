@@ -1,5 +1,6 @@
 {
   "case": "naca0012_re2000/210_baseflow_newton/fp",
+  "summary": "Steady base flow of the NACA 0012 airfoil at Re = 2000 by Newton-GMRES from a DNS snapshot.",
   "description": "NACA 0012 steady base flow at Re=2000 by Newton-GMRES from the t = 70 snapshot of the DNS stage. Regression values of this repository, not literature values. The seed is not converged, so the first residual and the iteration count test the Newton solver, and the field statistics test its result. The sponge forces the flow toward the seed (spng_vr), so the statistics belong to this seed: Newton from another start field gives a base flow that differs by 1e-2 (relative l2 norm of the velocity), mostly in the sponge zone.",
   "produced": {
     "ranks": "8",

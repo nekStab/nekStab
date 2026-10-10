@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/210_baseflow_newton/dyn",
+  "summary": "Steady base flow of the cylinder wake at Re = 100 by Newton-GMRES with Eisenstat-Walker dynamic solver tolerance.",
   "description": "Steady base flow of the Re = 100 cylinder wake by Newton-GMRES with Eisenstat-Walker dynamic solver tolerances (userParam01 = 2, ifdyntol). The residual must end at the Newton tolerance of 1e-9. The statistics of the converged field are algorithm-independent: 110_baseflow_sfd, which damps the shedding instead of solving for the fixed point, reaches the same steady flow (vx min -0.2001695, vx max 1.1560659, vx norm 264.3354 for the akervik variant), within 1.3e-6 of the dynamic-tolerance Newton run and 1e-5 of this one; the tolerance of 1e-4 covers that spread.",
   "produced": {
     "nekstab": "v2.0.0",

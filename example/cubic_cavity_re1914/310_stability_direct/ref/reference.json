@@ -1,5 +1,6 @@
 {
   "case": "cubic_cavity_re1914/310_stability_direct",
+  "summary": "Leading eigenpair of the steady cubic cavity flow at Re = 1914. The pair is slightly stable, with ω = 0.587.",
   "description": "Leading pair (T1) of the steady cavity flow at Re=1914, uniform lid: sigma slightly negative, omega = 0.587 (St = 0.0934, thesis)",
   "produced": {
     "ranks": "16",

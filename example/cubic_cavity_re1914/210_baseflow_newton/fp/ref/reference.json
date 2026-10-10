@@ -1,5 +1,6 @@
 {
   "case": "cubic_cavity_re1914/210_baseflow_newton/fp",
+  "summary": "Steady base flow of the cubic cavity at Re = 1914 by Newton-GMRES from the DNS field.",
   "description": "3D cubic cavity steady base flow at Re=1914, uniform lid, Newton-GMRES from a DNS field",
   "produced": {
     "ranks": "16",

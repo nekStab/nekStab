@@ -1,5 +1,6 @@
 {
   "case": "poiseuille_re5k/500_otd",
+  "summary": "Three OTD modes on the laminar channel flow at Re = 5000. The growth rates are compared with theory: viscous decay and the Orr-Sommerfeld eigenvalue.",
   "produced": {
     "nekstab": "v2.0.0",
     "date": "2026-10-09",

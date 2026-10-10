@@ -1,5 +1,6 @@
 {
   "case": "lid_driven_re3600/320_stability_adjoint",
+  "summary": "Adjoint eigenvalues of the lid-driven cavity at Re = 3600. They match the direct eigenvalues.",
   "description": "Adjoint eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12) compared with the DIRECT eigenvalues of 310_stability_direct: the adjoint operator has the spectrum of the direct one, so a match checks the adjoint. At lx1 = 12 the leading eigenvalues differ by 4e-6 (-0.016796 against -0.016793); the tolerance is 5e-5. The regularized lid has no corner singularity, so the adjoint problem is valid.",
   "produced": {
     "nekstab": "v2.0.0",

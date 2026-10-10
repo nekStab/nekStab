@@ -1,5 +1,6 @@
 {
   "case": "naca0012_re2000/000_dns",
+  "summary": "DNS of the NACA 0012 wake at Re = 2000. The wake rings down at the frequency and rate of the leading eigenvalue.",
   "description": "NACA 0012 Re=2000 DNS from a finite-amplitude Re=2000 wake restart; the wake rings down. The late-window DNS frequency agrees with the leading eigenvalue of 310_stability_direct (omega = 8.00579) to 0.75 %, and the decay rates (-0.0638 from the Hilbert envelope, -0.0654 from the window amplitude ratio) with sigma = -0.0665382 to 4 % and 2 %.",
   "produced": {
     "date": "2026-06-10",

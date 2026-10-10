@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/000_dns",
+  "summary": "DNS of the cylinder wake at Re = 100 to t = 200. The vortex street develops from a restart file.",
   "description": "Cylinder Re=100 DNS to t = 200. Regression values of this repository, not literature values. The run is deterministic: Jean Zay (ifort, 8 ranks), a workstation with gfortran (four optimisation levels, floating-point traps, signalling NaN) and ifx (three levels) agree to 5e-11 in the field norms and to all printed digits in the Strouhal number.",
   "produced": {
     "nekstab": "v2.0.0",

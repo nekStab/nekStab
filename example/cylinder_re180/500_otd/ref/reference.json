@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re180/500_otd",
+  "summary": "One OTD mode on the Re = 180 periodic orbit, with the base flow advanced by the DNS. Its exponent is that of the phase mode, zero.",
   "produced": {
     "nekstab": "v2.0.0",
     "date": "2026-10-09",

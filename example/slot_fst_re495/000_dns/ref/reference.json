@@ -1,5 +1,6 @@
 {
   "case": "slot_fst_re495/000_dns",
+  "summary": "DNS of a slot jet at Re = 495 with a synthetic free-stream turbulence inflow, to t = 100.",
   "description": "Slot jet with free-stream turbulence (FST) inflow, DNS at Re=495: statistics of the t=100 field",
   "produced": {
     "ranks": "16 and 32 (probe histories agree to 1e-7)",

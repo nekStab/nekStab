@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re30_thermal/000_dns_seed",
+  "summary": "DNS of the heated cylinder wake at Re = 25, Ri = 0.2 from a uniform flow to t = 100.",
   "description": "DNS of the heated cylinder wake at Re = 25, Ri = 0.2, from a uniform flow to t = 100. The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot to the stated tolerance. The values are those of the run named under produced.",
   "produced": {
     "nekstab": "v2.0.0",

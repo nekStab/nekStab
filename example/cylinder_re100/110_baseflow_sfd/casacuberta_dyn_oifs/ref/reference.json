@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/110_baseflow_sfd/casacuberta_dyn_oifs",
+  "summary": "Steady base flow of the cylinder wake at Re = 100 by selective frequency damping, Casacuberta formulation, dynamic solver tolerance, OIFS time stepping at CFL 5.",
   "description": "Steady base flow of the Re = 100 cylinder wake by selective frequency damping, Casacuberta formulation, dynamic solver tolerance, OIFS time stepping at CFL 5. The run stops when the residual (root mean square over the domain of the change of the velocity during one time step) falls below residualTol = 1e-06; the last row of residu.dat must lie below it. The converged field is the steady flow of the Newton solution of 210_baseflow_newton (the four statistics below are the Newton values, within 4e-3 of this variant, whose gate is looser because the step is 10 times larger). ",
   "produced": {
     "nekstab": "v2.0.0",

@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/411_postproc_wavemaker",
+  "summary": "Wavemaker (structural sensitivity) of the Re = 100 cylinder wake from the direct and adjoint modes.",
   "description": "Regression values of this repository (not literature values): structural-sensitivity (wavemaker) field of the Re=100 cylinder from the direct and adjoint modes. Giannetti and Luchini (2007) place the wavemaker inside the recirculation bubble; here x_peak = 3.84 lies inside the bubble of the steady base flow.",
   "produced": {
     "ranks": "8",

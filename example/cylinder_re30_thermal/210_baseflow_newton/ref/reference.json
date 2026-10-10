@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re30_thermal/210_baseflow_newton",
+  "summary": "Steady state of the heated cylinder wake at Re = 30, Ri = 0.2, by Newton-GMRES with the temperature field.",
   "description": "Regression value of this repository (not a literature value): Newton-GMRES for the heated-cylinder steady state at Re=30, Ri=0.2, cold start",
   "produced": {
     "ranks": "8",

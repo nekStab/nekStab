@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re180/210_baseflow_newton",
+  "summary": "Periodic orbit of the cylinder wake at Re = 180 (T = 5.1896) by Newton-GMRES.",
   "description": "2D cylinder wake periodic orbit at Re=180 via Newton-GMRES (T = 5.189628136, St = 0.192692034), no filter",
   "produced": {
     "ranks": "8",

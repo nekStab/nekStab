@@ -1,5 +1,6 @@
 {
   "case": "flip_flop_re62/000_dns",
+  "summary": "DNS of the flip-flop configuration, two side-by-side cylinders, at Re = 62 from a uniform flow to t = 100.",
   "description": "DNS of the flip-flop configuration (two cylinders) at Re = 62 from a uniform flow to t = 100. The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot to the stated tolerance. The values are those of the run named under produced.",
   "produced": {
     "nekstab": "v2.0.0",

@@ -1,5 +1,6 @@
 {
   "case": "cubic_cavity_re1914/411_postproc_wavemaker",
+  "summary": "Wavemaker (structural sensitivity) of the cubic cavity at Re = 1914 from the direct and adjoint modes.",
   "description": "Regression values of this repository (not literature values): structural-sensitivity (wavemaker) field of the Re=1914 cubic cavity from the leading direct and adjoint modes of the gate runs of 310 and 320, on the base flow of 210/fp. The peak position is not checked: the field has two maxima that differ by 0.4 %, at (-0.365, -0.244, 0) and (-0.307, 0.333, 0).",
   "produced": {
     "ranks": "16",

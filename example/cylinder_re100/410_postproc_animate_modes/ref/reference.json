@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/410_postproc_animate_modes",
+  "summary": "Animation of the leading direct mode of the Re = 100 cylinder wake over one period, T = 8.564.",
   "description": "Regression values of this repository (not literature values): the leading direct mode over one period T = 8.5639 (2 pi / omega, omega = 0.7336851 of ../310_stability_direct/direct), written as 92 snapshots; the amplitudes follow from the unit-norm eigenmode of that stage",
   "produced": {
     "ranks": "8",

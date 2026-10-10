@@ -1,5 +1,6 @@
 {
   "case": "lid_driven_re3600/000_dns",
+  "summary": "DNS of the lid-driven cavity at Re = 3600 (aspect ratio 1.5, regularized lid) to t = 600. The flow relaxes to its steady state.",
   "description": "DNS of the lid-driven cavity (aspect ratio 1.5, regularized lid, Re = 3600, lx1 = 12) from the lid profile to t = 600. Re = 3600 is below the first Hopf bifurcation, so the flow relaxes to the steady state with the rate of the leading eigenvalue, 0.0168: the change of the field between t = 500 and t = 600 is 2.4e-5 in the norm of u. The two norm checks use the steady value (the t = 600 value of the run) for the snapshots at t = 500 and t = 600, so a run that has not relaxed by t = 500 fails.",
   "produced": {
     "nekstab": "v2.0.0",

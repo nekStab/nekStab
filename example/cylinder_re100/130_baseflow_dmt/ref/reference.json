@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/130_baseflow_dmt",
+  "summary": "Steady base flow of the cylinder wake at Re = 100 by dynamic mode tracking (Queguineur et al. 2019).",
   "description": "Steady base flow of the Re = 100 cylinder wake by Dynamic Mode Tracking (userParam01 = 1.3, omega_c = 0.7337, beta = 1, chi = 0.5). The run stops when the residual (root mean square over the domain of u - ubar divided by the time step) falls below userParam15 = 1e-7; the last row of residu_dmt.dat must lie below it. The converged field is the steady flow of the Newton solution of 210_baseflow_newton (the four statistics below are the Newton values, within 4e-5 of this run).",
   "produced": {
     "nekstab": "v2.0.0",

@@ -1,5 +1,6 @@
 {
   "case": "naca0012_re2000/320_stability_adjoint",
+  "summary": "Leading adjoint eigenvalues of the NACA 0012 steady flow at Re = 2000.",
   "description": "NACA 0012 adjoint global stability at Re=2000 (leading eigenvalue)",
   "produced": {
     "date": "2026-06-11",

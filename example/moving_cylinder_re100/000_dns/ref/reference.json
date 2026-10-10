@@ -1,5 +1,6 @@
 {
   "case": "moving_cylinder_re100/000_dns",
+  "summary": "DNS of a cylinder in forced oscillation at Re = 100 on a moving mesh. The reference checks the frequency and the amplitude of the late probe signal.",
   "description": "Moving-cylinder Re=100 DNS late-window dominant frequency and amplitude from 1cyl.his.",
   "produced": {
     "date": "2026-06-10",

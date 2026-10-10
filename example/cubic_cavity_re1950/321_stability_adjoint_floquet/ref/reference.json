@@ -1,5 +1,6 @@
 {
   "case": "cubic_cavity_re1950/321_stability_adjoint_floquet",
+  "summary": "Adjoint Floquet analysis of the limit cycle of the cubic cavity at Re = 1950. The pair matches the direct analysis.",
   "description": "Regression value of this repository (not a literature value): leading adjoint Floquet pair of the Re=1950 limit cycle with the uniform lid, T = 10.78909; equals the direct pair of 311 to 1 % in sigma.",
   "produced": {"ranks": "16", "nekstab_mode": "3.21 (adjoint Floquet)", "k_dim": "100"},
   "quantities": {

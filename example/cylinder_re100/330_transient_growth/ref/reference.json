@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/330_transient_growth",
+  "summary": "Optimal energy gain of the steady cylinder wake at Re = 40 for a sweep of time horizons.",
   "description": "Optimal energy gain of the steady cylinder wake at Re=40, horizon tau=40",
   "produced": {"ranks": "8", "nekstab_mode": "3.3 (transient growth)", "k_dim": "50"},
   "quantities": {

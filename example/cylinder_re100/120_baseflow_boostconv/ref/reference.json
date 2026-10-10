@@ -1,5 +1,6 @@
 {
   "case": "cylinder_re100/120_baseflow_boostconv",
+  "summary": "Steady base flow of the cylinder wake at Re = 50 by BoostConv (Citro et al. 2017).",
   "description": "Steady base flow of the Re = 50 cylinder wake by BoostConv (userParam01 = 1.2) with the defaults of src/main.f90 (bst_snp = 10, bst_skp = 10) and an explicit filter of weight 0.01. The run stops when the residual (root mean square over the domain of the change of the velocity during one time step, sampled every bst_skp steps) falls below residualTol = 1e-6; the last row of residu.dat must lie below it. The converged field is the steady flow of the Newton solution at the same Reynolds number (210_baseflow_newton/fp with viscosity = -50, five iterations, residual 9.6e-10): the four statistics below are its values. BoostConv agrees with them to 2e-5 in the extrema and 2.5e-4 in the norm. The norm sums the whole domain; with the gate at 1e-8 instead of 1e-6 the run needs t = 232 instead of 159 and the norm agrees to 8e-7, so the 2.5e-4 is the part of the field that the loose gate leaves unconverged.",
   "produced": {
     "nekstab": "v2.0.0",

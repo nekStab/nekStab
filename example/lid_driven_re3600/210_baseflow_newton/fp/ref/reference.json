@@ -1,5 +1,6 @@
 {
   "case": "lid_driven_re3600/210_baseflow_newton/fp",
+  "summary": "Steady base flow of the lid-driven cavity at Re = 3600 by Newton-GMRES from the DNS state.",
   "description": "Steady base flow of the lid-driven cavity by Newton-GMRES from the t = 600 DNS state of 000_dns (lx1 = 12). The first residual is 4.4e-9: at this order the DNS state, computed with the explicit filter, is a fixed point of the unfiltered map to that level, and Newton ends in two iterations at the tolerance 1e-9. At lx1 = 6 the first residual was 3.5e-5 and Newton went to a second, unstable steady state.",
   "produced": {
     "nekstab": "v2.0.0",
