@@ -11,7 +11,7 @@ eigenvalues are in `Spectre_NSd_conv.dat` (sigma and omega in units of U/L).
 ## Result
 
 Re = 1920 lies above the first Hopf bifurcation. The leading pair has a positive growth rate: the
-steady flow is unstable. Gate run on Jean Zay, 40 ranks, 2229 s (120 matrix-vector products of 1392
+steady flow is unstable. Run on Jean Zay, 40 ranks, 2229 s (120 matrix-vector products of 1392
 steps, 47 eigenvalues converged to 1e-6, the six leading ones written):
 
 | pair | sigma, Re = 1920 | omega, Re = 1920 | sigma, Re = 1914 | omega, Re = 1914 |
@@ -41,4 +41,4 @@ a Reynolds number that is wrong by 0.2. Verify with
 ## Figure
 
 `python3 plot.py` writes `plot_spectrum.png`: (a) the converged spectrum and (b) the amplitude of the
-leading mode on the plane z = 0. `ref/spectrum.png` is the figure of the gate run.
+leading mode on the plane z = 0. `ref/spectrum.png` is the figure of that run.
