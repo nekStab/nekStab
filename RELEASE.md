@@ -260,7 +260,8 @@ run converges to a steady base flow: `cylinder_re100/130_baseflow_dmt`
 (Re = 100) reaches a residual of 1e-7 and agrees with the Newton solution
 to 4e-5.  A periodic orbit has content in the band at its own frequencies,
 the force does not vanish on it, and the residual does not reach zero
-(`tpjet_re2005/130_baseflow_dmt` stalls near 0.7).
+(a trial on the forced jet orbit stalled near 0.7).  The filter bank of
+mode 6.4 is the tool for the content of an orbit at given frequencies.
 
 #### FST inflow module (rc3)
 
@@ -367,16 +368,17 @@ post-process it.
 
 Families: `cylinder_re100` (flagship, full ladder), `cylinder_re180`
 (Floquet chain; 2D proxy — Mode A/B physics needs 3D), `cylinder_re30_thermal`,
-`cylinder_re1m` (2D RANS), `moving_cylinder_re100`, `flip_flop_re62`,
+`cylinder_re1m` (2D RANS, experimental), `moving_cylinder_re100`, `flip_flop_re62`,
 `thermosyphon_ra500`, `naca0012_re2000`, `lid_driven_re3600`,
-`back_fstep_re500`, `cubic_cavity_re1914`/`_re1950`, `tpjet_re2005`,
-`slot_fst_re495`, `poiseuille_re5k` (OTD), `poiseuille_re1e5` (RANS).
+`back_fstep_re500`, `cubic_cavity_re1914`/`_re1920`/`_re1950`, `tpjet_re2000`,
+`slot_fst_re495`, `poiseuille_re5k` (OTD).
 
 All cylinder isothermal cases share the same 2128-element mesh and a
-shared seed initial condition for direct cross-case comparison.  RANS
-cases (`cylinder_re1m`, `poiseuille_re1e5`) use the finite-difference
-Fréchet operator only — no adjoint, wavemaker, or transient growth,
-since the analytical RANS Jacobian is unavailable.
+shared seed initial condition for direct cross-case comparison.  The RANS
+case (`cylinder_re1m`) uses the finite-difference Fréchet operator
+only — no adjoint, wavemaker, or transient growth, since the analytical
+RANS Jacobian is unavailable.  It is marked experimental: it has no
+reference data and the gallery does not list it.
 
 Validated stages carry `ref/` reference data checked by
 `scripts/check_against_ref.py` (see Reproducibility framework above);

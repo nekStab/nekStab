@@ -49,8 +49,7 @@ Direct Floquet (`k_dim = 100`, 69 modes converged):
   and figure: [`350_dns_unstable_orbit/README.md`](350_dns_unstable_orbit/README.md).
 
 There is a mode to budget, so the energy budget (4.11) is possible on this
-cycle. It is exercised on `flip_flop_re62` and `tpjet_re2005`, and is not a
-stage here.
+cycle. It is exercised on `flip_flop_re62` and is not a stage here.
 
 POD / DMD: the snapshot stages are described in their own READMEs. The cycle
 saturates slowly because Re = 1950 is only just supercritical, and a weak
