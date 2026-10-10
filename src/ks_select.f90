@@ -8,6 +8,7 @@
 ! Public interface:
 !   ks_select_eigenvalues     — adaptive selection with a pair-aware cap
 !   ks_ensure_conjugate_pairs — select both members of a conjugate pair
+!   ks_converged_indices      — indices of the converged Ritz values
 !
 ! Dependencies:
 !   nekstab_argsort
@@ -17,7 +18,7 @@ module nekstab_ks_select
    use nekstab_argsort, only: argsort
    implicit none
    private
-   public :: ks_select_eigenvalues, ks_ensure_conjugate_pairs
+   public :: ks_select_eigenvalues, ks_ensure_conjugate_pairs, ks_converged_indices
 
    integer, parameter :: dp = kind(0.0d0)
    real, parameter :: PAIR_REL_TOL = 1.0d-10
@@ -198,5 +199,39 @@ contains
       end do
 
    end subroutine ks_ensure_conjugate_pairs
+
+!-----------------------------------------------------------------------
+! ks_converged_indices — Positions of the converged Ritz values in the list
+!
+!   The list is sorted by decreasing modulus. A Ritz value that has not
+!   converged can sit above a converged one, so the converged values are
+!   not the first nconv entries. A loop over the first nconv entries wrote
+!   the vector of an unconverged value and left the converged one out: in
+!   the Floquet analysis of cylinder_re180 the multipliers 0.880 and 0.872
+!   (residual 9e-3) took the place of the converged pair 0.233 +- 0.601i.
+!   The test is the one of the spectrum file: residual < tol*max(|lambda|, 1).
+!
+!   idx(1:nconv) — positions of the converged values, in list order
+!-----------------------------------------------------------------------
+   subroutine ks_converged_indices(idx, nconv, vals, residuals, n, tol)
+      integer, intent(in) :: n
+      complex(dp), dimension(n), intent(in) :: vals
+      real, dimension(n), intent(in) :: residuals
+      real, intent(in) :: tol
+      integer, dimension(n), intent(out) :: idx
+      integer, intent(out) :: nconv
+
+      integer :: i
+
+      idx = 0
+      nconv = 0
+      do i = 1, n
+         if (residuals(i) < tol*max(abs(vals(i)), 1.0d0)) then
+            nconv = nconv + 1
+            idx(nconv) = i
+         end if
+      end do
+
+   end subroutine ks_converged_indices
 
 end module nekstab_ks_select

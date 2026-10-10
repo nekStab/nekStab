@@ -7,6 +7,8 @@ An earlier version removed single values by residual and then completed the
 conjugate pairs. The completion returned the count to n, no Arnoldi step
 followed, and the residual test of krylov_schur reported n - 2 converged
 eigenvalues (an ellipse with k_dim = 160: "keeping 160 of 160", 158 converged).
+The export of the eigenmodes (outpost_ks) must visit the converged Ritz values, which
+are not always the first entries of the list sorted by modulus (ks_converged_indices).
 Needs gfortran; the tests skip when it is missing.
 """
 
@@ -45,6 +47,42 @@ def driver(tmp_path_factory) -> Path:
         check=True,
     )
     return exe
+
+
+@pytest.fixture(scope="module")
+def converged_driver(tmp_path_factory) -> Path:
+    gfortran = shutil.which("gfortran")
+    if gfortran is None:
+        pytest.skip("gfortran not found")
+    build = tmp_path_factory.mktemp("ks_converged")
+    flags = ["-fdefault-real-8", "-fdefault-double-8", "-ffree-line-length-none", "-O0"]
+    sources = [
+        ROOT / "src" / "argsort.f90",
+        ROOT / "src" / "ks_select.f90",
+        FORTRAN / "ks_converged_driver.f90",
+    ]
+    for src in sources:
+        subprocess.run([gfortran, *flags, "-c", str(src)], cwd=build, check=True)
+    exe = build / "driver"
+    subprocess.run(
+        [gfortran, *flags, "-o", str(exe), *(f"{s.stem}.o" for s in sources)],
+        cwd=build,
+        check=True,
+    )
+    return exe
+
+
+def converged(exe: Path, entries, tol: float = 1.0e-6):
+    """entries: list of (re, im, residual). Returns the 1-based positions of the converged ones."""
+    lines = [f"{len(entries)} {tol!r}"]
+    lines += [f"{re!r} {im!r} {res!r}" for re, im, res in entries]
+    run = subprocess.run(
+        [str(exe)], input="\n".join(lines) + "\n", capture_output=True, text=True
+    )
+    assert run.returncode == 0, run.stdout + run.stderr
+    head, positions = run.stdout.split("\n")[:2]
+    assert int(head) == len(positions.split())
+    return [int(x) for x in positions.split()]
 
 
 def select(exe: Path, entries, nev: int, delta: float, tol: float = 1.0e-6):
@@ -146,3 +184,34 @@ def test_a_conjugate_pair_is_selected_with_its_partner(driver):
     ]
     _, _, _, mask = select(driver, entries, nev=2, delta=0.05)
     assert mask[0] and mask[1]
+
+
+def test_converged_values_below_an_unconverged_one_are_found(converged_driver):
+    # cylinder_re180, Floquet: the phase mode, two unconverged real multipliers of larger
+    # modulus than the converged pair 0.233 +- 0.601i (the pair is far below in the list).
+    entries = [
+        (1.000018, 0.0, 7.7e-12),
+        (0.880352, 0.0, 8.8e-3),
+        (0.872416, 0.0, 8.3e-3),
+        (0.858055, 0.0, 5.2e-4),
+        (0.233106, 0.600789, 1.0e-9),
+        (0.233106, -0.600789, 1.0e-9),
+        (0.1, 0.0, 1.0),
+    ]
+    assert converged(converged_driver, entries) == [1, 5, 6]
+
+
+def test_the_first_entries_are_returned_when_they_are_the_converged_ones(converged_driver):
+    entries = [(0.99, 0.2, 1.0e-9), (0.99, -0.2, 1.0e-9), (0.8, 0.0, 1.0e-3), (0.5, 0.0, 1.0)]
+    assert converged(converged_driver, entries) == [1, 2]
+
+
+def test_no_value_converged(converged_driver):
+    entries = [(0.99, 0.0, 1.0e-2), (0.5, 0.0, 1.0)]
+    assert converged(converged_driver, entries) == []
+
+
+def test_the_tolerance_is_relative_above_modulus_one_and_absolute_below(converged_driver):
+    # |lambda| = 3: the bound is tol*3. |lambda| = 0.5: the bound is tol*1, not tol*0.5.
+    entries = [(3.0, 0.0, 2.9e-6), (3.0, 0.0, 3.1e-6), (0.5, 0.0, 0.9e-6), (0.5, 0.0, 1.1e-6)]
+    assert converged(converged_driver, entries) == [1, 3]

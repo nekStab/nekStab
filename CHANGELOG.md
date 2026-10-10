@@ -154,6 +154,19 @@ description for the 2.0 series; entries here are the per-tag deltas.
   instead of -0.0665.
 
 ### Fixed
+- The export of the eigenmodes wrote the first N Ritz values of the list sorted by
+  modulus, with N the number of converged values, and not the converged ones. A Ritz
+  value that has not converged and has a larger modulus than a converged one took its
+  place: the mode files (`dRe`, `dIm`, `aRe`, `aIm`, `pRe`, `pIm`) and the rows of
+  `Spectre_H?_conv.dat` and `Spectre_NS?_conv.dat` then belonged to the unconverged
+  value. `Spectre_H?.dat` and `Spectre_NS?.dat`, which list every value with the
+  convergence flag, were right. In a full run of the examples 6 of 19 spectra were
+  affected. The Floquet stage of `cylinder_re180` exported the multipliers 0.880 and
+  0.872 (Arnoldi residual 9e-3) in place of the converged pair 0.233 +- 0.601i.
+  `outpost_ks` now visits the converged values, selected by `ks_converged_indices`
+  (`ks_select.f90`) with the test of the flag column,
+  `residual < eigen_tol*max(abs(lambda), 1)`. The leading rows of a spectrum, which
+  the references read, did not change.
 - The direct linearized solver has the mesh-velocity term of a moving mesh. With
   `motion = user` Nek5000 solves the base flow with the term B div(w u) (`admeshv`, w
   the mesh velocity), and its perturbation solver does not add the term for the

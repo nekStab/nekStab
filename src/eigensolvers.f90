@@ -40,7 +40,7 @@ module nekstab_eigensolvers
                                  wbase, wdsize
    use nekstab_krylov_decomposition, only: arnoldi_factorization, log_transform
    use nekstab_lapack, only: eig, ordschur, schur
-   use nekstab_ks_select, only: ks_select_eigenvalues
+   use nekstab_ks_select, only: ks_converged_indices, ks_select_eigenvalues
    use nekstab_vectors, only: nopcmult, nopcopy
    use nekstab_matvec, only: matvec
    use nekstab_io, only: load_files, whereyouwant
@@ -476,7 +476,8 @@ contains
       type(krylov_vector) :: qq
       type(krylov_vector) :: ff
       ! Miscellaneous variables
-      integer :: i, m, n_press, n_scalar
+      integer :: i, j, m, n_press, n_scalar, n_conv
+      integer, dimension(k_dim) :: conv_idx ! positions of the converged Ritz values
       real :: speriod, trim, spurious_tol
       real :: alpha, alpha_r, alpha_i, beta, omega
       logical :: tg_steady ! transient growth around a steady (not periodic) base flow
@@ -554,7 +555,12 @@ contains
 
       spurious_tol = max(param(21), param(22))
       outp = 0 ! outposted modes counter
-      do i = 1, converged ! loop over converged modes
+      !  The converged values are not always the first entries of the list: a
+      !  Ritz value of larger modulus that has not converged can sit above a
+      !  converged one. Visit the converged entries, not the first `converged`.
+      call ks_converged_indices(conv_idx, n_conv, vals, residual, k_dim, eigen_tol)
+      do j = 1, n_conv ! loop over converged modes
+         i = conv_idx(j)
 
          if (outp >= maxmodes) then
 
@@ -665,7 +671,7 @@ contains
             end if ! isTransientGrowth.or.isFloquetTransientGrowth
          end if
 
-      end do ! i=1, k_dim
+      end do ! j = 1, n_conv
 
       if (nid == 0) then
 
