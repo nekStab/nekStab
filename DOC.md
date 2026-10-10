@@ -554,7 +554,10 @@ exponents are written to `otd_eigenvalues.dat`, `otd_growth_rates.dat` and `otd_
 The OTD perturbations start from the files `r01<session>0.f<n>`, `r02<session>0.f<n>`, ... (the highest `n` found) and from white
 noise when there are none. A run writes files with these names, so remove those of an earlier run before seeding. About a steady base
 flow, the real and imaginary parts of the leading eigenmode of `310_stability_direct` are an exact start: in
-`cylinder_re100/500_otd` the eigenvalues of the reduced operator at the start equal the growth rate 0.12479 of the 310 stage to 1e-4.
+`cylinder_re100/500_otd` the eigenvalues of the reduced operator at the start equal the growth rate 0.12479 of the 310 stage to 4e-5
+(the difference is the time discretisation of the 310 map, which `Lr` does not have: it falls by a factor 4 when the time step of the
+310 stage is halved). The two diagonal entries of a complex pair need not be equal: in `cubic_cavity_re1914/500_otd` they swing between +0.16 and
+-0.16 as the basis turns in the eigenplane, and their mean is the growth rate (-1.8320e-4 against -1.8296e-4 of the 310 stage).
 From white noise the basis needs 100 to 200 convective time units to settle: 100 for the steady wake of
 `cylinder_re100/500_otd` and 190 for the orbit of `cylinder_re180/500_otd`. A `userParam` value between 5 and 5.1 is not a mode
 and stops the run.
