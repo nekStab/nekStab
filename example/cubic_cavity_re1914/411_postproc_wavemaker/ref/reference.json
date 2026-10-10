@@ -1,0 +1,25 @@
+{
+  "case": "cubic_cavity_re1914/411_postproc_wavemaker",
+  "description": "Regression values of this repository (not literature values): structural-sensitivity (wavemaker) field of the Re=1914 cubic cavity from the leading direct and adjoint modes of the gate runs of 310 and 320, on the base flow of 210/fp. The peak position is not checked: the field has two maxima that differ by 0.4 %, at (-0.365, -0.244, 0) and (-0.307, 0.333, 0).",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "4.1 (wavemaker)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-10"
+  },
+  "quantities": {
+    "wavemaker_max": {
+      "source": "wm_cav0.f00001:field:t.max",
+      "value": 44.99398,
+      "tol_rel": 1e-3,
+      "note": "Largest value of the wavemaker field, which the run stores in the temperature slot."
+    },
+    "wavemaker_norm": {
+      "source": "wm_cav0.f00001:field:t.norm",
+      "value": 2187.618,
+      "tol_rel": 1e-3,
+      "note": "Norm of the wavemaker field."
+    }
+  }
+}
