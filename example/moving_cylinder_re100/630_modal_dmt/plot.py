@@ -43,7 +43,8 @@ NEAR_Y = 4.0
 HARMONICS = (1, 2, 3)  # filters 1 to 3; filter 4 is the mean flow
 MEAN = 4
 AMPLITUDE = 1.08  # userParam05 of 1cyl.par, in D
-WALL_TOLERANCE = 1.0e-4  # in D: distance of a wall node from the circle of radius 0.5 D at phase 0
+# Distance of a wall node from the circle of radius 0.5 D at phase 0, in D.
+WALL_TOLERANCE = 1.0e-4
 # The run ends one step (2.4e-4 of a period) after 30 periods, and the cylinder moves 1.6e-3 D in it.
 PHASE_TOLERANCE = 1.0e-3  # in periods
 MESH_TOLERANCE = 5.0e-3  # in D
