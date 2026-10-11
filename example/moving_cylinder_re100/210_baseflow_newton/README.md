@@ -37,19 +37,20 @@ tolerance):
 | Newton iteration | cumulative Arnoldi vectors | squared residual `abs(F(q) - q)^2` | ratio |
 |---|---|---|---|
 | 1 | 0 | 3.718e-3 | |
-| 2 | 2 | 4.604e-4 | 0.12 |
-| 3 | 6 | 1.160e-4 | 0.25 |
-| 4 | 11 | 2.284e-5 | 0.20 |
-| 5 | 28 | 5.161e-6 | 0.23 |
-| 6 | 49 | 9.529e-7 | 0.18 |
-| 7 | 63 | 1.724e-7 | 0.18 |
-| 8 | 70 | 3.363e-8 | 0.20 |
-| 9 | 81 | 6.325e-9 | 0.19 |
-| 10 | 91 | 1.173e-9 | 0.19 |
-| 11 | 93 | 9.021e-10 | |
+| 2 | 2 | 4.608e-4 | 0.12 |
+| 3 | 6 | 1.161e-4 | 0.25 |
+| 4 | 11 | 2.298e-5 | 0.20 |
+| 5 | 28 | 5.205e-6 | 0.23 |
+| 6 | 49 | 9.619e-7 | 0.18 |
+| 7 | 63 | 1.753e-7 | 0.18 |
+| 8 | 70 | 3.432e-8 | 0.20 |
+| 9 | 81 | 6.667e-9 | 0.19 |
+| 10 | 91 | 1.152e-9 | 0.17 |
+| 11 | 92 | 9.700e-10 | |
 
 The run stops when the squared residual is below the Newton tolerance 1e-9. One period is 4133 time steps (`dt = 1.4726e-3`,
-from the Courant number 0.35 of the seed), 471172 time steps in all. The run took 6687 s on 12 ranks (`ifx`, nexus-dev).
+from the Courant number 0.35 of the seed), 467039 time steps in all. The run took 3972 s on 40 ranks of Jean Zay (`ifort`). A first run on 12 ranks of a workstation (`ifx`, 6687 s)
+gave the same orbit: the norms of the velocity and the pressure agree to 7e-8 and the iteration count is the same.
 
 `BF_1cyl0.f00001` is the orbit at phase 0. Its time stamp is the period, 6.086427267194, which the Floquet stage reads as
 the length of the map. The Floquet stage `../311_stability_direct_floquet/` takes this file and the same `SIZE`.
@@ -73,7 +74,7 @@ and fails the second.
 ```bash
 printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME
 mks 1cyl
-sbatch --ntasks=12 run.local.slurm      # 1 h 51 min on 12 ranks of nexus-dev (ifx)
+sbatch --ntasks=12 run.local.slurm      # 1 h 51 min on 12 ranks of a workstation (ifx), 66 min on 40 ranks of Jean Zay
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

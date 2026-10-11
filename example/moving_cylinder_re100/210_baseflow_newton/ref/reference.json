@@ -5,11 +5,11 @@
   "produced": {
     "nekstab": "v2.0.0",
     "nekstab_mode": "2.2 (Newton, forced orbit)",
-    "ranks": "12",
+    "ranks": "40",
     "k_dim": "100",
-    "compiler": "ifx on nexus-dev",
-    "date": "2026-10-10",
-    "wall_s": 6687
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 3972
   },
   "quantities": {
     "first_residual": {
