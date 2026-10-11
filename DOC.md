@@ -1630,8 +1630,9 @@ Discrete adjoint uses the **transpose** of the linearized time-stepper.
 With `axiSymmetry = yes` the mass matrix `bm1` of Nek5000 contains the radius. The adjoint term `(∇U)^T u†` is computed
 by `convop_adj` (`core/perturb.f`) on the dealiased mesh: it integrates the product against the basis functions with
 the weights of `set_dealias_rx` (`core/convect2.f`), which have no radius, and divides by `bm1`. The term is then too
-large by the factor 1/r. On the forced jet (`example/tpjet_re2000/321_stability_adjoint_floquet`) the adjoint field grew
-by a factor 1.4 per time step from the first step on and the run ended in non-finite values. The direct perturbation
+large by the factor 1/r. On the forced jet (`example/tpjet_re2000/321_stability_adjoint_floquet`) the pressure residual
+of the adjoint run grew by a factor of about 1.4 per time step after the first ten steps and reached 1e39 within one
+forcing period, and the run returned multipliers of modulus 1e52. The direct perturbation
 equation is not affected: for an axisymmetric mesh Nek5000 selects the pointwise convection routine `conv1d`
 (`reader_par.f`: `if (ifaxis) param(99) = 3`).
 
