@@ -1,0 +1,55 @@
+{
+  "case": "tpjet_re2000/140_baseflow_tdf",
+  "summary": "Time-delayed feedback (mode 1.4) on the harmonically forced jet at Re = 2000: starting from the Re = 1900 orbit, the residual falls as t^-2.5 to 6.5e-8 at t = 600 without reaching the tolerance 1e-8.",
+  "description": "TDF holds the flow on its unstable periodic orbit with the force g (q(t) - q(t - T)), T = 1 / 0.6. The run starts from the orbit at Re = 1900 and runs to t = 600, 360 forcing periods. residu.dat holds the root mean square over the domain of q(t) - q(t - T). plot.py fits residual = c t^p over t >= 100 and writes tdf_decay.dat: p, the residual at t = 100, at t = 300 and at the end, and the largest residual with its time. The residual rises from 8.2e-5 to 3.2e-4 at t = 21.5, then falls as a power law and does not reach residualTol = 1e-8, so the run writes no BF_tpjet0.f00001. The field at t = 600 lies at 1.9e-3 of the Newton orbit of 210_baseflow_newton in the relative velocity norm, the Re = 1900 seed at 1.05e-2 (measured once from the stored results). The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "1.4 (TDF)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 4880
+  },
+  "quantities": {
+    "decay_exponent": {
+      "source": "tdf_decay.dat:col1:first",
+      "value": -2.488431,
+      "tol_abs": 0.05,
+      "note": "Exponent p of residual = c t^p fitted over t >= 100."
+    },
+    "residual_t100": {
+      "source": "tdf_decay.dat:col2:first",
+      "value": 5.316156e-06,
+      "tol_rel": 0.1,
+      "note": "Root mean square of q(t) - q(t - T) at t = 100."
+    },
+    "residual_t300": {
+      "source": "tdf_decay.dat:col3:first",
+      "value": 3.811122e-07,
+      "tol_rel": 0.1
+    },
+    "residual_end": {
+      "source": "tdf_decay.dat:col4:first",
+      "value": 6.531066e-08,
+      "tol_rel": 0.1,
+      "note": "At t = 600. Above residualTol = 1e-8: the run does not write the converged field."
+    },
+    "residual_peak": {
+      "source": "tdf_decay.dat:col5:first",
+      "value": 0.0003242033,
+      "tol_rel": 0.1,
+      "note": "Largest residual of the run, while the feedback takes hold of the seed."
+    },
+    "time_of_peak": {
+      "source": "tdf_decay.dat:col6:first",
+      "value": 21.45556,
+      "tol_abs": 1.0
+    },
+    "last_snapshot_time": {
+      "source": "tpjet0.f00006:field:time",
+      "value": 600.0055555551,
+      "tol_abs": 0.01,
+      "note": "Six snapshots, one every 100 time units; the run ends at endTime = 600."
+    }
+  }
+}

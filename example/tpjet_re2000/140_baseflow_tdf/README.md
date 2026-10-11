@@ -23,3 +23,30 @@ mks tpjet
 sbatch run.local.slurm     # 16 ranks
 ```
 The solver writes a snapshot every 100 time units (`tpjet0.f0000N`) and `residu.dat`.
+
+## Result
+The run takes 4880 s on 16 ranks of Jean Zay (`ifort`). The residual is 8.2e-5 at t = 3.3, the first period, rises to
+its largest value, 3.2e-4, at t = 21.5, and then falls as a power law of the time:
+
+| t | residual |
+|---|---|
+| 100 | 5.3e-6 |
+| 300 | 3.8e-7 |
+| 600 | 6.5e-8 |
+
+A fit over t >= 100 gives residual = c t^-2.49 (`plot.py` writes it to `tdf_decay.dat`). The residual stays above
+`residualTol = 1e-8` for the 600 time units, so the run writes no `BF_tpjet0.f00001`. The field at t = 600 (`tpjet0.f00006`) is
+at the same phase of the forcing as the Newton orbit of `../210_baseflow_newton` (600 is 360 periods). Their difference is
+1.9e-3 of the norm of the orbit (velocity, one measurement from the stored results); the seed, the orbit at Re = 1900, is at
+1.05e-2. TDF has come closer to the orbit than the seed, and the Newton stage gives the orbit to a squared residual of 1e-8.
+
+![residual of the time-delayed feedback and axial velocity at the end of the run](ref/residual.png)
+
+`ref/residual.png`: (a) and (b) the residual against the time on a linear and on a logarithmic axis, with the power-law fit
+over t >= 100; (c) the axial velocity of the last snapshot.
+
+## Reference
+`ref/reference.json` checks seven quantities of `tdf_decay.dat` and the last snapshot: the exponent of the fit (within
+0.05), the residual at t = 100, 300 and 600 and its largest value (10 %), the time of that value (1.0) and the time stamp of
+the last snapshot. They are regression values of this repository, from the run named under `produced`.
+`python3 ../../../scripts/check_against_ref.py .` runs the check after `python3 plot.py`.
