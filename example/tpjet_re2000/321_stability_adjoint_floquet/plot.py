@@ -2,8 +2,9 @@
 """plot.py: Visualize forced jet adjoint Floquet results.
 
 Matches AMR_Krylov_V5 paper style: Floquet spectrum on unit circle,
-base flow vx (Blues, 0→5) and leading mode vx (RdBu, ±2),
-axisymmetric domain [0,40]×[0,2] with z/r axis labels.
+base flow vx (Blues, 0→1) and leading adjoint mode vx (RdBu, ±6),
+axisymmetric domain [0,40]×[0,2] with z/r axis labels. The adjoint mode
+lives at the nozzle, so its panel shows [0,4]×[0,1].
 Double-column width for elongated domain.
 
 OUTPUTS: plot_spectrum.png, plot_baseflow.png, plot_mode.png
