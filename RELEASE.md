@@ -167,6 +167,19 @@ share eigenvalues).
   Validated on the thermosyphon at Ra=500: adjoint eigenvalue 0.1022272
   vs direct 0.1022191.
 
+A third defect was found in the final rerun of the examples.
+
+- **Adjoint on an axisymmetric mesh** — the adjoint convection term of
+  Nek5000 (`convop_adj`) is integrated with weights that have no radius
+  and divided by the mass matrix, which has it, so on an axisymmetric
+  mesh the term is too large by 1/r and the adjoint run diverges.
+  `nekStab_forcing` adds the difference to the term with the radius
+  in the weights (`axisymmetric_adjoint_term`, `forcing.f90`); it is
+  zero for a Nek5000 that has the radius in its weights.  Validated on
+  the forced jet at Re=2000: adjoint multiplier -1.1573 vs direct
+  -1.1577, the adjoint mode at the nozzle lip and the direct mode at
+  z = 20 (`example/tpjet_re2000/321_stability_adjoint_floquet`).
+
 #### General buoyancy API (rc3)
 
 Buoyant cases declare the buoyancy direction and coefficient once in
@@ -361,11 +374,12 @@ post-process it.
 
 | Stage | Meaning |
 |---|---|
-| `000_dns` | DNS / seed generation |
-| `1x0_baseflow_*` | base flow by filtering (110 SFD, 120 BoostConv, 130 DMT) |
+| `000_dns`, `010_dns_forced` | DNS / seed generation, DNS with a forcing |
+| `1x0_baseflow_*` | base flow by filtering (110 SFD, 120 BoostConv, 130 DMT, 140 TDF or mean flow) |
 | `210_baseflow_newton` | base flow / UPO by Newton-GMRES |
-| `3x0/3x1_stability_*` | 310 direct, 311 direct Floquet, 320 adjoint, 321 adjoint Floquet, 330 transient growth |
-| `4xx_postproc_*` | 410 mode animation, 411 wavemaker |
+| `3x0/3x1_stability_*` | 310 direct, 311 direct Floquet, 315 direct about the mean flow, 320 adjoint, 321 adjoint Floquet, 330 transient growth |
+| `350_dns_unstable_orbit` | DNS that leaves an unstable orbit along its Floquet mode |
+| `4xx_postproc_*` | 410 mode animation, 411 wavemaker or energy budget |
 | `500_otd` | OTD modes |
 | `6x0_modal_*` | 600 POD, 610 DMD, 620 SPOD, 630 DMT filter bank |
 
@@ -384,11 +398,23 @@ RANS Jacobian is unavailable.  It is marked experimental: it has no
 reference data and the gallery does not list it.
 
 Validated stages carry `ref/` reference data checked by
-`scripts/check_against_ref.py` (see Reproducibility framework above);
-the rc2 campaign validated 24 cases on the previous flat layout
-(8-rank Slurm runs, 2026-05-17), and those results carry over to the
-renumbered stages.  Stages without `ref/` are tracked configurations
-whose reference runs are still pending.
+`scripts/check_against_ref.py` (see Reproducibility framework above).
+Every stage outside `cylinder_re1m` ran again for 2.0.0 from a tree that
+holds tracked files only: 52 stages on Jean Zay (4 to 40 ranks), 14 on
+c8 (8 to 16 ranks) and 10 on the Intel servers x1 and x3 (4 to 8 ranks).
+The record of a run holds the digest of the source files that built it.
+Four stages ran on the final source (one comment differs); the other 72
+ran on an earlier source of the 2.0 series, and each change of the source
+after their run was read against the code path of the stages it can
+reach (the OTD, DMT, BoostConv, Floquet energy budget and moving-mesh
+changes, for example, reach only their own modes).  The 76 results pass
+their reference check and took 1.3e3 core-hours (ranks times wall time).
+Three stages have no such result at this commit:
+`back_fstep_re500/330_transient_growth` and
+`cylinder_re100/210_baseflow_newton/fp` are queued on Jean Zay, and
+`cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks of c8,
+220 core-hours) keeps the reference of an earlier c8 run and runs again
+after the tag.
 
 
 ## Full mode reference (uparam encoding)
@@ -448,11 +474,14 @@ whose reference runs are still pending.
 - [x] Adjoint correctness: Floquet orbit replay + thermal adjoint — fixed
       and validated (rc3)
 - [x] Tag `v2.0.0-rc3`
-- [ ] Finish the rerun campaign: `ref/` reference data for every remaining
-      stage (RANS coupled/quasilaminar, cubic cavity, moving cylinder, thermal cylinder,
-      wavemakers)
-- [x] `check_against_ref.py` sweep across all migrated stages as the
-      regression gate (37 of 37 pass, 2026-10-06)
+- [x] `ref/` reference data for every stage outside the experimental
+      `cylinder_re1m` (cubic cavity, moving cylinder, thermal cylinder,
+      wavemakers, forced jet)
+- [x] `check_against_ref.py` sweep across the stages of the final rerun
+      as the regression gate (76 of 79 pass at this commit; see Examples)
+- [ ] Results of the final source for `back_fstep_re500/330_transient_growth`
+      and `cylinder_re100/210_baseflow_newton/fp` (queued on Jean Zay);
+      `cubic_cavity_re1950/350_dns_unstable_orbit` runs after the tag
 - [x] Update `DOC.md` with string-mode documentation
 - [x] Update copyright year (2020-2026) in `main.f90`
 - [x] Review SPOD streaming module: it ran on `cylinder_re100/620_modal_spod`
