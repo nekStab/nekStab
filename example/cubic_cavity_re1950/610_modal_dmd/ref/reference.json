@@ -1,20 +1,81 @@
 {
   "case": "cubic_cavity_re1950/610_modal_dmd",
-  "description": "Regression value of this repository (not a literature value): DMD of 100 saturated limit-cycle snapshots at Re=1950; no mode grows",
+  "summary": "DMD of 100 snapshots of the limit cycle of the cubic cavity at Re = 1950. The modes lie on the harmonics of the cycle, 1 to 6 times 2 pi / T, and none grows.",
+  "description": "The stage reads 100 snapshots of 000_dns, one every 0.5 time units from t = 1740 to 1789.5, about 4.6 periods of the cycle, and computes 20 DMD modes. A flow on a limit cycle of period T has the frequencies n 2 pi / T and a growth rate of zero. plot.py takes, for n = 1 to 6, the mode with the positive frequency nearest to n 2 pi / T (T = 10.78909, the period of 000_dns_period). The reference checks the frequency of each of these six modes against n 2 pi / T, the growth rate of the fundamental, the largest modulus of the eigenvalues, and the energy of each of the four leading singular values of the snapshot matrix. A wrong snapshot spacing, window or period moves the frequencies off the harmonics. The values are those of the run named under produced.",
   "produced": {
     "ranks": "16",
-    "nekstab_mode": "6 (modal)"
+    "nekstab": "v2.0.0",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 11
   },
   "quantities": {
     "max_abs_mu": {
       "source": "dmd_spectrum.dat:col2:max",
       "value": 0.999978,
-      "tol_abs": 5e-05
+      "tol_abs": 5e-05,
+      "note": "Largest modulus of the 20 eigenvalues of the map over one snapshot interval. A value above 1 is a growing mode; the snapshots lie on the cycle, so none grows."
     },
-    "svd_first_pair_energy_percent": {
+    "harmonic_1_ratio": {
+      "source": "dmd_harmonics.dat:col3:row1",
+      "value": 1.0002976,
+      "tol_abs": 0.002,
+      "note": "Angular frequency of the mode nearest to the fundamental, over 2 pi / T."
+    },
+    "harmonic_2_ratio": {
+      "source": "dmd_harmonics.dat:col3:row2",
+      "value": 1.999606,
+      "tol_abs": 0.002
+    },
+    "harmonic_3_ratio": {
+      "source": "dmd_harmonics.dat:col3:row3",
+      "value": 3.0002333,
+      "tol_abs": 0.002
+    },
+    "harmonic_4_ratio": {
+      "source": "dmd_harmonics.dat:col3:row4",
+      "value": 4.000105,
+      "tol_abs": 0.002
+    },
+    "harmonic_5_ratio": {
+      "source": "dmd_harmonics.dat:col3:row5",
+      "value": 4.999702,
+      "tol_abs": 0.002
+    },
+    "harmonic_6_ratio": {
+      "source": "dmd_harmonics.dat:col3:row6",
+      "value": 6.0004151,
+      "tol_abs": 0.002
+    },
+    "sigma_fundamental": {
+      "source": "dmd_harmonics.dat:col4:row1",
+      "value": -0.000383548,
+      "tol_abs": 0.0005,
+      "note": "Growth rate of the fundamental, in units of U/L. It is zero on a cycle; the fit over 4.6 periods leaves -3.8e-4."
+    },
+    "svd_mode1_energy_percent": {
       "source": "dmd_svd.dat:col3:first",
       "value": 57.119991,
-      "tol_abs": 2.0
+      "tol_abs": 0.1,
+      "note": "Energy of the first singular value of the snapshot matrix; the first two singular values form the pair of the fundamental."
+    },
+    "svd_mode2_energy_percent": {
+      "source": "dmd_svd.dat:col3:row2",
+      "value": 37.137578,
+      "tol_abs": 0.1,
+      "note": "Energy of the second singular value. The first two together hold 94.26 %."
+    },
+    "svd_mode3_energy_percent": {
+      "source": "dmd_svd.dat:col3:row3",
+      "value": 2.7533279,
+      "tol_abs": 0.05,
+      "note": "Third singular value, the first of the pair at twice the frequency."
+    },
+    "svd_mode4_energy_percent": {
+      "source": "dmd_svd.dat:col3:row4",
+      "value": 2.5927006,
+      "tol_abs": 0.05,
+      "note": "The first four singular values hold 99.60 %."
     }
   }
 }
