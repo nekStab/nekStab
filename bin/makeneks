@@ -125,7 +125,21 @@ check_gslib_compat () {
 
     echo "Checking gslib compiler compatibility..."
 
-    local test_dir=$(mktemp -d)
+    # The library is shared by every build that uses this Nek5000 tree, and a
+    # wrong "incompatible" verdict deletes it under them. A full /tmp (a few
+    # hundred MB on the compute nodes of a cluster) or a compiler that cannot
+    # run says nothing about gslib, so the check stops before the verdict.
+    local test_dir
+    if ! test_dir=$(mktemp -d); then
+        echo "  cannot create a temporary directory; gslib check skipped"
+        return 0
+    fi
+    echo 'int main(void) { return 0; }' > "$test_dir/ok.c" 2>/dev/null
+    if ! $CC "$test_dir/ok.c" -o "$test_dir/ok" 2>/dev/null; then
+        echo "  C compiler cannot build a trivial program; gslib check skipped"
+        rm -rf "$test_dir"
+        return 0
+    fi
     # Must CALL the function to force linker to resolve gslib symbols
     cat > "$test_dir/t.c" << 'EOF'
 extern void fgslib_gs_setup_(void*, void*, void*, void*, void*);
