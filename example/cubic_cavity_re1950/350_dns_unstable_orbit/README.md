@@ -49,7 +49,7 @@ growth rate to about 15 %. The remaining difference in `sigma` has not been
 traced; it could come from the orbit and the Floquet solver (each converged to
 a tolerance) or from the fit.
 
-![DNS against Floquet](plot_floquet_vs_dns.png)
+![DNS against Floquet](ref/floquet_vs_dns.png)
 
 ## Run
 The initial field `ic_floq.f00001` is built from the outputs of `../000_dns_period/` and
