@@ -2,9 +2,8 @@
 """plot.py: Visualize cubic-cavity direct Floquet results (Re=1950, 3D).
 
 Floquet multiplier spectrum on the unit circle (geometry-independent).
-The leading-mode field is 3D; a volume/slice rendering is a TODO (the shared
-nekplot helpers are 2D-tricontour, so the mode panel is intentionally omitted
-here rather than rendered with a wrong 2D projection).
+The leading mode is 3D and is not drawn: the shared nekplot helpers make 2D contour plots, and a 2D
+projection of a 3D mode would mislead. The mode is in dRecav0.f00001 and dImcav0.f00001.
 
 OUTPUTS: plot_spectrum.png
 USAGE:   PYTHONPATH=<repo>/example python plot.py
