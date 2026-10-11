@@ -21,6 +21,8 @@ BF_DIR = CASE_DIR.parent.parent / 'baseflow'
 XLIM = (0, 40)
 YLIM = (0, 2)
 FW = 2 * nk.COL_WIDTH  # double-column width
+MODE_XLIM = (0, 4)  # the adjoint mode lives at the nozzle
+MODE_YLIM = (0, 1)
 
 
 def main():
@@ -69,23 +71,23 @@ def main():
         print(f'Saved {output}')
         plt.close(fig)
 
-    # --- Panel: Leading mode vx (RdBu, ±2) ---
+    # --- Panel: Leading adjoint mode vx (RdBu, ±6), zoomed on the nozzle ---
     # The mode files hold the converged multipliers by decreasing modulus: the first is the leading mode.
     if mode_files:
-        fig, ax_mode = plt.subplots(1, 1, figsize=(FW, FW * 0.15))
+        fig, ax_mode = plt.subplots(1, 1, figsize=(FW * 0.5, FW * 0.5 * 0.3))
         x, y, fields, time = nk.read_field(mode_files[0])
         triang = nk.make_triangulation(x, y)
         q = fields.get('vx')
         if q is not None:
             cf = nk.tricontourf(ax_mode, triang, q, levels=257,
-                                cmap='RdBu', vmin=-2., vmax=2.,
+                                cmap='RdBu', vmin=-6., vmax=6.,
                                 extend='both')
             nk.inset_colorbar(ax_mode, cf, orientation='horizontal',
                               width="20%", height="14%", loc=1,
-                              ticks=[-2, 2],
-                              tick_labels=['-2', '2'])
-        ax_mode.set_xlim(XLIM)
-        ax_mode.set_ylim(YLIM)
+                              ticks=[-6, 6],
+                              tick_labels=['-6', '6'])
+        ax_mode.set_xlim(MODE_XLIM)
+        ax_mode.set_ylim(MODE_YLIM)
         ax_mode.set_aspect('auto')
         _setup_tpjet_axes(ax_mode)
         output = CASE_DIR / 'plot_mode.png'

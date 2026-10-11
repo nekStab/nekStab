@@ -1,0 +1,63 @@
+{
+  "case": "tpjet_re2000/321_stability_adjoint_floquet",
+  "summary": "Adjoint Floquet analysis of the forced jet orbit at Re = 2000: the leading multiplier is real, -1.1573, within 4e-4 of the direct multiplier; the adjoint mode sits at the nozzle lip.",
+  "description": "Krylov-Schur (k_dim = 128, mode 3.21) on the adjoint of the map of 311_stability_direct_floquet: the solver stores the orbit of 210_baseflow_newton over one forcing period, T = 1 / 0.6, and integrates the adjoint equations backward over it. On an axisymmetric mesh the run needs the correction of the adjoint convection term in nekStab_forcing (axisymmetric_adjoint_term); without it the pressure residual grows by a factor of about 1.4 per step and the run returns multipliers of modulus 1e52. 83 of the 128 Ritz values meet the tolerance 1e-6 in the first Krylov cycle. The leading multiplier is real and negative, as in the direct map, and the two values differ by 4e-4 (3e-4 at k_dim = 40). The other converged multipliers of the adjoint map are not those of the direct map: the operator is strongly non-normal, and the second multiplier is -0.9654 at k_dim = 40, -0.9050 at k_dim = 128 and -0.8599 in the direct map. Only the leading multiplier is checked. The adjoint mode peaks at the nozzle lip, z = 0.64 and r = 0.48, where the direct mode of 311 peaks at z = 20.6. The mode norms are those of the mode files written by the solver, whose normalisation does not change between runs. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "3.21 (adjoint Floquet)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 4492
+  },
+  "quantities": {
+    "leading_multiplier": {
+      "source": "Spectre_Ha_conv.dat:col1:row1",
+      "value": -1.157257,
+      "tol_abs": 0.002,
+      "note": "Real part of the leading multiplier of the adjoint map; it is negative, so the instability doubles the period."
+    },
+    "leading_multiplier_imag": {
+      "source": "Spectre_Ha_conv.dat:col2:row1",
+      "value": 0.0,
+      "tol_abs": 1e-06,
+      "note": "The leading multiplier is real."
+    },
+    "direct_multiplier": {
+      "source": "Spectre_Ha_conv.dat:col1:row1",
+      "value": -1.157675,
+      "tol_abs": 0.002,
+      "note": "The adjoint map has the leading multiplier of the direct map; the value is the one of 311_stability_direct_floquet."
+    },
+    "leading_sigma": {
+      "source": "Spectre_NSa_conv.dat:col1:row1",
+      "value": 0.08763146,
+      "tol_abs": 0.002,
+      "note": "Growth rate ln|mu| / T of the leading multiplier."
+    },
+    "leading_mode_vx_norm": {
+      "source": "aRetpjet0.f00001:field:vx.norm",
+      "value": 67.35883,
+      "tol_rel": 0.02,
+      "note": "Norm of the axial velocity of the leading adjoint mode; its sign is arbitrary, the norm is not."
+    },
+    "leading_mode_vy_norm": {
+      "source": "aRetpjet0.f00001:field:vy.norm",
+      "value": 36.96594,
+      "tol_rel": 0.02,
+      "note": "Norm of the radial velocity of the leading adjoint mode."
+    },
+    "leading_mode_vx_xpeak": {
+      "source": "aRetpjet0.f00001:field:vx.xpeak",
+      "value": 0.64149,
+      "tol_abs": 1.0,
+      "note": "Axial position of the largest |vx| of the adjoint mode: the nozzle lip. The direct mode peaks at z = 20.6."
+    },
+    "leading_mode_vx_ypeak": {
+      "source": "aRetpjet0.f00001:field:vx.ypeak",
+      "value": 0.48196,
+      "tol_abs": 0.25,
+      "note": "Radial position of the largest |vx| of the adjoint mode: the lip of the nozzle, r = 0.5."
+    }
+  }
+}

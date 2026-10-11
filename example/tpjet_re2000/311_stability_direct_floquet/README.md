@@ -27,4 +27,5 @@ converged multiplier is mu = -0.8599 and the first complex pair is -0.8194 +- 0.
 (`ref/spectrum.png`). The leading mode is a wave packet of the axial velocity near the axis between z = 8 and
 z = 36 (`ref/mode.png`; `ref/baseflow.png` is the orbit at t = 0). The 128 Ritz values, with the
 convergence flag, are in `Spectre_Hd.dat`. `ref/reference.json` holds the numbers that
-`scripts/check_against_ref.py` checks. The adjoint map of `../321_stability_adjoint_floquet` has the same multipliers.
+`scripts/check_against_ref.py` checks. The adjoint map of `../321_stability_adjoint_floquet` has the same leading
+multiplier (-1.1573 against -1.1577); its damped multipliers are not those of this map.
