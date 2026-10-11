@@ -34,13 +34,13 @@ def read_his(path: Path) -> tuple[list[tuple[float, float, float]], np.ndarray]:
 
 
 def find_snapshot() -> Path:
-    patterns = ("naca00120.f*", "resnaca00120.f*", "*naca00120.f*")
-    matches: list[Path] = []
-    for pattern in patterns:
-        matches.extend(CASE_DIR.glob(pattern))
-    if not matches:
-        raise FileNotFoundError("no NACA field file found")
-    return sorted(set(matches))[-1]
+    # The last field of the run. The restart file resnaca00120.f00010 is the start of the run, not a snapshot;
+    # it comes last in the sorted names of all matches, so the patterns are tried in turn.
+    for pattern in ("naca00120.f*", "resnaca00120.f*", "*naca00120.f*"):
+        matches = sorted(CASE_DIR.glob(pattern))
+        if matches:
+            return matches[-1]
+    raise FileNotFoundError("no NACA field file found")
 
 
 def peak_frequency(t: np.ndarray, y: np.ndarray) -> tuple[float, np.ndarray, np.ndarray]:
