@@ -107,6 +107,21 @@ description for the 2.0 series; entries here are the per-tag deltas.
   dissipation. P/E and D/E are 175 times larger than sigma, so the exponent from the budget, the
   difference of the two, is 58.5 % high. The README says so, and the reference does not check
   that exponent.
+- `example/cubic_cavity_re1950/630_modal_dmt` and `example/moving_cylinder_re100/630_modal_dmt`
+  run the DMT filter bank (mode 6.4) with four filters: the frequency of the cycle or of the
+  forcing, its second and third harmonic, and the mean flow. On the cavity cycle (15 periods,
+  40 ranks, 1292 s) the amplitudes rebuild the last field to 0.227, 0.059 and 0.019 of its
+  fluctuation after one, two and three harmonics; the first POD pair of stage 600 leaves
+  0.239 after the fundamental. On the forced orbit of the oscillating cylinder (30 periods,
+  40 ranks, 643 s) the amplitudes rebuild the orbit of stage 210 to 0.401, 0.236 and 0.145 in
+  the near field. On the cylinder wall the amplitude of the first filter is 1.1148 against the
+  wall speed A 2 pi f = 1.1149, and the other filters return less than 2e-6.
+- `example/moving_cylinder_re100` (010 to 311): the cylinder in forced transverse oscillation at
+  Re = 100, A = 1.08, f = 0.1643 on a moving mesh. The DNS locks to the forcing; Newton-GMRES
+  finds the orbit in 11 iterations (squared residual 3.7e-3 to 9.7e-10, 3972 s on 40 ranks);
+  the direct Floquet stage finds one converged multiplier, mu = 0.92988, real and inside the unit
+  circle, so the lock-in is stable, and the DNS relaxes onto the orbit by 0.9252 per period,
+  0.5 % below |mu|.
 
 ### Changed
 - `validation/validate.py` (with `validation/tests/test_validate.py`) and
@@ -181,14 +196,15 @@ description for the 2.0 series; entries here are the per-tag deltas.
   stage directly. The Newton stage runs without the explicit filter.
 
 - The Newton stages `example/naca0012_re2000/210_baseflow_newton/fp` and
-  `example/tpjet_re2005/210_baseflow_newton` start from a field that is not
+  `example/tpjet_re2000/210_baseflow_newton` start from a field that is not
   converged. Before, each started from its own converged output: the first
   residual was already below the tolerance and the stage did not test Newton.
   The airfoil stage starts from the last DNS snapshot (`BF_seed_naca00120.f00001`,
   t = 70) and needs 5 iterations (squared residual 6.1e-7 to 9.5e-10, 956 s on 8
   ranks). The jet stage starts from the Re = 1900 field
-  (`BF_Re1900_tpjet0.f00001`) and needs 7 iterations (1.1e-4 to 9.3e-9). Both
-  references check the first residual and the iteration count, so a run that
+  (`BF_Re1900_tpjet0.f00001`) and needs 5 iterates, the seed and four updates
+  (squared residual 3.5e-6 to 9.7e-9, 66 Arnoldi vectors, 2663 s on 16 ranks).
+  Both references check the first residual and the iteration count, so a run that
   starts from a converged field fails. The sponge forces the velocity toward the
   field that the run holds at its start, so the airfoil base flow depends on its
   seed inside the sponge zone (`DOC.md`, "Sponge reference field"). It differs by
