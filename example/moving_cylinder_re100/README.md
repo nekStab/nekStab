@@ -27,10 +27,12 @@ specific to the repository.
 | `010_dns_forced` | 0 | DNS from rest with the forcing, 30 periods, one field per period: the wake locks to the forcing |
 | `210_baseflow_newton` | 2.2 | Newton-GMRES from the last field of `010`: the forced orbit, 11 iterations to a squared residual of 1e-9 |
 | `311_stability_direct_floquet` | 3.11 | direct Floquet analysis of that orbit: one converged multiplier, mu = 0.92988, real and inside the unit circle, so the lock-in is stable |
+| `630_modal_dmt` | 6.4 | DMT filter bank on the orbit: the amplitude fields at the forcing frequency, its second and third harmonic and the mean; three harmonics rebuild the orbit to 14.5 % of its fluctuation |
 
 The stages run in this order, and each reads the field of the one before from its sibling folder (the field files are not
-tracked). The orbit stages use the same `SIZE` (polynomial order 5, `lx1 = 6`, 2128 elements) and no filter, so that the DNS,
-the Newton iteration and the Floquet analysis solve the same discrete equations.
+tracked); `630_modal_dmt` starts from the orbit of `210_baseflow_newton`, as `311_stability_direct_floquet` does. The orbit
+stages use the same `SIZE` (polynomial order 5, `lx1 = 6`, 2128 elements) and no filter, so that the DNS, the Newton iteration,
+the Floquet analysis and the filter bank solve the same discrete equations.
 
 ## Moving mesh in the linearized solver
 
