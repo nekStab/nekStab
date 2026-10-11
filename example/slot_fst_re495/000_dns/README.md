@@ -27,5 +27,7 @@ repository, not literature values. The FST inflow is the shipped binary, so the 
 histories of a 16 and a 32 rank run agree to the seventh digit. Tolerance 1e-3 (relative). Verify with
 `scripts/check_against_ref.py example/slot_fst_re495/000_dns`.
 
-The figures `ref/fft.png`, `ref/signal.png`, `ref/phase.png` (probe time series) and `ref/snapshot.png` (flow
-field) show the same run. `slot0.f00001` is shipped as a representative snapshot and a run overwrites it.
+The figures `ref/signal.png`, `ref/fft.png` and `ref/phase.png` show the probe at (x, y) = (8.3333, 1.3333), the
+first of the three in `slot.his` (the file holds one row per probe at each step, so `plot.py` takes every third row).
+The signal is the response to the FST: it has no single frequency, and its spectrum has the maximum at f = 0.047 and
+falls by about six decades up to f = 0.5. `ref/snapshot.png` shows |u| at t = 100. Run on 16 ranks of c8: 246 s.

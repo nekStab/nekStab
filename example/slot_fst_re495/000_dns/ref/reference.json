@@ -1,11 +1,14 @@
 {
   "case": "slot_fst_re495/000_dns",
   "summary": "DNS of a slot jet at Re = 495 with a synthetic free-stream turbulence inflow, to t = 100.",
-  "description": "Slot jet with free-stream turbulence (FST) inflow, DNS at Re=495: statistics of the t=100 field",
+  "description": "DNS of a slot jet at Re = 495 from a uniform field, with the synthetic free-stream turbulence inflow of FST_data/FST_inflow.bin. The reference checks the time stamp of the last field and its statistics: the maximum of vx, the minimum of vy and the L2 norms of vx and vy. They are regression values of this repository: a change of the solver, the mesh or the inflow moves them. The values are those of the run named under produced.",
   "produced": {
-    "ranks": "16 and 32 (probe histories agree to 1e-7)",
+    "ranks": "16",
+    "nekstab": "v2.0.0",
     "nekstab_mode": "0.0 (DNS)",
-    "date": "2026-10-09"
+    "compiler": "ifx 2026.0 (c8)",
+    "date": "2026-10-11",
+    "wall_s": 246
   },
   "note": "Regression values of this repository (not literature values). The FST inflow is the shipped FST_data/FST_inflow.bin, so the run is deterministic; the 16 and 32 rank runs agree to the seventh digit.",
   "quantities": {

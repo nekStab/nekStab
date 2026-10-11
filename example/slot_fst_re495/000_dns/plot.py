@@ -23,7 +23,12 @@ CASE_DIR = Path(__file__).resolve().parent
 
 
 def read_his(his_path):
-    """Parse Nek5000 .his file. Returns (n_probes, probes[(x,y,z)], data)."""
+    """Parse Nek5000 .his file. Returns (n_probes, probes[(x,y,z)], data).
+
+    The file lists the values of all probes at each step, one row per probe, so with
+    several probes the rows of one probe are every n_probes-th row. data holds the rows
+    of the first probe, the one the figures show.
+    """
     with open(his_path) as f:
         n_probes = int(f.readline().strip())
         probes = []
@@ -31,6 +36,7 @@ def read_his(his_path):
             coords = [float(x) for x in f.readline().split()]
             probes.append(tuple(coords[:3]))
         data = np.loadtxt(f)
+    data = data[:len(data) // n_probes * n_probes:n_probes]
     return n_probes, probes, data
 
 
