@@ -24,3 +24,8 @@ omg*
 *.par.*
 compfile
 slot0.f*
+# Figures and logs that plot.py writes next to a run. The maintained copies are in ref/.
+plot*.png
+plot*.gif
+plot*.out
+!**/ref/plot*
