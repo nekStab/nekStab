@@ -122,8 +122,27 @@ description for the 2.0 series; entries here are the per-tag deltas.
   the direct Floquet stage finds one converged multiplier, mu = 0.92988, real and inside the unit
   circle, so the lock-in is stable, and the DNS relaxes onto the orbit by 0.9252 per period,
   0.5 % below |mu|.
+- `example/tpjet_re2000` (140 to 321): the harmonically forced axisymmetric jet at Re = 2000
+  (St = 0.6, T = 1.66667, 4800 elements, `lx1 = 6`, 16 ranks). Time-delayed feedback (mode 1.4,
+  stage 140, 4880 s) starts from the Re = 1900 orbit; its residual rises to 3.2e-4 at t = 21.5 and
+  falls as t^-2.49 to 6.5e-8 at t = 600, and the field lies at 1.9e-3 of the Newton orbit (the seed
+  at 1.05e-2). Stage 210 finds the orbit in 5 iterates (squared residual 3.5e-6 to 9.7e-9, 66
+  Arnoldi vectors, 2663 s). The direct Floquet stage 311 finds one real multiplier outside the unit
+  circle, mu = -1.1577 (a period doubling, sigma = 0.0878; 81 of 128 Ritz values converged, orbit
+  closure 4.6e-5, 2675 s), the next converged ones are -0.8599 and the pair -0.8194 +- 0.1119i.
+  The adjoint stage 321 gives mu = -1.1573 (83 of 128 converged, 4492 s) and an adjoint mode at the
+  nozzle lip, z = 0.64 and r = 0.48, where the direct mode peaks at z = 20.6. The damped multipliers
+  of the adjoint map are not those of the direct map (the second is -0.9050 against -0.8599, and
+  -0.9654 at `k_dim` = 40), so the reference of 321 checks the leading multiplier only.
 
 ### Changed
+- `example/tpjet_re2005` is `example/tpjet_re2000`. The stages ran the 4800-element mesh of the
+  AMR_Krylov paper at `lx1 = 5` from a seed stored at `lx1 = 6`, and at `lx1 = 5` the Floquet
+  spectrum at Re = 1900 had a complex pair of modulus 2.35; at `lx1 = 6` the leading multiplier is
+  real, -1.139, a period doubling as in the paper. Every stage uses `lx1 = 6` and Re = 2000 now,
+  and the references, the shipped orbit and the shipped modes of the old stages are replaced by
+  those of the runs above. The DMT stage `130_baseflow_dmt` is removed: the band-pass filter has
+  zero gain at zero frequency only, so it holds a steady state and not a periodic orbit.
 - `validation/validate.py` (with `validation/tests/test_validate.py`) and
   `example/collect_plots.py` are removed. Both listed example directories of an
   earlier layout that no longer exist. A stage is checked with
@@ -217,6 +236,38 @@ description for the 2.0 series; entries here are the per-tag deltas.
   data and no card in the gallery, and its stages are not part of the rerun of the examples.
 
 ### Fixed
+- Adjoint runs on an axisymmetric mesh (`axiSymmetry = yes`) diverged. Nek5000 computes
+  the adjoint convection term `(grad U)^T u` in `convop_adj` (`core/perturb.f`) with
+  integration weights that have no radius (`set_dealias_rx`, `core/convect2.f`) and divides
+  by the mass matrix `bm1`, which has it, so the term is too large by the factor 1/r. In
+  the adjoint run of the forced jet (`tpjet_re2000/321_stability_adjoint_floquet`) the
+  pressure residual grew by a factor of about 1.4 per time step after the first ten steps
+  and reached 1e39 within one forcing period, and the run returned multipliers of modulus
+  1e52. `nekStab_forcing` now adds the difference between the term of Nek5000 and the term with
+  the radius in the weights to the forcing of every adjoint perturbation on an axisymmetric
+  mesh (`axisymmetric_adjoint_term` in `forcing.f90`, the pattern of the mesh-velocity term).
+  A Nek5000 that has the radius in its weights gives a difference of zero. The direct maps
+  were not affected: Nek5000 selects the pointwise routine `conv1d` for an axisymmetric
+  mesh. On the jet at Re = 2000 the adjoint Floquet analysis gives the leading multiplier
+  -1.1573 (`k_dim` = 128, stage 321) against -1.1577 of the direct analysis. With `k_dim` = 40
+  it gave -1.1579, and the same value to seven digits with a Nek5000 whose `set_dealias_rx`
+  has the radius.
+- `bin/makeneks` (`mks`) no longer deletes the shared `3rd_party/gslib` library when its
+  compatibility test cannot run. The test compiled a small program with `mktemp -d` and the
+  C compiler, and called the library incompatible when that failed for any reason. On a
+  compute node whose `/tmp` was full, the library was deleted under the other builds of the
+  node and every stage that started there ended in seconds. The check now stops without a
+  verdict when `mktemp` fails or when the compiler cannot build a program that does not use
+  gslib.
+- The reference figures of four stages showed nothing or a wrong series, and the reference
+  check did not notice because it reads numbers. The snapshot of `slot_fst_re495/000_dns` was the
+  placeholder "No field files found", and its signal, phase and spectrum drew the rows of
+  three probes as one series; `read_his` in its `plot.py` now takes every third row. The
+  residual figure of `back_fstep_re500/210_baseflow_newton` had no data, and that of
+  `cylinder_re30_thermal/210_baseflow_newton` showed the first Arnoldi trace only. The
+  snapshot of `naca0012_re2000/000_dns` was a field at t = 9, almost empty; `find_snapshot`
+  now takes the last field file of the run. All four are drawn from the rerun of the
+  campaign.
 - The export of the eigenmodes wrote the first N Ritz values of the list sorted by
   modulus, with N the number of converged values, and not the converged ones. A Ritz
   value that has not converged and has a larger modulus than a converged one took its
