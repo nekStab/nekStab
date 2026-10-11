@@ -18,12 +18,12 @@ are time-delayed feedback (TDF), which holds the flow on the orbit with a force 
 between the flow and the flow one period earlier, and Newton-GMRES. Both stages start from the orbit at Re = 1900.
 
 ## Stages
-| Stage | Mode | What it does |
-|---|---|---|
-| `140_baseflow_tdf` | 1.4 | TDF from the orbit at Re = 1900; the flow approaches the orbit at Re = 2000 |
-| `210_baseflow_newton` | 2.2 | Newton-GMRES from the same seed; the orbit at Re = 2000 |
-| `311_stability_direct_floquet` | 3.11 | Floquet multipliers of that orbit |
-| `321_stability_adjoint_floquet` | 3.21 | Floquet multipliers of the adjoint map of that orbit |
+| Stage | Mode | What it does | Result |
+|---|---|---|---|
+| `140_baseflow_tdf` | 1.4 | TDF from the orbit at Re = 1900; the flow approaches the orbit at Re = 2000 | residual 6.5e-8 at t = 600, 1.9e-3 from the Newton orbit |
+| `210_baseflow_newton` | 2.2 | Newton-GMRES from the same seed; the orbit at Re = 2000 | 5 iterates, squared residual 3.5e-6 to 9.7e-9 |
+| `311_stability_direct_floquet` | 3.11 | Floquet multipliers of that orbit | mu = -1.1577 (period doubling), sigma = 0.0878 |
+| `321_stability_adjoint_floquet` | 3.21 | Floquet multipliers of the adjoint map of that orbit | mu = -1.1573; adjoint mode at the nozzle lip |
 
 The seed `BF_Re1900_tpjet0.f00001` is the orbit at Re = 1900 of the AMR_Krylov paper, stored at polynomial order 5.
 Stages 140 and 210 ship it. Stages 311 and 321 ship the orbit that stage 210 writes.
