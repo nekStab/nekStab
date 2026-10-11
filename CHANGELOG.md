@@ -151,6 +151,12 @@ description for the 2.0 series; entries here are the per-tag deltas.
   `cylinder_re100` and `naca0012_re2000` (23 MB) are removed. The folders of
   `cylinder_re1m` and `plot_compare.png` of `110_baseflow_sfd`, a figure over six variants,
   stay.
+- `bin/neksubmit` reads the remote host, the work directory and the Slurm account from
+  `NEKSUBMIT_HOST`, `NEKSUBMIT_WORKDIR` and `NEKSUBMIT_ACCOUNT`, and stops with a message when one
+  is missing. Before, a login, a work path and an account were written in the script. The queue
+  checks of `bin/nekStab_tools.py` use `$USER`.
+- `README.md` has a Disclaimer section: no warranty, and research software that is not validated
+  for engineering design, certification or safety-critical use.
 - `validation/validate.py` (with `validation/tests/test_validate.py`) and
   `example/collect_plots.py` are removed. Both listed example directories of an
   earlier layout that no longer exist. A stage is checked with
