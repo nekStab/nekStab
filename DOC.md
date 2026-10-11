@@ -1625,6 +1625,24 @@ The continuous adjoint satisfies:
 
 Discrete adjoint uses the **transpose** of the linearized time-stepper.
 
+### Adjoint on an Axisymmetric Mesh
+
+With `axiSymmetry = yes` the mass matrix `bm1` of Nek5000 contains the radius. The adjoint term `(∇U)^T u†` is computed
+by `convop_adj` (`core/perturb.f`) on the dealiased mesh: it integrates the product against the basis functions with
+the weights of `set_dealias_rx` (`core/convect2.f`), which have no radius, and divides by `bm1`. The term is then too
+large by the factor 1/r. On the forced jet (`example/tpjet_re2000/321_stability_adjoint_floquet`) the adjoint field grew
+by a factor 1.4 per time step from the first step on and the run ended in non-finite values. The direct perturbation
+equation is not affected: for an axisymmetric mesh Nek5000 selects the pointwise convection routine `conv1d`
+(`reader_par.f`: `if (ifaxis) param(99) = 3`).
+
+nekStab corrects the term in the forcing of every adjoint perturbation on an axisymmetric mesh
+(`axisymmetric_adjoint_term` in `src/forcing.f90`, called from `nekStab_forcing`, the same pattern as the mesh-velocity
+term above). The routine computes `(∇U)^T u†` again with the radius in the integration weights and returns the
+difference between the term of Nek5000 and this term. `makeufp` multiplies the forcing by B, and `advabp_adjoint`
+subtracts B times the term of Nek5000, so what remains is B times the correct term. A Nek5000 that has the radius in
+its weights gives a difference of zero, and the correction then does nothing. The weights are built in the routine, not
+taken from `set_dealias_rx`, so that the result does not depend on that.
+
 ### Structural Sensitivity
 
 The wavemaker S(x) identifies where feedback most affects eigenvalues:

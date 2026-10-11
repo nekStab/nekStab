@@ -28,13 +28,17 @@ module nekstab_forcing_mod
                                  xRspg, yRspg, zRspg, ifotd, otdfx, otdfy, otdfz, &
                                  lx1, ly1, lz1, lelv, xm1, ym1, zm1, fct, nid, bm1s, &
                                  ifto, ifpo, ldim, ndim, xmn, xmx, ymn, ymx, zmn, zmx, &
-                                 nfield, ifmvbd, nelv, bm1
+                                 nfield, ifmvbd, nelv, bm1, ifaxis, lxd, lyd, lzd, &
+                                 rxm1, rym1, sxm1, sym1
    use nekstab_reynolds, only: reynolds_add
    implicit none
    private
    ! Mesh-velocity term of the perturbation equation, one column per velocity
    ! component, and the work array of divws (see ale_mesh_velocity_term).
    real, allocatable, save :: ale_term(:, :), ale_work(:)
+   ! Correction of the adjoint convection term in axisymmetric geometry, one
+   ! column per velocity component, and a work array (see axisymmetric_adjoint_term).
+   real, allocatable, save :: axi_term(:, :), axi_work(:, :)
    public :: nekStab_forcing, nekStab_forcing_temp, &
              nekStab_set_buoyancy, nekStab_qvol, &
              activate_sponge, spng_init, spng_set, fringe_step
@@ -140,6 +144,16 @@ contains
          if (if3D) ffz = ffz + ale_term(ip, 3)
       end if
 
+      ! Axisymmetric adjoint: the adjoint convection term of Nek5000 has no
+      ! radius in its integration weights. Same pattern as the mesh velocity
+      ! term above: the first grid point computes the correction for the
+      ! whole perturbation field.
+      if (ifadj .and. ifaxis .and. .not. if3D .and. jp /= 0) then
+         if (ix == 1 .and. iy == 1 .and. iz == 1 .and. iel == 1) call axisymmetric_adjoint_term()
+         ffx = ffx + axi_term(ip, 1)
+         ffy = ffy + axi_term(ip, 2)
+      end if
+
       ! Frozen Reynolds-stress force: state-independent, so only on the
       ! jp == 0 residual. It is present in every finite-difference
       ! evaluation and cancels in the difference; an analytic
@@ -190,6 +204,97 @@ contains
       end if
 
    end subroutine ale_mesh_velocity_term
+
+!-----------------------------------------------------------------------
+! axisymmetric_adjoint_term — Radius weight of the adjoint convection term
+!
+! Purpose:
+!   The adjoint momentum equation has the term -(grad U)^T u*. Nek5000
+!   computes it in convop_adj on the dealiased mesh: it integrates the
+!   product against the basis functions with the weights of
+!   set_dealias_rx and divides by the mass matrix bm1. On an axisymmetric
+!   mesh bm1 contains the radius and those weights do not. The term is then
+!   too large by the factor 1/r, and the adjoint field of the forced jet
+!   (userParam01 = 3.21) grew by a factor 1.4 per time step from the first
+!   step on.
+!
+!   This routine computes the term again with the radius in the weights and
+!   returns the difference between the term of Nek5000 and the correct
+!   term. nekStab_forcing adds the difference to the forcing. makeufp
+!   multiplies the forcing by B, and advabp_adjoint subtracts B times the
+!   term of Nek5000. The sum is B times the correct term. A Nek5000 that has
+!   the radius in its weights gives a difference of zero.
+!
+!   At the forcing evaluation, vx and vy are the base flow and vxp and vyp
+!   the adjoint field of the previous step. These are the data that
+!   advabp_adjoint passes to convop_adj in the same step.
+!
+!   The routine runs at the first grid point of a forcing evaluation.
+!-----------------------------------------------------------------------
+   subroutine axisymmetric_adjoint_term()
+      integer, parameter :: ltd = lxd*lyd*lzd
+      integer :: e, i, j, l, n, nxyz
+      real :: zd(lxd), wd(lxd)
+      real :: fx(ltd), fy(ltd), ryd(ltd), metric(ltd, 4)
+      real :: ux(ltd), uy(ltd), urx(ltd), usx(ltd), utx(ltd)
+      real :: ury(ltd), usy(ltd), uty(ltd), uf4(ltd), uf5(ltd)
+
+      n = nx1*ny1*nz1*nelv
+      nxyz = nx1*ny1*nz1
+      if (.not. allocated(axi_term)) then
+         allocate (axi_term(lx1*ly1*lz1*lelv, 2), axi_work(lx1*ly1*lz1*lelv, 3))
+      end if
+      axi_term = 0.0d0
+      axi_work = 0.0d0
+
+      ! The term of Nek5000. Column 3 of axi_work takes the unused z component.
+      call convop_adj(axi_term(1, 1), axi_term(1, 2), axi_work(1, 3), vx, vy, vz, &
+                      vxp(1, jp), vyp(1, jp), vzp(1, jp))
+
+      ! The same term with the radius in the integration weights. The weights
+      ! are built here, not taken from set_dealias_rx, so that the result does
+      ! not depend on whether Nek5000 has the radius in them.
+      call zwgl(zd, wd, lxd)
+      do e = 1, nelv
+         call intp_rstd(metric(1, 1), rxm1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(metric(1, 2), rym1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(metric(1, 3), sxm1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(metric(1, 4), sym1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(ryd, ym1(1, 1, 1, e), lx1, lxd, .false., 0)
+         l = 0
+         do j = 1, lyd
+            do i = 1, lxd
+               l = l + 1
+               metric(l, :) = metric(l, :)*wd(i)*wd(j)*ryd(l)
+            end do
+         end do
+
+         ! Adjoint field and base flow on the fine mesh.
+         call intp_rstd(fx, vxp((e - 1)*nxyz + 1, jp), lx1, lxd, .false., 0)
+         call intp_rstd(fy, vyp((e - 1)*nxyz + 1, jp), lx1, lxd, .false., 0)
+         call intp_rstd(ux, vx(1, 1, 1, e), lx1, lxd, .false., 0)
+         call grad_rst(urx, usx, utx, ux, lxd, .false.)
+         call intp_rstd(uy, vy(1, 1, 1, e), lx1, lxd, .false., 0)
+         call grad_rst(ury, usy, uty, uy, lxd, .false.)
+
+         do l = 1, lxd*lyd
+            uf4(l) = fx(l)*(metric(l, 1)*urx(l) + metric(l, 3)*usx(l)) &
+                     + fy(l)*(metric(l, 1)*ury(l) + metric(l, 3)*usy(l))
+            uf5(l) = fx(l)*(metric(l, 2)*urx(l) + metric(l, 4)*usx(l)) &
+                     + fy(l)*(metric(l, 2)*ury(l) + metric(l, 4)*usy(l))
+         end do
+
+         ! Back to the coarse mesh.
+         call intp_rstd(axi_work((e - 1)*nxyz + 1, 1), uf4, lx1, lxd, .false., 1)
+         call intp_rstd(axi_work((e - 1)*nxyz + 1, 2), uf5, lx1, lxd, .false., 1)
+      end do
+      call invcol2(axi_work(1, 1), bm1, n)
+      call invcol2(axi_work(1, 2), bm1, n)
+
+      axi_term(1:n, 1) = axi_term(1:n, 1) - axi_work(1:n, 1)
+      axi_term(1:n, 2) = axi_term(1:n, 2) - axi_work(1:n, 2)
+
+   end subroutine axisymmetric_adjoint_term
 
 !-----------------------------------------------------------------------
 ! nekStab_qvol — Temperature forcing callback for adjoint buoyancy
