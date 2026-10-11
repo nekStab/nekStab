@@ -1,0 +1,50 @@
+{
+  "case": "cubic_cavity_re1950/411_postproc_energy_budget",
+  "summary": "Energy budget of the leading Floquet mode of the cubic cavity at Re = 1950. The energy of the marched mode gives the Floquet exponent to 0.2 %; production and dissipation balance to 0.34 % of the dissipation.",
+  "description": "Mode 4.11 marches the real and the imaginary part of the leading Floquet mode of 311_stability_direct_floquet over one period T = 10.78909 of the limit cycle on a stored copy of the orbit, and averages the terms of the energy equation with the weight exp(-2 sigma t) dt / T. The cavity is closed and has no sponge, so the balance P - D = sigma E holds exactly for the continuous problem. The reference checks the growth rate from the energy of the marched mode against the Floquet exponent, the gap of the balance in units of the dissipation, and regression values of the production, the dissipation, the energy and the sponge damping. The growth rate from the budget, (P - D) / E, is not checked: the terms P / E and D / E are 175 times larger than sigma, so it carries 175 times the discretisation error of the two integrals (README). The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 711
+  },
+  "quantities": {
+    "sigma_energy": {
+      "source": "PKE_floquet_cav0.f00001:col1:row16",
+      "value": 0.002907859,
+      "tol_rel": 0.005,
+      "note": "Growth rate from the energy of the marched mode, ln(E(T) / E(0)) / (2 T), against the Floquet exponent of stage 311, row 1 of Spectre_NSd_conv.dat. The run gives 2.90305e-3, 0.17 % below. The value involves no space derivative: it tests the mode, the period and the stored orbit."
+    },
+    "balance_gap_over_dissipation": {
+      "source": "budget_closure.dat:col9:first",
+      "value": 0.0,
+      "tol_abs": 0.01,
+      "note": "(sigma of the budget - sigma of the Floquet stage) E / D = (P - D - sigma E) / D: the closure of the energy balance in units of the dissipation. It is zero for the continuous problem. The run gives 3.4e-3."
+    },
+    "production": {
+      "source": "PKE_floquet_cav0.f00001:col1:row11",
+      "value": 0.2328361,
+      "tol_rel": 0.002,
+      "note": "Orbit average of the total production P, line 11 of the file, in the normalisation of the code."
+    },
+    "minus_dissipation": {
+      "source": "PKE_floquet_cav0.f00001:col1:row10",
+      "value": -0.2307312,
+      "tol_rel": 0.002,
+      "note": "Line 10 of the file: minus the orbit average of the dissipation D."
+    },
+    "energy": {
+      "source": "PKE_floquet_cav0.f00001:col1:row13",
+      "value": 0.4566154,
+      "tol_rel": 0.002,
+      "note": "Orbit average of the energy E of the mode with the weight exp(-2 sigma t)."
+    },
+    "sponge_damping": {
+      "source": "PKE_floquet_cav0.f00001:col1:row15",
+      "value": 0.0,
+      "tol_abs": 1e-12,
+      "note": "The cavity has no sponge."
+    }
+  }
+}
