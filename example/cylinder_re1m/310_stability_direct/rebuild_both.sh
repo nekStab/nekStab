@@ -1,10 +1,13 @@
 #!/bin/bash
 set -uo pipefail
-cd /home/rfrantz/nekStab
+# Rebuild the two RANS stability variants, for example after a change of src/eigensolvers.f90. Run it from any directory.
+here="$(cd "$(dirname "$0")" && pwd)"
+root="$(cd "$here/../../.." && pwd)"
+cd "$root"
 [ -f bin/sourceme.sh ] && source bin/sourceme.sh 2>/dev/null || true
-export PATH="/home/rfrantz/nekStab/bin:$PATH"
-for d in 310_stability_direct/coupled 310_stability_direct/quasilaminar; do
-  cd "/home/rfrantz/nekStab/example/cylinder_re1m/$d"
+export PATH="$root/bin:$PATH"
+for d in coupled quasilaminar; do
+  cd "$here/$d"
   rm -f obj/eigensolvers.o obj/libnek5000.a nek5000
   echo "=== building $d ==="
   if mks 1cyl > build_eig.log 2>&1 && [ -x nek5000 ]; then
