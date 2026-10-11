@@ -214,9 +214,9 @@ contains
 !   product against the basis functions with the weights of
 !   set_dealias_rx and divides by the mass matrix bm1. On an axisymmetric
 !   mesh bm1 contains the radius and those weights do not. The term is then
-!   too large by the factor 1/r, and the adjoint field of the forced jet
-!   (userParam01 = 3.21) grew by a factor 1.4 per time step from the first
-!   step on.
+!   too large by the factor 1/r. In the adjoint run of the forced jet
+!   (userParam01 = 3.21) the pressure residual of the solver grew by a
+!   factor of about 1.4 per time step after the first ten steps.
 !
 !   This routine computes the term again with the radius in the weights and
 !   returns the difference between the term of Nek5000 and the correct
