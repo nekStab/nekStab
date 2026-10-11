@@ -6,7 +6,7 @@ Usage:
     scripts/matrix_audit.py --json      # machine-readable
     scripts/matrix_audit.py --missing   # only the missing cells
 
-Mirrors plan.md §1.3. Update the GEOMETRIES and STAGES dicts when those change.
+Update the GEOMETRIES and STAGES dicts when the example tree changes.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 # ---------------------------------------------------------------------------
-# Locked matrix — mirrors plan.md §1.2
+# Locked matrix: the stage codes
 # ---------------------------------------------------------------------------
 STAGES: dict[str, dict[str, str]] = {
     "000": {"label": "DNS",                        "uparam01": "0"},
@@ -42,7 +42,7 @@ STAGES: dict[str, dict[str, str]] = {
 SFD_VARIANTS = ["akervik", "casacuberta", "dyn", "dyn_oifs"]
 
 # ---------------------------------------------------------------------------
-# Locked matrix — mirrors plan.md §1.3
+# Locked matrix: the stages of each geometry
 # ---------------------------------------------------------------------------
 _FULL = ["000", "110", "120", "130", "140", "210", "310", "311",
          "320", "321", "330", "411", "500", "600", "610", "620"]
@@ -63,7 +63,7 @@ GEOMETRIES: dict[str, list[str]] = {
     "slot_FST":         ["000"],
 }
 
-# Disk-name aliases: plan.md geometry name → actual example/ subdir name(s) to try.
+# Disk-name aliases: geometry name of the matrix → actual example/ subdir name(s) to try.
 # First match wins. If none match, the cell is TODO.
 DISK_ALIASES: dict[str, list[str]] = {
     "cylinder_re100": ["cylinder_re100", "cylinder"],
