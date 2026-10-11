@@ -87,6 +87,26 @@ description for the 2.0 series; entries here are the per-tag deltas.
   without running anything and requires that no quantity of any
   `ref/reference.json` passes. A second test requires every quantity to have a
   numeric value, a source and exactly one tolerance.
+- `example/cubic_cavity_re1914/330_transient_growth` and `411_postproc_wavemaker`.
+  The flow at Re = 1914 is stable (sigma = -1.8e-4), and a perturbation still gains a
+  factor 229 in energy over the horizon tau = 10 (G = 229.19, the second gain is 215.96).
+  The energy ratio of the stored response to the stored perturbation is 0.3 % below G;
+  this measures how far the adjoint integration departs from the transpose of the forward
+  one on this mesh. The wavemaker of the leading pair has its maximum, 45.0, at
+  (x, y, z) = (-0.365, -0.244, 0) and a second maximum of 44.8 at (-0.307, 0.333, 0), so the
+  position of the global maximum is not stable.
+- `example/cubic_cavity_re1950`: DNS, POD, DMD and energy-budget stages on the limit cycle of
+  the 3D cavity at Re = 1950 (period 10.78909). `000_dns` runs 100 time units on the cycle and
+  writes 200 snapshots; `600_modal_pod` and `610_modal_dmd` read 100 of them, 4.6 periods. Two
+  POD modes hold 94.3 % of the energy and turn at 1.0005 times 2 pi / T; the next four pairs
+  turn at 1.9998, 2.9989, 3.9981 and 4.9975 times. The DMD modes lie on the harmonics 1 to 6 of
+  the cycle, within 4.2e-4 in units of 2 pi / T, and none grows (largest modulus 0.999978).
+  `411_postproc_energy_budget` runs the Floquet energy budget (mode 4.11) on the closed cavity,
+  where P - D = sigma E holds exactly. The energy of the marched mode gives sigma to 0.17 %
+  (2.90305e-3 against 2.907859e-3), and production and dissipation balance to 0.34 % of the
+  dissipation. P/E and D/E are 175 times larger than sigma, so the exponent from the budget, the
+  difference of the two, is 58.5 % high. The README says so, and the reference does not check
+  that exponent.
 
 ### Changed
 - `validation/validate.py` (with `validation/tests/test_validate.py`) and
@@ -175,6 +195,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
   1.1e-2 (relative l2 norm of the velocity) from the base flow that the stability
   stages ship, and the leading growth rate of the direct stage is -0.0643 on it
   instead of -0.0665.
+
+- `example/cylinder_re1m` (2D RANS) is marked experimental in `RELEASE.md`. It has the
+  finite-difference operator only (no adjoint, wavemaker or transient growth), no reference
+  data and no card in the gallery, and its stages are not part of the rerun of the examples.
 
 ### Fixed
 - The export of the eigenmodes wrote the first N Ritz values of the list sorted by
