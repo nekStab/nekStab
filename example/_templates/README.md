@@ -19,7 +19,7 @@ cd example/<geom>/310_stability_direct
 | 000 | DNS | 0 | (no-op) | cold start or restart |
 | 110 | baseflow SFD | 1.1 | `SFD` (fixedp.f90) | variants: akervik, casacuberta, dyn, dyn_oifs |
 | 120 | baseflow BoostConv | 1.2 | `BoostConv` (fixedp.f90) | Krylov acceleration |
-| 130 | baseflow DMT | 1.3 | `dmt` (src/dmt.f90) | **TO PORT** -- Queguineur 2019 |
+| 130 | baseflow DMT | 1.3 | `dmt` (src/dmt.f90) | steady target; Queguineur et al. (2019) |
 | 140 | baseflow TDF | 1.4 | `tdf` (fixedp.f90) | time-delayed feedback |
 | 210 | baseflow Newton | 2 / 2.1 / 2.2 | `newton_krylov` | variants: fp, upo, upo_T |
 | 310 | stability direct | 3.1 | Krylov-Schur | variants: schur, arnoldi, findiff |
@@ -29,9 +29,10 @@ cd example/<geom>/310_stability_direct
 | 330 | transient growth | 3.3 | Krylov-Schur (direct+adjoint) | |
 | 411 | wavemaker / energy budget | 4.1 / 4.11 | `stability_energy_budget*` | variants: direct, floquet |
 | 500 | OTD | 5 | OTD module | co-evolves with DNS |
-| 600 | modal POD | postproc keyword | `modal_pod` | |
-| 610 | modal DMD | postproc keyword | `modal_dmd` | |
-| 620 | modal SPOD | postproc keyword | `modal_spod` | |
+| 600 | modal POD | 6.1 | `modal_pod` | reads a snapshot set, no time stepping |
+| 610 | modal DMD | 6.2 | `modal_dmd` | |
+| 620 | modal SPOD | 6.3 | `modal_spod` | |
+| 630 | modal DMT filter bank | 6.4 | `dmt_bank` | runs the DNS; no template, see `example/moving_cylinder_re100/630_modal_dmt` |
 
 > Authoritative dispatch source: grep `uparam(1) ==` in `src/` and `src/mode_config.f90`.
 
@@ -65,8 +66,8 @@ Rule: physics (mesh, .usr) DRY at NNN level; strategy (parameters) explicit per 
 | 01 | mode dispatch |
 | 02 | OTD mode count |
 | 03 | schur_tgt (stability) |
-| 04 | SFD Delta |
-| 05 | SFD chi OR forcing St_D (TDF/forced cases) |
+| 04 | SFD: frequency f of the oscillation to damp (Strouhal number); the sign selects Akervik (+) or Casacuberta (-) |
+| 05 | SFD: growth rate sigma of that oscillation; TDF and forced cases: frequency of the forcing |
 | 06 | Rayleigh / isothermal flag / jet amplitude (case-specific) |
 | 07 | k_dim -- universal across all Krylov-using cases |
 | 08 | sponge-left OR dyn-tol factor |
@@ -75,8 +76,8 @@ Rule: physics (mesh, .usr) DRY at NNN level; strategy (parameters) explicit per 
 | 11 | DMT: omega_c (target frequency) |
 | 12 | DMT: beta (filter width) |
 | 13 | DMT: chi (feedback gain) |
-| 14 | DMT: dmt_skp (steps before forcing) |
-| 15 | DMT: dmt_tol (convergence tolerance) |
+| 14 | DMT: t_start (time before the forcing starts) |
+| 15 | DMT: tol (convergence tolerance of the residual) |
 | 16-20 | reserved -- future stabilization methods |
 
 ---
@@ -102,19 +103,21 @@ Rule: physics (mesh, .usr) DRY at NNN level; strategy (parameters) explicit per 
 
 ## Mode selector preferences
 
-For new cases, prefer the `nekstab_mode` string in `.par` over the raw `userParam01` decimal value:
+For new cases, set the mode by name in `nekStab_usrchk` of the `.usr` file. The `.par` file does not read a mode name; it keeps
+`userParam01` (the example stages write the decimal value there, with the name in the comment):
+
+```fortran
+! preferred (new cases), in nekStab_usrchk of the .usr file
+nekstab_mode = 'direct'
+```
 
 ```ini
-# preferred (new cases)
-nekstab_mode = stability_direct
-
-# legacy — still accepted for backward compatibility
+# still accepted, in the .par file
 userParam01 = 3.1
 ```
 
-Both forms resolve to the same internal flags via `nekStab_resolve_mode`. String takes precedence if set.
-
-See the NNN stage table above for the string-to-mode mapping (e.g. `stability_adjoint` → 3.2, `dns` → 0.0).
+Both forms resolve to the same internal flags via `nekStab_resolve_mode`. The string takes precedence if it is set. The strings and their
+codes are in the table of [DOC.md](../../DOC.md) (for example `'adjoint'` is 3.2 and `'dns'` is 0).
 
 In `.usr` files, use named flags from the `nStab_mode_flags` common block instead of raw `uparam(1)` comparisons:
 

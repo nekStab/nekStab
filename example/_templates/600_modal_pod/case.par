@@ -1,5 +1,41 @@
-# TEMPLATE: modal_pod; dispatch=postproc keyword (not uparam01); subroutine=modal_pod; status: scaffold only
+# TEMPLATE: modal_pod; userParam01 = 6.1; subroutine = modal_pod
 #
-# POD = Proper Orthogonal Decomposition of snapshot ensemble.
-# Triggered by setting  postproc = pod  in [GENERAL] (not by uparam01).
-# Input: a sequence of field files (e.g., dns0.f0000*).
+# POD = Proper Orthogonal Decomposition of a snapshot ensemble.
+# The run does not march in time: it reads the snapshots. Input: field files named after the session
+# (for example dns0.f00001 to dns0.f00100). nekStab_usrchk of the .usr file sets modal_nsnap, modal_dt (the spacing of the
+# snapshots, the writeInterval of the DNS) and modal_nsave (the number of saved modes).
+# Working stage: example/cylinder_re100/600_modal_pod.
+[GENERAL]
+# TEMPLATE: the first snapshot
+startFrom = rst_case0.f00001
+
+stopAt = endTime
+endTime = 2050           # TEMPLATE: as in the working stage
+
+userParam01 = 6.1        # POD (nekstab_mode = 'pod' in the .usr file does the same)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 0.5
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-06
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-08
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

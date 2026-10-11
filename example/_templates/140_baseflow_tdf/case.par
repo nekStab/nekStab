@@ -1,11 +1,38 @@
-# TEMPLATE: baseflow_tdf; uparam01=1.4; subroutine=tdf (fixedp.f90); status: scaffold only
+# TEMPLATE: baseflow_tdf; userParam01 = 1.4; subroutine = tdf (src/fixedp.f90)
 #
-# TDF = Time-Delayed Feedback (Pyragas-type forcing for UPO stabilization)
-# Reference: example/tpjet/baseflow/tdf/tpjet.par  (Re~2000 axisymmetric jet)
-#
-# Key params:
-#   userParam01 = 1.4       # TDF mode
-#   userParam05 = 0.60      # forced frequency (St_D or omega_c, case-specific)
-#   userParam07 = 1         # k_dim (usually 1 for TDF)
-#
-# See example/_templates/210_baseflow_newton/case.par for the Newton follow-up stage.
+# TDF = Time-Delayed Feedback. The solver adds the force g (q(t) - q(t - T)) to the momentum equation, with T = 1 / userParam05.
+# The gain g is fixed in the code and negative (DOC.md). The force vanishes on a periodic orbit of period T, so the run holds the
+# flow on an unstable orbit of a forced flow. Working stage: example/tpjet_re2000/140_baseflow_tdf, with [PROBLEMTYPE]
+# axiSymmetry = yes for that axisymmetric jet. The Newton stage 210 follows.
+[GENERAL]
+# TEMPLATE: seed, a snapshot close to the orbit
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 600            # TEMPLATE: the residual of q(t) - q(t - T) decays slowly; read residu.dat
+
+userParam01 = 1.4        # TDF
+userParam05 = 0.6        # TEMPLATE: frequency of the forcing; the delay of the feedback is the period 1 / userParam05
+userParam07 = 1
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = yes
+density = 1.0
+viscosity = -2000.0      # TEMPLATE: -Re
