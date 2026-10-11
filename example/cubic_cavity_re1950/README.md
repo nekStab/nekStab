@@ -20,14 +20,19 @@ the unstable pair and snapshot-modal decompositions. Thesis source: chapter 4,
 velocity (no regularisation of the edge singularity).
 
 ## Workflow (DNS-orbit Floquet, no Newton)
-1. **`000_dns/`** — settle onto the limit cycle from a near-periodic start.
-2. **`000_dns_period/`** — long DNS + centre probe + harmonic fit for a sharp
+1. **`000_dns_period/`** — long DNS + centre probe + harmonic fit for a sharp
    period `T = 10.789`; stamp an on-orbit snapshot as the Floquet base flow.
+2. **`000_dns/`** — 100 time units on the limit cycle from that snapshot; it writes the
+   200 snapshots that the POD and the DMD read.
 3. **`311_stability_direct_floquet/`** — direct Floquet (`userParam01 = 3.11`)
    over one period `T`. **`321_stability_adjoint_floquet/`** — the adjoint run.
 4. **`350_dns_unstable_orbit/`** — DNS of 2000 time units from the orbit plus
    the Floquet mode, compared with the Floquet pair.
-5. **`600_modal_pod/`**, **`610_modal_dmd/`** — POD / DMD of the cycle.
+5. **`411_postproc_energy_budget/`** — energy budget of the leading Floquet mode
+   (`userParam01 = 4.11`) on the closed cavity.
+6. **`600_modal_pod/`**, **`610_modal_dmd/`** — POD / DMD of the cycle.
+7. **`630_modal_dmt/`** — DMT filter bank (`userParam01 = 6.4`): the amplitude of the
+   flow at the frequency of the cycle and its harmonics, from a DNS of 15 periods.
 
 Why DNS-orbit instead of Newton-UPO: the DNS settles directly onto the cycle
 (it is unstable only to a slowly growing mode, sigma = 2.9e-3), so Newton
@@ -48,8 +53,12 @@ Direct Floquet (`k_dim = 100`, 69 modes converged):
   saturates near t = 900; the spectrum has the sidebands `n f_1 ± f_F`. Details
   and figure: [`350_dns_unstable_orbit/README.md`](350_dns_unstable_orbit/README.md).
 
-There is a mode to budget, so the energy budget (4.11) is possible on this
-cycle. It is exercised on `flip_flop_re62` and is not a stage here.
+Energy budget (4.11, [`411_postproc_energy_budget/README.md`](411_postproc_energy_budget/README.md)):
+the cavity is closed, so the balance P − D = σE of the mode holds exactly. The energy of
+the marched mode gives σ to 0.17 % (2.90305e-3 against 2.907859e-3). Production and
+dissipation balance to 0.34 % of the dissipation, and because both are 175 times larger
+than σ, the exponent from the budget is 58.5 % high. Use the energy of the marched mode for σ
+and the budget for where the mode takes energy.
 
 POD / DMD: the snapshot stages are described in their own READMEs. The cycle
 saturates slowly because Re = 1950 is only just supercritical, and a weak
@@ -62,7 +71,8 @@ mks cav        # compile
 sbatch run.local.slurm   # per stage
 ```
 Wall times on 16 ranks: Floquet direct 12.9 h, adjoint 8.4 h, DNS of the unstable
-orbit 13.7 h.
+orbit 13.7 h, energy budget 12 min (Jean Zay) to 22 min (c8). The POD and the DMD take
+under 15 s, the filter bank 22 min on 40 ranks of Jean Zay.
 
 ## Reference
 Standard 3D lid-driven cubic cavity benchmark; first Hopf near Re ≈ 1916.
