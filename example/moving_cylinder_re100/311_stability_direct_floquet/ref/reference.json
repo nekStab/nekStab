@@ -37,10 +37,10 @@
       "note": "Mean factor per period of the change of the forced DNS over its last five periods (stage 010); |mu_1| = 0.92988."
     },
     "orbit_period": {
-      "source": "BF_1cyl0.f00001:field:time",
+      "source": "floquet.dat:col6:first",
       "value": 6.086427267194,
       "tol_rel": 1e-09,
-      "note": "Time stamp of the orbit file, the length of the map: the period of the forcing, 1 / 0.1643."
+      "note": "Time stamp of the orbit file BF_1cyl0.f00001, the length of the map: the period of the forcing, 1 / 0.1643. plot.py reads it from the orbit and writes it to floquet.dat."
     }
   }
 }

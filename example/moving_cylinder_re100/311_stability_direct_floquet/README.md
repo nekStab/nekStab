@@ -58,7 +58,8 @@ amplitude of the leading mode at phase 0 of the forcing.
 ## What the reference checks
 
 `ref/reference.json` has `mu_1` and `sigma_1` from the files of the converged values, the number of converged
-multipliers, the relaxation factor of the DNS and the time stamp of the orbit file against the period of the forcing.
+multipliers, the relaxation factor of the DNS and the time stamp of the orbit file against the period of the forcing
+(`plot.py` copies the time stamp of the orbit file, an input of the run, to the sixth column of `floquet.dat`).
 A solver without the mesh-velocity term has a first converged multiplier of modulus 0.72 and fails the first two. An
 export of the first values of the Ritz list (the behaviour before the fix of `outpost_ks`) puts 0.9957 in
 `Spectre_Hd_conv.dat` and fails them too.

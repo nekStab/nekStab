@@ -18,6 +18,7 @@ It writes floquet.dat and plot_floquet.png. floquet.dat holds one row with:
   n_converged  number of converged multipliers
   dns_ratio    (c_N / c_(N-5))^(1/5), the mean factor per period of the near-field change c of the DNS over its
                last 5 periods (NaN without lockin_history.dat)
+  orbit_period time stamp of BF_1cyl0.f00001, the length of the map (NaN without that file)
 
 Usage: python plot.py
 """
@@ -101,11 +102,15 @@ def main() -> None:
         ratio = dns_ratio(change)
     else:
         ratio = float("nan")
+    orbit_file = CASE_DIR / "BF_1cyl0.f00001"
+    orbit_period = (
+        float(nk.read_field(orbit_file)[3]) if orbit_file.is_file() else float("nan")
+    )
     np.savetxt(
         CASE_DIR / "floquet.dat",
-        [[modulus, argument, sigma, int(converged.sum()), ratio]],
-        header="modulus  argument  sigma  n_converged  dns_ratio",
-        fmt=["%.8g", "%.8g", "%.8g", "%d", "%.8g"],
+        [[modulus, argument, sigma, int(converged.sum()), ratio, orbit_period]],
+        header="modulus  argument  sigma  n_converged  dns_ratio  orbit_period",
+        fmt=["%.8g", "%.8g", "%.8g", "%d", "%.8g", "%.12g"],
     )
     print(
         f"leading multiplier |mu| = {modulus:.6f}, arg = {argument:.4f} rad, sigma = {sigma:.5f}; "
