@@ -143,6 +143,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   and the references, the shipped orbit and the shipped modes of the old stages are replaced by
   those of the runs above. The DMT stage `130_baseflow_dmt` is removed: the band-pass filter has
   zero gain at zero frequency only, so it holds a steady state and not a periodic orbit.
+- The stage folders of `example/` no longer track what a run writes. 150 copies of figures at
+  the root of the folders (`plot_bf.png`, `plot_spectrum.png` and the like; the plot scripts
+  write them at each run and `ref/` holds the maintained copy that the gallery draws), four
+  `plot.out` logs (they held the paths of the machine that ran the plot script) and the twelve
+  output fields `pr_`, `pi_`, `sr_`, `si_`, `tr_` and `ti_` of the wavemaker stages of
+  `cylinder_re100` and `naca0012_re2000` (23 MB) are removed. The folders of
+  `cylinder_re1m` and `plot_compare.png` of `110_baseflow_sfd`, a figure over six variants,
+  stay.
 - `validation/validate.py` (with `validation/tests/test_validate.py`) and
   `example/collect_plots.py` are removed. Both listed example directories of an
   earlier layout that no longer exist. A stage is checked with
