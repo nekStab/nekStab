@@ -1,17 +1,18 @@
 [GENERAL]
-# TEMPLATE: SFD dyn-tol + OIFS; uparam01=1.1; status: scaffold only
-# OIFS (Operator Integration Factor Splitting) allows targetCFL >> 1 (typically 5).
-# Reference: example/cylinder/baseflow/sfd_dyn_oifs/1cyl.par (Re=50, factor=0.95)
+# TEMPLATE: SFD with a dynamic solver tolerance and OIFS time stepping; userParam01 = 1.1
+# As the dyn variant, with extrapolation = OIFS (Operator Integration Factor Splitting), which allows targetCFL of about 5.
+# The working stage stops at a gate of 1e-6 (README of the SFD stage).
+# Working stage: example/cylinder_re100/110_baseflow_sfd/akervik_dyn_oifs (factor 0.95, stride 100)
 startFrom = BF_seed_case0.f00001
 
 stopAt = endTime
 endTime = 400.0
 
 userParam01 = 1.1        # SFD dyn-tol + OIFS
-userParam04 = 0.12       # TEMPLATE: Delta (target frequency)
-userParam05 = 0.05       # TEMPLATE: chi (gain)
-userParam08 = 0.95       # dyn-tol factor
-userParam09 = 100        # dyn-tol update stride
+userParam04 = 0.12       # TEMPLATE: f = omega / 2 pi of the leading mode (Strouhal number); positive Akervik, negative Casacuberta
+userParam05 = 0.05       # TEMPLATE: sigma, growth rate of that mode
+userParam08 = 0.95       # factor of the solver tolerance over the SFD residual
+userParam09 = 100        # stride of the update, in steps
 
 dt = 0
 variableDt = yes

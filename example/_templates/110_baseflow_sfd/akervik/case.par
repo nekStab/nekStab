@@ -1,16 +1,17 @@
 [GENERAL]
-# TEMPLATE: SFD classical Akervik (2006); uparam01=1.1; status: scaffold only
+# TEMPLATE: SFD classical, Akervik et al. (2006); userParam01 = 1.1 with userParam04 > 0
 # Ref: Akervik et al., Phys. Fluids 18, 068102 (2006)
-# Delta chosen from imaginary part of leading unstable eigenvalue (from prior 310 run).
-# Example values from cylinder Re=50: userParam04=0.12, userParam05=0.05
+# f and sigma come from the leading eigenvalue of the direct stability stage 310: omega = 2 pi f, sigma = its growth rate.
+# The filter has the cutoff omega / 2 and the gain -2 sigma (DOC.md).
+# Working stage: example/cylinder_re100/110_baseflow_sfd/akervik (f = 0.166, sigma = 0.26)
 startFrom = BF_seed_case0.f00001
 
 stopAt = endTime
 endTime = 400.0          # TEMPLATE: long enough for SFD residual to decay
 
 userParam01 = 1.1        # SFD classical
-userParam04 = 0.12       # TEMPLATE: Delta -- target frequency (omega_i of leading mode, Strouhal)
-userParam05 = 0.05       # TEMPLATE: chi -- gain (approx twice the leading growth rate)
+userParam04 = 0.12       # TEMPLATE: f = omega / 2 pi of the leading mode (Strouhal number); positive selects Akervik
+userParam05 = 0.05       # TEMPLATE: sigma, growth rate of that mode
 
 dt = 0
 variableDt = yes

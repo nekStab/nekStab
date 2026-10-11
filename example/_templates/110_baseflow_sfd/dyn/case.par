@@ -1,17 +1,18 @@
 [GENERAL]
-# TEMPLATE: SFD dyn-tol; uparam01=1.1; status: scaffold only
-# Dynamic tolerance SFD: residualTol updated each userParam09 steps by factor userParam08.
-# Reference: example/cylinder/baseflow/sfd_dyn/1cyl.par (Re=50, factor=0.9, stride=100)
+# TEMPLATE: SFD with a dynamic solver tolerance; userParam01 = 1.1
+# Set ifdyntol = .true. in nekStab_usrchk of the .usr file. Every userParam09 steps the velocity solver tolerance is set to
+# userParam08 times the SFD residual, and never below the convergence gate (src/fixedp.f90).
+# Working stage: example/cylinder_re100/110_baseflow_sfd/akervik_dyn (factor 0.9, stride 100)
 startFrom = BF_seed_case0.f00001
 
 stopAt = endTime
 endTime = 400.0
 
 userParam01 = 1.1        # SFD with dynamic tolerance
-userParam04 = 0.12       # TEMPLATE: Delta (target frequency)
-userParam05 = 0.05       # TEMPLATE: chi (gain)
-userParam08 = 0.9        # dyn-tol factor (0 = static)
-userParam09 = 100        # dyn-tol update stride
+userParam04 = 0.12       # TEMPLATE: f = omega / 2 pi of the leading mode (Strouhal number); positive Akervik, negative Casacuberta
+userParam05 = 0.05       # TEMPLATE: sigma, growth rate of that mode
+userParam08 = 0.9        # factor of the solver tolerance over the SFD residual
+userParam09 = 100        # stride of the update, in steps
 
 dt = 0
 variableDt = yes

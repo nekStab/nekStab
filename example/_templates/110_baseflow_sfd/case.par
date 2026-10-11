@@ -6,9 +6,9 @@ startFrom = BF_seed_case0.f00001
 stopAt = endTime
 endTime = 400.0          # TEMPLATE: long enough for SFD residual to decay
 
-userParam01 = 1.1        # 1.1 = SFD; 1.2 = SFD dyn; 1.3 = SFD dyn + OIFS
-userParam04 = 0.12       # TEMPLATE: target frequency (Strouhal of leading mode)
-userParam05 = 0.05       # TEMPLATE: SFD gain (~ twice the leading growth rate)
+userParam01 = 1.1        # SFD; the variants differ in the filter and in the solver tolerance, not in this value
+userParam04 = 0.12       # TEMPLATE: f = omega / 2 pi of the oscillation to damp (Strouhal number of the leading mode); + Akervik, - Casacuberta
+userParam05 = 0.05       # TEMPLATE: growth rate sigma of that oscillation; the gain follows from it (0 continues a previous run)
 
 dt = 0
 variableDt = yes
