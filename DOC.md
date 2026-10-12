@@ -785,10 +785,10 @@ Set in `nekStab_usrchk` subroutine in your `.usr` file:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `k_dim` | 100 | Krylov subspace dimension (larger = more eigenvalues but more memory) |
+| `k_dim` | 100 | Largest Krylov basis. The run stops at the first Arnoldi step where the `schur_tgt` leading values have converged, so a larger `k_dim` costs memory, not matvecs; the basis fills and restarts only when they need more steps |
 | `use_cgs` | .true. | Use CGS2 orthogonalization with batched BLAS/MPI reductions (`.false.` = classic MGS + reorthogonalization) |
-| `eigen_tol` | 1e-6 | Convergence tolerance for eigenvalues |
-| `schur_tgt` | 2 | Number of wanted eigenvalues. A restart keeps at least `schur_tgt + 2` and at most `k_dim - schur_tgt` Ritz values, so the next Arnoldi run adds at least `schur_tgt` steps |
+| `eigen_tol` | 1e-6 | Convergence tolerance: a Ritz value has converged when its residual is below `eigen_tol*max(abs(mu), 1)`. The same test applies to the residual of each exported mode vector |
+| `schur_tgt` | 2 | Number of wanted eigenvalues, counted from the top of the list sorted by `abs(mu)` (a conjugate pair counts as two). The run stops when the first `schur_tgt` entries have converged, not when any `schur_tgt` values have. `schur_tgt <= 0` runs one full pass of `k_dim` steps. A restart keeps at least `schur_tgt + 2` and at most `k_dim - schur_tgt` Ritz values, so the next Arnoldi run adds at least `schur_tgt` steps |
 | `schur_del` | 0.10 | Selection radius of the restart: it keeps the Ritz values with `abs(mu) >= 1 - schur_del`, and those with a Schur residual below `sqrt(eigen_tol)` |
 | `maxmodes` | 20 | Maximum eigenmodes to save to disk |
 
@@ -1609,11 +1609,25 @@ where **A** is the linearized operator. nekStab never forms **A** explicitly. In
    ```
    Current default: CGS2 with reorthogonalization (`use_cgs = .true.`), which reduces MPI reductions relative to the older MGS path while keeping the fallback available.
 
-2. **Ritz extraction**: Eigenvalues of H_m approximate eigenvalues of A
+2. **Ritz extraction**: Eigenvalues of H_m approximate eigenvalues of A. The residual of the Ritz pair
+   (mu_i, V_m y_i) is |h_{m+1,m} y_i(m)|. It is tested after every step, and the run stops at the first step m where
+   the `schur_tgt` leading values (largest `abs(mu)`) have converged.
 
-3. **Implicit restart**: Schur decomposition filters unwanted eigenvalues
+3. **Implicit restart**: Schur decomposition filters unwanted eigenvalues. It happens only when the basis reaches
+   `k_dim` before the leading values have converged.
 
 4. **Deflation**: Lock converged eigenvalues, continue with reduced subspace
+
+5. **Check of the exported modes**: the Ritz residual equals ||M x - mu x|| only while the relation of step 1 holds
+   for every column. Each mode to export is therefore given to the linearized solver once more (one matvec for a real
+   mode, two for a complex pair) and its residual ||M x - mu x|| / ||x|| is measured. Below `eigen_tol` the mode is
+   written. Above it, but less than `eigen_tol` above the Ritz residual, it is written with a warning: the run stops
+   as soon as the Ritz residual is below the tolerance, and a small error of the relation can put the vector just
+   above it. A larger difference means the vector is not an eigenvector: it is not written, and when it is one of
+   the `schur_tgt` leading modes the run ends with an error after the files are written. Row k of
+   `Spectre_*_conv.dat` and mode file k always hold the same mode. A locked mode shows a residual near 1e-16 in the
+   spectrum files; its vector residual is the Ritz residual it had when it was locked. `Spectre_?.info` lists both
+   numbers under `[vector residuals]`, with `k_used=` (size of the last basis) and `check matvecs=`.
 
 ### Adjoint Operator
 

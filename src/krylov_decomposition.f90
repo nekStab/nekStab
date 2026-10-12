@@ -10,25 +10,27 @@
 !   arnoldi_factorization  — k-step Arnoldi factorization
 !   update_hessenberg_matrix — orthonormalize and update Hessenberg
 !   arnoldi_checkpoint     — save Krylov vector and eigenspectrum checkpoint
+!   ritz_pairs             — Ritz values, vectors and residuals of H(1:k,1:k)
 !   log_transform          — complex log for eigenvalue (no imag noise)
 !
 ! Dependencies:
-!   krylov_subspace, nekstab_lapack (eig),
+!   krylov_subspace, nekstab_lapack (eig), nekstab_ks_select,
 !   nekstab_io (whereyouwant), SIZE, TOTAL
 !-----------------------------------------------------------------------
 
 module nekstab_krylov_decomposition
    use nekstab_nek_bridge, only: nekStab_dp, nid, ifres, use_cgs, time, dt, &
                                  nsteps, evop, eigen_tol, schur_tgt, SESSION, &
-                                 nof, mstep, NEKSTAB_UNIT_HESS, ldimt
+                                 nof, mstep, NEKSTAB_UNIT_HESS, ldimt, isize
    use nekstab_matvec, only: matvec
    use nekstab_lapack, only: eig
+   use nekstab_ks_select, only: ks_converged, ks_leading_converged
    use nekstab_io, only: whereyouwant
    implicit none
    private
    public :: arnoldi_factorization, &
              update_hessenberg_matrix, &
-             arnoldi_checkpoint, log_transform
+             arnoldi_checkpoint, log_transform, ritz_pairs
 contains
 
    !-----------------------------------------------------------------------
@@ -53,8 +55,15 @@ contains
    !     ksize : integer
    !     Size of the Krylov subspace (same as k_dim).
    !
+   !     nev : integer, optional
+   !     Krylov-Schur only. Stop at the first step where the nev leading Ritz values
+   !     have converged. Absent or <= 0: run to mend.
+   !
    !     RETURNS
    !     -------
+   !
+   !     mlast : integer, optional
+   !     Last step done: mend, or less after an early stop or a lucky breakdown.
    !
    !     qx, qy, qz : nek arrays of size (lx1*ly1*lz1*lelt, ksize).
    !     Arrays containing the various Krylov vectors associated to each velocity component.
@@ -66,13 +75,15 @@ contains
    !     Upper Hessenberg matrix resulting from the Arnoldi factorization of the linearized
    !     Navier-Stokes operator.
    !-----------------------------------------------------------------------
-   subroutine arnoldi_factorization(Q, H, mstart, mend, ksize)
+   subroutine arnoldi_factorization(Q, H, mstart, mend, ksize, nev, mlast)
 
       use nekstab_krylov_subspace, only: krylov_vector, k_zero, k_copy, dnekclock
 
       !     ----- Miscellaneous -----
       real :: alpha
       integer, intent(in) :: mstart, mend, ksize
+      integer, intent(in), optional :: nev
+      integer, intent(out), optional :: mlast
       integer :: step
 
       !     ----- Timer -----
@@ -125,6 +136,7 @@ contains
                write (6, *) '         Lucky breakdown - invariant subspace found.'
             end if
             call k_copy(Q(mstep + 1), f) ! Still copy the (near-zero) residual
+            if (present(mlast)) mlast = mstep
             return ! Exit early - don't pollute basis with noise
          end if
 
@@ -147,9 +159,80 @@ contains
                   int(tmiss), ceiling((tmiss - int(tmiss))*60.0d0)
             end if
          end if
+
+         !     --> Stop as soon as the nev leading Ritz values have converged.
+         !         The test is the one krylov_schur applies after a full pass,
+         !         so k_dim is the largest base, not a fixed cost: a long base
+         !         costs only the steps that the leading values need.
+         !         Rank 0 decides and broadcasts, so all ranks leave the loop
+         !         at the same step even if their copies of H differ in the
+         !         last bit.
+         if (present(nev)) then
+            if (nev > 0) then
+               if (leading_converged(H, mstep) >= nev) then
+                  if (nid == 0) write (6, "('        ARNOLDI - ',I0,' leading Ritz values converged at step ',I0,'/',I0)") &
+                     nev, mstep, mend
+                  exit
+               end if
+            end if
+         end if
       end do
+      if (present(mlast)) mlast = mstep
 
    end subroutine arnoldi_factorization
+
+   !-----------------------------------------------------------------------
+   ! leading_converged — Converged Ritz values at the top of the spectrum of H(1:k,1:k)
+   !-----------------------------------------------------------------------
+   integer function leading_converged(H, k) result(nlead)
+      integer, intent(in) :: k
+      real, dimension(:, :), intent(in) :: H
+      ! allocatable: called at every step, and k can reach k_dim = 1000 (16 MB for vecs)
+      complex(nekStab_dp), allocatable, dimension(:) :: vals
+      complex(nekStab_dp), allocatable, dimension(:, :) :: vecs
+      real, allocatable, dimension(:) :: residual
+
+      allocate (vals(k), vecs(k, k), residual(k))
+      call ritz_pairs(H(1:k + 1, 1:k), k, vals, vecs, residual)
+      nlead = ks_leading_converged(vals, residual, k, eigen_tol)
+      call bcast(nlead, isize)
+
+   end function leading_converged
+
+   !-----------------------------------------------------------------------
+   ! ritz_pairs — Ritz values, vectors and residuals of H(1:k,1:k)
+   !
+   !     The residual of the Ritz pair (lambda_i, V y_i) is |H(k+1,k) y_i(k)|.
+   !     It equals ||M V y_i - lambda_i V y_i|| when M V = V H + f e_k^T holds
+   !     for every column. eig sorts by decreasing modulus.
+   !-----------------------------------------------------------------------
+   subroutine ritz_pairs(H, k, vals, vecs, residual)
+      integer, intent(in) :: k
+      real, dimension(k + 1, k), intent(in) :: H
+      complex(nekStab_dp), dimension(k), intent(out) :: vals
+      complex(nekStab_dp), dimension(k, k), intent(out) :: vecs
+      real, dimension(k), intent(out) :: residual
+
+      call eig(H(1:k, 1:k), vecs, vals, k)
+      residual = abs(H(k + 1, k)*vecs(k, :))
+
+      !     --> Floor the REPORTED residual at float64 relative precision.
+      !         The Arnoldi residual r_i = |beta * y_i(k)| is the product of two
+      !         independently tiny factors after Krylov-Schur deflation/locking:
+      !         beta = H(k+1,k) collapses as the subspace becomes invariant, and
+      !         y_i(k) (last component of a converged Ritz vector) -> 0. Their
+      !         product can underflow far below machine epsilon (e.g. ~1e-48),
+      !         which would write sub-epsilon "accuracy" into the spectrum file -
+      !         misleading, since float64 carries only ~16 significant digits.
+      !         Floor at eps*max(|lambda|,1) so a fully-locked mode reports
+      !         "~1e-16" (converged to machine precision) instead of fake digits.
+      !         Classification below is unaffected: the floor eps*max(|lambda|,1)
+      !         is many orders of magnitude tighter than eigen_tol*max(|lambda|,1),
+      !         so a floored residual still satisfies the convergence criterion
+      !         exactly when the raw one did.
+      residual = max(residual, epsilon(1.0d0)*max(abs(vals), 1.0d0))
+
+   end subroutine ritz_pairs
 
    !-----------------------------------------------------------------------
    ! update_hessenberg_matrix — Orthonormalize and update Hessenberg entries
@@ -281,16 +364,11 @@ contains
       time = time*k !order in ParaView
       call outpost2(f_xr, f_yr, f_zr, f_pr, f_tr, nof, "KRY")
 
-      !     --> Compute the eigenvalues and eigenvectors of the current Hessenberg matrix.
-      call eig(H(1:k, 1:k), vecs, vals, k)
-
-      !     --> Compute the residual (assume H results from classical Arnoldi factorization).
-      residual = abs(H(k + 1, k)*vecs(k, :))
-
-      ! ------> Enforce minimum value of machine epsilon
-      where (residual < epsilon(1.0d0)) residual = epsilon(1.0d0)
-
-      converged_eigenvalues = count(residual < eigen_tol)
+      !     --> Compute the eigenvalues, eigenvectors and residuals of the current Hessenberg matrix.
+      !         Same residual and test as the run itself, so the checkpoint count
+      !         and the stop of the run agree.
+      call ritz_pairs(H, k, vals, vecs, residual)
+      converged_eigenvalues = count(ks_converged(vals, residual, eigen_tol))
 
       if (nid == 0) then
 

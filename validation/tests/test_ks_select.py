@@ -9,6 +9,8 @@ followed, and the residual test of krylov_schur reported n - 2 converged
 eigenvalues (an ellipse with k_dim = 160: "keeping 160 of 160", 158 converged).
 The export of the eigenmodes (outpost_ks) must visit the converged Ritz values, which
 are not always the first entries of the list sorted by modulus (ks_converged_indices).
+The run stops when the schur_tgt values at the top of that list have converged
+(ks_leading_converged), not when any schur_tgt values have.
 Needs gfortran; the tests skip when it is missing.
 """
 
@@ -83,6 +85,17 @@ def converged(exe: Path, entries, tol: float = 1.0e-6):
     head, positions = run.stdout.split("\n")[:2]
     assert int(head) == len(positions.split())
     return [int(x) for x in positions.split()]
+
+
+def leading(exe: Path, entries, tol: float = 1.0e-6) -> int:
+    """entries: list of (re, im, residual). Returns the count of ks_leading_converged."""
+    lines = [f"{len(entries)} {tol!r}"]
+    lines += [f"{re!r} {im!r} {res!r}" for re, im, res in entries]
+    run = subprocess.run(
+        [str(exe)], input="\n".join(lines) + "\n", capture_output=True, text=True
+    )
+    assert run.returncode == 0, run.stdout + run.stderr
+    return int(run.stdout.split("\n")[2])
 
 
 def select(exe: Path, entries, nev: int, delta: float, tol: float = 1.0e-6):
@@ -214,4 +227,49 @@ def test_no_value_converged(converged_driver):
 def test_the_tolerance_is_relative_above_modulus_one_and_absolute_below(converged_driver):
     # |lambda| = 3: the bound is tol*3. |lambda| = 0.5: the bound is tol*1, not tol*0.5.
     entries = [(3.0, 0.0, 2.9e-6), (3.0, 0.0, 3.1e-6), (0.5, 0.0, 0.9e-6), (0.5, 0.0, 1.1e-6)]
+    assert converged(converged_driver, entries) == [1, 3]
+
+
+def test_the_leading_count_stops_at_the_first_unconverged_value(converged_driver):
+    # A user's cylinder at Re = 42 (Spectre_Hd.dat, multipliers for T = 1): two slow real
+    # values lead the list unconverged, the shedding pair below them has converged. A count
+    # over the whole list reached schur_tgt = 2 and the run stopped there.
+    entries = [
+        (0.9863590, 0.0, 6.106864e-3),
+        (0.9852301, 0.0, 1.192071e-2),
+        (0.7315887, 0.6504731, 2.726931e-9),
+        (0.7315887, -0.6504731, 2.726931e-9),
+        (0.8977830, 0.2856916, 4.549857e-2),
+    ]
+    assert converged(converged_driver, entries) == [3, 4]
+    assert leading(converged_driver, entries) == 0
+
+
+def test_a_target_larger_than_the_converged_top_does_not_stop(converged_driver):
+    # lid_driven_re3600 310 (Spectre_Hd.dat of the release check): schur_tgt = 4, the real
+    # mode and the pair have converged, row 4 has not. 39 values had converged in all.
+    entries = [
+        (0.9833477, 0.0, 5.303505e-7),
+        (0.6872962, -0.6686519, 8.804929e-13),
+        (0.6872962, 0.6686519, 8.804929e-13),
+        (0.9518588, 0.0, 1.173250e-2),
+        (0.9433427, 0.0, 4.502671e-3),
+        (0.0088639, -0.9344230, 1.387086e-15),
+    ]
+    assert leading(converged_driver, entries) == 3
+
+
+def test_a_converged_pair_at_the_top_counts_as_two(converged_driver):
+    entries = [(0.99, 0.2, 1.0e-9), (0.99, -0.2, 1.0e-9), (0.8, 0.0, 1.0e-3), (0.5, 0.0, 1.0e-12)]
+    assert leading(converged_driver, entries) == 2
+
+
+def test_the_leading_count_is_the_whole_list_when_all_converged(converged_driver):
+    entries = [(0.99, 0.0, 1.0e-9), (0.9, 0.1, 1.0e-8), (0.9, -0.1, 1.0e-8)]
+    assert leading(converged_driver, entries) == 3
+
+
+def test_a_nan_residual_is_not_converged(converged_driver):
+    entries = [(0.99, 0.0, 1.0e-9), (0.9, 0.0, float("nan")), (0.8, 0.0, 1.0e-9)]
+    assert leading(converged_driver, entries) == 1
     assert converged(converged_driver, entries) == [1, 3]

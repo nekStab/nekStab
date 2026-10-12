@@ -9,6 +9,9 @@
 !   ks_select_eigenvalues     — adaptive selection with a pair-aware cap
 !   ks_ensure_conjugate_pairs — select both members of a conjugate pair
 !   ks_converged_indices      — indices of the converged Ritz values
+!   ks_converged              — convergence test of one Ritz value
+!   ks_leading_converged      — converged Ritz values at the top of the list
+!   is_conjugate_pair         — true when entries i and i+1 are a conjugate pair
 !
 ! Dependencies:
 !   nekstab_argsort
@@ -18,7 +21,8 @@ module nekstab_ks_select
    use nekstab_argsort, only: argsort
    implicit none
    private
-   public :: ks_select_eigenvalues, ks_ensure_conjugate_pairs, ks_converged_indices
+   public :: ks_select_eigenvalues, ks_ensure_conjugate_pairs, ks_converged_indices, &
+             ks_converged, ks_leading_converged, is_conjugate_pair
 
    integer, parameter :: dp = kind(0.0d0)
    real, parameter :: PAIR_REL_TOL = 1.0d-10
@@ -209,7 +213,7 @@ contains
 !   the vector of an unconverged value and left the converged one out: in
 !   the Floquet analysis of cylinder_re180 the multipliers 0.880 and 0.872
 !   (residual 9e-3) took the place of the converged pair 0.233 +- 0.601i.
-!   The test is the one of the spectrum file: residual < tol*max(|lambda|, 1).
+!   The test is ks_converged, the one of the spectrum file.
 !
 !   idx(1:nconv) — positions of the converged values, in list order
 !-----------------------------------------------------------------------
@@ -226,12 +230,56 @@ contains
       idx = 0
       nconv = 0
       do i = 1, n
-         if (residuals(i) < tol*max(abs(vals(i)), 1.0d0)) then
+         if (ks_converged(vals(i), residuals(i), tol)) then
             nconv = nconv + 1
             idx(nconv) = i
          end if
       end do
 
    end subroutine ks_converged_indices
+
+!-----------------------------------------------------------------------
+! ks_converged — Convergence test of one Ritz value
+!
+!   residual < tol*max(|lambda|, 1): absolute for |lambda| <= 1, relative
+!   above. The stop of the run, the flags of the spectrum file, the export
+!   and the check of the exported vectors all call this function, so they
+!   cannot disagree. A NaN residual fails the test.
+!-----------------------------------------------------------------------
+   elemental logical function ks_converged(val, residual, tol)
+      complex(dp), intent(in) :: val
+      real, intent(in) :: residual, tol
+
+      ks_converged = residual < tol*max(abs(val), 1.0d0)
+
+   end function ks_converged
+
+!-----------------------------------------------------------------------
+! ks_leading_converged — Converged Ritz values at the top of the list
+!
+!   The list is sorted by decreasing modulus, so its top holds the least
+!   stable modes of a time stepper. The count starts at the top and stops
+!   at the first value that has not converged. The run stops when this
+!   count reaches schur_tgt. A count over the whole list reached schur_tgt
+!   with damped values while the leading values had not converged
+!   (a user's cylinder at Re = 42: rows 1 and 2 unconverged, the converged
+!   pair in rows 3 and 4). Both members of a conjugate pair have the same
+!   residual, so a pair counts as two.
+!-----------------------------------------------------------------------
+   integer function ks_leading_converged(vals, residuals, n, tol) result(nlead)
+      integer, intent(in) :: n
+      complex(dp), dimension(n), intent(in) :: vals
+      real, dimension(n), intent(in) :: residuals
+      real, intent(in) :: tol
+
+      integer :: i
+
+      nlead = 0
+      do i = 1, n
+         if (.not. ks_converged(vals(i), residuals(i), tol)) exit
+         nlead = nlead + 1
+      end do
+
+   end function ks_leading_converged
 
 end module nekstab_ks_select

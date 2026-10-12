@@ -22,7 +22,7 @@
 !-----------------------------------------------------------------------
 
 module nekstab_eigensolvers
-   use nekstab_krylov_subspace, only: inner_product, k_copy, k_dot, k_norm, k_normalize, &
+   use nekstab_krylov_subspace, only: inner_product, k_add2s2, k_copy, k_dot, k_norm, k_normalize, &
                                       k_zero, krylov_vector, lp, lt, lv, n2, NEKSTAB_PI, norm, &
                                       nt, nv
    use nekstab_nek_bridge, only: ctarg, dt, eigen_tol, evop, if3D, if3d, ifheat, ifldbf, &
@@ -38,9 +38,10 @@ module nekstab_eigensolvers
                                  nz2, param, pbase, pr, schur_cnt, schur_del, schur_tgt, &
                                  SESSION, t, tbase, time, ubase, uparam, vbase, vx, vy, vz, &
                                  wbase, wdsize
-   use nekstab_krylov_decomposition, only: arnoldi_factorization, log_transform
-   use nekstab_lapack, only: eig, ordschur, schur
-   use nekstab_ks_select, only: ks_converged_indices, ks_select_eigenvalues
+   use nekstab_krylov_decomposition, only: arnoldi_factorization, log_transform, ritz_pairs
+   use nekstab_lapack, only: ordschur, schur
+   use nekstab_ks_select, only: is_conjugate_pair, ks_converged, ks_converged_indices, &
+                                ks_leading_converged, ks_select_eigenvalues
    use nekstab_vectors, only: nopcmult, nopcopy
    use nekstab_matvec, only: matvec
    use nekstab_io, only: load_files, whereyouwant
@@ -126,6 +127,8 @@ contains
       type(krylov_vector) :: wrk, wrk2
 
       integer :: mstart, converged_eigenvalues, m, total_matvecs
+      integer :: n_leading ! converged values at the top of the sorted list
+      integer :: kk ! size of the basis after the last Arnoldi pass (k_dim, or less after an early stop)
       real :: alpha
       logical :: converged
       integer :: i, j
@@ -307,9 +310,10 @@ contains
 
       do while (.not. converged)
 
-         !     --> Arnoldi factorization.
-         total_matvecs = total_matvecs + (k_dim - mstart + 1)
-         call arnoldi_factorization(Q, H, mstart, k_dim, k_dim)
+         !     --> Arnoldi factorization. With schur_tgt > 0 it stops at the
+         !         first step where the schur_tgt leading Ritz values converged.
+         call arnoldi_factorization(Q, H, mstart, k_dim, k_dim, nev=schur_tgt, mlast=kk)
+         total_matvecs = total_matvecs + (kk - mstart + 1)
 
          !     if(nid.eq.0) then
          !        open(unit=12345, file="Hessenberg_matrix.dat")
@@ -318,8 +322,6 @@ contains
          !     endif
 
          !     --> Compute the eigenspectrum of the Hessenberg matrix.
-         call eig(H(1:k_dim, 1:k_dim), vecs, vals, k_dim)
-
          !     --> Check the residual of the eigenvalues.
          !         The standard Arnoldi residual is: r_i = |beta * e_k^T * y_i|
          !         where beta = H(k+1,k), e_k is the k-th unit vector, and y_i is the
@@ -332,24 +334,9 @@ contains
          !         residual < eigen_tol OR residual < eigen_tol * |lambda|
          !         This ensures small eigenvalues use absolute tolerance while large ones
          !         use relative tolerance, preventing spurious acceptance of unconverged modes.
-
-         residual = abs(H(k_dim + 1, k_dim)*vecs(k_dim, :))
-
-         !     --> Floor the REPORTED residual at float64 relative precision.
-         !         The Arnoldi residual r_i = |beta * y_i(k)| is the product of two
-         !         independently tiny factors after Krylov-Schur deflation/locking:
-         !         beta = H(k+1,k) collapses as the subspace becomes invariant, and
-         !         y_i(k) (last component of a converged Ritz vector) -> 0. Their
-         !         product can underflow far below machine epsilon (e.g. ~1e-48),
-         !         which would write sub-epsilon "accuracy" into the spectrum file -
-         !         misleading, since float64 carries only ~16 significant digits.
-         !         Floor at eps*max(|lambda|,1) so a fully-locked mode reports
-         !         "~1e-16" (converged to machine precision) instead of fake digits.
-         !         Classification below is unaffected: the floor eps*max(|lambda|,1)
-         !         is many orders of magnitude tighter than eigen_tol*max(|lambda|,1),
-         !         so a floored residual still satisfies the convergence criterion
-         !         exactly when the raw one did.
-         residual = max(residual, epsilon(1.0d0)*max(abs(vals), 1.0d0))
+         !         ritz_pairs computes both and floors the residual at float64 precision.
+         !         After an early stop only the first kk entries are set.
+         call ritz_pairs(H(1:kk + 1, 1:kk), kk, vals(1:kk), vecs(1:kk, 1:kk), residual(1:kk))
 
          !     --> Count converged eigenvalues using combined absolute/relative criterion.
          !         We use: converged if residual < eigen_tol * max(|lambda|, 1)
@@ -357,14 +344,13 @@ contains
          !         - For |lambda| < 1: we use absolute tolerance (don't over-tighten)
          !         - For |lambda| >= 1: we use relative tolerance (don't under-tighten)
          !         This is important for stability analysis where |lambda| ~ 1 matters most.
-         converged_eigenvalues = 0
-         do i = 1, k_dim
-            if (residual(i) < eigen_tol*max(abs(vals(i)), 1.0d0)) then
-               converged_eigenvalues = converged_eigenvalues + 1
-            end if
-         end do
+         converged_eigenvalues = count(ks_converged(vals(1:kk), residual(1:kk), eigen_tol))
 
          if (nid == 0) write (6, *) 'total eigenvalues converged:', converged_eigenvalues
+
+         !     --> The run stops on the leading values, not on any values.
+         n_leading = ks_leading_converged(vals(1:kk), residual(1:kk), kk, eigen_tol)
+         if (nid == 0) write (6, *) 'leading eigenvalues converged:', n_leading
 
          !     --> Select whether to stop or apply Schur condensation depending on schur_tgt.
          select case (schur_tgt)
@@ -376,8 +362,12 @@ contains
 
             !     --> Krylov-Schur factorization.
          case (1:)
-            if (converged_eigenvalues >= schur_tgt) then ! Krylov-Schur factorization completed.
+            if (n_leading >= schur_tgt) then ! Krylov-Schur factorization completed.
                converged = .true.
+            elseif (kk < k_dim) then ! lucky breakdown: the basis spans an invariant subspace
+               converged = .true.
+               if (nid == 0) write (6, *) 'nekStab: WARNING: invariant subspace of size', kk, &
+                  ' holds fewer than schur_tgt converged leading values.'
             else ! Apply Schur condensation before restarting the factorization.
                schur_cnt = schur_cnt + 1
                if (nid == 0) write (6, *) 'Starting Schur condensation phase.', schur_cnt
@@ -419,8 +409,8 @@ contains
       !  wake. The orbit closure check in matvec.f90 tests the period itself.
       if ((isFloquetDirect .or. isFloquetAdjoint) .and. converged_eigenvalues > 0) then
          orbit_gap = huge(1.0d0)
-         do i = 1, k_dim
-            if (residual(i) < eigen_tol*max(abs(vals(i)), 1.0d0)) then
+         do i = 1, kk
+            if (ks_converged(vals(i), residual(i), eigen_tol)) then
                orbit_gap = min(orbit_gap, abs(vals(i) - cmplx(1.0d0, 0.0d0, kind=nekStab_dp)))
             end if
          end do
@@ -437,7 +427,7 @@ contains
          if (nid == 0) then
             write (6, *) 'Exporting modes...'
          end if
-         call outpost_ks(vals, vecs, Q, residual, &
+         call outpost_ks(kk, vals(1:kk), vecs(1:kk, 1:kk), Q(1:kk + 1), residual(1:kk), &
                          converged_eigenvalues, total_matvecs)
       end if
 
@@ -459,17 +449,21 @@ contains
    ! Purpose:
    !   Reconstructs eigenmodes from Krylov basis via dgemv, normalizes
    !   them, and writes real/imaginary parts plus spectrum data files.
+   !   n is the size of the last basis: k_dim, or less after an early stop.
+   !   A mode is written only when its vector passes the convergence test
+   !   with a residual from one more matvec (eigenvector_residual).
    !-----------------------------------------------------------------------
-   subroutine outpost_ks(vals, vecs, Q, residual, converged, &
+   subroutine outpost_ks(n, vals, vecs, Q, residual, converged, &
                          total_matvecs)
 
+      integer, intent(in) :: n
       ! Eigenvalues (VP) and eigenvectors (FP) of the Hessenberg matrix
-      complex(nekStab_dp), dimension(k_dim), intent(in) :: vals
-      complex(nekStab_dp), dimension(k_dim, k_dim), intent(in) :: vecs
+      complex(nekStab_dp), dimension(n), intent(in) :: vals
+      complex(nekStab_dp), dimension(n, n), intent(in) :: vecs
 
       ! Krylov basis V for the projection M*V = V*H
-      type(krylov_vector), dimension(k_dim + 1), intent(in) :: Q
-      real, dimension(k_dim), intent(in) :: residual
+      type(krylov_vector), dimension(n + 1), intent(in) :: Q
+      real, dimension(n), intent(in) :: residual
       integer, intent(in) :: converged, total_matvecs
 
       ! Krylov vectors
@@ -477,7 +471,7 @@ contains
       type(krylov_vector) :: ff
       ! Miscellaneous variables
       integer :: i, j, m, n_press, n_scalar, n_conv
-      integer, dimension(k_dim) :: conv_idx ! positions of the converged Ritz values
+      integer, dimension(n) :: conv_idx ! positions of the converged Ritz values
       real :: speriod, trim, spurious_tol
       real :: alpha, alpha_r, alpha_i, beta, omega
       logical :: tg_steady ! transient growth around a steady (not periodic) base flow
@@ -487,6 +481,14 @@ contains
       character(len=3) nRe, nIm, nRv
       character(len=2) ci
       integer :: outp
+      real, dimension(n) :: res_vec ! residual of the mode vector, from one more matvec
+      integer, dimension(n) :: idx_chk ! list position of each checked mode
+      integer :: nchk ! number of checked modes
+      integer :: n_failed_lead ! target modes (rows 1 to schur_tgt) whose vector failed
+      integer :: n_check_mv ! matvecs spent on the check of the mode vectors
+      integer :: nmv
+      logical :: reuse ! mode is the conjugate partner of the mode checked just before
+      logical, dimension(n) :: reused ! check j took the residual of check j-1
 
       ! nv, nt from globals; n_press local for pressure
       n_press = lx2*ly2*lz2*nelv
@@ -512,11 +514,13 @@ contains
       end if
 
       ! Copy Krylov basis into contiguous arrays for BLAS
-      do i = 1, k_dim
+      do i = 1, n
          call copy(oks_qx_s(1, i), Q(i)%vx, nv)
          call copy(oks_qy_s(1, i), Q(i)%vy, nv)
          if (if3D) call copy(oks_qz_s(1, i), Q(i)%vz, nv)
-         if (ifpo) call copy(oks_qp_s(1, i), Q(i)%pr, n_press)
+         ! Also without ifpo: the check of the mode vector applies the
+         ! linearized map to the whole state, as the Arnoldi steps did.
+         call copy(oks_qp_s(1, i), Q(i)%pr, n_press)
          !  Scalar fields can have different local lengths in CHT / passive-scalar
          !  cases (`nelfld`), so field 1 (temperature) and fields 2..ldimt must use
          !  their own active extents rather than one shared `nt` length.
@@ -532,10 +536,9 @@ contains
       end do
 
       ! outpost full spectrum with convergence flag (4th column: 1=converged, 0=not)
-      do i = 1, k_dim
+      do i = 1, n
          if (nid == 0) then
-            if (residual(i) < eigen_tol &
-                *max(abs(vals(i)), 1.0d0)) then
+            if (ks_converged(vals(i), residual(i), eigen_tol)) then
                write (NEKSTAB_UNIT_FICH1, "(3E15.7,I2)") real(vals(i)), &
                   aimag(vals(i)), residual(i), 1
                write (NEKSTAB_UNIT_FICH2, "(3E15.7,I2)") &
@@ -555,10 +558,13 @@ contains
 
       spurious_tol = max(param(21), param(22))
       outp = 0 ! outposted modes counter
+      nchk = 0
+      n_failed_lead = 0
+      n_check_mv = 0
       !  The converged values are not always the first entries of the list: a
       !  Ritz value of larger modulus that has not converged can sit above a
       !  converged one. Visit the converged entries, not the first `converged`.
-      call ks_converged_indices(conv_idx, n_conv, vals, residual, k_dim, eigen_tol)
+      call ks_converged_indices(conv_idx, n_conv, vals, residual, n, eigen_tol)
       do j = 1, n_conv ! loop over converged modes
          i = conv_idx(j)
 
@@ -570,20 +576,20 @@ contains
          else ! converged modes
 
             !     ----- Computation of eigenmode via matmul (complex) -----
-            oks_fp_cx_s(1:nv) = matmul(oks_qx_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
-            oks_fp_cy_s(1:nv) = matmul(oks_qy_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
-            if (if3D) oks_fp_cz_s(1:nv) = matmul(oks_qz_s(1:nv, 1:k_dim), vecs(1:k_dim, i))
-            if (ifpo) oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:k_dim), vecs(1:k_dim, i))
+            oks_fp_cx_s(1:nv) = matmul(oks_qx_s(1:nv, 1:n), vecs(1:n, i))
+            oks_fp_cy_s(1:nv) = matmul(oks_qy_s(1:nv, 1:n), vecs(1:n, i))
+            if (if3D) oks_fp_cz_s(1:nv) = matmul(oks_qz_s(1:nv, 1:n), vecs(1:n, i))
+            oks_fp_cp_s(1:n_press) = matmul(oks_qp_s(1:n_press, 1:n), vecs(1:n, i))
 
             ! solver=none leaves ifpsco true, so that flag is not enough.
             ! idpss < 0 means the slot was not solved. Leave the zero.
             oks_fp_ct_s = (0.0d0, 0.0d0)
-            if (ifto .and. idpss(1) >= 0) oks_fp_ct_s(1:nt, 1) = matmul(oks_qt_s(1:nt, 1, 1:k_dim), vecs(:, i))
+            if (ifto .and. idpss(1) >= 0) oks_fp_ct_s(1:nt, 1) = matmul(oks_qt_s(1:nt, 1, 1:n), vecs(:, i))
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1) .and. idpss(m) >= 0) then
                      n_scalar = nx1*ny1*nz1*nelfld(m + 1)
-                     oks_fp_ct_s(1:n_scalar, m) = matmul(oks_qt_s(1:n_scalar, m, 1:k_dim), vecs(:, i))
+                     oks_fp_ct_s(1:n_scalar, m) = matmul(oks_qt_s(1:n_scalar, m, 1:n), vecs(:, i))
                   end if
                end do
             end if
@@ -608,6 +614,57 @@ contains
             !       if (nid == 0) write (6, *) ' Skipping spurious (non-physical) eigenvector:', i, real(vals(i)), aimag(vals(i))
             !       cycle  ! skip this iteration if all real parts are zero
             !    end if !
+
+            !     ----- Residual of the mode vector itself -----
+            !  The Ritz residual |H(k+1,k) y(k)| is ||M x - mu x|| only when
+            !  M V = V H + f e_k^T holds for every column. A matvec that is not
+            !  the same linear map at every call, a basis that lost
+            !  orthogonality, or the coupling that locking set to zero breaks
+            !  that, and the Ritz residual then says nothing about the vector.
+            !  So apply M once more to the mode. A conjugate partner has the
+            !  same residual. With E the error of the Krylov relation,
+            !  ||M x - mu x|| <= Ritz residual + ||E y||, so the vector residual
+            !  minus the Ritz residual is a lower bound of the relation error
+            !  for this mode. Three outcomes, all with the test of ks_converged:
+            !  - vector residual below eigen_tol: verified to the tolerance asked;
+            !  - above, but the relation error below eigen_tol: the right mode,
+            !    a little less accurate than asked. The run stops at the first
+            !    step where the Ritz residual falls below eigen_tol, so a relation
+            !    error of 1e-9 can put the vector just above it (cylinder_re100
+            !    310 after 7 restarts: Ritz 9.761e-7, vector 9.785e-7). Exported,
+            !    with a warning;
+            !  - relation error above eigen_tol: the vector is not an eigenvector
+            !    to the tolerance, whatever its Ritz value says. Not exported.
+            !  Row k of the _conv files and field file k hold the same mode.
+            !  A partner is the next list entry of a pair whose first member
+            !  was checked itself. Equal values of two degenerate pairs are
+            !  then each checked once.
+            reuse = .false.
+            if (nchk > 0 .and. i > 1) then
+               if (idx_chk(nchk) == i - 1 .and. .not. reused(nchk)) reuse = is_conjugate_pair(vals, i - 1, n)
+            end if
+            nchk = nchk + 1
+            idx_chk(nchk) = i
+            reused(nchk) = reuse
+            if (reuse) then
+               res_vec(nchk) = res_vec(nchk - 1)
+            else
+               call eigenvector_residual(res_vec(nchk), vals(i), nmv)
+               n_check_mv = n_check_mv + nmv
+            end if
+            if (nid == 0) write (6, '(A,I4,2(A,E12.4))') '  mode ', i, &
+               ': Ritz residual ', residual(i), ', residual of the vector ', res_vec(nchk)
+            if (.not. ks_converged(vals(i), res_vec(nchk), eigen_tol)) then
+               if (ks_converged(vals(i), res_vec(nchk) - residual(i), eigen_tol)) then
+                  if (nid == 0) write (6, '(A,I4,A)') ' nekStab: WARNING: mode', i, &
+                     ' exported with a vector residual above eigen_tol.'
+               else
+                  if (nid == 0) write (6, '(A,I4,A)') ' nekStab: WARNING: mode', i, &
+                     ' not exported: the Krylov relation is off by more than eigen_tol for it.'
+                  if (i <= schur_tgt) n_failed_lead = n_failed_lead + 1
+                  cycle
+               end if
+            end if
 
             call nekStab_log('Outposting eigenvector')
             if (nid == 0) then
@@ -714,17 +771,80 @@ contains
          write (NEKSTAB_UNIT_EXPORT, '(A)') '[eigensolver]'
          write (NEKSTAB_UNIT_EXPORT, fmt4) 'sampling period =', speriod
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'k_dim=           ', k_dim
+         write (NEKSTAB_UNIT_EXPORT, fmt2) 'k_used=          ', n
          write (NEKSTAB_UNIT_EXPORT, fmt6) 'eigentol=        ', eigen_tol
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur_target=    ', schur_tgt
          write (NEKSTAB_UNIT_EXPORT, fmt3) 'schur_del=       ', schur_del
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur iterations=', schur_cnt
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'total matvecs=   ', total_matvecs
+         write (NEKSTAB_UNIT_EXPORT, fmt2) 'check matvecs=   ', n_check_mv
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'converged=       ', converged
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'outp=            ', outp
+         write (NEKSTAB_UNIT_EXPORT, '(A)') '[vector residuals]'
+         do j = 1, nchk
+            write (NEKSTAB_UNIT_EXPORT, '(A,I4,A,E13.4,A,E13.4)') 'mode ', idx_chk(j), &
+               ' ritz= ', residual(idx_chk(j)), ' vector= ', res_vec(j)
+         end do
          close (NEKSTAB_UNIT_EXPORT)
       end if
 
+      !  The run stopped because rows 1 to schur_tgt passed the Ritz test.
+      !  If the vector of one of them is not an eigenvector, the Krylov
+      !  relation did not hold, and more restarts cannot repair that. Stop
+      !  with an error instead of reporting target modes that are wrong.
+      if (n_failed_lead > 0) then
+         if (nid == 0) write (6, '(A,I0,A)') ' nekStab: ERROR: ', n_failed_lead, &
+            ' target mode(s) failed the vector check; see [vector residuals] in Spectre_'//trim(evop)//'.info'
+         call exitti('target eigenvector check failed$', n_failed_lead)
+      end if
+
    end subroutine outpost_ks
+
+   !-----------------------------------------------------------------------
+   ! eigenvector_residual — Residual ||M x - mu x|| / ||x|| of the mode in the outpost workspace
+   !
+   !   With x = xr + i xi and mu = a + i b, M applied to the real and the
+   !   imaginary part gives
+   !     real part:      M xr - (a xr - b xi)
+   !     imaginary part: M xi - (b xr + a xi)
+   !   A real mode (xi = 0) needs one matvec, a complex mode two (nmv).
+   !-----------------------------------------------------------------------
+   subroutine eigenvector_residual(res, mu, nmv)
+      real, intent(out) :: res
+      complex(nekStab_dp), intent(in) :: mu
+      integer, intent(out) :: nmv
+
+      ! allocatable: four full fields on the heap, freed on return
+      type(krylov_vector), allocatable :: xr, xi, fr, fi
+      real :: nfr, nfi, nxr, nxi
+
+      allocate (xr, xi, fr, fi)
+      call nopcopy(xr%vx, xr%vy, xr%vz, xr%pr, xr%t, &
+                   real(oks_fp_cx_s), real(oks_fp_cy_s), real(oks_fp_cz_s), &
+                   real(oks_fp_cp_s), real(oks_fp_ct_s))
+      call nopcopy(xi%vx, xi%vy, xi%vz, xi%pr, xi%t, &
+                   aimag(oks_fp_cx_s), aimag(oks_fp_cy_s), aimag(oks_fp_cz_s), &
+                   aimag(oks_fp_cp_s), aimag(oks_fp_ct_s))
+      call k_norm(nxr, xr)
+      call k_norm(nxi, xi)
+
+      call matvec(fr, xr)
+      nmv = 1
+      if (nxi > 0.0d0) then
+         call matvec(fi, xi)
+         nmv = 2
+      else
+         call k_zero(fi)
+      end if
+
+      call k_add2s2(fr, xr, -real(mu)); call k_add2s2(fr, xi, aimag(mu))
+      call k_add2s2(fi, xr, -aimag(mu)); call k_add2s2(fi, xi, -real(mu))
+
+      call k_norm(nfr, fr)
+      call k_norm(nfi, fi)
+      res = sqrt(nfr**2 + nfi**2)/sqrt(nxr**2 + nxi**2)
+
+   end subroutine eigenvector_residual
 
    !-----------------------------------------------------------------------
 

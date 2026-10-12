@@ -249,6 +249,40 @@ description for the 2.0 series; entries here are the per-tag deltas.
   finite-difference operator only (no adjoint, wavemaker or transient growth), no reference
   data and no card in the gallery, and its stages are not part of the rerun of the examples.
 
+- The Krylov-Schur eigensolver stops on the leading eigenvalues, and inside the Arnoldi
+  pass. The run stopped when any `schur_tgt` Ritz values had converged, tested after all
+  `k_dim` steps. A run could then stop with the leading values unconverged and damped values
+  converged below them (cylinder at Re = 42, reported by a user: rows 1 and 2 unconverged,
+  the converged shedding pair in rows 3 and 4). And a long basis was always paid in full: in
+  the rerun of the examples 20 of 24 eigenvalue runs did exactly `k_dim` matvecs and ended
+  with 13 to 83 converged values where 2 to 6 were wanted. The run now tests after every
+  Arnoldi step and stops at the first step where the first `schur_tgt` entries of the list
+  sorted by modulus have converged (`ks_leading_converged`; a conjugate pair counts as two).
+  `k_dim` is the largest basis, not a fixed cost; `schur_tgt <= 0` still runs one full pass.
+  `lid_driven_re3600/310_stability_direct` stops at step 114 of 120 with the reference rows
+  unchanged, and `cylinder_re100/310_stability_direct` at step 46 of 50 after 7 restarts
+  (134 matvecs instead of 138). Had only the old count moved inside the pass, the lid run
+  would have stopped at step 75 with its leading mode at residual 6e-4. One function,
+  `ks_converged` (`residual < eigen_tol*max(abs(lambda), 1)`), now makes the test for the
+  stop, the flag column, the export and the Arnoldi checkpoint, and rank 0 makes the stop
+  decision for all ranks.
+- Every exported mode is checked with one more application of the linearized map (one
+  matvec for a real mode, two for a pair): `||M x - mu x|| / ||x||`. The Arnoldi residual
+  equals this number only while `M V = V H + f e_k^T` holds for every column. Below
+  `eigen_tol` the mode is written. Above it, but less than `eigen_tol` above the Arnoldi
+  residual, it is written with a warning: the run stops at the first step where the Arnoldi
+  residual falls below the tolerance, and a relation error of about 1e-9 can put the vector
+  just above it (`cylinder_re100/310`: Arnoldi 9.761e-7, vector 9.772e-7). A larger
+  difference means the vector is not an eigenvector: it is not written, and if it is one of
+  the `schur_tgt` leading modes the run ends with an error once the files are written. A
+  test build that moved one mesh node of the leading mode by 1 gave 5.6e-4 against 9.5e-7;
+  the mode was rejected and the run ended with exit code 1. Row k of `Spectre_*_conv.dat` and
+  mode file k always hold the same mode. `Spectre_?.info` gets `k_used=` (size of the last
+  basis), `check matvecs=` and a `[vector residuals]` section with both residuals. After a
+  restart with locking the flag column printed 2.2e-16 for the leading mode of
+  `lid_driven_re3600/310` with `schur_tgt = 4`; its vector residual is 5.3e-7, the Arnoldi
+  residual it had when it was locked.
+
 ### Fixed
 - Adjoint runs on an axisymmetric mesh (`axiSymmetry = yes`) diverged. Nek5000 computes
   the adjoint convection term `(grad U)^T u` in `convop_adj` (`core/perturb.f`) with
@@ -295,6 +329,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
   (`ks_select.f90`) with the test of the flag column,
   `residual < eigen_tol*max(abs(lambda), 1)`. The leading rows of a spectrum, which
   the references read, did not change.
+- After a lucky breakdown (an invariant subspace found at step m < `k_dim`) the eigensolver
+  computed the spectrum of all `k_dim` columns of the Hessenberg matrix, of which only m were
+  filled in that pass. It now uses the m steps it has, and the export uses the size of the
+  last basis.
 - The direct linearized solver has the mesh-velocity term of a moving mesh. With
   `motion = user` Nek5000 solves the base flow with the term B div(w u) (`admeshv`, w
   the mesh velocity), and its perturbation solver does not add the term for the
