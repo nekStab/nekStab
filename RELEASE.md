@@ -403,12 +403,14 @@ Validated stages carry `ref/` reference data checked by
 tree that holds tracked files only: 52 stages on Jean Zay (4 to 40
 ranks), 16 on c8 (8 to 16 ranks) and 10 on the Intel servers x1 and x3
 (4 to 8 ranks).  The record of a run holds the digest of the source files
-that built it.  Eight stages ran on the final source.  The other 70 ran
-on an earlier source of the 2.0 series, and each change of the source
-after their run was read against the code path of the stages it can
+that built it.  Eight stages ran on the source files of commit `6c122882`.
+The other 70 ran on earlier sources of the 2.0 series.  Each change of the
+source after a run was read against the code path of the stages it can
 reach (the OTD, DMT, BoostConv, Floquet energy budget and moving-mesh
-changes, for example, reach only their own modes).  The 78 results pass
-their reference check and took 1.4e3 core-hours (ranks times wall time).
+changes, for example, reach only their own modes).  The last change, in
+commit `6ae304b4`, breaks the lines of one warning text that no run
+prints.  The 78 results pass their reference check and took 1.4e3
+core-hours (ranks times wall time).
 One stage is open at this commit and listed in the TODO list below.
 
 
@@ -483,9 +485,9 @@ One stage is open at this commit and listed in the TODO list below.
       `cylinder_re100/411_postproc_wavemaker` and
       `naca0012_re2000/411_postproc_wavemaker` (1 s to 20 min each, on
       Jean Zay; all six pass)
-- [x] Results of the final source for `back_fstep_re500/330_transient_growth`
-      (6.3 h on 8 ranks of c8) and `cylinder_re100/210_baseflow_newton/fp`
-      (55 min on 8 ranks of c8)
+- [x] Results of the source of commit `6c122882` for
+      `back_fstep_re500/330_transient_growth` (6.3 h on 8 ranks of c8) and
+      `cylinder_re100/210_baseflow_newton/fp` (55 min on 8 ranks of c8)
 - [ ] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks of c8,
       220 core-hours) keeps the reference of an earlier c8 run and runs
       again after the tag
