@@ -407,11 +407,15 @@ that built it.  Eight stages ran on the source files of commit `6c122882`.
 The other 70 ran on earlier sources of the 2.0 series.  Each change of the
 source after a run was read against the code path of the stages it can
 reach (the OTD, DMT, BoostConv, Floquet energy budget and moving-mesh
-changes, for example, reach only their own modes).  The last change, in
-commit `6ae304b4`, breaks the lines of one warning text that no run
-prints.  The 78 results pass their reference check and took 1.4e3
-core-hours (ranks times wall time).
-One stage is open at this commit and listed in the TODO list below.
+changes, for example, reach only their own modes).  Commits `0ca2a0e1`
+and `d65823c3` then changed the Krylov-Schur eigensolver (stop rule,
+convergence test, check of each exported vector) and the targets of four
+stages.  The 23 stages that run it (every stage numbered 310, 311, 315,
+320, 321 or 330) ran before that change; their rerun is in the TODO list
+below.  The 78 results passed their reference check when they ran and
+took 1.4e3 core-hours (ranks times wall time).
+One stage and the rerun of those 23 are open at this commit and listed in
+the TODO list below.
 
 
 ## Full mode reference (uparam encoding)
@@ -475,7 +479,8 @@ One stage is open at this commit and listed in the TODO list below.
       `cylinder_re1m` (cubic cavity, moving cylinder, thermal cylinder,
       wavemakers, forced jet)
 - [x] `check_against_ref.py` sweep across the stages of the final rerun
-      as the regression gate (78 of 79 stages have a passing result)
+      as the regression gate (78 of 79 stages had a passing result before
+      the eigensolver change of `0ca2a0e1`)
 - [x] Six stages ran again because their folders lost tracked log and
       output files (150 figure copies, four `plot.out` logs and twelve
       wavemaker output fields were removed): `back_fstep_re500/210_baseflow_newton`,
@@ -488,6 +493,10 @@ One stage is open at this commit and listed in the TODO list below.
 - [x] Results of the source of commit `6c122882` for
       `back_fstep_re500/330_transient_growth` (6.3 h on 8 ranks of c8) and
       `cylinder_re100/210_baseflow_newton/fp` (55 min on 8 ranks of c8)
+- [ ] Rerun of the 23 stages that run the Krylov-Schur eigensolver (every
+      stage numbered 310, 311, 315, 320, 321 or 330, about 790 core-hours)
+      on the source of `d65823c3`; `lid_driven_re3600` 310 and 320 and
+      `tpjet_re2000` 311 and 321 also have changed inputs
 - [ ] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks of c8,
       220 core-hours) keeps the reference of an earlier c8 run and runs
       again after the tag
