@@ -4,7 +4,8 @@
 **Start from**: `BF_cav0.f00001`, the Newton base flow of `../210_baseflow_newton/fp` (copy the
 result `BF_cav0.f00001` here). Stage rationale: repo-root `EXAMPLES.md`.
 
-Direct eigenvalue problem (Krylov-Schur, `k_dim = 120`) of the regularized lid-driven cavity at
+Direct eigenvalue problem (Krylov-Schur, at most `k_dim = 120` vectors; the run stops when the 3 leading
+values have converged, at step 114) of the regularized lid-driven cavity at
 Re = 3600, `lx1 = 12`. The flow is linearly stable: the leading eigenvalue is real,
 σ = −0.01679, and the next two form a complex pair −0.0420 ± 0.7717 i. `../320_stability_adjoint/`
 gives the same spectrum; the regularized lid has no corner singularity, so the adjoint problem

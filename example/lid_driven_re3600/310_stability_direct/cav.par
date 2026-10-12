@@ -6,7 +6,7 @@ stopAt = endTime
 endTime = 1.0
 
 userParam01 = 3.1        # 3.1 = direct stability
-userParam03 = 2          # schur_tgt
+userParam03 = 3          # schur_tgt (cav.usr sets it)
 userParam04 = 0          # maxmodes (0 = schur_tgt)
 userParam07 = 120        # k_dim (bumped for non-normal lid)
 userParam08 = 0          # sponge left

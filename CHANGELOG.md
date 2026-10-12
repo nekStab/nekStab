@@ -282,6 +282,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   restart with locking the flag column printed 2.2e-16 for the leading mode of
   `lid_driven_re3600/310` with `schur_tgt = 4`; its vector residual is 5.3e-7, the Arnoldi
   residual it had when it was locked.
+- `lid_driven_re3600` 310 and 320 ask for 3 values, the real mode and the pair that the
+  references read, not 4. With 4 the run needs a restart, 187 matvecs instead of 120, for a
+  fourth value (real, sigma = -0.0503) that no reference reads. `tpjet_re2000` 311 and 321
+  ask for 1: the leading multiplier is real (-1.1577), and the next entry, 0.9996, belongs to
+  a cluster of slow multipliers between 0.988 and 0.9996 that had not converged after 128
+  steps. The 311 reference no longer reads rows 2 and 3 of `Spectre_Hd_conv.dat` (-0.860 and
+  -0.819): they were converged values below those three unconverged multipliers, not the
+  second and third multipliers.
 
 ### Fixed
 - Adjoint runs on an axisymmetric mesh (`axiSymmetry = yes`) diverged. Nek5000 computes

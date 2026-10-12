@@ -29,18 +29,6 @@
       "tol_abs": 0.002,
       "note": "Growth rate ln|mu| / T of the leading multiplier."
     },
-    "second_multiplier": {
-      "source": "Spectre_Hd_conv.dat:col1:row2",
-      "value": -0.8599149,
-      "tol_abs": 0.005,
-      "note": "Next converged multiplier, real and inside the unit circle."
-    },
-    "third_multiplier_real": {
-      "source": "Spectre_Hd_conv.dat:col1:row3",
-      "value": -0.8194405,
-      "tol_abs": 0.005,
-      "note": "Real part of the first complex pair."
-    },
     "leading_mode_vx_norm": {
       "source": "dRetpjet0.f00001:field:vx.norm",
       "value": 52.47515,

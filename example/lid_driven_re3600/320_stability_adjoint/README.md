@@ -4,7 +4,8 @@
 **Start from**: `BF_cav0.f00001`, the Newton base flow of `../210_baseflow_newton/fp` (copy the
 result `BF_cav0.f00001` here). Stage rationale: repo-root `EXAMPLES.md`.
 
-Adjoint eigenvalue problem (Krylov-Schur, `k_dim = 120`) about the same base flow as
+Adjoint eigenvalue problem (Krylov-Schur, at most `k_dim = 120` vectors; the run stops when the 3 leading
+values have converged, at step 116) about the same base flow as
 `../310_stability_direct/`, `lx1 = 12`. The adjoint operator has the spectrum of the direct one,
 so this stage checks the adjoint: at `lx1 = 12` the leading eigenvalue, −0.016796, is within 4e-6
 of the direct −0.016793, and the pair is −0.04197 ± 0.77165 i against −0.04198 ± 0.77165 i.

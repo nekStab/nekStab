@@ -4,7 +4,8 @@
 The Floquet multipliers of the adjoint map of the forced orbit of `../210_baseflow_newton` (`userParam01 = 3.21`).
 In exact arithmetic the adjoint map has the multipliers of the direct map of `../311_stability_direct_floquet`. Its
 eigenvectors give the receptivity of the unstable multiplier to a forcing. The solver stores the orbit during the
-period and runs the adjoint equations backward over it. The settings are those of the direct stage: `k_dim = 128`,
+period and runs the adjoint equations backward over it. The settings are those of the direct stage: at most
+`k_dim = 128` Krylov vectors, `schur_tgt = 1` (the run stops when the leading multiplier has converged),
 T = 1 / St = 1.66667. The output files are `Spectre_Ha.dat`, `Spectre_NSa_conv.dat` and the adjoint modes
 `aRetpjet0.f0000N`, `aImtpjet0.f0000N`.
 
