@@ -748,6 +748,11 @@ button.thumb:focus-visible {
 @media (min-width: 1400px) {
     .grid { grid-template-columns: repeat(3, 1fr); }
 }
+/* The case chips wrap to many rows on a phone, in portrait and in landscape. A sticky panel
+   of that height covers most of the screen, so it scrolls with the page there. */
+@media (max-width: 599px), (max-height: 500px) {
+    .section-nav { position: static; }
+}
 /* Text overflow — prevent long labels from breaking layout */
 .card .label .path {
     overflow: hidden;
