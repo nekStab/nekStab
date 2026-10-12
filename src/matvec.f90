@@ -403,10 +403,11 @@ contains
       if (nid == 0 .and. norm_start > 0.0d0) then
          write (6, *) 'Orbit closure: ||U(T)-U(0)||/||U(0)|| =', norm_defect/norm_start, ' for T =', param(10)
          if (norm_defect > 1.0d-3*norm_start) then
-            write (6, *) 'nekStab: WARNING: the base flow does not return to its start field after one period.'
-            write (6, *) '  The Floquet multipliers are not those of a closed orbit. Check the period'
-            write (6, *) '  in the time stamp of the base-flow file, the polynomial order, the sponge'
-            write (6, *) '  and that the base flow is on the orbit.'
+            ! Each literal stays below 80 characters: Intel list-directed output breaks a longer line in the middle of a word.
+            write (6, *) 'nekStab: WARNING: the base flow does not return to its start field'
+            write (6, *) '  after one period. The Floquet multipliers are not those of a closed orbit.'
+            write (6, *) '  Check the period in the time stamp of the base-flow file, the polynomial'
+            write (6, *) '  order, the sponge and that the base flow is on the orbit.'
          end if
       end if
 
