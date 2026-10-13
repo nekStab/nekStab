@@ -260,12 +260,28 @@ description for the 2.0 series; entries here are the per-tag deltas.
   sorted by modulus have converged (`ks_leading_converged`; a conjugate pair counts as two).
   `k_dim` is the largest basis, not a fixed cost; `schur_tgt <= 0` still runs one full pass.
   `lid_driven_re3600/310_stability_direct` stops at step 114 of 120 with the reference rows
-  unchanged, and `cylinder_re100/310_stability_direct` at step 46 of 50 after 7 restarts
-  (134 matvecs instead of 138). Had only the old count moved inside the pass, the lid run
+  unchanged. Had only the old count moved inside the pass, the lid run
   would have stopped at step 75 with its leading mode at residual 6e-4. One function,
   `ks_converged` (`residual < eigen_tol*max(abs(lambda), 1)`), now makes the test for the
   stop, the flag column, the export and the Arnoldi checkpoint, and rank 0 makes the stop
   decision for all ranks.
+- The stop also waits until the leading Ritz values stand still. A residual below `eigen_tol`
+  bounds the error of the eigenvalue only through its condition number, which is large for a
+  non-normal operator. The adjoint Floquet run of `tpjet_re2000/321` stopped at step 37 of 128
+  with the residual 1.1e-6 and the multiplier -1.16222, against -1.15792 of the direct stage
+  and -1.15726 of the run before the stop moved into the pass (whole basis of 128); the
+  condition number of that multiplier is 4e5. A leading value now has to move by less than
+  `eigen_tol*max(abs(mu), 1)` in each of the last 5 steps (`ks_stationary`,
+  `ks_leading_settled`); a conjugate pair may change places between steps. At the last step
+  of a pass the residual test decides alone, as before, and the run prints a warning when
+  the value was still moving. `validation/tests/test_ritz_stop_rule.py` runs the rule on 900
+  random non-normal operators and counts the stops with an error above 3 times the error of
+  the whole basis plus 1e-6: the residual test alone in 62 % of the operators, one step of
+  rest in 26 %, three steps in 1.2 %, five steps in none. The mean stop moves from step 17 to
+  step 26 of 128. The unit cases are in `validation/tests/test_ks_select.py`.
+  `cylinder_re100/310_stability_direct` stops at step 50 of 50 (138 matvecs) with the
+  residual 3.1e-7, and `lid_driven_re3600/310_stability_direct` still at step 114 of 120;
+  both references are unchanged.
 - Every exported mode is checked with one more application of the linearized map (one
   matvec for a real mode, two for a pair): `||M x - mu x|| / ||x||`. The Arnoldi residual
   equals this number only while `M V = V H + f e_k^T` holds for every column. Below

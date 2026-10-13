@@ -311,7 +311,8 @@ contains
       do while (.not. converged)
 
          !     --> Arnoldi factorization. With schur_tgt > 0 it stops at the
-         !         first step where the schur_tgt leading Ritz values converged.
+         !         first step where the schur_tgt leading Ritz values converged
+         !         and stood still for NSTILL steps (ks_leading_settled).
          call arnoldi_factorization(Q, H, mstart, k_dim, k_dim, nev=schur_tgt, mlast=kk)
          total_matvecs = total_matvecs + (kk - mstart + 1)
 
@@ -629,10 +630,10 @@ contains
             !  - vector residual below eigen_tol: verified to the tolerance asked;
             !  - above, but the relation error below eigen_tol: the right mode,
             !    a little less accurate than asked. The run stops at the first
-            !    step where the Ritz residual falls below eigen_tol, so a relation
-            !    error of 1e-9 can put the vector just above it (cylinder_re100
-            !    310 after 7 restarts: Ritz 9.761e-7, vector 9.785e-7). Exported,
-            !    with a warning;
+            !    step where the Ritz residual falls below eigen_tol (and the
+            !    value stands still), so a relation error of 1e-9 can put the
+            !    vector just above it (cylinder_re100 310 after 7 restarts:
+            !    Ritz 9.761e-7, vector 9.785e-7). Exported, with a warning;
             !  - relation error above eigen_tol: the vector is not an eigenvector
             !    to the tolerance, whatever its Ritz value says. Not exported.
             !  Row k of the _conv files and field file k hold the same mode.

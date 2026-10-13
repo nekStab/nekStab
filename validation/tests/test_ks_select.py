@@ -11,6 +11,8 @@ The export of the eigenmodes (outpost_ks) must visit the converged Ritz values, 
 are not always the first entries of the list sorted by modulus (ks_converged_indices).
 The run stops when the schur_tgt values at the top of that list have converged
 (ks_leading_converged), not when any schur_tgt values have.
+A residual below the tolerance does not bound the error of the eigenvalue of a non-normal
+operator, so the run also waits until the leading values stand still (ks_leading_settled).
 Needs gfortran; the tests skip when it is missing.
 """
 
@@ -72,6 +74,42 @@ def converged_driver(tmp_path_factory) -> Path:
         check=True,
     )
     return exe
+
+
+@pytest.fixture(scope="module")
+def settled_driver(tmp_path_factory) -> Path:
+    gfortran = shutil.which("gfortran")
+    if gfortran is None:
+        pytest.skip("gfortran not found")
+    build = tmp_path_factory.mktemp("ks_settled")
+    flags = ["-fdefault-real-8", "-fdefault-double-8", "-ffree-line-length-none", "-O0"]
+    sources = [
+        ROOT / "src" / "argsort.f90",
+        ROOT / "src" / "ks_select.f90",
+        FORTRAN / "ks_settled_driver.f90",
+    ]
+    for src in sources:
+        subprocess.run([gfortran, *flags, "-c", str(src)], cwd=build, check=True)
+    exe = build / "driver"
+    subprocess.run(
+        [gfortran, *flags, "-o", str(exe), *(f"{s.stem}.o" for s in sources)],
+        cwd=build,
+        check=True,
+    )
+    return exe
+
+
+def settled(exe: Path, steps, nev: int = 1, nstill: int = 3, tol: float = 1.0e-6):
+    """steps: one list of (re, im, residual) per Arnoldi step. Returns [(settled, residual-only)]."""
+    lines = [f"{nev} {nstill} {tol!r}"]
+    for entries in steps:
+        lines.append(str(len(entries)))
+        lines += [f"{re!r} {im!r} {res!r}" for re, im, res in entries]
+    run = subprocess.run(
+        [str(exe)], input="\n".join(lines) + "\n", capture_output=True, text=True
+    )
+    assert run.returncode == 0, run.stdout + run.stderr
+    return [tuple(int(x) for x in line.split()) for line in run.stdout.strip().split("\n")]
 
 
 def converged(exe: Path, entries, tol: float = 1.0e-6):
@@ -273,3 +311,75 @@ def test_a_nan_residual_is_not_converged(converged_driver):
     entries = [(0.99, 0.0, 1.0e-9), (0.9, 0.0, float("nan")), (0.8, 0.0, 1.0e-9)]
     assert leading(converged_driver, entries) == 1
     assert converged(converged_driver, entries) == [1, 3]
+
+
+def test_a_value_that_stands_still_settles_after_nstill_moves(settled_driver):
+    # Residual below the tolerance from step 1. No history at step 1, then three steps of rest.
+    steps = [[(1.16, 0.0, 1.0e-9), (0.5, 0.0, 1.0)] for _ in range(6)]
+    counts = settled(settled_driver, steps, nev=1, nstill=3)
+    assert [c[0] for c in counts] == [0, 0, 0, 1, 1, 1]
+    assert [c[1] for c in counts] == [1] * 6
+
+
+def test_a_value_that_still_moves_does_not_settle_although_its_residual_passes(settled_driver):
+    # The forced jet: residual 1.1e-6 (passes 1e-6 * 1.16) while the value moves by 2e-3 per step.
+    # The residual test alone says 1 from the first step; the settled count stays 0.
+    steps = [[(1.16 + 2.0e-3 * 0.7**k, 0.0, 1.0e-7)] for k in range(8)]
+    counts = settled(settled_driver, steps, nev=1, nstill=3)
+    assert all(c == (0, 1) for c in counts)
+
+
+def test_a_value_settles_once_its_steps_are_below_the_tolerance(settled_driver):
+    # Moves of 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9: below 1.16e-6 from the move of 1e-6 on.
+    # The moves 1e-6 (not below 1.16e-6? it is: 1e-6 < 1.16e-6), 1e-7, 1e-8 are three steps of rest.
+    values = [1.16]
+    for k in range(3, 10):
+        values.append(values[-1] + 10.0 ** (-k))
+    steps = [[(v, 0.0, 1.0e-9)] for v in values]
+    counts = settled(settled_driver, steps, nev=1, nstill=3)
+    # step 1 has no history; steps 2 and 3 move by 1e-3 and 1e-4; the move 1e-6 enters at step 5
+    assert [c[0] for c in counts] == [0, 0, 0, 0, 0, 0, 1, 1]
+
+
+def test_a_jump_resets_the_count(settled_driver):
+    values = [1.16] * 5 + [1.17] + [1.17] * 4
+    steps = [[(v, 0.0, 1.0e-9)] for v in values]
+    counts = settled(settled_driver, steps, nev=1, nstill=3)
+    assert [c[0] for c in counts] == [0, 0, 0, 1, 1, 0, 0, 0, 1, 1]
+
+
+def test_a_conjugate_pair_that_changes_places_is_still_stationary(settled_driver):
+    # The members of a pair may come in either order from one step to the next.
+    first = [(0.9, 0.3, 1.0e-9), (0.9, -0.3, 1.0e-9)]
+    second = [(0.9, -0.3, 1.0e-9), (0.9, 0.3, 1.0e-9)]
+    steps = [first, second, first, second, first]
+    counts = settled(settled_driver, steps, nev=2, nstill=3)
+    assert [c[0] for c in counts] == [0, 0, 0, 2, 2]
+
+
+def test_an_unconverged_value_does_not_settle_however_still_it_is(settled_driver):
+    steps = [[(1.16, 0.0, 1.0e-3)] for _ in range(6)]
+    counts = settled(settled_driver, steps, nev=1, nstill=3)
+    assert all(c == (0, 0) for c in counts)
+
+
+def test_the_target_needs_every_leading_entry_to_stand_still(settled_driver):
+    # nev = 2: the second entry keeps moving, the first does not.
+    steps = [[(1.16, 0.0, 1.0e-9), (1.0 - 0.1 * 0.5**k, 0.0, 1.0e-9)] for k in range(7)]
+    counts = settled(settled_driver, steps, nev=2, nstill=3)
+    assert all(c[0] <= 1 for c in counts)
+    assert counts[-1][0] <= 1
+
+
+def test_fewer_values_than_targets_cannot_reach_the_target(settled_driver):
+    # One Ritz value at step 1 to 6 and nev = 3: the count can reach 1 but never 3.
+    steps = [[(1.16, 0.0, 1.0e-9)] for _ in range(6)]
+    counts = settled(settled_driver, steps, nev=3, nstill=3)
+    assert [c[0] for c in counts] == [0, 0, 0, 1, 1, 1]
+    assert all(c[0] < 3 for c in counts)
+
+
+def test_a_nan_value_is_not_stationary(settled_driver):
+    steps = [[(1.16, 0.0, 1.0e-9)], [(float("nan"), 0.0, 1.0e-9)], [(1.16, 0.0, 1.0e-9)]]
+    counts = settled(settled_driver, steps, nev=1, nstill=1)
+    assert [c[0] for c in counts] == [0, 0, 0]

@@ -785,9 +785,9 @@ Set in `nekStab_usrchk` subroutine in your `.usr` file:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `k_dim` | 100 | Largest Krylov basis. The run stops at the first Arnoldi step where the `schur_tgt` leading values have converged, so a larger `k_dim` costs memory, not matvecs; the basis fills and restarts only when they need more steps |
+| `k_dim` | 100 | Largest Krylov basis. The run stops at the first Arnoldi step where the `schur_tgt` leading values have converged and have stood still for 5 steps, so a larger `k_dim` costs memory, not matvecs; the basis fills and restarts only when they need more steps |
 | `use_cgs` | .true. | Use CGS2 orthogonalization with batched BLAS/MPI reductions (`.false.` = classic MGS + reorthogonalization) |
-| `eigen_tol` | 1e-6 | Convergence tolerance: a Ritz value has converged when its residual is below `eigen_tol*max(abs(mu), 1)`. The same test applies to the residual of each exported mode vector |
+| `eigen_tol` | 1e-6 | Convergence tolerance: a Ritz value has converged when its residual is below `eigen_tol*max(abs(mu), 1)`. The same test applies to the residual of each exported mode vector. A leading value also has to stand still: it must move by less than the same bound in each of the last 5 steps before the run stops on it |
 | `schur_tgt` | 2 | Number of wanted eigenvalues, counted from the top of the list sorted by `abs(mu)` (a conjugate pair counts as two). The run stops when the first `schur_tgt` entries have converged, not when any `schur_tgt` values have. `schur_tgt <= 0` runs one full pass of `k_dim` steps. A restart keeps at least `schur_tgt + 2` and at most `k_dim - schur_tgt` Ritz values, so the next Arnoldi run adds at least `schur_tgt` steps |
 | `schur_del` | 0.10 | Selection radius of the restart: it keeps the Ritz values with `abs(mu) >= 1 - schur_del`, and those with a Schur residual below `sqrt(eigen_tol)` |
 | `maxmodes` | 20 | Maximum eigenmodes to save to disk |
@@ -1611,7 +1611,24 @@ where **A** is the linearized operator. nekStab never forms **A** explicitly. In
 
 2. **Ritz extraction**: Eigenvalues of H_m approximate eigenvalues of A. The residual of the Ritz pair
    (mu_i, V_m y_i) is |h_{m+1,m} y_i(m)|. It is tested after every step, and the run stops at the first step m where
-   the `schur_tgt` leading values (largest `abs(mu)`) have converged.
+   the `schur_tgt` leading values (largest `abs(mu)`) have converged and have stood still for 5 steps.
+
+   The second condition is needed because the residual bounds the error of the eigenvalue only through its condition
+   number kappa: |theta - mu| is up to kappa times the residual. For a strongly non-normal operator (a convectively
+   unstable flow) kappa is large. For the forced jet `tpjet_re2000` kappa = 4e5 (from the direct and the adjoint mode,
+   `<y,x>` = 2.5e-6 for unit norms); the adjoint run stopped at step 37 with the residual 1.1e-6 and its multiplier
+   was off by 5e-3, the direct run at step 44 with 8e-7 and 2e-4. While the basis still resolves the mode the value
+   moves from step to step by a part of the error that is left, so a value that moved by less than `eigen_tol` (relative
+   for `abs(mu) > 1`) in each of the last 5 steps has settled. At the last step of a pass the residual test decides
+   alone, as before, and a run whose value has not settled by then prints a warning.
+   Check: `validation/tests/test_ritz_stop_rule.py` runs the rule on random non-normal operators (condition number of
+   the leading value up to 1e6, clusters of slow values, a matvec exact to 1e-9). A stop counts as worse when its error
+   is above 3 times the error of the whole basis plus `eigen_tol`. Of 900 operators the residual test alone was worse
+   in 62 %, one step of rest in 26 %, three steps in 1.2 %, five steps in none; the mean stop moved from step 17 to
+   step 26 of 128. A residual below the tolerance does not replace a comparison with a larger `k_dim` or with the
+   adjoint value when `kappa` is large. The error of the matvec limits the eigenvalue too: it is of the order of `kappa`
+   times the relative error of the matvec, whatever `k_dim` and `eigen_tol` are (5e-4 for `tpjet_re2000`, whose
+   matvec repeats to 1e-9).
 
 3. **Implicit restart**: Schur decomposition filters unwanted eigenvalues. It happens only when the basis reaches
    `k_dim` before the leading values have converged.

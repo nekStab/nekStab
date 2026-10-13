@@ -11,6 +11,8 @@
 !   ks_converged_indices      — indices of the converged Ritz values
 !   ks_converged              — convergence test of one Ritz value
 !   ks_leading_converged      — converged Ritz values at the top of the list
+!   ks_stationary             — test that a Ritz value did not move between two steps
+!   ks_leading_settled        — leading values that converged and stand still
 !   is_conjugate_pair         — true when entries i and i+1 are a conjugate pair
 !
 ! Dependencies:
@@ -22,7 +24,8 @@ module nekstab_ks_select
    implicit none
    private
    public :: ks_select_eigenvalues, ks_ensure_conjugate_pairs, ks_converged_indices, &
-             ks_converged, ks_leading_converged, is_conjugate_pair
+             ks_converged, ks_leading_converged, ks_stationary, ks_leading_settled, &
+             is_conjugate_pair
 
    integer, parameter :: dp = kind(0.0d0)
    real, parameter :: PAIR_REL_TOL = 1.0d-10
@@ -281,5 +284,88 @@ contains
       end do
 
    end function ks_leading_converged
+
+!-----------------------------------------------------------------------
+! ks_stationary — Test that a Ritz value did not move between two steps
+!
+!   The residual of a Ritz value bounds the error of the eigenvalue only
+!   through the condition number kappa of the eigenvalue: the error is up
+!   to kappa times the residual. kappa is large for a non-normal operator,
+!   such as the map of a convectively unstable flow. For the forced jet of
+!   tpjet_re2000 it is 4e5: the adjoint run stopped at the residual 1.1e-6
+!   and its multiplier was 5e-3 off. While the basis still resolves the
+!   mode, the value moves from step to step by a part of the error that is
+!   left. A value that stays within tol*max(|val|, 1) of its value at the
+!   previous step has settled to the accuracy that the residual test
+!   assumes.
+!
+!   The two members of a conjugate pair can change places between two
+!   steps, so the distance to the conjugate of the previous value counts
+!   too. A NaN fails the test.
+!-----------------------------------------------------------------------
+   elemental logical function ks_stationary(val, val_prev, tol)
+      complex(dp), intent(in) :: val, val_prev
+      real, intent(in) :: tol
+
+      ks_stationary = min(abs(val - val_prev), abs(val - conjg(val_prev))) < tol*max(abs(val), 1.0d0)
+
+   end function ks_stationary
+
+!-----------------------------------------------------------------------
+! ks_leading_settled — Leading Ritz values that converged and stand still
+!
+!   The list is sorted by decreasing modulus. The count starts at the top
+!   and stops at the first value that fails ks_converged or has not passed
+!   ks_stationary in each of the last nstill steps. The run stops when this
+!   count reaches schur_tgt.
+!
+!   lead_prev(1:nprev) and still(1:nev) are the memory of the function
+!   between two steps: the leading values of the previous step and, for each
+!   entry, the number of successive steps in which it stood still. The
+!   caller sets nprev = 0 and still = 0 at the first step of a pass. Such a
+!   pass cannot stop in its first nstill steps.
+!
+!   nconv (optional) — the count of ks_leading_converged, the residual test
+!                      alone
+!-----------------------------------------------------------------------
+   integer function ks_leading_settled(vals, residuals, n, nev, tol, nstill, &
+                                       lead_prev, nprev, still, nconv) result(nset)
+      integer, intent(in) :: n, nev, nstill
+      complex(dp), dimension(n), intent(in) :: vals
+      real, dimension(n), intent(in) :: residuals
+      real, intent(in) :: tol
+      complex(dp), dimension(nev), intent(inout) :: lead_prev
+      integer, intent(inout) :: nprev
+      integer, dimension(nev), intent(inout) :: still
+      integer, intent(out), optional :: nconv
+
+      integer :: i, nl, nres, nsteady
+
+      nl = min(nev, n)
+      do i = 1, nl
+         if (i <= nprev) then
+            if (ks_stationary(vals(i), lead_prev(i), tol)) then
+               still(i) = still(i) + 1
+            else
+               still(i) = 0
+            end if
+         else
+            still(i) = 0
+         end if
+         lead_prev(i) = vals(i)
+      end do
+      nprev = nl
+
+      nsteady = 0
+      do i = 1, nl
+         if (still(i) < nstill) exit
+         nsteady = nsteady + 1
+      end do
+
+      nres = ks_leading_converged(vals, residuals, n, tol)
+      if (present(nconv)) nconv = nres
+      nset = min(nres, nsteady)
+
+   end function ks_leading_settled
 
 end module nekstab_ks_select

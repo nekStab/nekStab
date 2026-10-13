@@ -24,13 +24,25 @@ module nekstab_krylov_decomposition
                                  nof, mstep, NEKSTAB_UNIT_HESS, ldimt, isize
    use nekstab_matvec, only: matvec
    use nekstab_lapack, only: eig
-   use nekstab_ks_select, only: ks_converged, ks_leading_converged
+   use nekstab_ks_select, only: ks_converged, ks_leading_settled
    use nekstab_io, only: whereyouwant
    implicit none
    private
    public :: arnoldi_factorization, &
              update_hessenberg_matrix, &
              arnoldi_checkpoint, log_transform, ritz_pairs
+
+   ! Successive Arnoldi steps in which each leading Ritz value must stand
+   ! still (ks_stationary) before the run stops on it. A residual below the
+   ! tolerance is not enough for a non-normal operator: the eigenvalue error
+   ! is up to the condition number times the residual. The sweep of
+   ! validation/tests/test_ritz_stop_rule.py (900 random non-normal operators,
+   ! condition number of the leading value up to 1e6, slow clusters, a matvec
+   ! exact to 1e-9) counts the stops with an error above 3 times the error of
+   ! the whole basis plus 1e-6: the residual test alone 62 % of the operators,
+   ! one step of rest 26 %, three steps 1.2 %, five steps none. The mean stop
+   ! moved from step 17 to step 26 of 128.
+   integer, parameter :: NSTILL = 5
 contains
 
    !-----------------------------------------------------------------------
@@ -57,7 +69,8 @@ contains
    !
    !     nev : integer, optional
    !     Krylov-Schur only. Stop at the first step where the nev leading Ritz values
-   !     have converged. Absent or <= 0: run to mend.
+   !     have converged (residual below eigen_tol) and have stood still for NSTILL
+   !     steps (ks_stationary). Absent or <= 0: run to mend.
    !
    !     RETURNS
    !     -------
@@ -86,6 +99,11 @@ contains
       integer, intent(out), optional :: mlast
       integer :: step
 
+      !     ----- Stop test on the leading Ritz values -----
+      complex(nekStab_dp), allocatable, dimension(:) :: lead_prev
+      integer, allocatable, dimension(:) :: still
+      integer :: nprev, nconv
+
       !     ----- Timer -----
       real :: eetime0, eetime1, telapsed, tmiss, avg_time
 
@@ -107,6 +125,17 @@ contains
 
       !     --> Initialize arrays.
       call k_zero(f); alpha = 0.0d0
+
+      !     --> Memory of the stop test. A pass has no history at its first step.
+      nprev = 0
+      nconv = 0
+      if (present(nev)) then
+         if (nev > 0) then
+            allocate (lead_prev(nev), still(nev))
+            lead_prev = (0.0d0, 0.0d0)
+            still = 0
+         end if
+      end if
 
       !     --> Arnoldi factorization.
       eetime0 = dnekclock() ! Start time for entire process
@@ -160,19 +189,29 @@ contains
             end if
          end if
 
-         !     --> Stop as soon as the nev leading Ritz values have converged.
-         !         The test is the one krylov_schur applies after a full pass,
-         !         so k_dim is the largest base, not a fixed cost: a long base
-         !         costs only the steps that the leading values need.
+         !     --> Stop as soon as the nev leading Ritz values have converged
+         !         and stand still. The residual test is the one krylov_schur
+         !         applies after a full pass, so k_dim is the largest base, not
+         !         a fixed cost: a long base costs only the steps that the
+         !         leading values need. The rest test keeps a run from stopping
+         !         on a residual that leaves the eigenvalue off by the
+         !         condition number times that residual. The last step of the
+         !         pass ends with the residual test alone, as before.
          !         Rank 0 decides and broadcasts, so all ranks leave the loop
          !         at the same step even if their copies of H differ in the
          !         last bit.
          if (present(nev)) then
             if (nev > 0) then
-               if (leading_converged(H, mstep) >= nev) then
+               if (leading_settled(H, mstep, nev, lead_prev, nprev, still, nconv) >= nev) then
                   if (nid == 0) write (6, "('        ARNOLDI - ',I0,' leading Ritz values converged at step ',I0,'/',I0)") &
                      nev, mstep, mend
                   exit
+               end if
+               if (mstep == mend .and. nconv >= nev .and. nid == 0) then
+                  write (6, *) 'nekStab: WARNING: the leading Ritz values passed the residual test'
+                  write (6, "('   but did not stand still for ',I0,' steps of this pass. The error of')") NSTILL
+                  write (6, *) '   the eigenvalue can exceed eigen_tol by its condition number.'
+                  write (6, *) '   Compare with a larger k_dim or a smaller eigen_tol.'
                end if
             end if
          end if
@@ -182,11 +221,19 @@ contains
    end subroutine arnoldi_factorization
 
    !-----------------------------------------------------------------------
-   ! leading_converged — Converged Ritz values at the top of the spectrum of H(1:k,1:k)
+   ! leading_settled — Leading Ritz values of H(1:k,1:k) that converged and stand still
+   !
+   !     The count is ks_leading_settled. lead_prev, nprev and still carry the
+   !     values of the previous steps between two calls (see ks_leading_settled).
+   !     nconv is the count of the residual test alone.
    !-----------------------------------------------------------------------
-   integer function leading_converged(H, k) result(nlead)
-      integer, intent(in) :: k
+   integer function leading_settled(H, k, nev, lead_prev, nprev, still, nconv) result(nset)
+      integer, intent(in) :: k, nev
       real, dimension(:, :), intent(in) :: H
+      complex(nekStab_dp), dimension(nev), intent(inout) :: lead_prev
+      integer, intent(inout) :: nprev
+      integer, dimension(nev), intent(inout) :: still
+      integer, intent(out) :: nconv
       ! allocatable: called at every step, and k can reach k_dim = 1000 (16 MB for vecs)
       complex(nekStab_dp), allocatable, dimension(:) :: vals
       complex(nekStab_dp), allocatable, dimension(:, :) :: vecs
@@ -194,10 +241,11 @@ contains
 
       allocate (vals(k), vecs(k, k), residual(k))
       call ritz_pairs(H(1:k + 1, 1:k), k, vals, vecs, residual)
-      nlead = ks_leading_converged(vals, residual, k, eigen_tol)
-      call bcast(nlead, isize)
+      nset = ks_leading_settled(vals, residual, k, nev, eigen_tol, NSTILL, lead_prev, nprev, still, nconv)
+      call bcast(nset, isize)
+      call bcast(nconv, isize)
 
-   end function leading_converged
+   end function leading_settled
 
    !-----------------------------------------------------------------------
    ! ritz_pairs — Ritz values, vectors and residuals of H(1:k,1:k)
