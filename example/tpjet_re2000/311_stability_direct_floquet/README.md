@@ -21,13 +21,16 @@ sbatch run.local.slurm     # 16 ranks
 The solver writes the leading eigenmodes `dRetpjet0.f0000N` and `dImtpjet0.f0000N`, the leading mode first.
 
 ## Result
-The first Krylov cycle converges 81 of the 128 Ritz values (tolerance 1e-6). The orbit closes to 4.6e-5 in the
-relative velocity norm. The leading multiplier is real and negative, mu = -1.1577, outside the unit circle (residual
-3e-16): the forced orbit is unstable by period doubling, with growth rate sigma = ln|mu| / T = 0.0878. The next
-entries of the list, three slow multipliers between 0.988 and 0.9996, had not converged after 128 steps; the
-converged values below them, such as mu = -0.8599 and the pair -0.8194 +- 0.1119 i, lie inside the unit circle
-(`ref/spectrum.png`). Only the leading multiplier is the stage target. The leading mode is a wave packet of the
-axial velocity near the axis between z = 8 and z = 36 (`ref/mode.png`; `ref/baseflow.png` is the orbit at t = 0).
-The 128 Ritz values, with the convergence flag, are in `Spectre_Hd.dat`. `ref/reference.json` holds the numbers that
+The run stops at step 57 of the 128 allowed: the leading multiplier has then converged (residual 1.4e-10) and has
+stood still for 5 steps. 13 Ritz values meet the tolerance 1e-6 (2408 s on 16 ranks). The orbit closes to 4.6e-5 in
+the relative velocity norm. The leading multiplier is real and negative, mu = -1.1577, outside the unit circle: the
+forced orbit is unstable by period doubling, with growth rate sigma = ln|mu| / T = 0.0878. The next entries of the
+list, slow multipliers at 0.9958 and 0.9682, have not converged (residuals 3e-2 and 9e-2). The converged values below
+them lie on an arc inside the unit circle, from -0.9241 +- 0.0458 i (modulus 0.925) to -0.7187 +- 0.4682 i
+(`ref/spectrum.png`). The arc moves with the step at which the run stops: a run to all 128 steps gives two arcs, with
+-0.8599 as the second converged value. Only the leading multiplier is the stage target. The leading mode is a wave
+packet of the axial velocity near the axis between z = 8 and z = 36 (`ref/mode.png`; `ref/baseflow.png` is the orbit
+at t = 0).
+The 57 Ritz values, with the convergence flag, are in `Spectre_Hd.dat`. `ref/reference.json` holds the numbers that
 `scripts/check_against_ref.py` checks. The adjoint map of `../321_stability_adjoint_floquet` has the same leading
 multiplier (-1.1573 against -1.1577); its damped multipliers are not those of this map.

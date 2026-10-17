@@ -24,13 +24,14 @@ sbatch run.local.slurm     # 16 ranks
 ```
 
 ## Result
-The first Krylov cycle converges 83 of the 128 Ritz values (tolerance 1e-6, 4492 s on 16 ranks). The leading
-multiplier is real and negative, mu = -1.1573 (residual 3e-16), with growth rate sigma = ln|mu| / T = 0.0876. The
-direct stage finds -1.1577, so the two differ by 4e-4 (`ref/spectrum.png`). A run with `k_dim = 40` gives -1.1579; the
-scatter of 7e-4 between the two Krylov dimensions is why the reference tolerance on the leading multiplier is 2e-3.
-The other converged multipliers are not those of the direct map: the second is -0.9050 against -0.8599, and -0.9654 at
-`k_dim = 40`. The map is strongly non-normal, and a damped multiplier moves with the Krylov dimension, so only the
-leading multiplier is compared.
+The run stops at step 56 of the 128 allowed, when the leading multiplier has converged and has stood still for 5
+steps; 22 Ritz values then meet the tolerance 1e-6 (1890 s on 16 ranks). The leading multiplier is real and negative,
+mu = -1.1573 (residual 1.6e-11), with growth rate sigma = ln|mu| / T = 0.0876. The direct stage finds -1.1577, so the
+two differ by 4e-4 (`ref/spectrum.png`). A run with `k_dim = 40` gives -1.1579; the scatter of 7e-4 between the two
+Krylov dimensions is why the reference tolerance on the leading multiplier is 2e-3. The other converged multipliers
+are not those of the direct map: the second is -0.9063 here, -0.9050 after all 128 steps and -0.9654 at
+`k_dim = 40`, against -0.9241 +- 0.0458 i in the direct stage. The map is strongly non-normal, and a damped multiplier
+moves with the number of Krylov steps, so only the leading multiplier is compared.
 
 The leading adjoint mode is concentrated at the lip of the nozzle, with its largest axial velocity at z = 0.64 and
 r = 0.48 (`ref/mode.png`, zoomed on z < 4). The direct mode of `../311_stability_direct_floquet` has its largest
