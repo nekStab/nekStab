@@ -33,7 +33,8 @@ module nekstab_matvec
                                  istep, vxp, vyp, vzp, prp, tp, findiff_order, ampls, &
                                  coefs, ifheat, dTdx, dTdy, dTdz, ifbuoyancy, &
                                  buoyancy_qvol_wired,&
-                                 ifquasilaminar, ifKEnorm, ldimt
+                                 ifquasilaminar, ifKEnorm, ldimt, ifield, vmult, tmult, &
+                                 ifto, ifpsco, lx1, ly1, lz1
    implicit none
    private
 
@@ -186,6 +187,10 @@ contains
       type(krylov_vector), intent(out) :: f
       type(krylov_vector), intent(inout) :: q
 
+      !     --> Every copy of a shared grid point gets the same value. In
+      !     place, so that the Krylov basis holds the vector the solver sees.
+      call average_copies(q)
+
       !     --> Pass the baseflow to vx, vy, vz
       call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)
 
@@ -264,6 +269,48 @@ contains
       end if
 
    end subroutine matvec
+
+!-----------------------------------------------------------------------
+! average_copies — Give every copy of a shared grid point the mean value
+!
+!     Nek5000 stores a point on an element face once for each element that
+!     holds it, and all copies must hold the same value. Nek5000 averages
+!     every field it reads (projfld_c0 in setics); this does the same for
+!     each vector that goes into the linearized solver.
+!
+!     Why: the vectors of nekStab carry round-off differences of 1e-16
+!     between copies on different MPI ranks (gather-scatter order where 3
+!     or more ranks share a point; dgemm rounding of the last rows of a
+!     rank's array in the Krylov-Schur rotation). The solver adds its
+!     increment to the old field (opadd2 in perturbv), so it keeps such a
+!     difference with multiplier exactly 1. Below the critical Reynolds
+!     number the Arnoldi method then returns it as a leading mu = 1 "mode"
+!     with O(1) jumps between elements. bin/c0check finds them in files.
+!-----------------------------------------------------------------------
+   subroutine average_copies(x)
+
+      type(krylov_vector), intent(inout) :: x
+
+      integer :: ifield_saved, m
+
+      ifield_saved = ifield
+      ifield = 1
+      call opdssum(x%vx, x%vy, x%vz)
+      call opcolv(x%vx, x%vy, x%vz, vmult)
+      if (ifto) then
+         ifield = 2
+         call dssum(x%t(:, 1), lx1, ly1, lz1)
+         call col2(x%t(:, 1), tmult(:, :, :, :, 1), nt)
+      end if
+      do m = 2, ldimt
+         if (.not. ifpsco(m - 1)) cycle
+         ifield = m + 1
+         call dssum(x%t(:, m), lx1, ly1, lz1)
+         call col2(x%t(:, m), tmult(:, :, :, :, m), nt)
+      end do
+      ifield = ifield_saved
+
+   end subroutine average_copies
 
 !-----------------------------------------------------------------------
 ! forward_linearized_map — Integrate linearized Navier-Stokes forward

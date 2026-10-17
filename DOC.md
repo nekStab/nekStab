@@ -1781,6 +1781,42 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
   residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
   the projection is on in these modes.
 
+**A converged eigenvalue at mu = 1.0000000 whose mode is a set of spikes**
+- Seen in versions up to v2.0.0-rc4 (v1.0.1 included), most often below the
+  critical Reynolds number and on many MPI ranks with few elements per rank.
+  The Ritz residual is small and the mode can even pass the vector check, but
+  the field is not a flow: the values that neighbouring elements hold for the
+  same grid point differ by O(1). The physical modes sit further down the list
+  and are often not exported.
+- Cause. Nek5000 stores a point on an element face once for each element
+  that holds it. Copies on different ranks pick up different round-off in
+  two places. Where 3 or more ranks share a point, the gather-scatter adds
+  the contributions in a different order on each rank (1e-16 in a base
+  flow). And dgemm, which rotates the Krylov basis at each restart, rounds
+  the last rows of a rank's array in another kernel than the rows before
+  them: with MKL on an AMD Zen 5 CPU the last `mod(nv, 12)` rows, so on a
+  rank of 92 elements of 64 points the last 8 points of its last element,
+  and none on a rank of 93. The perturbation solver adds a
+  continuous increment to the old field, so a difference between copies is
+  never removed: the linearized map multiplies it by exactly 1. Below the
+  critical Reynolds number every physical multiplier is below 1, and the
+  Arnoldi method brings this round-off to the top of the spectrum after
+  enough matvecs. More ranks give more such points: a 2D case of 5920
+  elements on 64 ranks has 76, the cylinder of the examples on 8 ranks has 2.
+- Fix. `matvec` now gives every copy of a shared point the mean of its copies
+  on each vector that goes into the solver (`average_copies` in
+  `src/matvec.f90`), as Nek5000 does for every field it
+  reads. A difference between copies then has multiplier 0 instead of 1, and
+  the vector check refuses any mode that still holds one.
+- Results of older versions. `bin/c0check FIELD...` reports the largest jump
+  between copies, relative to the field maximum, and the number of jumps at
+  points shared by 1, 2, 3 or more ranks. Exit status 1 means a broken file.
+  Base flows and continuous modes are correct. A broken mode cannot be
+  repaired: Nek5000 averages a file when it reads it, but the average of a
+  jump is not a mode, and the physical mode was never written. Recompute it.
+  Do not restart a Krylov basis (`KRY*`, `HES*`) from such a run, because the
+  averaged vectors no longer fit the stored Hessenberg matrix.
+
 **Run stops with `Cannot open history file in subroutine hpts()`**
 - `hpts` reads the probe list from `<session>.his` and writes the probe values
   after it, in the same file. The file name ends in `.his`, which `.gitignore`

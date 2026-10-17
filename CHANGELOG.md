@@ -308,6 +308,25 @@ description for the 2.0 series; entries here are the per-tag deltas.
   second and third multipliers.
 
 ### Fixed
+- Eigenvalue runs could converge to mu = 1.0000000 with a mode that is not a
+  flow field: the copies that neighbouring elements hold for one grid point
+  differ by O(1). This holds for every earlier version, v1.0.1 included. Copies
+  on different MPI ranks pick up different round-off: the gather-scatter adds
+  in another order on each rank where 3 or more ranks share a point, and MKL
+  dgemm (the Krylov-Schur rotation) rounds the last `mod(nv, 12)` rows of each
+  rank's array in another kernel. In the ellipse case below, all 206 bad points
+  shared by 2 ranks lie in the last element of a rank. The perturbation
+  solver adds a continuous increment to the old field, so it keeps such a
+  difference with multiplier exactly 1.
+  Below the critical Reynolds number the Arnoldi method then brings it to the
+  top of the spectrum. Many ranks with few elements each make it likely: an
+  AR 2 ellipse at Re = 70 (5920 elements, 64 ranks, 76 points shared by 3 or 4
+  ranks) exported two such modes and not the shedding pair. `matvec` now
+  averages the copies of each shared point on every vector that goes into
+  the solver (`average_copies`). A pure jump field of 3.1e-3 put into the solver came out
+  unchanged after 324 steps; with the averaging it comes out at 4e-19, and
+  the output maximum agrees with that of the run without the jump to 5 digits. New tool `bin/c0check` finds such jumps
+  in field files of older runs (see DOC.md, Troubleshooting).
 - Adjoint runs on an axisymmetric mesh (`axiSymmetry = yes`) diverged. Nek5000 computes
   the adjoint convection term `(grad U)^T u` in `convop_adj` (`core/perturb.f`) with
   integration weights that have no radius (`set_dealias_rx`, `core/convect2.f`) and divides
