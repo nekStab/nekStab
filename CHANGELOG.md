@@ -5,6 +5,8 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [Unreleased]
 
+## [2.0.0-rc5] - 2026-10-17
+
 ### Added
 - DMT filter bank, mode 6.4 (`userParam01 = 6.4`, string `'dmt_bank'`, flag
   `ifdmtbank`). Second-order filters of the Dynamic Mode Tracking kind, one per chosen
