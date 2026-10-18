@@ -13,7 +13,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "inspect_nek_field.py"
-REAL_FIELD = ROOT / "example" / "cylinder" / "dns" / "1cyl0.f00001"
+REAL_FIELD = ROOT / "example" / "cylinder_re100" / "000_dns" / "rst_1cyl0.f00001"
 
 
 def write_fake_fld(path: Path, nz: int = 1, wdsize: int = 4) -> Path:
