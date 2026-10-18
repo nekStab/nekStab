@@ -400,22 +400,26 @@ reference data and the gallery does not list it.
 Validated stages carry `ref/` reference data checked by
 `scripts/check_against_ref.py` (see Reproducibility framework above).
 78 of the 79 stages outside `cylinder_re1m` ran again for 2.0.0 from a
-tree that holds tracked files only: 52 stages on Jean Zay (4 to 40
-ranks), 16 on c8 (8 to 16 ranks) and 10 on the Intel servers x1 and x3
+tree that holds tracked files only: 40 stages on Jean Zay (4 to 40
+ranks), 19 on c8 (4 to 16 ranks) and 19 on the Intel servers x1 and x3
 (4 to 8 ranks).  The record of a run holds the digest of the source files
-that built it.  Eight stages ran on the source files of commit `6c122882`.
-The other 70 ran on earlier sources of the 2.0 series.  Each change of the
-source after a run was read against the code path of the stages it can
-reach (the OTD, DMT, BoostConv, Floquet energy budget and moving-mesh
-changes, for example, reach only their own modes).  Commits `0ca2a0e1`
-and `d65823c3` then changed the Krylov-Schur eigensolver (stop rule,
-convergence test, check of each exported vector) and the targets of four
-stages.  The 23 stages that run it (every stage numbered 310, 311, 315,
-320, 321 or 330) ran before that change; their rerun is in the TODO list
-below.  The 78 results passed their reference check when they ran and
-took 1.4e3 core-hours (ranks times wall time).
-One stage and the rerun of those 23 are open at this commit and listed in
-the TODO list below.
+that built it.  Commits `0ca2a0e1`, `d65823c3` and `01f69c2e` changed the
+Krylov-Schur eigensolver (stop rule, convergence test, check of each
+exported vector) and the targets of four stages, so the 23 stages that
+run it (every stage numbered 310, 311, 315, 320, 321 or 330) and the 9
+stages that read their modes ran again (13 of the 23 stopped inside a
+pass and ran a second time after `01f69c2e`).  26 stages ran on the
+source of `01f69c2e`.  The other 52 ran on earlier sources of the 2.0
+series; each change of the source after a run was read against the code
+path of the stages it can reach (the OTD, DMT, BoostConv, Floquet energy
+budget and moving-mesh changes, for example, reach only their own
+modes).  The 78 results pass their reference check and took 1.0e3
+core-hours (ranks times wall time).
+Commit `fd684c48` (2.0.0-rc5) came after these runs: it averages the
+copies of shared grid points on the input of each solver call.  On 8
+ranks `cylinder_re100/310_stability_direct` gives the same leading pair
+with and without it.  The other stages that call the solver did not run
+again on it; this and one stage are open in the TODO list below.
 
 
 ## Full mode reference (uparam encoding)
@@ -493,10 +497,13 @@ the TODO list below.
 - [x] Results of the source of commit `6c122882` for
       `back_fstep_re500/330_transient_growth` (6.3 h on 8 ranks of c8) and
       `cylinder_re100/210_baseflow_newton/fp` (55 min on 8 ranks of c8)
-- [ ] Rerun of the 23 stages that run the Krylov-Schur eigensolver (every
-      stage numbered 310, 311, 315, 320, 321 or 330, about 790 core-hours)
-      on the source of `d65823c3`; `lid_driven_re3600` 310 and 320 and
-      `tpjet_re2000` 311 and 321 also have changed inputs
+- [x] Rerun of the 23 stages that run the Krylov-Schur eigensolver (every
+      stage numbered 310, 311, 315, 320, 321 or 330) and the 9 stages that
+      read their modes, on the source of `01f69c2e`: all 32 pass (about
+      630 core-hours on Jean Zay, c8, x1 and x3, both passes included)
+- [ ] Decide whether the averaging of `fd684c48` needs a rerun of the
+      stages that call the solver, or a waiver from a check at their rank
+      counts
 - [ ] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks of c8,
       220 core-hours) keeps the reference of an earlier c8 run and runs
       again after the tag
