@@ -122,7 +122,8 @@
 
       integer :: mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof
       integer :: thermal_norm_mode
-      common/nStab_int/mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof, thermal_norm_mode
+      integer :: schur_stop ! 0: stop on the leading schur_tgt values; 1: on any schur_tgt converged values
+      common/nStab_int/mstep, schur_tgt, maxmodes, schur_cnt, glob_skip, nof, thermal_norm_mode, schur_stop
 
       ! Mode configuration integers
       integer :: animate_mode_num ! Mode number for animation (default=1)

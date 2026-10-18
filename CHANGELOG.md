@@ -5,6 +5,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [Unreleased]
 
+### Added
+- `schur_stop` (default 0) selects the stop rule of the eigensolver. `0` keeps
+  the stop on the first `schur_tgt` entries of the sorted list. `1` stops when any
+  `schur_tgt` values have converged. Below the critical Reynolds number, slow
+  non-oscillating modes can lead the list: on an AR 2 ellipse at Re = 70 the
+  shedding pair converged after about 540 calls, while the leading real mode still
+  had a residual of 4e-3. Set it in `nekStab_usrchk`; `Spectre_d.info` lists it.
+
 ## [2.0.0-rc5] - 2026-10-17
 
 ### Added

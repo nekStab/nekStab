@@ -39,6 +39,7 @@
          schur_tgt = 2 ! schur target for schur step factorizaiton
          eigen_tol = 1.0e-6 ! tolerance for eigenmodes convergence
          schur_del = 0.10d0 !
+         schur_stop = 0 ! 0: stop on the leading schur_tgt values; 1: on any schur_tgt converged values
          maxmodes = 20 ! max number of converged modes to disk
          glob_skip = 10 ! global energy computation skip frequency
          findiff_order = 2 ! finite difference order for the Frechet derivative
@@ -219,6 +220,7 @@
 
 !        nStab_int
          call bcast(schur_tgt, isize)
+         call bcast(schur_stop, isize)
          call bcast(maxmodes, isize)
          call bcast(glob_skip, isize)
          call bcast(thermal_norm_mode, isize)

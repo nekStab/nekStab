@@ -35,7 +35,7 @@ module nekstab_eigensolvers
                                  NEKSTAB_UNIT_FICH2, NEKSTAB_UNIT_FICH3, &
                                  NEKSTAB_UNIT_FICH4, NEKSTAB_UNIT_HESS, nelfld, nelgv, &
                                  nelv, nid, nof, np, npscal, nsteps, nx1, nx2, ny1, ny2, nz1, &
-                                 nz2, param, pbase, pr, schur_cnt, schur_del, schur_tgt, &
+                                 nz2, param, pbase, pr, schur_cnt, schur_del, schur_stop, schur_tgt, &
                                  SESSION, t, tbase, time, ubase, uparam, vbase, vx, vy, vz, &
                                  wbase, wdsize
    use nekstab_krylov_decomposition, only: arnoldi_factorization, log_transform, ritz_pairs
@@ -352,6 +352,11 @@ contains
          !     --> The run stops on the leading values, not on any values.
          n_leading = ks_leading_converged(vals(1:kk), residual(1:kk), kk, eigen_tol)
          if (nid == 0) write (6, *) 'leading eigenvalues converged:', n_leading
+
+         !     --> schur_stop = 1: stop on any schur_tgt converged values. Below the critical
+         !         Reynolds number slow non-oscillating modes can lead the list and converge
+         !         much later than the modes of interest (AR 2 ellipse, Re = 70).
+         if (schur_stop == 1) n_leading = converged_eigenvalues
 
          !     --> Select whether to stop or apply Schur condensation depending on schur_tgt.
          select case (schur_tgt)
@@ -776,6 +781,7 @@ contains
          write (NEKSTAB_UNIT_EXPORT, fmt6) 'eigentol=        ', eigen_tol
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur_target=    ', schur_tgt
          write (NEKSTAB_UNIT_EXPORT, fmt3) 'schur_del=       ', schur_del
+         write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur_stop=      ', schur_stop
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur iterations=', schur_cnt
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'total matvecs=   ', total_matvecs
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'check matvecs=   ', n_check_mv
