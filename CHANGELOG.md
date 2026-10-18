@@ -130,12 +130,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   falls as t^-2.49 to 6.5e-8 at t = 600, and the field lies at 1.9e-3 of the Newton orbit (the seed
   at 1.05e-2). Stage 210 finds the orbit in 5 iterates (squared residual 3.5e-6 to 9.7e-9, 66
   Arnoldi vectors, 2663 s). The direct Floquet stage 311 finds one real multiplier outside the unit
-  circle, mu = -1.1577 (a period doubling, sigma = 0.0878; 81 of 128 Ritz values converged, orbit
-  closure 4.6e-5, 2675 s), the next converged ones are -0.8599 and the pair -0.8194 +- 0.1119i.
-  The adjoint stage 321 gives mu = -1.1573 (83 of 128 converged, 4492 s) and an adjoint mode at the
-  nozzle lip, z = 0.64 and r = 0.48, where the direct mode peaks at z = 20.6. The damped multipliers
-  of the adjoint map are not those of the direct map (the second is -0.9050 against -0.8599, and
-  -0.9654 at `k_dim` = 40), so the reference of 321 checks the leading multiplier only.
+  circle, mu = -1.1577 (a period doubling, sigma = 0.0878; the run stops at step 57 of 128 with
+  13 Ritz values converged, orbit closure 4.6e-5, 2408 s). The other converged values lie on an
+  arc inside the unit circle that moves with the step at which the run stops (-0.9241 +- 0.0458i
+  after 57 steps, -0.8599 after all 128). The adjoint stage 321 gives mu = -1.1573 (step 56 of 128,
+  22 converged, 1890 s) and an adjoint mode at the nozzle lip, z = 0.64 and r = 0.48, where the
+  direct mode peaks at z = 20.6. The damped multipliers of the adjoint map are not those of the
+  direct map (the second is -0.9063 after 56 steps, -0.9050 after 128 and -0.9654 at
+  `k_dim` = 40), so the references check the leading multiplier only.
 
 ### Changed
 - `example/tpjet_re2005` is `example/tpjet_re2000`. The stages ran the 4800-element mesh of the
