@@ -416,10 +416,20 @@ budget and moving-mesh changes, for example, reach only their own
 modes).  The 78 results pass their reference check and took 1.0e3
 core-hours (ranks times wall time).
 Commit `fd684c48` (2.0.0-rc5) came after these runs: it averages the
-copies of shared grid points on the input of each solver call.  On 8
-ranks `cylinder_re100/310_stability_direct` gives the same leading pair
-with and without it.  The other stages that call the solver did not run
-again on it; this and one stage are open in the TODO list below.
+copies of shared grid points on the input of each solver call.  It
+changes a result only where the copies of a vector disagree.
+`bin/c0check` on the 228 exported modes and base flows of the runs
+found such jumps in two stages only: `flip_flop_re62` 311 and 321 (16
+ranks) each exported a spurious multiplier mu = 1.0000000 whose mode
+jumps between element copies by up to 3.5e-3 of its maximum.  These two
+stages and the wavemaker 411 ran again on the source of `fd684c48`: the
+spurious multiplier is gone, the leading pair is unchanged to seven
+digits and no mode has a jump.  No other mode has a jump at the
+precision of its file;
+the base flows of `flip_flop_re62` and `cubic_cavity_re1920` 210 have
+jumps of 1e-8 or less, which Nek5000 averages when it reads the file.
+78 of the 79 results are valid for the source of `fd684c48`; one stage
+is open in the TODO list below.
 
 
 ## Full mode reference (uparam encoding)
@@ -501,9 +511,9 @@ again on it; this and one stage are open in the TODO list below.
       stage numbered 310, 311, 315, 320, 321 or 330) and the 9 stages that
       read their modes, on the source of `01f69c2e`: all 32 pass (about
       630 core-hours on Jean Zay, c8, x1 and x3, both passes included)
-- [ ] Decide whether the averaging of `fd684c48` needs a rerun of the
-      stages that call the solver, or a waiver from a check at their rank
-      counts
+- [x] Check of the averaging of `fd684c48` against the results:
+      `bin/c0check` on every exported mode, and a rerun of
+      `flip_flop_re62` 311, 321 and 411 (the only stages with jumps)
 - [ ] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks of c8,
       220 core-hours) keeps the reference of an earlier c8 run and runs
       again after the tag
