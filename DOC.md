@@ -454,6 +454,18 @@ The following sections describe each mode in detail. The `userParam01` values ar
 | `0` | Standard DNS (nonlinear Navier-Stokes) |
 | `0.1` | Linearized DNS (perturbation around base flow) |
 
+
+**Zero-crossing period probe**: On-the-fly period and orbit-closure monitor for DNS (`userParam01 = 0`). Reports oscillation period `T` and relative orbit defect `||u(t) - u(t-T)|| / ||u(t)||` without FFT or post-processing, useful for choosing the Newton-Krylov periodic orbit seed and `endTime`. Configured in `nekStab_usrchk`:
+
+```fortran
+ifzerocross = .true.   ! Enable period detection (default: .false.)
+zc_component = 2       ! Velocity component: 1 = vx, 2 = vy (default), 3 = vz
+xck = 2.0d0            ! Probe coordinates (default: 2.0, 0.0, 0.0)
+yck = 0.0d0
+zck = 0.0d0
+```
+
+Crossing time is linearly interpolated between steps. Output is logged at each crossing (`Zero-crossing time = ... T = ... |T-T_old| = ... rel_norm = ...`) and recorded in `zc_period.dat` (time, `T`, `|T - T_old|`, `v_mean`, `||u(t)-u(t-T)||/||u(t)||`) and `zc_poincare.dat` (time, `v`, `dv/dt`, `d²v/dt²`).
 ### Mode 1: Fixed Point Methods
 
 | Value | Method | Description |
@@ -880,6 +892,14 @@ BoostConv accelerates the velocity only. With a temperature or another scalar it
 | `ifvox` | .false. | Output vortex criteria Q, λ₂, ω (vox*) |
 | `glob_skip` | 10 | Steps between energy/enstrophy output |
 
+
+#### DNS Period Probe (Zero-Crossing)
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `ifzerocross` | `.false.` | Enable zero-crossing period and orbit-closure monitoring in DNS |
+| `zc_component` | `2` | Velocity component to monitor (1 = `vx`, 2 = `vy`, 3 = `vz`) |
+| `xck`, `yck`, `zck` | `2.0`, `0.0`, `0.0` | Coordinates of probe location (nearest grid point) |
 #### Initial Seed
 
 | Parameter | Default | Description |

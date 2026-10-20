@@ -118,7 +118,7 @@ $(O)/usr_wrappers.o: $(NS)/usr_wrappers.f90 $(O)/torque.o $(O)/forcing.o \
 # .usr compilation needs .mod files from nekStab modules.
 # GNU Make merges prerequisites from multiple rules for the same target.
 # ─────────────────────────────────────────────────────────────────────
-$(USRF): SIZE NEKSTAB.inc $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o $(O)/base_mut.o $(O)/reynolds_force.o
+$(USRF): SIZE NEKSTAB.inc $(O)/krylov_subspace.o $(O)/otd.o $(O)/fst.o $(O)/base_mut.o $(O)/reynolds_force.o $(O)/probes.o
 
 # ─────────────────────────────────────────────────────────────────────
 # Catch-all for case-local .f90 files (e.g., torus_utils.f90)

@@ -144,6 +144,11 @@
       real :: coefs(ncoef), ampls(ncoef)
       common/nStab_fd/xck, yck, zck, coefs, ampls, findiff_order
 
+      ! Zero-crossing period probe options (DNS)
+      logical :: ifzerocross
+      integer :: zc_component
+      common/nStab_zc/ifzerocross, zc_component
+
       ! Arrays for base flow variables
       real :: ubase(lx1, ly1, lz1, lelv), vbase(lx1, ly1, lz1, lelv)
       real :: wbase(lx1, ly1, lz1, lelv), pbase(lx2, ly2, lz2, lelv)

@@ -5,6 +5,16 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [Unreleased]
 
+### Changed
+- Zero-crossing period probe (`src/probes.f90`): available as a DNS option via
+  `ifzerocross = .true.` in `nekStab_usrchk` with probe position `(xck, yck, zck)`
+  and component `zc_component` (1 = vx, 2 = vy [default], 3 = vz). Fixed defects:
+  crossing time is linearly interpolated between steps; the mean is evaluated over
+  the previous period rather than accumulating the initial transient or keeping
+  the initial guess as an offset; a shared grid point on a rank boundary is owned
+  by the lowest rank to avoid double-counting in `glsum`; and the reported defect
+  is normalized by the mass-weighted velocity norm `||u(t)-u(t-T)||/||u(t)||`.
+
 ### Fixed
 - `test_baseline_gallery` no longer rewrites `EXAMPLES.md`: `build_gallery.py`
   updates it only when it writes the default page `validation/index.html`.

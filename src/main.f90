@@ -78,11 +78,12 @@
       !  Note: if ifseed_* all are false, the 'useric' subroutine in the .usr
       !  prescribes the initial seed. This preserves the historical path.
 
-      !  Define here the probe position for zero-crossing vertical velocity analysis !
+      !  Define here the probe position for zero-crossing analysis !
+         ifzerocross = .false.
+         zc_component = 2 ! 1=vx, 2=vy, 3=vz; default vy
          xck = 2.0d0
          yck = 0.0d0
          zck = 0.0d0
-
       ! Sponge zone parameters.  This fringe/sponge method follows the
       ! Nordstrom, Nordin & Henningson (1999) and Lundbladh et al. (1999)
       ! smooth-mask formulation used by the original fringe setup.
@@ -212,6 +213,10 @@
          call bcast(acc_spg, wdsize)
          call bcast(spng_st, wdsize)
 
+!        nStab_zc (zero-crossing period probe)
+         call bcast(ifzerocross, lsize)
+         call bcast(zc_component, isize)
+
 !        nStab_fd (probe position, finite difference)
          call bcast(xck, wdsize)
          call bcast(yck, wdsize)
@@ -333,6 +338,11 @@
       !     Broadcast user-set values to all MPI ranks (32 chars * csize bytes)
             call bcast(nekstab_mode, 32*csize)
             call bcast(modal_prefix, 3*csize)
+            call bcast(ifzerocross, lsize)
+            call bcast(zc_component, isize)
+            call bcast(xck, wdsize)
+            call bcast(yck, wdsize)
+            call bcast(zck, wdsize)
             call nekStab_resolve_mode ! resolve mode from string/flags/uparam
             call nekStab_printNEKParams
 
@@ -413,6 +423,7 @@
          use nekstab_dmt, only: dmt, dmt_bank
          use nekstab_modal_analysis, only: modal_analysis
          use nekstab_vectors, only: zero_forcing
+         use nekstab_probes, only: zero_crossing
          implicit none
          include 'SIZE'
          include 'TOTAL'
@@ -442,6 +453,7 @@
              call nekStab_outpost
              call nekStab_comment
              call zero_forcing
+            if (ifzerocross) call zero_crossing
 
             if (ifbfcv) call nek_end
             return
