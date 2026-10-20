@@ -29,9 +29,6 @@ module nekstab_fourier_fftw
 
    ! FFTW3 constants (from fftw3.f03)
    integer(c_int), parameter :: FFTW_ESTIMATE = 64
-   integer(c_int), parameter :: FFTW_MEASURE = 0
-   integer(c_int), parameter :: FFTW_PATIENT = 32
-   integer(c_int), parameter :: FFTW_EXHAUSTIVE = 8
 
    ! FFTW3 C interface bindings
    interface

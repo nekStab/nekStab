@@ -102,7 +102,7 @@
       common/nStab_mode_flags/ifdmtbank
 
       ! Real variables for numerical tolerances and domain dimensions
-      real :: eigen_tol, schur_del, glmax_qc, dtmaxx
+      real :: eigen_tol, schur_del, glmax_qc
       real :: xmn, xmx, ymn, ymx, zmn, zmx, epsilon_base
       real :: ew_tol_cap ! EW solver tolerance cap (0 = uncapped)
       ! Thermal weighting of the Krylov/Newton inner product.
@@ -113,7 +113,7 @@
       real :: thermal_buoyancy_coeff
       real :: buoyancy_dir(3)
       real :: thermal_norm_min, thermal_norm_max
-      common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base, dtmaxx, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap
+      common/nStab_real/eigen_tol, schur_del, glmax_qc, epsilon_base, xmn, xmx, ymn, ymx, zmn, zmx, ew_tol_cap
       common/nStab_real/thermal_norm_weight, thermal_buoyancy_coeff, buoyancy_dir, thermal_norm_min, thermal_norm_max
 
       ! Integer variables for boost convergence and spatial dimensions
@@ -162,9 +162,9 @@
 
       ! Arrays for general forcing variables
       real :: fcx(lx1, ly1, lz1, lelv), fcy(lx1, ly1, lz1, lelv)
-      real :: fcz(lx1, ly1, lz1, lelv), fcp(lx2, ly2, lz2, lelv)
+      real :: fcz(lx1, ly1, lz1, lelv)
       real :: fct(lx1, ly1, lz1, lelt, ldimt)
-      common/nStab_forces/fcx, fcy, fcz, fcp, fct
+      common/nStab_forces/fcx, fcy, fcz, fct
 
       ! Arrays and variables for sponge function and related parameters
       real :: spng_fn(lx1*ly1*lz1*lelv)
@@ -202,17 +202,10 @@
       real, dimension(lpert) :: FTLEv, LEintegral
       common/OTD_FTLE/FTLEv, LEintegral
 
-      real, dimension(lpert) :: EIGR, EIGI, OSIGMA, RCL, RCR
-      real, dimension(lpert, lpert) :: EVR, EVRR, EVRI, EVL, VMATX, VMATXT
-      common/OTD_dgeev/EIGR, EIGI, EVR, EVL, EVRR, EVRI, OSIGMA, VMATX, VMATXT, RCL, RCR
+      real, dimension(lpert) :: EIGR, EIGI
+      real, dimension(lpert, lpert) :: EVR, EVRR, EVRI, EVL
+      common/OTD_dgeev/EIGR, EIGI, EVR, EVL, EVRR, EVRI
 
       integer, parameter :: LWORKR = 5*LPERT*LPERT + 4*LPERT + 3*LPERT
-      integer, parameter :: LWORKI = 3*LPERT*2 + 11*LPERT
-      integer, parameter :: LWORKC = 2*LPERT + LPERT
       real, dimension(LWORKR) :: RWORK
-      integer, dimension(LWORKI) :: otd_IWORK
-      complex, dimension(LWORKC) :: CWORK
-      real, dimension(LPERT, LPERT) :: ALU, SINGV
-      common/rlpvec/RWORK, ALU, SINGV
-      common/ilpvec/otd_IWORK
-      common/clpvec/CWORK
+      common/rlpvec/RWORK

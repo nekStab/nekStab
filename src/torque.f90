@@ -28,7 +28,6 @@ module nekstab_torque_mod
    private
    public :: nekStab_torque, nekStab_define_obj
    logical, save :: torque_initialized = .false.
-   integer, save :: torque_bIDs(1), torque_iobj_wall(1)
    real, save :: torque_x0(3), torque_scale
 
 contains

@@ -44,8 +44,6 @@ module nekstab_matvec
    ! Initialization flags for one-time setup in various subroutines
    logical, save :: matvec_init = .false.
    logical, save :: forward_linearized_map_init = .false.
-   logical, save :: forward_finite_difference_map_init = .false.
-   logical, save :: adjoint_linearized_map_init = .false.
    logical, save :: orbit_closure_done = .false.
 
    public :: prepare_linearized_solver, matvec, &
