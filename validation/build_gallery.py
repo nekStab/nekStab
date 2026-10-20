@@ -21,8 +21,10 @@ Image src is emitted relative to validation/index.html (for example
 .github/workflows/pages-validation.yml ships the png and gif files of example/
 next to validation/index.html, so the same paths work there.
 
-The same run rewrites the table of verified stages in EXAMPLES.md between the markers
-VERIFIED_START and VERIFIED_END: one row per drawn stage, with the summary of its reference.
+A run that writes the default page validation/index.html also rewrites the table of
+verified stages in EXAMPLES.md between the markers VERIFIED_START and VERIFIED_END: one
+row per drawn stage, with the summary of its reference. A run with another output path
+leaves EXAMPLES.md as it is.
 
 Run:  python validation/build_gallery.py [output.html]
 Open: xdg-open validation/index.html
@@ -2049,7 +2051,11 @@ def main(argv: list[str] | None = None) -> int:
     stages = discover_stages()
     out.write_text(build_page(), encoding='utf-8')
     drawn = drawn_stages(stages)
-    EXAMPLES_MD.write_text(examples_md_with_table(EXAMPLES_MD.read_text(encoding='utf-8'), drawn), encoding='utf-8')
+    # Only the default page updates EXAMPLES.md. A test that builds the page into a
+    # temporary path must not change a tracked file: that made the check on the
+    # EXAMPLES.md table in test_gallery_complete.py pass by construction.
+    if out.resolve() == OUT:
+        EXAMPLES_MD.write_text(examples_md_with_table(EXAMPLES_MD.read_text(encoding='utf-8'), drawn), encoding='utf-8')
     print(f'Wrote {out}')
     print(f'  stages drawn: {len(drawn)} of {len(stages)} in {len({s.family for s in drawn})} cases')
     for stage in stages:
