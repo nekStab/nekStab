@@ -22,4 +22,3 @@ a choice about the closure linearization, not a Reynolds stress:
 The hpfrt spectra (quasilaminar σ = 0.237 at St = 0.194) are in
 `spectre_hpfrt.tar` in each directory.
 
-Cross-variant residual decay plot: `scripts/nstab_compare.py example/cylinder_re1m/310_stability_direct/`

@@ -33,5 +33,5 @@ Re_c = 46.6). The Reynolds number of a stage is the (negative) `viscosity` in it
 | `500_otd/` | optimally time-dependent modes about the steady wake |
 | `600_modal_pod/`, `610_modal_dmd/`, `620_modal_spod/` | POD, DMD and SPOD of the shedding wake |
 
-**Cross-stage comparison**: `scripts/nstab_compare.py example/cylinder_re100/110_baseflow_sfd/` overlays
-the residual decays of the SFD variants.
+**Cross-stage comparison**: `110_baseflow_sfd/plot_compare.py` overlays the residual decays
+of the SFD variants.
