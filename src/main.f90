@@ -59,6 +59,7 @@
          ifbf2D = .false. ! force 2D base flow solution
          ifstorebase = .true. ! store base flow for Floquet analysis (dynamic allocated)
          ifdyntol = .false. ! dynamical tolerances for SFD and Newton (potential speed-up)
+         iforthocheck = .false. ! check the orthogonality of the Krylov vectors (Arnoldi, GMRES)
          ew_tol_cap = 0.0d0 ! EW solver cap (0=uncapped, e.g. 1e-5 for conservative)
          thermal_norm_weight = 1.0d0
          thermal_buoyancy_coeff = 0.0d0
@@ -246,6 +247,7 @@
          call bcast(ifbf2D, lsize)
          call bcast(ifstorebase, lsize)
          call bcast(ifdyntol, lsize)
+         call bcast(iforthocheck, lsize)
          call bcast(ifotd, lsize)
          call bcast(ifotdDNS, lsize)
          call bcast(ifbuoyancy, lsize)

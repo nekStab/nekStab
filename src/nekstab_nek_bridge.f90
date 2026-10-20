@@ -57,6 +57,7 @@
          integer, parameter :: NEKSTAB_UNIT_NEWTON_LOG  = 770
          integer, parameter :: NEKSTAB_UNIT_GMRES_LOG   = 771
          integer, parameter :: NEKSTAB_UNIT_ARNOLDI_LOG = 772
+         integer, parameter :: NEKSTAB_UNIT_ORTHO       = 773
 
          public :: nekStab_error, nekStab_log
 

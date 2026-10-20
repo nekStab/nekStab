@@ -20,7 +20,7 @@ module nekstab_newton
                                       k_add2s2, k_cmult, k_copy, k_dot, k_matmul, k_norm, &
                                       k_normalize, k_sub2, k_zero, krylov_vector, lt, lv, &
                                       norm, nt, tor, uor, vor, wor
-   use nekstab_nek_bridge, only: bm1s, dt, ew_tol_cap, if3D, if3d, ifbase, ifdyntol, iffindiff, &
+   use nekstab_nek_bridge, only: bm1s, dt, ew_tol_cap, if3D, if3d, ifbase, ifdyntol, iffindiff, iforthocheck, &
                                  ifield, ifnewton_backtrack, ifpert, ifpsco, ifstorebase, &
                                  ifto, isNewtonFP, isNewtonPO, isNewtonPO_T, istep, k_dim, &
                                  ldimt, ldimt1, lsize, nekStab_error, &
@@ -727,6 +727,7 @@ contains
       real :: prev_beta2 = 0.0d0
       real :: arnoldi_start_time, arnoldi_iter_time
       real :: dot_val ! For weighted inner product calculation
+      real :: ortho_metric ! mean |<Q(k),Q(j)>| over j < k (iforthocheck)
       integer, save :: gmres_k_sum = 0 ! Accumulator for total k values in GMRES
       logical :: opened_local_logs ! true if WE opened the logs (standalone call)
 
@@ -803,19 +804,21 @@ contains
 
             !     Compute orthogonalization quality metric using proper weighted inner products
             !     Note: This check is disabled by default as most problems maintain good orthogonality.
-            !     Enable if you suspect loss of orthogonality in your specific problem.
+            !     Enable it (iforthocheck = .true. in nekStab_usrchk) if you suspect loss of
+            !     orthogonality in your specific problem.
             !     Warning signs:
             !     1. Slow GMRES convergence
             !     2. Unexpected increase in residuals
             !     3. Large number of GMRES restarts
-!              ortho_metric = 0.0d0
-!              if (k > 1) then
-!                 do j = 1, k - 1
-!                    call k_dot(dot_val, Q(k), Q(j))  ! Use weighted inner product
-!                    ortho_metric = ortho_metric + abs(dot_val)
-!                 end do
-!                 ortho_metric = ortho_metric/(k - 1)  ! Average orthogonalization error
-!              end if
+            ortho_metric = 0.0d0
+            if (iforthocheck .and. k > 1) then
+               do j = 1, k - 1
+                  call k_dot(dot_val, Q(k), Q(j))  ! Use weighted inner product
+                  ortho_metric = ortho_metric + abs(dot_val)
+               end do
+               ortho_metric = ortho_metric/(k - 1)  ! Average orthogonalization error
+               if (nid == 0) write (6, "('              Orthogonality: mean |<Q(k),Q(j)>| =',1PE15.6)") ortho_metric
+            end if
 
             if (nid == 0) then
                arnoldi_iter_time = dnekclock() - arnoldi_start_time

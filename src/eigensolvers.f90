@@ -27,13 +27,13 @@ module nekstab_eigensolvers
                                       nt, nv
    use nekstab_nek_bridge, only: ctarg, dt, eigen_tol, evop, if3D, if3d, ifheat, ifldbf, &
                                  ifpo, ifpsco, idpss, ifres, ifseed_load, ifseed_nois, &
-                                 ifseed_symm, ifto, isFloquetAdjoint, isFloquetDirect, &
+                                 ifseed_symm, ifto, iforthocheck, isFloquetAdjoint, isFloquetDirect, &
                                  isFloquetTransientGrowth, isNewtonPO, istep, isDirect, &
                                  isTransientGrowth, isAdjoint, k_dim, ldim, ldimt, lelt, lelv, lx1, &
                                  lx2, ly1, ly2, lz1, lz2, maxmodes, nekStab_dp, &
                                  nekStab_error, nekStab_log, NEKSTAB_UNIT_EXPORT, NEKSTAB_UNIT_FICH1, &
                                  NEKSTAB_UNIT_FICH2, NEKSTAB_UNIT_FICH3, &
-                                 NEKSTAB_UNIT_FICH4, NEKSTAB_UNIT_HESS, nelfld, nelgv, &
+                                 NEKSTAB_UNIT_FICH4, NEKSTAB_UNIT_HESS, NEKSTAB_UNIT_ORTHO, nelfld, nelgv, &
                                  nelv, nid, nof, np, npscal, nsteps, nx1, nx2, ny1, ny2, nz1, &
                                  nz2, param, pbase, pr, schur_cnt, schur_del, schur_stop, schur_tgt, &
                                  SESSION, t, tbase, time, ubase, uparam, vbase, vx, vy, vz, &
@@ -371,17 +371,24 @@ contains
 
       end do
 
-      !  if (nid == 0) open (unit=99, file="orthonormality.dat")
-      !  do i = 1, k_dim
-      !     call k_norm(alpha, Q(i))
-      !     if (nid == 0) write (99, '("Norm of the ", I4, "th mode = ", F20.14)') i, alpha
-      !     do j = i + 1, k_dim
-      !        call k_dot(alpha, q(i), q(j))
-      !        if (nid == 0) write (99, '("Orthogonality between mode ", I4, " and mode ", I4, " = ", E15.7)') i, j, alpha
-      !     end do
-      !     if (nid == 0) write (99, *)
-      !  end do
-      !  if (nid == 0) close (unit=99)
+      !  iforthocheck: write the norm of each Krylov vector and its inner product with
+      !  the later ones. A loss of orthogonality shows as norms away from 1 or products
+      !  well above round-off; it makes the Ritz values unreliable. k_dim^2/2 inner
+      !  products, so the check is off by default.
+      if (iforthocheck) then
+         if (nid == 0) open (unit=NEKSTAB_UNIT_ORTHO, file="orthonormality.dat")
+         do i = 1, k_dim
+            call k_norm(alpha, Q(i))
+            if (nid == 0) write (NEKSTAB_UNIT_ORTHO, '("Norm of the ", I4, "th mode = ", F20.14)') i, alpha
+            do j = i + 1, k_dim
+               call k_dot(alpha, Q(i), Q(j))
+               if (nid == 0) write (NEKSTAB_UNIT_ORTHO, &
+                                    '("Orthogonality between mode ", I4, " and mode ", I4, " = ", E15.7)') i, j, alpha
+            end do
+            if (nid == 0) write (NEKSTAB_UNIT_ORTHO, *)
+         end do
+         if (nid == 0) close (unit=NEKSTAB_UNIT_ORTHO)
+      end if
 
       if (nid == 0) then
          write (6, *) 'Converged eigenvalues: ', &

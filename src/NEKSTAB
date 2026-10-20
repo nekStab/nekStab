@@ -38,7 +38,7 @@
 
       ! Logical variables for various stability flags
       logical :: ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm
-      logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol
+      logical :: ifseed_load, ifvor, ifvox, ifstorebase, ifdyntol, iforthocheck
       logical :: ifotd, ifbuoyancy, buoyancy_qvol_wired
       logical :: iffindiff, isNekStabinit
       logical :: isDirect, isAdjoint, isTransientGrowth
@@ -85,7 +85,7 @@
       !                       .false.=energy (Parseval)
 
       common/nStab_logical/ifbfcv, ifres, ifldbf, ifbf2D, ifseed_nois, ifseed_symm, ifseed_load, ifvor, ifvox
-      common/nStab_logical/ifstorebase, ifdyntol, iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired, isNekStabinit
+      common/nStab_logical/ifstorebase, ifdyntol, iforthocheck, iffindiff, ifotd, ifbuoyancy, buoyancy_qvol_wired, isNekStabinit
       common/nStab_logical/isDirect, isAdjoint, isTransientGrowth, isFloquetDirect, isFloquetAdjoint
       common/nStab_logical/isFloquetTransientGrowth, isNewtonFP, isNewtonPO, isNewtonPO_T
       common/nStab_logical/ifotdDNS

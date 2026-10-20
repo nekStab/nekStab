@@ -15,6 +15,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   by the lowest rank to avoid double-counting in `glsum`; and the reported defect
   is normalized by the mass-weighted velocity norm `||u(t)-u(t-T)||/||u(t)||`.
 
+### Added
+- `iforthocheck` (default `.false.`, set in `nekStab_usrchk`) checks the
+  orthogonality of the Krylov vectors. The eigensolver writes the norm of each
+  vector and the inner products of each pair to `orthonormality.dat`; GMRES prints
+  the mean |<Q(k),Q(j)>| at each iteration. On cylinder_re100 310 the largest
+  product is 3.5e-15 and on the 210 Newton run 3e-17. This replaces two
+  blocks of code that were commented out.
+
 ### Fixed
 - `test_baseline_gallery` no longer rewrites `EXAMPLES.md`: `build_gallery.py`
   updates it only when it writes the default page `validation/index.html`.

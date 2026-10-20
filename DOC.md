@@ -840,6 +840,7 @@ where L_x is the streamwise domain extent.
 | `epsilon_base` | 1e-6 | Perturbation scale ε for Jacobian approximation |
 | `ifdyntol` | .false. | Enable residual-proportional inner GMRES tolerances |
 | `ew_tol_cap` | 0.0 | Optional upper cap for dynamic tolerance (`0` = uncapped) |
+| `iforthocheck` | .false. | Check the orthogonality of the Krylov vectors: the eigensolver writes the norm of each vector and the inner products of each pair to `orthonormality.dat`; GMRES prints the mean \|<Q(k),Q(j)>\| at each iteration. A loss of orthogonality makes Ritz values and GMRES residuals unreliable. |
 | `ifquasilaminar` | .false. | Quasilaminar RANS stability: velocity-only perturbation, base eddy viscosity prescribed (requires `iffindiff`; pair with `ifKEnorm`) |
 | `ifKEnorm` | .false. | Velocity-only kinetic-energy inner product (turbulence scalars excluded) |
 
