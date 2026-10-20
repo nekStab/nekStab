@@ -1,6 +1,7 @@
 """Tests for scripts/plot_runner.py."""
 from __future__ import annotations
 
+import importlib.metadata
 import subprocess
 import sys
 import textwrap
@@ -67,7 +68,13 @@ def test_env_snapshot(tmp_path: Path) -> None:
     env_log = tmp_path / "env.log"
     assert env_log.exists(), "env.log not created"
     env_text = env_log.read_text()
-    assert "matplotlib" in env_text, f"matplotlib not in env.log: {env_text!r}"
+    # The word "matplotlib" is in env.log also when the import fails, so check
+    # the full line: the installed version, or the note that it is missing.
+    try:
+        expected = f"matplotlib: {importlib.metadata.version('matplotlib')}"
+    except importlib.metadata.PackageNotFoundError:
+        expected = "matplotlib: (not importable)"
+    assert expected in env_text.splitlines(), f"{expected!r} not in env.log: {env_text!r}"
 
 
 def test_custom_log_path(tmp_path: Path) -> None:
