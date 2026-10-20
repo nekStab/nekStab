@@ -5,6 +5,15 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [Unreleased]
 
+### Fixed
+- `test_baseline_gallery` no longer rewrites `EXAMPLES.md`: `build_gallery.py`
+  updates it only when it writes the default page `validation/index.html`.
+  Before, the check of the `EXAMPLES.md` table could not fail in a full run.
+
+### Removed
+- Procedures with no caller: `norm_grad` (diagnostics), `k_dot_complex`
+  (modal_spod, replaced by `k_gram_complex`) and `base_mut_reset` (base_mut).
+
 ## [2.0.0-rc6] - 2026-10-20
 
 ### Added
