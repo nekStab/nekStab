@@ -2,8 +2,7 @@
 
 Asserts:
 
-* validation/build_gallery.py, validation/serve.py, and
-  validation/audit_screenshot.py compile (`py_compile`);
+* validation/build_gallery.py and validation/serve.py compile (`py_compile`);
 * `python3 validation/build_gallery.py <file>` exits 0 and writes the page;
 * the rendered HTML contains at least one card, no deferred card, at least one
   figure image, and at least one recompile/resubmit action button.
@@ -30,7 +29,6 @@ INDEX_HTML = VALIDATION_DIR / "index.html"
 SCRIPTS_TO_COMPILE = [
     VALIDATION_DIR / "build_gallery.py",
     VALIDATION_DIR / "serve.py",
-    VALIDATION_DIR / "audit_screenshot.py",
 ]
 
 
