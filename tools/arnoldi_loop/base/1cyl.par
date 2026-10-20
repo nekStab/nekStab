@@ -4,9 +4,9 @@ startFrom = 0
 stopAt = endTime
 endTime = 0
 
-userParam01 = 3  # 0:dns,1:stabilization,3:stability
+userParam01 = 3.1  # 3.1: direct eigenvalue problem (see DOC.md for all codes)
 userParam02 = 0  # krylov snapshot to load
-userParam03 = 0  # stabilization technique: 1:sfd
+userParam03 = 0  # schur_tgt is set in the .usr
 userParam04 = 0  # freq (Strouhal leading mode)
 userParam05 = 0   # gain (twice growth rate leading mode)
 userParam06 = 0 # Ri > 0 for heating

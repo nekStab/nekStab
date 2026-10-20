@@ -149,8 +149,7 @@ if __name__ == "__main__":
             pf = folder + cn + ".par"
 
             c_pf(pf,pf,{'GENERAL':{'endTime':str(p2[j])}})
-            c_pf(pf,pf,{'GENERAL':{'userParam01':'1'}})
-            c_pf(pf,pf,{'GENERAL':{'userParam03':'3'}})
+            c_pf(pf,pf,{'GENERAL':{'userParam01':'2'}})
             c_pf(pf,pf,{'GENERAL':{'userParam07':str(int(p1[i]))}})
             rnek(folder,cn,True,log_suffix="_nwt",n_procs=nps)
             ccall(('visnek BF_'+cn).split(), cwd=folder)
