@@ -1064,7 +1064,7 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `nekstab_fixedpoint` | `fixedp.f90` | `sfd`, `BoostConv`, `tdf`, `boostconv_core`, `qr_dec`, `linear_system` |
 | `nekstab_sensitivity` | `sensitivity.f90` | `wave_maker`, `bf_sensitivity`, `ts_steady_force_sensitivity`, `biorthogonalize`, `delta_forcing`, `animate_mode_only`, `animate_mode`, `animate_mode_Floquet` |
 | `nekstab_energy_budget` | `energy_budget.f90` | `stability_energy_budget`, `stability_energy_budget_floquet`, `compute_velocity_gradient_tensor`, `compute_dissipation`, `compute_production` |
-| `nekstab_diagnostics` | `diagnostics.f90` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort`, `norm_grad`, `smooth_field`, `nekStab_outpost`, `nekStab_comment`, `nekStab_printNEKParams` |
+| `nekstab_diagnostics` | `diagnostics.f90` | `nekStab_energy`, `nekStab_enstrophy`, `outpost_vort`, `smooth_field`, `nekStab_outpost`, `nekStab_comment`, `nekStab_printNEKParams` |
 | `nekstab_vortex` | `vortex.f90` | `vortex_core`, `compute_omega_jc`, `compute_omega`, `compute_q`, `compute_delta`, `compute_swirling` |
 | `nekstab_statistics` | `statistics.f90` | `nekStab_avg` |
 | `nekstab_reynolds` | `reynolds_force.f90` | `reynolds_commit`, `reynolds_load`, `reynolds_add`, `reynolds_enable`, `reynolds_enabled`, `reynolds_armed` |

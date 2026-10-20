@@ -8,7 +8,6 @@
 !
 ! Public interface:
 !   outpost_vort          — output vorticity field
-!   norm_grad             — compute H1 gradient semi-norm
 !   smooth_field          — smooth field via DSS + filtering
 !   nekStab_outpost       — custom outpost with vorticity/vortex
 !   nekStab_comment       — verbose timestep progress output
@@ -39,7 +38,7 @@ module nekstab_diagnostics
    use nekstab_vortex, only: vortex_core
    implicit none
    private
-   public :: outpost_vort, norm_grad, smooth_field, &
+   public :: outpost_vort, smooth_field, &
              nekStab_outpost, nekStab_comment, &
              nekStab_printNEKParams, nekStab_energy, &
              nekStab_enstrophy, nekStab_error, nekStab_log, &
@@ -81,57 +80,6 @@ contains
       end if
 
    end subroutine outpost_vort
-
-!-----------------------------------------------------------------------
-! norm_grad — Compute H1 gradient semi-norm of a velocity field
-!
-! Purpose:
-!   Computes the L2 norm of velocity gradients (H1 semi-norm),
-!   weighted by the mass matrix. Used for convergence monitoring.
-!
-! Arguments:
-!   vx_  [in]  — x-velocity field
-!   vy_  [in]  — y-velocity field
-!   vz_  [in]  — z-velocity field
-!   pr_  [in]  — pressure field (unused, kept for interface)
-!   t_   [in]  — temperature field (unused, kept for interface)
-!   norma [out] — computed gradient norm
-!-----------------------------------------------------------------------
-   subroutine norm_grad(vx_, vy_, vz_, pr_, t_, norma)
-
-      use nekstab_krylov_subspace, only: lv, lp, lt, nv
-      implicit none
-
-      real, intent(in), dimension(lv) :: vx_, vy_, vz_
-      real, intent(in), dimension(lp) :: pr_
-      real, intent(in), dimension(lt, ldimt) :: t_
-      real, intent(out) :: norma
-
-      real, dimension(lv) :: dudx, dudy, dudz
-      real, dimension(lv) :: dvdx, dvdy, dvdz
-      real, dimension(lv) :: dwdx, dwdy, dwdz
-
-      real :: glsc3
-
-      ! gradient computation
-      call gradm1(dudx, dudy, dudz, vx_, nelv)
-      call gradm1(dvdx, dvdy, dvdz, vy_, nelv)
-      if (if3D) call gradm1(dwdx, dwdy, dwdz, vz_, nelv)
-
-      norma = 0.0d0
-
-      norma = norma + glsc3(dudx, dudx, bm1s, nv) + glsc3(dudy, dudy, bm1s, nv)
-      norma = norma + glsc3(dvdx, dvdx, bm1s, nv) + glsc3(dvdy, dvdy, bm1s, nv)
-
-      if (if3D) then
-         norma = norma + glsc3(dudz, dudz, bm1s, nv)
-         norma = norma + glsc3(dvdz, dvdz, bm1s, nv)
-         norma = norma + glsc3(dwdx, dwdx, bm1s, nv)
-         norma = norma + glsc3(dwdy, dwdy, bm1s, nv)
-         norma = norma + glsc3(dwdz, dwdz, bm1s, nv)
-      end if
-
-   end subroutine norm_grad
 
 !-----------------------------------------------------------------------
 ! smooth_field — Smooth a field via DSS averaging and filtering
