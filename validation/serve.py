@@ -4,7 +4,8 @@
 Replaces `python -m http.server` with a tiny custom server that also
 exposes:
 
-  POST /api/resubmit         {case: "<case-path>"}  -> {token}
+  POST /api/run              {case: "<case-path>", action: "recompile" | "resubmit"}
+                             -> {token}
   GET  /api/jobs/<token>     -> job state + slurm state
   GET  /api/queue            -> live `squeue` snapshot
 
@@ -151,15 +152,15 @@ def _run_sbatch(token: str, case_dir: Path) -> bool:
 
 
 def _action_worker(token: str, case: str, action: str) -> None:
-    """Background thread for one of: 'recompile', 'resubmit', 'recompile_submit'."""
+    """Background thread for one of: 'recompile', 'resubmit'."""
     case_dir = EXAMPLE / case
     slurm = case_dir / 'run.local.slurm'
     casename = _read_casename(case_dir)
 
-    if action in ('recompile', 'recompile_submit') and not casename:
+    if action == 'recompile' and not casename:
         _update_job(token, state='error', log='no SESSION.NAME or .par file (need the case name for mks)')
         return
-    if action in ('resubmit', 'recompile_submit') and not slurm.exists():
+    if action == 'resubmit' and not slurm.exists():
         _update_job(token, state='error', log='no run.local.slurm')
         return
 
@@ -167,12 +168,7 @@ def _action_worker(token: str, case: str, action: str) -> None:
         if _run_mks(token, case_dir, casename):  # type: ignore[arg-type]
             _update_job(token, state='done', log='nek5000 binary built')
         return
-    if action == 'resubmit':
-        _run_sbatch(token, case_dir)
-        return
-    # combined
-    if _run_mks(token, case_dir, casename):  # type: ignore[arg-type]
-        _run_sbatch(token, case_dir)
+    _run_sbatch(token, case_dir)
 
 
 def _live_queue() -> dict:
@@ -229,7 +225,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    _ACTIONS = {'recompile', 'resubmit', 'recompile_submit'}
+    _ACTIONS = {'recompile', 'resubmit'}
     _ALLOWED_ORIGINS = {
         f'http://127.0.0.1:{p}' for p in (8000, 8001, 8080)
     } | {
@@ -273,15 +269,8 @@ class Handler(SimpleHTTPRequestHandler):
         if not self._is_origin_allowed():
             return self._json(403, {'error': 'origin not allowed'})
 
-        # Map URL -> action. Keep /api/resubmit + /api/recompile + /api/run.
-        action: str | None = None
-        if url.path == '/api/resubmit':
-            action = 'resubmit'
-        elif url.path == '/api/recompile':
-            action = 'recompile'
-        elif url.path == '/api/run':
-            action = None  # read from body
-        else:
+        # The page sends every action to /api/run, with the action in the body.
+        if url.path != '/api/run':
             return self._json(404, {'error': 'not found'})
 
         length = int(self.headers.get('Content-Length', '0') or '0')
@@ -292,8 +281,7 @@ class Handler(SimpleHTTPRequestHandler):
         except (json.JSONDecodeError, ValueError):
             return self._json(400, {'error': 'invalid json'})
         case = data.get('case', '')
-        if action is None:
-            action = data.get('action', 'resubmit')
+        action = data.get('action', 'resubmit')
         if action not in self._ACTIONS:
             return self._json(400, {'error': f'unknown action: {action}'})
         if not isinstance(case, str) or case not in ALLOWED:
