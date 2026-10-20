@@ -36,7 +36,6 @@
 !                                  calling the passed getter mut_fun(ix,iy,iz,iel)
 !   base_mut_get(ix,iy,iz,iel)   — fetch the frozen value at a point
 !   base_mut_ready()             — .true. once the snapshot has been taken
-!   base_mut_reset()             — invalidate the snapshot (force re-capture)
 !
 ! Dependencies:
 !   nekstab_nek_bridge (sizes, nelv, nid)
@@ -55,8 +54,7 @@ module nekstab_base_mut
    real, save :: mut0(lmut) = 0.0d0  ! captured base eddy-viscosity field
    logical, save :: mut0_ready = .false.
 
-   public :: base_mut_capture, base_mut_get, base_mut_ready, &
-             base_mut_reset
+   public :: base_mut_capture, base_mut_get, base_mut_ready
 
 contains
 
@@ -103,9 +101,5 @@ contains
    logical function base_mut_ready()
       base_mut_ready = mut0_ready
    end function base_mut_ready
-
-   subroutine base_mut_reset()
-      mut0_ready = .false.
-   end subroutine base_mut_reset
 
 end module nekstab_base_mut
