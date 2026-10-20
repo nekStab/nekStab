@@ -5,6 +5,8 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ## [Unreleased]
 
+## [2.0.0-rc6] - 2026-10-20
+
 ### Added
 - `schur_stop` (default 0) selects the stop rule of the eigensolver. `0` keeps
   the stop on the first `schur_tgt` entries of the sorted list. `1` stops when any
