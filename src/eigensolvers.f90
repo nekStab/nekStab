@@ -279,19 +279,6 @@ contains
          end if !nid.eq.0
          call bcast(H, (k_dim + 1)*k_dim*wdsize) !broadcast H matrix to all procs
 
-         !     if(nid.eq.2)then !-> debug only
-         !     write(filename,'(a,a,i4.4)')'HESloaded',trim(SESSION),mstart
-         !     write(6,*) ''
-         !     open(67,file=trim(filename),status='unknown',form='formatted')
-         !     write(67,*) beta
-         !     do i = 1,mstart+1
-         !     do j = 1,mstart
-         !     write(67,*) H(i,j)
-         !     enddo
-         !     enddo
-         !     close(67)
-         !     endif
-
          mstart = mstart + 1 !careful here!
          call load_files(Q, mstart, k_dim + 1, 'KRY')
          if (nid == 0) write (6, *) 'Restart fields loaded to memory!'
