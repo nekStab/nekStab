@@ -70,12 +70,6 @@ def _flatten(value: object) -> Iterable[float]:
         yield float(value)  # type: ignore[arg-type]
 
 
-def _stats_from_array(array: object) -> Stats:
-    stats = _empty_stats()
-    _update_stats(stats, _array_values(array))
-    return _finalize_stats(stats)
-
-
 def _inspect_with_pymech(path: Path) -> Dict[str, object]:
     if os.environ.get("INSPECT_NEK_FIELD_NO_PYMECH"):
         raise InspectError("pymech disabled by INSPECT_NEK_FIELD_NO_PYMECH")
@@ -264,12 +258,19 @@ def inspect(path: Path) -> Dict[str, object]:
         raise InspectError("not a regular file")
 
     try:
-        return _inspect_with_pymech(path)
+        result = _inspect_with_pymech(path)
     except InspectError as pymech_error:
         try:
-            return _inspect_raw(path)
+            result = _inspect_raw(path)
         except InspectError as raw_error:
             raise InspectError(f"{pymech_error}; raw reader failed: {raw_error}") from raw_error
+    # The word size and the record code show how the file was written: rdcode
+    # XUPT (not XUP) proves that a thermal start field holds the temperature.
+    meta, _ = _parse_header(path)
+    result["wdsize"] = meta["wdsize"]
+    result["rdcode"] = meta["rdcode"]
+    result["size_bytes"] = path.stat().st_size
+    return result
 
 
 def _format_stats(name: str, stats: Stats) -> str:
@@ -285,7 +286,8 @@ def print_text(results: Sequence[Dict[str, object]]) -> None:
         print(
             f"  nelt={result['nelt']}  lx1={result['lx1']}  ly1={result['ly1']}  "
             f"lz1={result['lz1']}  time={float(result['time']):.6e}  "
-            f"istep={result['istep']}"
+            f"istep={result['istep']}  wdsize={result['wdsize']}  "
+            f"rdcode={result['rdcode']}  size_bytes={result['size_bytes']}"
         )
         fields = result["fields"]
         assert isinstance(fields, dict)

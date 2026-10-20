@@ -91,6 +91,8 @@ def test_header_parsed(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert "nelt=2" in result.stdout
     assert "time=1.250000e+01" in result.stdout
+    assert "wdsize=4" in result.stdout
+    assert "rdcode=XUP" in result.stdout
 
 
 def test_min_max_vx(tmp_path: Path) -> None:
