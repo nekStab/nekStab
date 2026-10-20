@@ -1078,7 +1078,7 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `nekstab_modal_analysis` | `modal_analysis.f90` | `modal_analysis`, `modal_compute_mean`, `modal_subtract_mean` |
 | `modal_pod` | `modal_pod.f90` | `pod_compute`, `pod_fft_spectrum`, `hamming_window` |
 | `modal_dmd` | `modal_dmd.f90` | `dmd_compute` |
-| `modal_spod` | `modal_spod.f90` | `spod_compute`, `k_dot_complex`, `spod_save_modes` |
+| `modal_spod` | `modal_spod.f90` | `spod_compute`, `spod_save_modes` |
 | `spod_streaming_state` | `modal_spod_streaming.f90` | `spod_s_init`, `spod_s_cleanup`, streaming SPOD state arrays and metadata |
 | `modal_spod_streaming` | `modal_spod_streaming.f90` | `spod_streaming_batch` |
 | `fourier` | `fourier.f90` | `nek_fourier_decomposition`, `fourier_decomposition`, `fourier_reconstruction`, `fft_init`, `fft_cleanup`, `fft_r2c`, `fft_c2r`, `fft_frequencies` |

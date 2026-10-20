@@ -8,7 +8,6 @@
 !
 ! Public interface:
 !   spod_compute    — Full batch SPOD computation
-!   k_dot_complex   — Hermitian inner product for complex fields
 !   spod_save_modes — Save SPOD modes at selected frequencies
 !
 ! Dependencies:
@@ -16,7 +15,7 @@
 !-----------------------------------------------------------------------
 module nekstab_modal_spod
 
-   use nekstab_krylov_subspace, only: krylov_vector, k_zero, k_dot, k_add2s2, k_cmult, &
+   use nekstab_krylov_subspace, only: krylov_vector, k_zero, k_add2s2, k_cmult, &
                                       k_norm, nv, nt
    use nekstab_krylov_inner_products, only: k_gram_complex
    use nekstab_lapack, only: eig_hermitian
@@ -30,7 +29,6 @@ module nekstab_modal_spod
    private
 
    public :: spod_compute
-   public :: k_dot_complex
    public :: spod_save_modes
 
 contains
@@ -213,28 +211,6 @@ contains
       end if
 
    end subroutine fft_block_at_freq
-
-   !-----------------------------------------------------------------------
-   ! k_dot_complex — Hermitian inner product: <p, q> = p^H * W * q
-   !
-   !   <p,q> = <p_re,q_re> + <p_im,q_im>
-   !         + i(<p_re,q_im> - <p_im,q_re>)
-   !-----------------------------------------------------------------------
-   subroutine k_dot_complex(alpha, p_re, p_im, q_re, q_im)
-
-      type(krylov_vector), intent(in) :: p_re, p_im, q_re, q_im
-      complex(nekStab_dp), intent(out) :: alpha
-
-      real :: rr, ii, ri, ir
-
-      call k_dot(rr, p_re, q_re)
-      call k_dot(ii, p_im, q_im)
-      call k_dot(ri, p_re, q_im)
-      call k_dot(ir, p_im, q_re)
-
-      alpha = dcmplx(rr + ii, ri - ir)
-
-   end subroutine k_dot_complex
 
    !-----------------------------------------------------------------------
    ! spod_save_modes — Save SPOD modes at selected frequencies
