@@ -58,3 +58,13 @@ def test_quantity_values_are_formatted() -> None:
     assert gallery._format_number(12) == "12"
     assert gallery._tolerance_text({"tol_rel": 0.05}) == "±0.05 rel"
     assert gallery._tolerance_text({"tol_abs": 1e-3}) == "±0.001"
+
+
+def test_a_stage_number_without_a_lane_stops_the_build() -> None:
+    # A first digit 7, 8 or 9 has no lane: the build must stop, not count the stage
+    # in the header and draw it nowhere.
+    import pytest
+
+    assert gallery._stage_lane("x/310_stability_direct", "310") == "stability"
+    with pytest.raises(ValueError, match="has no lane"):
+        gallery._stage_lane("x/710_new", "710")

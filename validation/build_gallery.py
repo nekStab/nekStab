@@ -60,6 +60,14 @@ STAGE_LANE = {
     '0': 'dns', '1': 'baseflow', '2': 'baseflow', '3': 'stability',
     '4': 'postproc', '5': 'otd', '6': 'modal',
 }
+def _stage_lane(rel: str, number: str) -> str:
+    """Return the lane of a stage; stop for a first digit that no lane draws."""
+    # A stage in no lane used to be counted in the page header but drawn nowhere.
+    if number[:1] not in STAGE_LANE:
+        raise ValueError(f'{rel}: stage number {number} has no lane (first digit 0 to 6)')
+    return STAGE_LANE[number[:1]]
+
+
 LANES = [
     ('dns', 'DNS'),
     ('baseflow', 'Base flow'),
@@ -296,7 +304,7 @@ def read_stage(folder: Path) -> Stage:
         path=rel,
         family=rel.split('/')[0],
         number=number,
-        lane=STAGE_LANE.get(number[:1], 'other'),
+        lane=_stage_lane(rel, number),
         re_tag=re_tag,
         mode=mode,
         summary=summary,
@@ -423,11 +431,9 @@ CSS = """
     --warning:    #e0b86e;     /* alias --stale */
     --danger:     #e07070;
     --info:       #6e7be0;
-    --neutral:    #555c6b;     /* alias --pending */
     /* compatibility aliases used throughout */
     --ok:         var(--success);
     --stale:      var(--warning);
-    --pending:    var(--neutral);
     /* lines */
     --border:     #2a3140;
     --border-faint: rgba(255, 255, 255, 0.04);
@@ -473,9 +479,8 @@ h2 .counts {
     font-weight: 500;
     font-variant-numeric: tabular-nums;
 }
-/* status chips — work in any container (h2 counts, details summary, etc.) */
-.c-ok,
-.c-pending {
+/* status chips — work in any container (h2 counts, etc.) */
+.c-ok {
     display: inline-block;
     padding: 0.1em 0.55em;
     border-radius: 999px;
@@ -483,7 +488,6 @@ h2 .counts {
     font-size: 0.95em;
 }
 .c-ok      { background: rgba(110, 224, 138, 0.14); color: var(--success); }
-.c-pending { background: rgba(255, 255, 255, 0.05); color: var(--fg-mute); }
 :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -597,46 +601,6 @@ section.geom > h2 { margin: 0 0 0.8em; scroll-margin-top: 4.5em; }
     text-transform: none;
     letter-spacing: normal;
 }
-
-/* Collapsible mode sub-sections inside a geometry */
-details.mode-section {
-    margin: 1em 0 0;
-    border: 1px solid var(--border-faint);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.012);
-    overflow: hidden;
-    scroll-margin-top: 4.5em;
-}
-details.mode-section > summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 0.7em 1em;
-    user-select: none;
-    display: flex;
-    align-items: baseline;
-    gap: 0.8em;
-    transition: background 0.15s var(--ease-snap);
-}
-details.mode-section > summary::-webkit-details-marker { display: none; }
-details.mode-section > summary::before {
-    content: '▸';
-    color: var(--fg-mute);
-    transition: transform 0.18s var(--ease-snap);
-    font-size: 0.85em;
-}
-details.mode-section[open] > summary::before { transform: rotate(90deg); }
-details.mode-section > summary:hover { background: rgba(255, 255, 255, 0.025); }
-details.mode-section .summary-label {
-    color: var(--fg);
-    font-weight: 600;
-    font-size: 0.98em;
-}
-details.mode-section .counts {
-    color: var(--fg-mute);
-    font-size: 0.84em;
-    font-weight: normal;
-}
-details.mode-section > .grid { padding: 0.4em 1em 1em; }
 
 .grid {
     display: grid;
