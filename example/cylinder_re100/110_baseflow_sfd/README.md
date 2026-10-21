@@ -50,8 +50,11 @@ eigenvalue of the steady flow.
 ## Reference and figures
 
 Each variant has `ref/reference.json` (gate, time of convergence, four statistics of the field against the Newton values) and
-`ref/*.png`. `plot_compare.png` (made by `plot_compare.py` from the `residu.dat` and `logfile` of the six variants) overlays their residuals against
-time and against wall time.
+`ref/*.png`. `plot_compare.png` (made by `plot_compare.py` from the residual file and `logfile` of each run) overlays the residuals of the
+six variants, of BoostConv (`../120_baseflow_boostconv`, at Re = 50), of DMT (`../130_baseflow_dmt`) and of Newton
+(`../210_baseflow_newton/fp`, one point per iteration) against time and against wall time. Newton writes the norm of
+U(T) - q, not the change in one time step, so its curve is not the same quantity. The figure comes from the runs of
+2026-10-11 (8 ranks); their wall times are not those of the table above.
 
 Run one variant with `mks 1cyl; sbatch run.local.slurm; python3 plot.py` in its folder.
 
