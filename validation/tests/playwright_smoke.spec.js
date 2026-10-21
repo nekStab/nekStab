@@ -26,7 +26,7 @@ const PAGE_URL = `file://${indexPath}`;
  */
 async function openGallery(page) {
     await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
-    // Force all cards to render — same trick as audit_screenshot.py
+    // Force all cards to render (they are lazy by default).
     await page.addStyleTag({ content: '.card { content-visibility: visible !important; }' });
     await page.waitForTimeout(300);
 }
