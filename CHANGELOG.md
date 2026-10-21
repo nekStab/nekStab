@@ -14,6 +14,19 @@ description for the 2.0 series; entries here are the per-tag deltas.
   the initial guess as an offset; a shared grid point on a rank boundary is owned
   by the lowest rank to avoid double-counting in `glsum`; and the reported defect
   is normalized by the mass-weighted velocity norm `||u(t)-u(t-T)||/||u(t)||`.
+- `exports.sh` works from any directory and shell, keeps an existing
+  `NEK_SOURCE_ROOT`, refuses `bash exports.sh` (it must be sourced) and sets
+  `ulimit -s`. The README explains each line.
+- `scripts/inspect_nek_field.py` prints the word size, the record code and the
+  file size of a field file.
+- `validation/build_gallery.py` reads the title and blurb of each family from the
+  first heading and paragraph of `example/<family>/README.md`. A stage number with
+  no lane (first digit 7, 8 or 9) stops the build with an error that names the folder.
+- `validation/serve.py` keeps one route to start a job, `/api/run`.
+- `example/cylinder_re100/110_baseflow_sfd/plot_compare.py` also draws Newton,
+  BoostConv (Re = 50) and DMT, and takes the folder pattern as an argument.
+- The Newton and Arnoldi loop tools in `tools/` use the current mode codes
+  (`userParam01` = 2 and 3.1).
 
 ### Added
 - Fourier representation of a periodic orbit, off by default (`iffourierorbit`
@@ -35,10 +48,22 @@ description for the 2.0 series; entries here are the per-tag deltas.
 - `test_baseline_gallery` no longer rewrites `EXAMPLES.md`: `build_gallery.py`
   updates it only when it writes the default page `validation/index.html`.
   Before, the check of the `EXAMPLES.md` table could not fail in a full run.
+- `scripts/inspect_nek_field.py` keeps the field statistics read by pymech when its
+  own header parser rejects the header; the word size and record code are then empty.
 
 ### Removed
 - Procedures with no caller: `norm_grad` (diagnostics), `k_dot_complex`
   (modal_spod, replaced by `k_gram_complex`) and `base_mut_reset` (base_mut).
+- `nek_fourier_decomposition` (fourier), which had no caller.
+- Declarations that nothing reads in `src/NEKSTAB` (among them the old OTD LAPACK
+  work arrays and the FFTW planner flags), two unused matvec flags and two unused
+  torque variables; commented-out code in `eigensolvers.f90` and `fst.f90`.
+- Scripts: `bin/ident` (it ran fprettify on fixed-form files),
+  `validation/parsers/`, `write_manifest.py`, `generate_thumbnail.py`,
+  `inspect_nek_ic.py`, `nstab_compare.py` (it found no residual logs in any stage),
+  `matrix_audit.py`, `audit_screenshot.py`, `plot_cross_method_tts.py`,
+  `plot_cross_method_convergence.py`, and from `tools/` `x_auto_cyl.py`,
+  `test_fftw.f90`, `benchmark_fftw.f90` and `install_oneAPI.sh`.
 
 ## [2.0.0-rc6] - 2026-10-20
 
