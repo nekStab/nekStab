@@ -37,8 +37,9 @@ module nekstab_otd
                                  sxm1, sym1, szm1, t, time, txm1, tym1, tzm1, ubic, uparam, &
                                  upic, v1mask, v2mask, v3mask, vbic, vdiff, vmult, vpic, vx, &
                                  vxp, vxpic, vy, vyp, vypic, vz, vzp, vzpic, wbic, wpic, xm1, &
-                                 ym1, zm1
-   use nekstab_krylov_subspace, only: nv
+                                 ym1, zm1, iffourierorbit, nsteps
+   use nekstab_krylov_subspace, only: nv, allocate_orbit, orbit_restore
+   use nekstab_fourier, only: fourier_orbit_available
    implicit none
    private
 
@@ -177,13 +178,23 @@ contains
          !  field and the DNS is not advanced. Code 5.1 (ifotdDNS) advances the base
          !  flow with the DNS, so the basis follows the trajectory.
          if (ifotdDNS) then
-            call nekStab_log('OTD with the base flow advanced by the DNS')
-            ifbase = .true.
+            if (iffourierorbit) then
+               call allocate_orbit(nsteps)
+               if (fourier_orbit_available()) then
+                  call nekStab_log('OTD with base flow from Fourier orbit modes')
+                  ifbase = .false.
+               else
+                  call nekStab_log('OTD with the base flow advanced by the DNS')
+                  ifbase = .true.
+               end if
+            else
+               call nekStab_log('OTD with the base flow advanced by the DNS')
+               ifbase = .true.
+            end if
          else
             call nekStab_log('OTD in Frozen baseflow mode!')
             ifbase = .false.
          end if
-         call bcast(ifbase, lsize)
 
          gsstep_override = .true.
          call otd_orthonormalize_basis
@@ -194,6 +205,9 @@ contains
 
       ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.1.
       gsstep_override = .false.
+      if (ifotdDNS .and. iffourierorbit .and. fourier_orbit_available()) then
+         call orbit_restore(istep)
+      end if
       call otd_orthonormalize_basis
       call otd_construct_linear_operator
       call otd_generate_forces

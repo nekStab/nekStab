@@ -506,6 +506,19 @@ TDF holds an unstable periodic orbit of a forced flow. It adds the force `g (q(t
 Uses GMRES to solve the Newton system. The Jacobian-vector product is computed via finite differences of the time-stepper.
 Arnoldi orthogonalization uses CGS2 by default (`use_cgs = .true.`), with classic MGS + reorthogonalization still available for debugging or comparison.
 
+### Fourier representation of a periodic orbit
+
+Set `iffourierorbit = .true.` in `nekStab_usrchk` (default `.false.`). Optional caps, also set there: `fourier_kmax` (fixed number of modes, `0` = automatic) and `fourier_mem_gb` (`0` = uncapped). Both are broadcast after `nekStab_usrchk`.
+
+At convergence a Newton periodic orbit writes `FOU<session>0.f*` and `<session>.fourier`. The field files are `c_0`, then the real and imaginary parts of `c_k` for `k = 1..K`. The text header holds the period `T`, the number of samples `N`, `dt`, `K`, the missing fluctuation energy and `E_k`. A later Floquet, energy-budget or OTD run loads those files and evaluates
+
+```
+U(t) = c_0 + 2 Re sum_{k=1}^{K} c_k exp(2 pi i k t / T)
+```
+
+`K` starts at 8 and doubles while a doubling cuts the missing fluctuation energy by 10 or more. It stops below `1e-10`, or when a doubling gains less than 10, and never exceeds `N/2`. `E_k` is the mass-weighted `|c_k|^2`; mode `k` and mode `N-k` are counted once. Samples cover one period (`N*dt = T`) and do not store `U(0)` and `U(T)` as two points. If the trajectory does not close, the periodic extension has a jump and the tail falls only as `1/k^2`. Replay then keeps every computed coefficient, so the sample times still match the integrated trajectory; the file keeps the doubling-rule `K`. A Floquet record whose closure exceeds `1e-3` stops. A `dt` different from the header `dt` is allowed: `|mu - 1|` is the printed orbit gap, and a gap above `1e-3` is a warning.
+
+
 ### Mode 3: Eigenvalue Problems
 
 | Value | Description | Output Prefix |
@@ -1102,7 +1115,7 @@ Most computational source files are wrapped in Fortran modules, providing explic
 | `modal_spod` | `modal_spod.f90` | `spod_compute`, `spod_save_modes` |
 | `spod_streaming_state` | `modal_spod_streaming.f90` | `spod_s_init`, `spod_s_cleanup`, streaming SPOD state arrays and metadata |
 | `modal_spod_streaming` | `modal_spod_streaming.f90` | `spod_streaming_batch` |
-| `fourier` | `fourier.f90` | `nek_fourier_decomposition`, `fourier_decomposition`, `fourier_reconstruction`, `fft_init`, `fft_cleanup`, `fft_r2c`, `fft_c2r`, `fft_frequencies` |
+| `fourier` | `fourier.f90` | `fourier_orbit_load`, `fourier_orbit_write`, `fourier_orbit_eval`, `fourier_decomposition`, `fourier_reconstruction` |
 | `fourier_fftw` | `fourier_fftw.f90` | `fft_init`, `fft_cleanup`, `fft_r2c`, `fft_c2r`, `fft_frequencies`, `fourier_decomposition`, `fourier_reconstruction` |
 
 ### Upgrading to v2.x

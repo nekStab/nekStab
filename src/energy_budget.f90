@@ -29,7 +29,12 @@ module nekstab_energy_budget
                                  ubase, vbase, wbase, pbase, tbase, maxmodes, bm1, if3d, ifto, &
                                  NEKSTAB_UNIT_PKE, nelv, lelv, lelt, lx1, ly1, lz1, nsteps, dt, time, &
                                  istep, ifpert, ifadj, lsize, ifbase, param, vxp, vyp, vzp, tp, &
-                                 spng_fn, spng_st, wdsize, nekStab_error, NEKSTAB_UNIT_RESIDU
+                                 spng_fn, spng_st, wdsize, nekStab_error, NEKSTAB_UNIT_RESIDU, &
+                                 iffourierorbit, ifstorebase
+   use nekstab_krylov_subspace, only: uor, vor, wor, tor
+   use nekstab_fourier, only: fourier_orbit_available, &
+                              fourier_orbit_build_from_stored, &
+                              fourier_orbit_finalize_streaming
    use nekstab_matvec, only: prepare_linearized_solver
    use nekstab_eigensolvers, only: norm
    implicit none
@@ -657,6 +662,9 @@ contains
       !     --> Allocate orbit storage on first call
       if (.not. energy_init) then
          call allocate_orbit(nsteps)
+         if (iffourierorbit .and. fourier_orbit_available()) then
+            energy_init = .true.
+         end if
       end if
 
       !     #####
@@ -691,6 +699,13 @@ contains
             call nek_advance() ! base evolves; settime advances `time`
             call orbit_store(istep) ! cache base at phase istep*dt
          end do
+         if (iffourierorbit .and. .not. fourier_orbit_available()) then
+            if (ifstorebase) then
+               call fourier_orbit_build_from_stored(nsteps, param(10), uor, vor, wor, tor)
+            else
+               call fourier_orbit_finalize_streaming()
+            end if
+         end if
 
          !        --> Orbit cached. Re-enable the perturbation solve and freeze
          !            the base; from now on every pass only replays the cache.

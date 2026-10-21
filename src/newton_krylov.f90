@@ -19,7 +19,7 @@ module nekstab_newton
    use nekstab_krylov_subspace, only: allocate_orbit, dnekclock, fc_nwt, ic_nwt, k_add2, &
                                       k_add2s2, k_cmult, k_copy, k_dot, k_matmul, k_norm, &
                                       k_normalize, k_sub2, k_zero, krylov_vector, lt, lv, &
-                                      norm, nt, tor, uor, vor, wor
+                                      norm, nt, tor, uor, vor, wor, orbit_store
    use nekstab_nek_bridge, only: bm1s, dt, ew_tol_cap, if3D, if3d, ifbase, ifdyntol, iffindiff, iforthocheck, &
                                  ifield, ifnewton_backtrack, ifpert, ifpsco, ifstorebase, &
                                  ifto, isNewtonFP, isNewtonPO, isNewtonPO_T, istep, k_dim, &
@@ -27,7 +27,11 @@ module nekstab_newton
                                  NEKSTAB_UNIT_ARNOLDI_LOG, NEKSTAB_UNIT_GMRES_LOG, &
                                  NEKSTAB_UNIT_NEWTON_LOG, nid, nof, nsteps, param, pbase, &
                                  pr, restol, t, tbase, time, ubase, uparam, vbase, vx, vy, &
-                                 vz, wbase, wdsize
+                                 vz, wbase, wdsize, iffourierorbit
+   use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_write, &
+                              fourier_orbit_build_from_stored, &
+                              fourier_orbit_finalize_streaming, &
+                              fourier_orbit_reset_trial
    use nekstab_vectors, only: nopcopy
    use nekstab_matvec, only: cache_newton_bvec, matvec, prepare_linearized_solver
    use nekstab_krylov_decomposition, only: arnoldi_factorization
@@ -263,36 +267,8 @@ contains
 
          call prepare_linearized_solver ! Compute nsteps and Nek parameters
 
-         if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
-            if (nid == 0) then ! Allocate nonlinear solution variable for natural or forced UPO
-               write (6, "('  Allocating orbit for GMRES')")
-               write (6, "('    Number of steps:',I6)") nsteps
-            end if
-            request_gb = 2.0d0*real(lv)*real(nsteps)*8.0d0/1.0d9
-            allocate (uor(lv, nsteps), vor(lv, nsteps), stat=alloc_stat)
-            if (alloc_stat /= 0) then
-               call nekStab_error('orbit allocation failed for uor/vor')
-               call exitti('orbit allocation failed$', alloc_stat)
-            end if
-            if (if3d) then
-               request_gb = real(lv)*real(nsteps)*8.0d0/1.0d9
-               allocate (wor(lv, nsteps), stat=alloc_stat)
-            else
-               request_gb = 8.0d0/1.0d9
-               allocate (wor(1, 1), stat=alloc_stat)
-            end if
-            if (alloc_stat /= 0) then
-               call nekStab_error('orbit allocation failed for wor')
-               call exitti('orbit allocation failed$', alloc_stat)
-            end if
-            if (ifto .or. ldimt > 1) then
-               request_gb = real(lt)*real(nsteps)*real(ldimt)*8.0d0/1.0d9
-               allocate (tor(lt, nsteps, ldimt), stat=alloc_stat)
-               if (alloc_stat /= 0) then
-                  call nekStab_error('orbit allocation failed for tor')
-                  call exitti('orbit allocation failed$', alloc_stat)
-               end if
-            end if
+         if ((ifstorebase .or. iffourierorbit) .and. (isNewtonPO .or. isNewtonPO_T)) then
+            call allocate_orbit(nsteps, .false.)
          end if
 
          call nonlinear_forward_map(f, q) ! rhs of Newton iteration f(q)
@@ -431,10 +407,13 @@ contains
          call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, 'nwt')
          time = q%time ! Restore
 
+         if (iffourierorbit) then
+            call fourier_orbit_reset_trial()
+         end if
          if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
             if (nid == 0) write (6, *) '  Deallocating orbit storage'
-            deallocate (uor, vor, wor)
-            if (ifto .or. ldimt > 1) deallocate (tor)
+            if (allocated(uor)) deallocate (uor, vor, wor)
+            if ((ifto .or. ldimt > 1) .and. allocated(tor)) deallocate (tor)
          end if
 
       end do newton
@@ -474,6 +453,7 @@ contains
          call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, "BF_")
          param(63) = 0.0d0; call bcast(param(63), wdsize) ! Single precision
          call outpost_vort(vx, vy, vz, 'BFV')
+         if (iffourierorbit) call fourier_orbit_write()
       end if
 
       call close_newton_log_units()
@@ -655,7 +635,7 @@ contains
          ! so grow the storage before nonlinear_forward_map writes snapshots.
          if (nid == 0) write (6, "('  BACKTRACK reallocating orbit storage from ',I6, &
       &      ' to ',I6,' steps')") allocated_nsteps, required_nsteps
-         call allocate_orbit(required_nsteps)
+         call allocate_orbit(required_nsteps, .false.)
 
       end subroutine ensure_trial_orbit_storage
 
@@ -950,7 +930,7 @@ contains
       type(krylov_vector), intent(in) :: q
 
       integer :: m
-      real :: gmres_target
+      real :: gmres_target, closure_abs, closure_ref
 
       ! nt from globals
 
@@ -967,19 +947,25 @@ contains
       do istep = 1, nsteps
          call nekStab_usrchk()
          call nek_advance()
-         if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
-            if (nid == 0) then
+         if ((ifstorebase .or. iffourierorbit) .and. (isNewtonPO .or. isNewtonPO_T)) then
+            if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                                istep == 1 .or. istep == nsteps)) then
                write (6, *) 'Storing nonlinear solution for GMRES:', istep, '/', nsteps
             end if
-            call opcopy(uor(:, istep), vor(:, istep), wor(:, istep), vx, vy, vz)
-            if (ifto) call copy(tor(:, istep, 1), t(:, :, :, :, 1), nt)
-            if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(tor(:, istep, m), t(:, :, :, :, m), nt)
-               end do
-            end if
+            call orbit_store(istep)
          end if
       end do
+      if (iffourierorbit .and. (isNewtonPO .or. isNewtonPO_T)) then
+         if (ifstorebase) then
+            call fourier_orbit_build_from_stored(nsteps, q%time, uor, vor, wor, tor)
+         else
+            call fourier_orbit_finalize_streaming()
+         end if
+         if (fourier_orbit_available() .and. allocated(uor)) then
+            deallocate (uor, vor, wor)
+            if (allocated(tor)) deallocate (tor)
+         end if
+      end if
 
       !     --> Compute the right hand side of the time-stepper Newton.
       call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, vx, vy, vz, pr, t) ! F(q)
@@ -987,6 +973,14 @@ contains
       call k_copy(fc_nwt, f) ! for Newton UPO newton_linearized_map
       call k_sub2(f, q) ! f = F(q) - q
       f%time = 0.0d0
+      if (iffourierorbit .and. (isNewtonPO .or. isNewtonPO_T)) then
+         call k_norm(closure_abs, f)
+         call k_norm(closure_ref, q)
+         if (nid == 0 .and. closure_ref > 0.0d0) then
+            write (6, "('Fourier orbit closure ||U(T)-U(0)||/||U(0)|| =',1PE12.4)") &
+               closure_abs/closure_ref
+         end if
+      end if
 
       !     --> Pass current guess as base flow for the linearized calculation.
       call nopcopy(ubase, vbase, wbase, pbase, tbase, q%vx, q%vy, q%vz, q%pr, q%t)

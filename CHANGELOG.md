@@ -16,6 +16,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   is normalized by the mass-weighted velocity norm `||u(t)-u(t-T)||/||u(t)||`.
 
 ### Added
+- Fourier representation of a periodic orbit, off by default (`iffourierorbit`
+  in `nekStab_usrchk`; `fourier_kmax` and `fourier_mem_gb` cap the modes).
+  A converged Newton orbit writes `FOU<session>0.f*` and `<session>.fourier`.
+  Floquet, the energy budget and OTD reload `U(t)` from those modes. `K` follows
+  the doubling rule and never exceeds `N/2`. A trajectory that does not close
+  has a `1/k^2` tail; replay then keeps every computed coefficient so the
+  sample times match, while the file keeps the doubling-rule `K`.
+
 - `iforthocheck` (default `.false.`, set in `nekStab_usrchk`) checks the
   orthogonality of the Krylov vectors. The eigensolver writes the norm of each
   vector and the inner products of each pair to `orthonormality.dat`; GMRES prints

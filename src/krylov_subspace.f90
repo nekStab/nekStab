@@ -33,8 +33,12 @@ module nekstab_krylov_subspace
                                  thermal_norm_mode, thermal_norm_weight, &
                                  thermal_norm_min, thermal_norm_max, &
                                  thermal_buoyancy_coeff, isNewtonPO,&
-                                 ifKEnorm
-   implicit none
+                                 ifKEnorm, iffourierorbit, ifstorebase, dt, param
+   use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_load, &
+                              fourier_orbit_init_streaming, fourier_orbit_stream_step, &
+                              fourier_orbit_finalize_streaming, &
+                              fourier_orbit_build_from_stored, fourier_orbit_eval, &
+                              fourier_orbit_cleanup
 
    private
 
@@ -454,11 +458,30 @@ contains
 !-----------------------------------------------------------------------
 ! allocate_orbit — Allocate orbit storage arrays on the heap
 !-----------------------------------------------------------------------
-   subroutine allocate_orbit(nsteps_in)
+   subroutine allocate_orbit(nsteps_in, load_modes)
 
       integer, intent(in) :: nsteps_in
+      logical, intent(in), optional :: load_modes
       integer :: alloc_stat
       real :: request_gb
+      logical :: loaded, do_load
+
+      do_load = .true.
+      if (present(load_modes)) do_load = load_modes
+
+      if (iffourierorbit .and. do_load) then
+         call fourier_orbit_load(loaded)
+         if (loaded) then
+            if (nid == 0) write (6, *) 'ALLOCATE_ORBIT: using Fourier modes from disk'
+            return
+         end if
+      end if
+
+      if (iffourierorbit .and. .not. ifstorebase) then
+         if (nid == 0) write (6, *) 'INITIALIZING STREAMING FOURIER ORBIT (no full storage)'
+         call fourier_orbit_init_streaming(nsteps_in, param(10))
+         return
+      end if
 
       if (nid == 0) write (6, *) &
          'ALLOCATING ORBIT WITH NSTEPS:', nsteps_in
@@ -504,6 +527,11 @@ contains
 
       ! nt from globals
 
+      if (iffourierorbit .and. .not. ifstorebase) then
+         call fourier_orbit_stream_step(istep_in)
+         return
+      end if
+
       call opcopy(uor(:, istep_in), vor(:, istep_in), &
                   wor(:, istep_in), vx, vy, vz)
       if (ifto) call copy(tor(:, istep_in, 1), &
@@ -526,6 +554,11 @@ contains
       integer :: m
 
       ! nt from globals
+
+      if (iffourierorbit .and. fourier_orbit_available()) then
+         call fourier_orbit_eval(real(istep_in)*dt, vx, vy, vz, t(1, 1, 1, 1, 1))
+         return
+      end if
 
       call opcopy(vx, vy, vz, &
                   uor(:, istep_in), vor(:, istep_in), &

@@ -39,6 +39,7 @@ $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o 
 $(O)/mode_codes.o:        $(NS)/mode_codes.f90                                   ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/mode_config.o:       $(NS)/mode_config.f90       $(O)/nekstab_nek_bridge.o $(O)/mode_codes.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/fourier.o:           $(NS)/fourier.f90           $(O)/nekstab_nek_bridge.o $(O)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
 # base_mut: base eddy-viscosity snapshot for quasilaminar RANS stability.
 # Called only from the case .usr (receives rans_mut as a procedure arg), so
 # it carries no RANS dependency and is a pure leaf on the bridge.
@@ -48,7 +49,7 @@ $(O)/reynolds_force.o: $(NS)/reynolds_force.f90 $(O)/nekstab_nek_bridge.o ;$(FC)
 # ─────────────────────────────────────────────────────────────────────
 # Level 1: krylov_subspace (depends on nekstab_vectors)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/krylov_subspace.o:   $(NS)/krylov_subspace.f90   $(O)/nek_vectors.o $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/krylov_subspace.o:   $(NS)/krylov_subspace.f90   $(O)/nek_vectors.o $(O)/nekstab_nek_bridge.o $(O)/fourier.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 1.5: Batch inner products (depends on krylov_subspace only)
@@ -58,15 +59,14 @@ $(O)/krylov_inner_products.o: $(NS)/krylov_inner_products.f90 $(O)/krylov_subspa
 # ─────────────────────────────────────────────────────────────────────
 # Level 2: Modules that depend on krylov_subspace + Level 0
 # ─────────────────────────────────────────────────────────────────────
-$(O)/fourier.o:           $(NS)/fourier.f90           $(O)/krylov_subspace.o $(O)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/IO.o:                $(NS)/IO.f90                $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/fourier.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/noise.o:             $(NS)/noise.f90             $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/statistics.o:        $(NS)/statistics.f90        $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o $(O)/otd.o $(O)/reynolds_force.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/diagnostics.o:       $(NS)/diagnostics.f90       $(O)/krylov_subspace.o $(O)/vortex.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o $(O)/noise.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/otd.o:               $(NS)/otd.f90               $(O)/krylov_subspace.o $(O)/IO.o $(O)/noise.o $(O)/fourier.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/fst.o:               $(NS)/fst.f90               $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
@@ -85,8 +85,8 @@ $(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O
 $(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o $(O)/newton_krylov.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/dmt.o:               $(NS)/dmt.f90               $(O)/nekstab_nek_bridge.o $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/dmt_filter.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o $(O)/newton_krylov.o $(O)/energy_budget.o $(O)/torque.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o $(O)/fourier.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o $(O)/fourier.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Modal analysis modules
