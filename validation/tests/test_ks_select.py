@@ -367,8 +367,9 @@ def test_the_target_needs_every_leading_entry_to_stand_still(settled_driver):
     # nev = 2: the second entry keeps moving, the first does not.
     steps = [[(1.16, 0.0, 1.0e-9), (1.0 - 0.1 * 0.5**k, 0.0, 1.0e-9)] for k in range(7)]
     counts = settled(settled_driver, steps, nev=2, nstill=3)
-    assert all(c[0] <= 1 for c in counts)
-    assert counts[-1][0] <= 1
+    # The first entry stands still from step 4 on; the second never does, so the
+    # count stays at 1 and never reaches nev = 2.
+    assert [c[0] for c in counts] == [0, 0, 0, 1, 1, 1, 1]
 
 
 def test_fewer_values_than_targets_cannot_reach_the_target(settled_driver):
