@@ -146,4 +146,9 @@ def test_real_file_smoke() -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    assert "vx" in result.stdout
+    # Header and vx norm of the tracked cylinder_re100 restart field.
+    assert "nelt=2128" in result.stdout
+    assert "time=1.000000e+02" in result.stdout
+    assert "istep=9948" in result.stdout
+    vx_line = next(line for line in result.stdout.splitlines() if line.split()[:1] == ["vx"])
+    assert "norm= 2.664943e+02" in vx_line
