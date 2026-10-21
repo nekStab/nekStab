@@ -377,10 +377,12 @@ contains
       !  products, so the check is off by default.
       if (iforthocheck) then
          if (nid == 0) open (unit=NEKSTAB_UNIT_ORTHO, file="orthonormality.dat")
-         do i = 1, k_dim
+         ! kk = length of the basis the last factorization built; an early stop
+         ! leaves columns kk+1..k_dim unset.
+         do i = 1, kk
             call k_norm(alpha, Q(i))
             if (nid == 0) write (NEKSTAB_UNIT_ORTHO, '("Norm of the ", I4, "th mode = ", F20.14)') i, alpha
-            do j = i + 1, k_dim
+            do j = i + 1, kk
                call k_dot(alpha, Q(i), Q(j))
                if (nid == 0) write (NEKSTAB_UNIT_ORTHO, &
                                     '("Orthogonality between mode ", I4, " and mode ", I4, " = ", E15.7)') i, j, alpha
