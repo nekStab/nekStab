@@ -1,4 +1,7 @@
-# Cubic Cavity at Re=1920 — unstable steady state
+# Cubic cavity, Re = 1920
+
+The cubic cavity just above the critical Reynolds number: the unstable steady state and its
+direct stability.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

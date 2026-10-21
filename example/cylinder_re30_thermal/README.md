@@ -1,4 +1,7 @@
-# Thermally Coupled Cylinder at Re=30
+# Heated cylinder, Re = 30
+
+The cylinder wake with an active temperature field (Richardson number 0.2): a DNS seed and
+the Newton steady state.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

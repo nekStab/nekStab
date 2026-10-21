@@ -1,4 +1,7 @@
-# Backward-Facing Step at Re=500
+# Backward-facing step, Re = 500
+
+A stable but non-normal open shear flow: the Newton base flow and the optimal transient
+growth at the horizons of Blackburn, Barkley and Sherwin (2008).
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

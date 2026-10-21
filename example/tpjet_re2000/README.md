@@ -1,4 +1,6 @@
-# Harmonically forced jet (tpjet_re2000)
+# Harmonically forced jet, Re = 2000
+
+The axisymmetric jet with harmonic forcing at St = 0.6: the forced periodic orbit by time-delayed feedback and by Newton, and its direct and adjoint Floquet stability.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

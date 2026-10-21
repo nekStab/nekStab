@@ -74,87 +74,47 @@ BASEFLOW_GROUPS = {
     '2': 'Newton methods',
 }
 
-# Example folder -> (title, one sentence). The dictionary order is the page order.
+# Page order of the example folders. The title of a folder is the first '# ' line of its
+# README.md, and its blurb is the paragraph that follows that line.
 # validation/tests/test_gallery_complete.py fails for a folder that is missing here.
-FAMILIES: dict[str, tuple[str, str]] = {
-    'cylinder_re100': (
-        'Cylinder, Re = 100',
-        'The reference family: the two-dimensional wake of a circular cylinder on one mesh of '
-        '2128 elements. DNS, the steady-state solvers (SFD, BoostConv, DMT, Newton), direct and '
-        'adjoint stability, transient growth, wavemaker, OTD and modal decomposition. BoostConv '
-        'runs at Re = 50 and transient growth at Re = 40.',
-    ),
-    'cylinder_re180': (
-        'Cylinder, Re = 180',
-        'The periodic cylinder wake below the three-dimensional secondary instability: Newton for '
-        'the periodic orbit, direct and adjoint Floquet stability, animation of the Floquet mode '
-        'and OTD along the orbit. The Floquet analysis is two-dimensional and finds the phase '
-        'mode only; modes A and B of Barkley and Henderson (1996) are three-dimensional.',
-    ),
-    'cylinder_re30_thermal': (
-        'Heated cylinder, Re = 30',
-        'The cylinder wake with an active temperature field (Richardson number 0.2): a DNS seed '
-        'and the Newton steady state.',
-    ),
-    'moving_cylinder_re100': (
-        'Moving cylinder, Re = 100',
-        'A cylinder in forced transverse oscillation on a moving mesh: the lock-in of the wake, its '
-        'periodic orbit by Newton, the Floquet multiplier of that orbit and the DMT filter bank on the orbit.',
-    ),
-    'flip_flop_re62': (
-        'Flip-flop, Re = 62',
-        'Two side-by-side cylinders just above the critical Reynolds number: the unstable periodic '
-        'orbit, its direct and adjoint Floquet stability and the wavemaker.',
-    ),
-    'tpjet_re2000': (
-        'Harmonically forced jet, Re = 2000',
-        'The axisymmetric jet with harmonic forcing at St = 0.6: the forced periodic orbit by '
-        'time-delayed feedback and by Newton, and its direct and adjoint Floquet stability.',
-    ),
-    'thermosyphon_ra500': (
-        'Thermosyphon, Ra = 500',
-        'The buoyancy-driven annular thermosyphon just above the critical Rayleigh number: DNS, the '
-        'Newton steady state and direct stability.',
-    ),
-    'back_fstep_re500': (
-        'Backward-facing step, Re = 500',
-        'A stable but non-normal open shear flow: the Newton base flow and the optimal transient '
-        'growth at the horizons of Blackburn, Barkley and Sherwin (2008).',
-    ),
-    'lid_driven_re3600': (
-        'Lid-driven cavity, Re = 3600',
-        'The two-dimensional cavity of aspect ratio 1.5 with a regularized lid: DNS, the Newton '
-        'steady state, direct and adjoint stability.',
-    ),
-    'cubic_cavity_re1914': (
-        'Cubic cavity, Re = 1914',
-        'The three-dimensional lid-driven cavity just below the critical Reynolds number: the '
-        'steady state, direct and adjoint stability, transient growth, the wavemaker and OTD.',
-    ),
-    'cubic_cavity_re1920': (
-        'Cubic cavity, Re = 1920',
-        'The cubic cavity just above the critical Reynolds number: the unstable steady state and '
-        'its direct stability.',
-    ),
-    'cubic_cavity_re1950': (
-        'Cubic cavity, Re = 1950',
-        'The saturated limit cycle of the cubic cavity: its period, direct and adjoint Floquet '
-        'stability, a DNS check of the unstable pair, POD and DMD of the cycle, and the DMT filter bank on the cycle.',
-    ),
-    'naca0012_re2000': (
-        'NACA 0012, Re = 2000',
-        'The wake of a NACA 0012 airfoil: DNS, the Newton steady state with sponge, direct and '
-        'adjoint stability and the wavemaker.',
-    ),
-    'poiseuille_re5k': (
-        'Poiseuille channel, Re = 5000',
-        'OTD modes about the laminar channel profile, compared with theory.',
-    ),
-    'slot_fst_re495': (
-        'Slot jet with free-stream turbulence, Re = 495',
-        'DNS of a slot jet with a synthetic free-stream turbulence inflow.',
-    ),
-}
+FAMILY_ORDER: tuple[str, ...] = (
+    'cylinder_re100',
+    'cylinder_re180',
+    'cylinder_re30_thermal',
+    'moving_cylinder_re100',
+    'flip_flop_re62',
+    'tpjet_re2000',
+    'thermosyphon_ra500',
+    'back_fstep_re500',
+    'lid_driven_re3600',
+    'cubic_cavity_re1914',
+    'cubic_cavity_re1920',
+    'cubic_cavity_re1950',
+    'naca0012_re2000',
+    'poiseuille_re5k',
+    'slot_fst_re495',
+)
+
+
+def _family_text(family: str) -> tuple[str, str]:
+    """Return the title and the blurb of an example folder, read from its README.md."""
+    readme = ROOT.parent / 'example' / family / 'README.md'
+    lines = readme.read_text(encoding='utf-8').split('\n')
+    head = next((k for k, line in enumerate(lines) if line.startswith('# ')), None)
+    if head is None:
+        raise ValueError(f'{readme} has no title line')
+    paragraph: list[str] = []
+    for line in lines[head + 1:]:
+        if line.strip():
+            paragraph.append(line.strip())
+        elif paragraph:
+            break
+    if not paragraph or paragraph[0].startswith('#'):
+        raise ValueError(f'{readme} has no paragraph after its title')
+    return lines[head][2:].strip(), ' '.join(paragraph)
+
+
+FAMILIES: dict[str, tuple[str, str]] = {family: _family_text(family) for family in FAMILY_ORDER}
 
 # userParam01 -> mode of nekStab. The keys are the codes of src/mode_codes.f90 divided by 100;
 # validation/tests/test_gallery_complete.py compares the two lists.

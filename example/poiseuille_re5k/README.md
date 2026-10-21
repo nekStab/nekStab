@@ -1,4 +1,6 @@
-# Poiseuille OTD — Optimally time-dependent modes in channel flow
+# Poiseuille channel, Re = 5000
+
+OTD modes about the laminar channel profile, compared with theory.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

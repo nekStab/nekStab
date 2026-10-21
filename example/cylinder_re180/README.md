@@ -1,4 +1,9 @@
-# Cylinder at Re=180
+# Cylinder, Re = 180
+
+The periodic cylinder wake below the three-dimensional secondary instability: Newton for the
+periodic orbit, direct and adjoint Floquet stability, animation of the Floquet mode and OTD
+along the orbit. The Floquet analysis is two-dimensional and finds the phase mode only;
+modes A and B of Barkley and Henderson (1996) are three-dimensional.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

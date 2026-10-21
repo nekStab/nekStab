@@ -1,4 +1,9 @@
-# cylinder_re100 — canonical full-pipeline showcase
+# Cylinder, Re = 100
+
+The reference family: the two-dimensional wake of a circular cylinder on one mesh of 2128
+elements. DNS, the steady-state solvers (SFD, BoostConv, DMT, Newton), direct and adjoint
+stability, transient growth, wavemaker, OTD and modal decomposition. BoostConv runs at Re =
+50 and transient growth at Re = 40.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

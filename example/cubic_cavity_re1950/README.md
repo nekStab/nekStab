@@ -1,4 +1,8 @@
-# Cubic Cavity Re=1950 — unstable periodic limit cycle: Floquet, DNS and modal analysis
+# Cubic cavity, Re = 1950
+
+The saturated limit cycle of the cubic cavity: its period, direct and adjoint Floquet
+stability, a DNS check of the unstable pair, POD and DMD of the cycle, and the DMT filter
+bank on the cycle.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

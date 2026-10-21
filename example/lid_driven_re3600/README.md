@@ -1,4 +1,7 @@
-# Lid-Driven Cavity — Newton-GMRES base flow
+# Lid-driven cavity, Re = 3600
+
+The two-dimensional cavity of aspect ratio 1.5 with a regularized lid: DNS, the Newton
+steady state, direct and adjoint stability.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

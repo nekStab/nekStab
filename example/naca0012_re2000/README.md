@@ -1,4 +1,7 @@
-# NACA 0012 — Newton-GMRES base flow
+# NACA 0012, Re = 2000
+
+The wake of a NACA 0012 airfoil: DNS, the Newton steady state with sponge, direct and
+adjoint stability and the wavemaker.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

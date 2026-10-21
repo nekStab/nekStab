@@ -1,4 +1,6 @@
-# Slot Jet with Free-Stream Turbulence — DNS
+# Slot jet with free-stream turbulence, Re = 495
+
+DNS of a slot jet with a synthetic free-stream turbulence inflow.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

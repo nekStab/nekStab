@@ -1,4 +1,7 @@
-# Annular Thermosyphon at Ra=500
+# Thermosyphon, Ra = 500
+
+The buoyancy-driven annular thermosyphon just above the critical Rayleigh number: DNS, the
+Newton steady state and direct stability.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

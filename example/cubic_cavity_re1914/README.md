@@ -1,4 +1,7 @@
-# Cubic Cavity at Re=1914 — steady base flow and its stability
+# Cubic cavity, Re = 1914
+
+The three-dimensional lid-driven cavity just below the critical Reynolds number: the steady
+state, direct and adjoint stability, transient growth, the wavemaker and OTD.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

@@ -1,4 +1,8 @@
-# Cylinder in forced transverse oscillation, Re = 100
+# Moving cylinder, Re = 100
+
+A cylinder in forced transverse oscillation on a moving mesh: the lock-in of the wake, its
+periodic orbit by Newton, the Floquet multiplier of that orbit and the DMT filter bank on
+the orbit.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 

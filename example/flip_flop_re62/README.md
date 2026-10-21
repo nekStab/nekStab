@@ -1,4 +1,7 @@
-# Side-by-Side Cylinders at Re=62
+# Flip-flop, Re = 62
+
+Two side-by-side cylinders just above the critical Reynolds number: the unstable periodic
+orbit, its direct and adjoint Floquet stability and the wavemaker.
 
 Stage rationale: see [EXAMPLES.md](../../EXAMPLES.md).
 
