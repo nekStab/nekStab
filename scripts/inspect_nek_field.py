@@ -266,7 +266,11 @@ def inspect(path: Path) -> Dict[str, object]:
             raise InspectError(f"{pymech_error}; raw reader failed: {raw_error}") from raw_error
     # The word size and the record code show how the file was written: rdcode
     # XUPT (not XUP) proves that a thermal start field holds the temperature.
-    meta, _ = _parse_header(path)
+    # pymech can read a header that _parse_header rejects; keep its result then.
+    try:
+        meta, _ = _parse_header(path)
+    except InspectError:
+        meta = {"wdsize": None, "rdcode": None}
     result["wdsize"] = meta["wdsize"]
     result["rdcode"] = meta["rdcode"]
     result["size_bytes"] = path.stat().st_size
