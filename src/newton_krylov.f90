@@ -526,7 +526,8 @@ contains
 
          ! Trial diagnostics go to stdout ONLY.  residu_newton.dat must
          ! contain one row per ACCEPTED Newton iterate: its consumers
-         ! (validation/parsers/residual.py) read every row as an iterate,
+         ! (the plot.py of each 210 stage, and scripts/check_against_ref.py
+         ! through newton_iterations) read every row as an iterate,
          ! so rejected trials in that file would corrupt convergence plots.
          if (nid == 0) then
             if (isNewtonPO .or. isNewtonPO_T) then
