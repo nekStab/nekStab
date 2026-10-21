@@ -9,7 +9,6 @@ Needs gfortran; the tests skip when it is missing.
 from __future__ import annotations
 
 import re
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -94,27 +93,16 @@ STRINGS = {
 
 
 @pytest.fixture(scope="module")
-def driver(tmp_path_factory) -> Path:
-    gfortran = shutil.which("gfortran")
-    if gfortran is None:
-        pytest.skip("gfortran not found")
-    build = tmp_path_factory.mktemp("mode_selector")
-    flags = ["-fdefault-real-8", "-fdefault-double-8", "-ffree-line-length-none", "-O0"]
-    sources = [
-        ROOT / "src" / "mode_codes.f90",
-        FORTRAN / "mode_selector_stub.f90",
-        ROOT / "src" / "mode_config.f90",
-        FORTRAN / "mode_selector_driver.f90",
-    ]
-    for src in sources:
-        subprocess.run([gfortran, *flags, "-c", str(src)], cwd=build, check=True)
-    exe = build / "driver"
-    subprocess.run(
-        [gfortran, *flags, "-o", str(exe), *(f"{s.stem}.o" for s in sources)],
-        cwd=build,
-        check=True,
+def driver(build_driver) -> Path:
+    return build_driver(
+        "mode_selector",
+        [
+            ROOT / "src" / "mode_codes.f90",
+            FORTRAN / "mode_selector_stub.f90",
+            ROOT / "src" / "mode_config.f90",
+            FORTRAN / "mode_selector_driver.f90",
+        ],
     )
-    return exe
 
 
 def resolve(exe: Path, up1: float, *args: str) -> tuple[int, set[str], float | None, str]:

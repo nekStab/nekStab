@@ -12,7 +12,6 @@ Needs gfortran; the tests skip when it is missing.
 from __future__ import annotations
 
 import math
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -24,22 +23,11 @@ FORTRAN = Path(__file__).resolve().parent / "fortran"
 
 
 @pytest.fixture(scope="module")
-def driver(tmp_path_factory) -> Path:
-    gfortran = shutil.which("gfortran")
-    if gfortran is None:
-        pytest.skip("gfortran not found")
-    build = tmp_path_factory.mktemp("dmt_filter")
-    flags = ["-fdefault-real-8", "-fdefault-double-8", "-ffree-line-length-none", "-O0"]
-    sources = [ROOT / "src" / "dmt_filter.f90", FORTRAN / "dmt_filter_driver.f90"]
-    for src in sources:
-        subprocess.run([gfortran, *flags, "-c", str(src)], cwd=build, check=True)
-    exe = build / "driver"
-    subprocess.run(
-        [gfortran, *flags, "-o", str(exe), *(f"{s.stem}.o" for s in sources)],
-        cwd=build,
-        check=True,
+def driver(build_driver) -> Path:
+    return build_driver(
+        "dmt_filter",
+        [ROOT / "src" / "dmt_filter.f90", FORTRAN / "dmt_filter_driver.f90"],
     )
-    return exe
 
 
 def ask(exe: Path, *lines: str) -> list[list[float]]:

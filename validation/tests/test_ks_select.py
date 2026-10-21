@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import math
 import random
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -31,72 +30,39 @@ FORTRAN = Path(__file__).resolve().parent / "fortran"
 
 
 @pytest.fixture(scope="module")
-def driver(tmp_path_factory) -> Path:
-    gfortran = shutil.which("gfortran")
-    if gfortran is None:
-        pytest.skip("gfortran not found")
-    build = tmp_path_factory.mktemp("ks_select")
-    flags = ["-fdefault-real-8", "-fdefault-double-8", "-ffree-line-length-none", "-O0"]
-    sources = [
-        ROOT / "src" / "argsort.f90",
-        ROOT / "src" / "ks_select.f90",
-        FORTRAN / "ks_select_driver.f90",
-    ]
-    for src in sources:
-        subprocess.run([gfortran, *flags, "-c", str(src)], cwd=build, check=True)
-    exe = build / "driver"
-    subprocess.run(
-        [gfortran, *flags, "-o", str(exe), *(f"{s.stem}.o" for s in sources)],
-        cwd=build,
-        check=True,
+def driver(build_driver) -> Path:
+    return build_driver(
+        "ks_select",
+        [
+            ROOT / "src" / "argsort.f90",
+            ROOT / "src" / "ks_select.f90",
+            FORTRAN / "ks_select_driver.f90",
+        ],
     )
-    return exe
 
 
 @pytest.fixture(scope="module")
-def converged_driver(tmp_path_factory) -> Path:
-    gfortran = shutil.which("gfortran")
-    if gfortran is None:
-        pytest.skip("gfortran not found")
-    build = tmp_path_factory.mktemp("ks_converged")
-    flags = ["-fdefault-real-8", "-fdefault-double-8", "-ffree-line-length-none", "-O0"]
-    sources = [
-        ROOT / "src" / "argsort.f90",
-        ROOT / "src" / "ks_select.f90",
-        FORTRAN / "ks_converged_driver.f90",
-    ]
-    for src in sources:
-        subprocess.run([gfortran, *flags, "-c", str(src)], cwd=build, check=True)
-    exe = build / "driver"
-    subprocess.run(
-        [gfortran, *flags, "-o", str(exe), *(f"{s.stem}.o" for s in sources)],
-        cwd=build,
-        check=True,
+def converged_driver(build_driver) -> Path:
+    return build_driver(
+        "ks_converged",
+        [
+            ROOT / "src" / "argsort.f90",
+            ROOT / "src" / "ks_select.f90",
+            FORTRAN / "ks_converged_driver.f90",
+        ],
     )
-    return exe
 
 
 @pytest.fixture(scope="module")
-def settled_driver(tmp_path_factory) -> Path:
-    gfortran = shutil.which("gfortran")
-    if gfortran is None:
-        pytest.skip("gfortran not found")
-    build = tmp_path_factory.mktemp("ks_settled")
-    flags = ["-fdefault-real-8", "-fdefault-double-8", "-ffree-line-length-none", "-O0"]
-    sources = [
-        ROOT / "src" / "argsort.f90",
-        ROOT / "src" / "ks_select.f90",
-        FORTRAN / "ks_settled_driver.f90",
-    ]
-    for src in sources:
-        subprocess.run([gfortran, *flags, "-c", str(src)], cwd=build, check=True)
-    exe = build / "driver"
-    subprocess.run(
-        [gfortran, *flags, "-o", str(exe), *(f"{s.stem}.o" for s in sources)],
-        cwd=build,
-        check=True,
+def settled_driver(build_driver) -> Path:
+    return build_driver(
+        "ks_settled",
+        [
+            ROOT / "src" / "argsort.f90",
+            ROOT / "src" / "ks_select.f90",
+            FORTRAN / "ks_settled_driver.f90",
+        ],
     )
-    return exe
 
 
 def settled(exe: Path, steps, nev: int = 1, nstill: int = 3, tol: float = 1.0e-6):
