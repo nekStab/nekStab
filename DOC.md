@@ -508,16 +508,17 @@ Arnoldi orthogonalization uses CGS2 by default (`use_cgs = .true.`), with classi
 
 ### Fourier representation of a periodic orbit
 
-Set `iffourierorbit = .true.` in `nekStab_usrchk` (default `.false.`). Optional caps, also set there: `fourier_kmax` (fixed number of modes, `0` = automatic) and `fourier_mem_gb` (`0` = uncapped). Both are broadcast after `nekStab_usrchk`.
-
-At convergence a Newton periodic orbit writes `FOU<session>0.f*` and `<session>.fourier`. The field files are `c_0`, then the real and imaginary parts of `c_k` for `k = 1..K`. The text header holds the period `T`, the number of samples `N`, `dt`, `K`, the missing fluctuation energy and `E_k`. A later Floquet, energy-budget or OTD run loads those files and evaluates
+Set `iffourierorbit = .true.` in `nekStab_usrchk` (default `.false.`). The stability and post-processing runs on a periodic orbit then hold the base flow as `K` Fourier modes instead of `N` stored snapshots:
 
 ```
 U(t) = c_0 + 2 Re sum_{k=1}^{K} c_k exp(2 pi i k t / T)
 ```
 
-`K` starts at 8 and doubles while a doubling cuts the missing fluctuation energy by 10 or more. It stops below `1e-10`, or when a doubling gains less than 10, and never exceeds `N/2`. `E_k` is the mass-weighted `|c_k|^2`; mode `k` and mode `N-k` are counted once. Samples cover one period (`N*dt = T`) and do not store `U(0)` and `U(T)` as two points. If the trajectory does not close, the periodic extension has a jump and the tail falls only as `1/k^2`. Replay then keeps every computed coefficient, so the sample times still match the integrated trajectory; the file keeps the doubling-rule `K`. A Floquet record whose closure exceeds `1e-3` stops. A `dt` different from the header `dt` is allowed: `|mu - 1|` is the printed orbit gap, and a gap above `1e-3` is a warning.
-
+- A Newton periodic orbit (2.1, 2.2) runs as before: its guesses do not close, so it keeps its snapshots (`ifstorebase`) or recomputes the base. After it converges it integrates the orbit once more, accumulates the modes and writes `FOU<session>0.f*` (`c_0`, then the real and imaginary parts of `c_1`, `c_2`, ...) and `<session>.fourier` (period `T`, `N`, `dt`, `K`, missing energy, `E_k`).
+- Floquet (3.11, 3.21, 3.31), the energy budget (4.11) and OTD with a moving base (5.1) read those files. Without them, the Floquet and energy-budget runs accumulate the modes during their first integration of the base; OTD then advances the base with the DNS.
+- The modes are a discrete Fourier transform of the samples `U(dt), ..., U(N dt)`, with `N dt = T`, added one time step at a time. At most `min(128, (N-1)/2)` modes are accumulated; `fourier_kmax > 0` fixes `K`. Otherwise `K` starts at 8 and doubles while a doubling cuts the missing fluctuation energy by 10 or more, down to `1e-10`. `E_k` is the mass-weighted `|c_k|^2`, with the norm of the Krylov vectors.
+- The series is evaluated at the time of each step, so another `dt` than that of the files is allowed; the phase-mode multiplier then moves by the time-step error.
+- A Floquet base that does not return to its start field within `1e-3` stops the run: its modes would not describe a closed orbit.
 
 ### Mode 3: Eigenvalue Problems
 

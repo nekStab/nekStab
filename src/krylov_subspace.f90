@@ -33,12 +33,11 @@ module nekstab_krylov_subspace
                                  thermal_norm_mode, thermal_norm_weight, &
                                  thermal_norm_min, thermal_norm_max, &
                                  thermal_buoyancy_coeff, isNewtonPO,&
-                                 ifKEnorm, iffourierorbit, ifstorebase, dt, param
+                                 ifKEnorm, iffourierorbit, ifstorebase, dt, param, &
+                                 isNewtonPO_T
    use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_load, &
                               fourier_orbit_init_streaming, fourier_orbit_stream_step, &
-                              fourier_orbit_finalize_streaming, &
-                              fourier_orbit_build_from_stored, fourier_orbit_eval, &
-                              fourier_orbit_cleanup
+                              fourier_orbit_eval
 
    private
 
@@ -79,7 +78,7 @@ module nekstab_krylov_subspace
              k_zero, k_copy, k_matmul, &
              configure_thermal_norm_weight, &
              TN_MANUAL, TN_AUTO, TN_CLIP, &
-             allocate_orbit, orbit_store, orbit_restore
+             allocate_orbit, orbit_store, orbit_restore, orbit_modes, orbit_kept
 
    ! thermal_norm_mode selector values
    integer, parameter :: TN_MANUAL = 0, TN_AUTO = 1, TN_CLIP = 2
@@ -458,28 +457,18 @@ contains
 !-----------------------------------------------------------------------
 ! allocate_orbit — Allocate orbit storage arrays on the heap
 !-----------------------------------------------------------------------
-   subroutine allocate_orbit(nsteps_in, load_modes)
+   subroutine allocate_orbit(nsteps_in)
 
       integer, intent(in) :: nsteps_in
-      logical, intent(in), optional :: load_modes
       integer :: alloc_stat
       real :: request_gb
-      logical :: loaded, do_load
+      logical :: loaded
 
-      do_load = .true.
-      if (present(load_modes)) do_load = load_modes
-
-      if (iffourierorbit .and. do_load) then
+      !  Fourier orbit: read the modes of a converged Newton run, or accumulate
+      !  them while the caller integrates the base over its first period.
+      if (orbit_modes()) then
          call fourier_orbit_load(loaded)
-         if (loaded) then
-            if (nid == 0) write (6, *) 'ALLOCATE_ORBIT: using Fourier modes from disk'
-            return
-         end if
-      end if
-
-      if (iffourierorbit .and. .not. ifstorebase) then
-         if (nid == 0) write (6, *) 'INITIALIZING STREAMING FOURIER ORBIT (no full storage)'
-         call fourier_orbit_init_streaming(nsteps_in, param(10))
+         if (.not. loaded) call fourier_orbit_init_streaming(nsteps_in, param(10))
          return
       end if
 
@@ -527,10 +516,9 @@ contains
 
       ! nt from globals
 
-      if (iffourierorbit .and. .not. ifstorebase) then
-         call fourier_orbit_stream_step(istep_in)
-         return
-      end if
+      !  A converged Newton orbit both stores its samples and accumulates its modes.
+      call fourier_orbit_stream_step(istep_in) ! returns unless the DFT is open
+      if (.not. allocated(uor)) return
 
       call opcopy(uor(:, istep_in), vor(:, istep_in), &
                   wor(:, istep_in), vx, vy, vz)
@@ -555,8 +543,8 @@ contains
 
       ! nt from globals
 
-      if (iffourierorbit .and. fourier_orbit_available()) then
-         call fourier_orbit_eval(real(istep_in)*dt, vx, vy, vz, t(1, 1, 1, 1, 1))
+      if (fourier_orbit_available()) then
+         call fourier_orbit_eval(real(istep_in)*dt)
          return
       end if
 
@@ -573,5 +561,23 @@ contains
       end if
 
    end subroutine orbit_restore
+
+!-----------------------------------------------------------------------
+! orbit_modes — the base orbit is held as Fourier modes
+!
+!   Not during Newton: a Newton guess is not a closed orbit, and the
+!   truncated series of a trajectory with a jump does not reproduce it.
+!-----------------------------------------------------------------------
+   logical function orbit_modes()
+      orbit_modes = iffourierorbit .and. .not. (isNewtonPO .or. isNewtonPO_T)
+   end function orbit_modes
+
+!-----------------------------------------------------------------------
+! orbit_kept — the base orbit is integrated once and then replayed
+!   (stored samples, or Fourier modes), instead of integrated every time
+!-----------------------------------------------------------------------
+   logical function orbit_kept()
+      orbit_kept = ifstorebase .or. orbit_modes()
+   end function orbit_kept
 
 end module nekstab_krylov_subspace

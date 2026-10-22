@@ -29,12 +29,7 @@ module nekstab_energy_budget
                                  ubase, vbase, wbase, pbase, tbase, maxmodes, bm1, if3d, ifto, &
                                  NEKSTAB_UNIT_PKE, nelv, lelv, lelt, lx1, ly1, lz1, nsteps, dt, time, &
                                  istep, ifpert, ifadj, lsize, ifbase, param, vxp, vyp, vzp, tp, &
-                                 spng_fn, spng_st, wdsize, nekStab_error, NEKSTAB_UNIT_RESIDU, &
-                                 iffourierorbit, ifstorebase
-   use nekstab_krylov_subspace, only: uor, vor, wor, tor
-   use nekstab_fourier, only: fourier_orbit_available, &
-                              fourier_orbit_build_from_stored, &
-                              fourier_orbit_finalize_streaming
+                                 spng_fn, spng_st, wdsize, nekStab_error, NEKSTAB_UNIT_RESIDU
    use nekstab_matvec, only: prepare_linearized_solver
    use nekstab_eigensolvers, only: norm
    implicit none
@@ -444,6 +439,7 @@ contains
    subroutine stability_energy_budget_floquet
       use nekstab_krylov_subspace, only: lv, lt, nv, nt, allocate_orbit, &
                                          orbit_store, orbit_restore, uor, vor, wor, tor
+      use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_finalize_streaming
 
       !     ----- Perturbation work arrays -----
       !       vx_d/vy_d/vz_d : a snapshot of the perturbation velocity at the
@@ -662,9 +658,7 @@ contains
       !     --> Allocate orbit storage on first call
       if (.not. energy_init) then
          call allocate_orbit(nsteps)
-         if (iffourierorbit .and. fourier_orbit_available()) then
-            energy_init = .true.
-         end if
+         if (fourier_orbit_available()) energy_init = .true. ! Fourier modes read from disk: no build
       end if
 
       !     #####
@@ -699,13 +693,7 @@ contains
             call nek_advance() ! base evolves; settime advances `time`
             call orbit_store(istep) ! cache base at phase istep*dt
          end do
-         if (iffourierorbit .and. .not. fourier_orbit_available()) then
-            if (ifstorebase) then
-               call fourier_orbit_build_from_stored(nsteps, param(10), uor, vor, wor, tor)
-            else
-               call fourier_orbit_finalize_streaming()
-            end if
-         end if
+         call fourier_orbit_finalize_streaming() ! iffourierorbit: keep K modes, not the samples
 
          !        --> Orbit cached. Re-enable the perturbation solve and freeze
          !            the base; from now on every pass only replays the cache.

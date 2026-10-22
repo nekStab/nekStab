@@ -28,10 +28,8 @@ module nekstab_newton
                                  NEKSTAB_UNIT_NEWTON_LOG, nid, nof, nsteps, param, pbase, &
                                  pr, restol, t, tbase, time, ubase, uparam, vbase, vx, vy, &
                                  vz, wbase, wdsize, iffourierorbit
-   use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_write, &
-                              fourier_orbit_build_from_stored, &
-                              fourier_orbit_finalize_streaming, &
-                              fourier_orbit_reset_trial
+   use nekstab_fourier, only: fourier_orbit_write, fourier_orbit_init_streaming, &
+                              fourier_orbit_finalize_streaming
    use nekstab_vectors, only: nopcopy
    use nekstab_matvec, only: cache_newton_bvec, matvec, prepare_linearized_solver
    use nekstab_krylov_decomposition, only: arnoldi_factorization
@@ -184,9 +182,7 @@ contains
       integer :: prev_total_calls = 0 ! Track calls from previous iteration
       integer, save :: k_out = 0 ! Columns from the previous GMRES; 0 before the first
       integer, save :: k_sum = 0 ! Accumulator for total k values across Newton iterations
-      integer :: alloc_stat
       real :: saved_tol21, saved_tol22 ! Save/restore param(21:22)
-      real :: request_gb
       real :: accepted_residuals(3) ! Non-monotone Armijo window (last 3 accepted)
       integer :: accepted_residual_count
       integer :: accepted_residual_next
@@ -267,8 +263,8 @@ contains
 
          call prepare_linearized_solver ! Compute nsteps and Nek parameters
 
-         if ((ifstorebase .or. iffourierorbit) .and. (isNewtonPO .or. isNewtonPO_T)) then
-            call allocate_orbit(nsteps, .false.)
+         if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
+            call allocate_orbit(nsteps)
          end if
 
          call nonlinear_forward_map(f, q) ! rhs of Newton iteration f(q)
@@ -407,9 +403,6 @@ contains
          call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, 'nwt')
          time = q%time ! Restore
 
-         if (iffourierorbit) then
-            call fourier_orbit_reset_trial()
-         end if
          if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
             if (nid == 0) write (6, *) '  Deallocating orbit storage'
             if (allocated(uor)) deallocate (uor, vor, wor)
@@ -453,7 +446,15 @@ contains
          call outpost2(q%vx, q%vy, q%vz, q%pr, q%t, nof, "BF_")
          param(63) = 0.0d0; call bcast(param(63), wdsize) ! Single precision
          call outpost_vort(vx, vy, vz, 'BFV')
-         if (iffourierorbit) call fourier_orbit_write()
+         !  iffourierorbit: one more period of the converged orbit, with its Fourier
+         !  modes accumulated, then the modes are written. A guess that is not
+         !  converged is never written: its trajectory does not close.
+         if (iffourierorbit .and. (isNewtonPO .or. isNewtonPO_T)) then
+            call fourier_orbit_init_streaming(nsteps, q%time)
+            call nonlinear_forward_map(f, q)
+            call fourier_orbit_finalize_streaming()
+            call fourier_orbit_write()
+         end if
       end if
 
       call close_newton_log_units()
@@ -636,7 +637,7 @@ contains
          ! so grow the storage before nonlinear_forward_map writes snapshots.
          if (nid == 0) write (6, "('  BACKTRACK reallocating orbit storage from ',I6, &
       &      ' to ',I6,' steps')") allocated_nsteps, required_nsteps
-         call allocate_orbit(required_nsteps, .false.)
+         call allocate_orbit(required_nsteps)
 
       end subroutine ensure_trial_orbit_storage
 
@@ -930,9 +931,6 @@ contains
       !     ----- Initial condition for the forward simulation.
       type(krylov_vector), intent(in) :: q
 
-      integer :: m
-      real :: gmres_target, closure_abs, closure_ref
-
       ! nt from globals
 
       !     --> Copy the initial condition to Nek.
@@ -956,17 +954,6 @@ contains
             call orbit_store(istep)
          end if
       end do
-      if (iffourierorbit .and. (isNewtonPO .or. isNewtonPO_T)) then
-         if (ifstorebase) then
-            call fourier_orbit_build_from_stored(nsteps, q%time, uor, vor, wor, tor)
-         else
-            call fourier_orbit_finalize_streaming()
-         end if
-         if (fourier_orbit_available() .and. allocated(uor)) then
-            deallocate (uor, vor, wor)
-            if (allocated(tor)) deallocate (tor)
-         end if
-      end if
 
       !     --> Compute the right hand side of the time-stepper Newton.
       call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, vx, vy, vz, pr, t) ! F(q)
@@ -974,14 +961,6 @@ contains
       call k_copy(fc_nwt, f) ! for Newton UPO newton_linearized_map
       call k_sub2(f, q) ! f = F(q) - q
       f%time = 0.0d0
-      if (iffourierorbit .and. (isNewtonPO .or. isNewtonPO_T)) then
-         call k_norm(closure_abs, f)
-         call k_norm(closure_ref, q)
-         if (nid == 0 .and. closure_ref > 0.0d0) then
-            write (6, "('Fourier orbit closure ||U(T)-U(0)||/||U(0)|| =',1PE12.4)") &
-               closure_abs/closure_ref
-         end if
-      end if
 
       !     --> Pass current guess as base flow for the linearized calculation.
       call nopcopy(ubase, vbase, wbase, pbase, tbase, q%vx, q%vy, q%vz, q%pr, q%t)

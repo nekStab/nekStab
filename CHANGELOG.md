@@ -30,12 +30,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
 
 ### Added
 - Fourier representation of a periodic orbit, off by default (`iffourierorbit`
-  in `nekStab_usrchk`; `fourier_kmax` and `fourier_mem_gb` cap the modes).
-  A converged Newton orbit writes `FOU<session>0.f*` and `<session>.fourier`.
-  Floquet, the energy budget and OTD reload `U(t)` from those modes. `K` follows
-  the doubling rule and never exceeds `N/2`. A trajectory that does not close
-  has a `1/k^2` tail; replay then keeps every computed coefficient so the
-  sample times match, while the file keeps the doubling-rule `K`.
+  in `nekStab_usrchk`; `fourier_kmax` fixes the number of modes). A converged
+  Newton orbit writes `FOU<session>0.f*` and `<session>.fourier`; Floquet, the
+  energy budget and OTD read `U(t)` from those modes instead of storing the orbit.
+  `K` follows a doubling rule on the missing energy, at most 128 modes.
 
 - `iforthocheck` (default `.false.`, set in `nekStab_usrchk`) checks the
   orthogonality of the Krylov vectors. The eigensolver writes the norm of each

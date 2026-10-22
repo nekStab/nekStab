@@ -103,9 +103,8 @@
 
       ! Fourier orbit representation options
       logical :: iffourierorbit ! Fourier mode orbit representation
-      integer :: fourier_kmax   ! Max K mode override (0=auto)
-      real :: fourier_mem_gb    ! Memory cap in GB (0=uncapped)
-      common/nStab_fourier/fourier_mem_gb, fourier_kmax, iffourierorbit
+      integer :: fourier_kmax   ! Fixed number of modes K (0 = doubling rule, at most 128)
+      common/nStab_fourier/fourier_kmax, iffourierorbit
 
       ! Real variables for numerical tolerances and domain dimensions
       real :: eigen_tol, schur_del, glmax_qc

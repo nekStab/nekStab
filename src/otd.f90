@@ -37,9 +37,9 @@ module nekstab_otd
                                  sxm1, sym1, szm1, t, time, txm1, tym1, tzm1, ubic, uparam, &
                                  upic, v1mask, v2mask, v3mask, vbic, vdiff, vmult, vpic, vx, &
                                  vxp, vxpic, vy, vyp, vypic, vz, vzp, vzpic, wbic, wpic, xm1, &
-                                 ym1, zm1, iffourierorbit, nsteps
-   use nekstab_krylov_subspace, only: nv, allocate_orbit, orbit_restore
-   use nekstab_fourier, only: fourier_orbit_available
+                                 ym1, zm1, iffourierorbit
+   use nekstab_krylov_subspace, only: nv
+   use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_load, fourier_orbit_eval
    implicit none
    private
 
@@ -94,7 +94,7 @@ contains
 ! https://dx.doi.org/10.1098/rspa.2015.0779
 !-----------------------------------------------------------------------
    subroutine otd
-      logical :: file_found
+      logical :: file_found, modes_loaded
       integer :: mode, restart_id, latest_restart
       character(len=3) :: mode_tag
       character(len=30) :: filename
@@ -177,19 +177,15 @@ contains
          !  Code 5.0 freezes the base flow: the perturbations evolve about the loaded
          !  field and the DNS is not advanced. Code 5.1 (ifotdDNS) advances the base
          !  flow with the DNS, so the basis follows the trajectory.
+         !  With iffourierorbit and the modes of a converged orbit on disk, 5.1
+         !  evaluates the base from them instead of advancing it.
          if (ifotdDNS) then
-            if (iffourierorbit) then
-               call allocate_orbit(nsteps)
-               if (fourier_orbit_available()) then
-                  call nekStab_log('OTD with base flow from Fourier orbit modes')
-                  ifbase = .false.
-               else
-                  call nekStab_log('OTD with the base flow advanced by the DNS')
-                  ifbase = .true.
-               end if
-            else
+            if (iffourierorbit) call fourier_orbit_load(modes_loaded)
+            ifbase = .not. fourier_orbit_available()
+            if (ifbase) then
                call nekStab_log('OTD with the base flow advanced by the DNS')
-               ifbase = .true.
+            else
+               call nekStab_log('OTD with the base flow from the Fourier orbit modes')
             end if
          else
             call nekStab_log('OTD in Frozen baseflow mode!')
@@ -205,9 +201,8 @@ contains
 
       ! Implementation based on Babaee & Sapsis (2016); docs/otd-spec.md §1.1.
       gsstep_override = .false.
-      if (ifotdDNS .and. iffourierorbit .and. fourier_orbit_available()) then
-         call orbit_restore(istep)
-      end if
+      ! At the run time, not istep*dt: OTD may run with a variable time step.
+      if (ifotdDNS .and. fourier_orbit_available()) call fourier_orbit_eval(time)
       call otd_orthonormalize_basis
       call otd_construct_linear_operator
       call otd_generate_forces

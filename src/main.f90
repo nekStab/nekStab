@@ -175,7 +175,6 @@
       !  Fourier orbit representation
          iffourierorbit = .false.
          fourier_kmax = 0
-         fourier_mem_gb = 0.0d0
       !  Note: the modal defaults (nsnap=100, nsave=10, dt=0.1) are the
       !  historical v1 values used in the original POD/DMD examples; they
       !  keep old cases bit-identical when not overridden in the .usr.
@@ -314,7 +313,6 @@
 !        nStab_fourier
          call bcast(iffourierorbit, lsize)
          call bcast(fourier_kmax, isize)
-         call bcast(fourier_mem_gb, wdsize)
       end subroutine bcast_nStab_defaults
 
       !-----------------------------------------------------------------------
@@ -357,7 +355,6 @@
             call bcast(zck, wdsize)
             call bcast(iffourierorbit, lsize)
             call bcast(fourier_kmax, isize)
-            call bcast(fourier_mem_gb, wdsize)
             call nekStab_resolve_mode ! resolve mode from string/flags/uparam
             call nekStab_printNEKParams
 

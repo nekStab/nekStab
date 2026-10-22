@@ -17,7 +17,8 @@
 !-----------------------------------------------------------------------
 
 module nekstab_matvec
-   use nekstab_krylov_subspace, only: krylov_vector, nt
+   use nekstab_krylov_subspace, only: krylov_vector, nt, orbit_kept, orbit_modes
+   use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_finalize_streaming
    use nekstab_vectors, only: nopcopy, nopadd2
    use nekstab_nek_bridge, only: nekStab_log, nid, nio, param, npert, time, dt, &
                                  nsteps, ctarg, vx, vy, vz, pr, t, lastep, fintim, &
@@ -29,16 +30,12 @@ module nekstab_matvec
                                  ifDeltaForcing, ifAnimateMode, ifAnimateBFDeform, &
                                  ifAnimateFloquet, isNewtonFP, isNewtonPO, isNewtonPO_T, &
                                  evop, ubase, vbase, wbase, pbase, tbase, ifpert, ifadj, &
-                                 lsize, ifbase, ifstorebase, mstep, k_dim, schur_cnt, &
+                                 lsize, ifbase, mstep, k_dim, schur_cnt, &
                                  istep, vxp, vyp, vzp, prp, tp, findiff_order, ampls, &
                                  coefs, ifheat, dTdx, dTdy, dTdz, ifbuoyancy, &
                                  buoyancy_qvol_wired,&
                                  ifquasilaminar, ifKEnorm, ldimt, ifield, vmult, tmult, &
-                                 ifto, ifpsco, lx1, ly1, lz1, iffourierorbit
-   use nekstab_krylov_subspace, only: uor, vor, wor, tor
-   use nekstab_fourier, only: fourier_orbit_available, &
-                              fourier_orbit_build_from_stored, &
-                              fourier_orbit_finalize_streaming
+                                 ifto, ifpsco, lx1, ly1, lz1
    implicit none
    private
 
@@ -360,17 +357,13 @@ contains
       if (isNewtonPO .or. isNewtonPO_T) then
          ifbase = .true. ! activate baseflow evolution for UPO
       end if
-      if (ifstorebase .or. iffourierorbit) then
+      if (orbit_kept()) then
          if (forward_linearized_map_init) then
             ifbase = .false. ! subsequent calls: use stored orbit
-         elseif (iffourierorbit .and. fourier_orbit_available()) then
-            ifbase = .false.
-            forward_linearized_map_init = .true.
          elseif (ifbase) then
-            call allocate_orbit(nsteps) ! first call: allocate storage or load modes
-            if (iffourierorbit .and. fourier_orbit_available()) then
-               ifbase = .false.
-               forward_linearized_map_init = .true.
+            call allocate_orbit(nsteps) ! first call: allocate storage, or read the Fourier modes
+            if (fourier_orbit_available()) then ! modes read from disk: no base integration
+               ifbase = .false.; forward_linearized_map_init = .true.
             end if
          end if
       end if
@@ -392,25 +385,19 @@ contains
          call nekstab_usrchk()
          call nek_advance_quiet()
 
-         if ((ifstorebase .or. iffourierorbit) .and. ifbase .and. .not. forward_linearized_map_init) then !storing first time
+         if (orbit_kept() .and. ifbase .and. .not. forward_linearized_map_init) then !storing first time
             if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
                                 istep == 1 .or. istep == nsteps)) &
                write (6, *) 'storing first series:', istep, '/', nsteps
             call orbit_store(istep)
-         elseif ((ifstorebase .or. iffourierorbit) .and. forward_linearized_map_init .and. .not. ifbase) then !just moving in memory
+         elseif (orbit_kept() .and. forward_linearized_map_init .and. .not. ifbase) then !just moving in memory
             if (nid == 0 .and. istep == 1) write (6, *) 'using stored baseflow'
             call orbit_restore(istep)
          end if
       end do
-      if ((ifstorebase .or. iffourierorbit) .and. .not. forward_linearized_map_init .and. ifbase) then
+      if (orbit_kept() .and. .not. forward_linearized_map_init .and. ifbase) then
          ifbase = .false.; forward_linearized_map_init = .true.
-         if (iffourierorbit .and. .not. fourier_orbit_available()) then
-            if (ifstorebase) then
-               call fourier_orbit_build_from_stored(nsteps, param(10), uor, vor, wor, tor)
-            else
-               call fourier_orbit_finalize_streaming()
-            end if
-         end if
+         call fourier_orbit_finalize_streaming()
       end if
 
 !     --> Floquet: the base flow must be back at its start field after one period.
@@ -465,21 +452,19 @@ contains
 
       if (nid == 0 .and. norm_start > 0.0d0) then
          write (6, *) 'Orbit closure: ||U(T)-U(0)||/||U(0)|| =', norm_defect/norm_start, ' for T =', param(10)
-         if (norm_defect > 1.0d-3*norm_start) then
-            if (iffourierorbit) then
-               write (6, *) 'nekStab: ERROR: orbit closure exceeds 1e-3:'
-               write (6, *) '  ||U(T)-U(0)||/||U(0)|| =', norm_defect/norm_start
-               write (6, *) '  A non-periodic record rings under Fourier representation.'
-               call exitti('orbit closure exceeds 1e-3$', 1)
-            else
-               ! Each literal stays below 80 characters: Intel list-directed output breaks a longer line in the middle of a word.
-               write (6, *) 'nekStab: WARNING: the base flow does not return to its start field'
-               write (6, *) '  after one period. The Floquet multipliers are not those of a closed orbit.'
-               write (6, *) '  Check the period in the time stamp of the base-flow file, the polynomial'
-               write (6, *) '  order, the sponge and that the base flow is on the orbit.'
-            end if
+         if (norm_defect > 1.0d-3*norm_start .and. orbit_modes()) then
+            write (6, *) 'nekStab: ERROR: the base flow does not return to its start field'
+            write (6, *) '  after one period (closure above 1e-3). Its Fourier modes would'
+            write (6, *) '  not represent a closed orbit. Converge the orbit with Newton first.'
+         elseif (norm_defect > 1.0d-3*norm_start) then
+            ! Each literal stays below 80 characters: Intel list-directed output breaks a longer line in the middle of a word.
+            write (6, *) 'nekStab: WARNING: the base flow does not return to its start field'
+            write (6, *) '  after one period. The Floquet multipliers are not those of a closed orbit.'
+            write (6, *) '  Check the period in the time stamp of the base-flow file, the polynomial'
+            write (6, *) '  order, the sponge and that the base flow is on the orbit.'
          end if
       end if
+      if (orbit_modes() .and. norm_defect > 1.0d-3*norm_start) call exitti('orbit closure exceeds 1e-3$', 1)
 
    end subroutine orbit_closure_check
 
@@ -538,10 +523,13 @@ contains
          init = .true. ! Use stored baseflow if ifstorebase.
          ifbase = .true. ! activate baseflow evolution for UPO.
       end if
-      if (ifstorebase .and. init) ifbase = .false. ! deactivate ifbase if baseflow stored.
+      if (orbit_kept() .and. init) ifbase = .false. ! deactivate ifbase if baseflow stored.
 
-      if (ifstorebase .and. ifbase .and. .not. init) then
+      if (orbit_kept() .and. ifbase .and. .not. init) then
          call allocate_orbit(nsteps)
+         if (fourier_orbit_available()) then ! modes read from disk: no base integration
+            ifbase = .false.; init = .true.
+         end if
       end if
 
 !-----------------------------------------------------------------------
@@ -582,25 +570,19 @@ contains
             call nekstab_usrchk()
             call nek_advance_quiet()
 
-            if (i == 1 .and. (ifstorebase .or. iffourierorbit) .and. ifbase .and. .not. init) then !storing first time
+            if (i == 1 .and. orbit_kept() .and. ifbase .and. .not. init) then !storing first time
                if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
                                    istep == 1 .or. istep == nsteps)) &
                   write (6, *) 'storing first series:', istep, '/', nsteps
                call orbit_store(istep)
-            elseif (i > 1 .and. (ifstorebase .or. iffourierorbit) .and. init .and. .not. ifbase) then !just moving in memory
+            elseif (i > 1 .and. orbit_kept() .and. init .and. .not. ifbase) then !just moving in memory
                if (nid == 0 .and. istep == 1) write (6, *) 'using stored baseflow'
                call orbit_restore(istep)
             end if
          end do
-         if ((ifstorebase .or. iffourierorbit) .and. .not. init .and. ifbase) then
+         if (orbit_kept() .and. .not. init .and. ifbase) then
             ifbase = .false.; init = .true.
-            if (iffourierorbit .and. .not. fourier_orbit_available()) then
-               if (ifstorebase) then
-                  call fourier_orbit_build_from_stored(nsteps, param(10), uor, vor, wor, tor)
-               else
-                  call fourier_orbit_finalize_streaming()
-               end if
-            end if
+            call fourier_orbit_finalize_streaming()
          end if
 
 !     --> Copy the solution and compute the approximation of the Frechet derivative.
@@ -656,45 +638,28 @@ contains
       ifbase = .false.
       if (isFloquetAdjoint) ifbase = .true. ! activate floquet (was 3.21)
 
-      if ((ifstorebase .or. iffourierorbit) .and. init) ifbase = .false.
-
-      if (iffourierorbit .and. .not. init) then
-         if (fourier_orbit_available()) then
-            ifbase = .false.
-            init = .true.
-         else
-            call allocate_orbit(nsteps)
-            if (fourier_orbit_available()) then
-               ifbase = .false.
-               init = .true.
-            end if
-         end if
-      end if
+      if (orbit_kept() .and. init) ifbase = .false.
 
       if (isFloquetTransientGrowth) init = .true. ! intracycle transient growth: orbit already built by forward map (was 3.31)
 
 !     --> Build the periodic base-flow orbit once (forward, base only).
-      if ((ifstorebase .or. iffourierorbit) .and. ifbase .and. .not. init) then
+      if (orbit_kept() .and. ifbase .and. .not. init) then
          call allocate_orbit(nsteps)
-         ifpert = .false.; call bcast(ifpert, lsize)
-         time = 0.0d+00
-         do istep = 1, nsteps
-            if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
-                                istep == 1 .or. istep == nsteps)) &
-               write (6, *) 'building base orbit:', istep, '/', nsteps
-            call nekstab_usrchk()
-            call nek_advance_quiet()
-            call orbit_store(istep) ! orbit(j) = U(j*dt)
-         end do
-         call orbit_closure_check()
-         if (iffourierorbit .and. .not. fourier_orbit_available()) then
-            if (ifstorebase) then
-               call fourier_orbit_build_from_stored(nsteps, param(10), uor, vor, wor, tor)
-            else
-               call fourier_orbit_finalize_streaming()
-            end if
+         if (.not. fourier_orbit_available()) then ! no modes on disk: integrate the base
+            ifpert = .false.; call bcast(ifpert, lsize)
+            time = 0.0d+00
+            do istep = 1, nsteps
+               if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                                   istep == 1 .or. istep == nsteps)) &
+                  write (6, *) 'building base orbit:', istep, '/', nsteps
+               call nekstab_usrchk()
+               call nek_advance_quiet()
+               call orbit_store(istep) ! orbit(j) = U(j*dt)
+            end do
+            call orbit_closure_check()
+            call fourier_orbit_finalize_streaming()
+            ifpert = .true.; call bcast(ifpert, lsize)
          end if
-         ifpert = .true.; call bcast(ifpert, lsize)
          ifbase = .false.; init = .true.
       end if
 
@@ -715,8 +680,8 @@ contains
             write (6, "(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") &
             istep, nsteps, mstep, k_dim, schur_cnt
 
-         if ((ifstorebase .or. iffourierorbit) .and. init) call orbit_restore(nsteps - istep + 1)
-         if (init .and. ifheat .and. (ifstorebase .or. fourier_orbit_available())) then
+         if (orbit_kept() .and. init) call orbit_restore(nsteps - istep + 1)
+         if (orbit_kept() .and. init .and. ifheat) then
             call gradm1(dTdx, dTdy, dTdz, t)
          end if
 
