@@ -6,6 +6,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
 ## [Unreleased]
 
 ### Changed
+- Energy budget (4.1, 4.11): the dissipation is the weak form `nu int |grad q|^2`
+  with element-local gradients, the term that the time stepper applies. The old
+  strong form `nu q . lap q` (two gradients with an average across the element
+  faces) was 0.1 % to 0.3 % too small. The budget sigma of `flip_flop_re62` 411
+  now closes to 0.40 % (was 1.22 %); on `cubic_cavity_re1950` 411 the gap of the
+  balance goes from 0.34 % to 0.012 % of the dissipation. The rest of the
+  closure error is first order in `dt`. `compute_laplacian` and
+  `compute_gradients` are removed.
 - Zero-crossing period probe (`src/probes.f90`): available as a DNS option via
   `ifzerocross = .true.` in `nekStab_usrchk` with probe position `(xck, yck, zck)`
   and component `zc_component` (1 = vx, 2 = vy [default], 3 = vz). Fixed defects:

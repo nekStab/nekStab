@@ -1,7 +1,7 @@
 {
   "case": "flip_flop_re62/411_postproc_wavemaker",
   "summary": "Perturbation kinetic energy budget of the two Floquet modes of the flip-flop orbit at Re = 62. It reproduces the Floquet exponent.",
-  "description": "Orbit-averaged perturbation kinetic energy budget (userParam01 = 4.11) of the two Floquet modes of the flip-flop orbit at Re = 62. The period T = 8.815172 is the time stamp of BF_2cyl0.f00001. The budget must reproduce the Floquet exponent of stage 311, 7.89623e-3 (row 1 of Spectre_NSd_conv.dat): sigma = (P - D - S)/(2 E) with the production P, the dissipation D and the sponge damping S averaged over one orbit. It closes to 1.2 %. The exponent from the energy of the marched mode after one period (no space derivative in it) is within 0.11 % of the eigenvalue, so the remaining 1.2 % comes from the production and dissipation integrals, which are about eight times larger than sigma times E. Without the sponge term the budget gave 8.478e-3 (7.4 % above) and fails the first two quantities. The sponge loss and the three field statistics are regression values of the run.",
+  "description": "Orbit-averaged perturbation kinetic energy budget (userParam01 = 4.11) of the two Floquet modes of the flip-flop orbit at Re = 62. The period T = 8.815172 is the time stamp of BF_2cyl0.f00001. The budget must reproduce the Floquet exponent of stage 311, 7.89623e-3 (row 1 of Spectre_NSd_conv.dat): sigma = (P - D - S)/(2 E) with the production P, the dissipation D and the sponge damping S averaged over one orbit. With the weak-form dissipation nu int |grad q|^2 it closes to 0.40 % (1.2 % with the strong form q . lap q); the rest is first order in dt. The exponent from the energy of the marched mode after one period (no space derivative in it) is within 0.11 % of the eigenvalue. Without the sponge term the budget gave 8.478e-3 (7.4 % above) and fails the first two quantities. The sponge loss and the three field statistics are regression values of the run.",
   "produced": {
     "nekstab": "v2.0.0",
     "date": "2026-10-09",
@@ -14,7 +14,7 @@
       "source": "PKE_floquet_2cyl0.f00001:col1:row14",
       "value": 0.00789623,
       "tol_rel": 0.02,
-      "note": "sigma reconstructed from the budget of mode 1 (line 14 of PKE_floquet_2cyl0.f00001) against the Floquet exponent of stage 311. Measured 7.9926e-3, 1.22 % above."
+      "note": "sigma reconstructed from the budget of mode 1 (line 14 of PKE_floquet_2cyl0.f00001) against the Floquet exponent of stage 311. Measured 7.9279e-3, 0.40 % above (7.9926e-3, 1.22 %, with the strong-form dissipation)."
     },
     "sigma_budget_mode2": {
       "source": "PKE_floquet_2cyl0.f00002:col1:row14",

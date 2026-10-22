@@ -1,13 +1,12 @@
 {
   "case": "cubic_cavity_re1950/411_postproc_energy_budget",
-  "summary": "Energy budget of the leading Floquet mode of the cubic cavity at Re = 1950. The energy of the marched mode gives the Floquet exponent to 0.2 %; production and dissipation balance to 0.34 % of the dissipation.",
-  "description": "Mode 4.11 marches the real and the imaginary part of the leading Floquet mode of 311_stability_direct_floquet over one period T = 10.78909 of the limit cycle on a stored copy of the orbit, and averages the terms of the energy equation with the weight exp(-2 sigma t) dt / T. The cavity is closed and has no sponge, so the balance P - D = sigma E holds exactly for the continuous problem. The reference checks the growth rate from the energy of the marched mode against the Floquet exponent, the gap of the balance in units of the dissipation, and regression values of the production, the dissipation, the energy and the sponge damping. The growth rate from the budget, (P - D) / E, is not checked: the terms P / E and D / E are 175 times larger than sigma, so it carries 175 times the discretisation error of the two integrals (README). The values are those of the run named under produced.",
+  "summary": "Energy budget of the leading Floquet mode of the cubic cavity at Re = 1950. The energy of the marched mode gives the Floquet exponent to 0.2 %; production and dissipation balance to 0.012 % of the dissipation, and the budget gives the exponent to 2 %.",
+  "description": "Mode 4.11 marches the real and the imaginary part of the leading Floquet mode of 311_stability_direct_floquet over one period T = 10.78909 of the limit cycle on a stored copy of the orbit, and averages the terms of the energy equation with the weight exp(-2 sigma t) dt / T. The cavity is closed and has no sponge, so the balance P - D = sigma E holds exactly for the continuous problem. The reference checks the growth rate from the energy of the marched mode against the Floquet exponent, the gap of the balance in units of the dissipation, and regression values of the production, the dissipation, the energy and the sponge damping. The growth rate from the budget, (P - D) / E, is not checked: the terms P / E and D / E are 175 times larger than sigma, so it carries 175 times the error of the two integrals (README). The values are those of the run named under produced; the dissipation is the weak form nu int |grad q|^2.",
   "produced": {
     "ranks": "16",
     "nekstab": "v2.0.0",
-    "compiler": "ifort 2021.9 (Jean Zay)",
-    "date": "2026-10-11",
-    "wall_s": 711
+    "compiler": "ifx (c8)",
+    "date": "2026-10-22"
   },
   "quantities": {
     "sigma_energy": {
@@ -20,7 +19,7 @@
       "source": "budget_closure.dat:col9:first",
       "value": 0.0,
       "tol_abs": 0.01,
-      "note": "(sigma of the budget - sigma of the Floquet stage) E / D = (P - D - sigma E) / D: the closure of the energy balance in units of the dissipation. It is zero for the continuous problem. The run gives 3.4e-3."
+      "note": "(sigma of the budget - sigma of the Floquet stage) E / D = (P - D - sigma E) / D: the closure of the energy balance in units of the dissipation. It is zero for the continuous problem. The run gives 1.15e-4 (3.4e-3 with the strong form q . lap q of the dissipation)."
     },
     "production": {
       "source": "PKE_floquet_cav0.f00001:col1:row11",
@@ -30,9 +29,9 @@
     },
     "minus_dissipation": {
       "source": "PKE_floquet_cav0.f00001:col1:row10",
-      "value": -0.2307312,
+      "value": -0.2314817,
       "tol_rel": 0.002,
-      "note": "Line 10 of the file: minus the orbit average of the dissipation D."
+      "note": "Line 10 of the file: minus the orbit average of the dissipation D, in the weak form nu int |grad q|^2."
     },
     "energy": {
       "source": "PKE_floquet_cav0.f00001:col1:row13",

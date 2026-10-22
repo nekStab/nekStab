@@ -37,31 +37,29 @@ averages the terms with the weight exp(−2σt) dt/T. The terms are in the norma
 The run script writes `BF_cav0.f00001` from `../000_dns_period/cav0.f00017` and copies the mode and its exponent from stage 311
 (`dRecav0.f00001`, `dImcav0.f00001` and `Spectre_NSd_conv.dat`, row 1). Run `../000_dns_period` and `../311_stability_direct_floquet` first.
 
-## Result (16 ranks, Jean Zay, `ifort`)
+## Result (16 ranks, c8, `ifx`)
 
-Wall time 711 s. A first run on 16 ranks of a 40-core node of c8 (`ifx`, 1293 s) gave the same numbers to the digits
-printed below. The Floquet exponent of stage 311 is σ = 2.907859e-3.
+Wall time about 25 min on a shared 40-core node (711 s on Jean Zay with `ifort` before the change of the dissipation term).
+The Floquet exponent of stage 311 is σ = 2.907855e-3.
 
 | quantity | value |
 |---|---|
 | σ from the energy of the marched mode, ln(E(T)/E(0))/(2T) (line 16) | 2.90305e-3 (0.17 % below) |
-| σ from the budget (line 14) | 4.6099e-3 (58.5 % above) |
+| σ from the budget (line 14) | 2.96635e-3 (2.0 % above) |
 | production P̄ (line 11) | 0.23284 |
-| dissipation D̄ | 0.23073 |
+| dissipation D̄ | 0.23148 |
 | sponge damping S̄ (line 15) | 0 |
 | energy Ē (line 13) | 0.45662 |
-| P̄/Ē, D̄/Ē | 0.50992, 0.50531 |
+| P̄/Ē, D̄/Ē | 0.50992, 0.50695 |
 
 - The exponent from the energy of the marched mode involves no space derivative. It is within 0.17 % of the Floquet exponent, so the mode, the
   period, the stored orbit and the replay of 7516 steps agree in 3D.
-- The budget does not give σ here. P̄ − D̄ = 2.105e-3, and σĒ is 1.328e-3: the balance misses by 7.8e-4, which is 0.34 % of D̄.
-  The exponent is the difference of two terms that are 175 times larger than σ, so a gap of 0.34 % of D̄ becomes +58.5 % of σ.
-  The flip-flop stage (`../../flip_flop_re62/411_postproc_wavemaker`, 2D, open) has a gap of the same kind, 0.17 % of D̄; it becomes 1.2 % of its σ because
-  its terms are only 8 times larger than σ. A gap of a few tenths of a percent is what the space discretisation of the production and dissipation
-  integrals can give at `lx1 = 6`, with the production concentrated in the wall layers (figure). No resolution study was made: it needs a new orbit
-  at another polynomial order.
-- Use the exponent of the marched mode for σ, and the budget for where the mode takes energy. The budget gives σ when σ is not much smaller
-  than P̄/Ē.
+- P̄ − D̄ = 1.3544e-3 and σĒ = 1.3278e-3: the balance misses by 2.7e-5, which is 0.012 % of D̄. The exponent is the difference of two terms
+  that are 175 times larger than σ, so this gap becomes 2.0 % of σ.
+- The dissipation is the weak form ν∫|∇q|² dV, with the gradients taken in each element. It is the term by which the time stepper changes
+  the energy. The strong form ν∫q·∇²q dV, with the second derivative taken after an average of the first derivatives across the element
+  faces, gave D̄ = 0.23073: 0.33 % smaller, a gap of 0.34 % of D̄ and a budget σ 58.5 % above the Floquet exponent.
+- The rest of the gap is first order in the time step (measured on `../../flip_flop_re62/411_postproc_wavemaker`).
 
 `ref/budget.png`: (a) to (c) the production density, the sum of the nine production fields, normalised by its 99.9th percentile, on the planes z = 0, y = 0 and
 x = 0. Red: the mode takes energy from the base flow. Blue: it gives energy back. (d) The three growth rates.

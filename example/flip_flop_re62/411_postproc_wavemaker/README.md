@@ -52,10 +52,10 @@ Wall time 79.5 s. The Floquet exponent of stage 311 is σ = 7.89623e-3 (ω = 0.1
 
 | quantity | mode 1 | mode 2 |
 |---|---|---|
-| σ from the budget (line 14 of the file) | 7.9926e-3 (1.22 % above) | 7.9926e-3 |
+| σ from the budget (line 14 of the file) | 7.9926e-3 (1.22 % above); 7.9279e-3 (0.40 % above) with the weak-form dissipation | 7.9926e-3 |
 | σ from the energy of the marched mode, ln(E(T)/E(0))/(2T) (line 16) | 7.8874e-3 (0.11 % below) | 7.8874e-3 |
 | production P̄ | 3.3564e-2 | 3.3564e-2 |
-| dissipation D̄ | 2.9306e-2 | 2.9306e-2 |
+| dissipation D̄ | 2.9306e-2; 2.9337e-2 in the weak form | 2.9306e-2 |
 | sponge damping S̄ | 2.436e-4 | 2.436e-4 |
 | energy Ē | 0.50234 | 0.50234 |
 
@@ -64,11 +64,15 @@ The terms are in the normalisation of the code, where σ = (P̄ − D̄ − S̄)
 The same stage on Jean Zay (`ifort`, 8 ranks, with the modes of the 311 and 321 runs of that day, wall time 128 s) gives P̄ = 3.3563e-2, Ē = 0.50233,
 σ from the budget 7.9926e-3 and σ from the energy 7.8874e-3. The two compilers agree to 5e-5 in relative terms.
 
-- The budget closes to 1.2 %. The exponent from the energy of the marched mode involves no space derivative and is within 0.11 %, so the mode,
-  the period and the stored orbit agree. The outflow is not the cause: the largest |q| on the outflow face (x = 75) is at most 5e-4 of the
-  largest |q| of the mode. The remaining 1.2 % comes from the space discretisation of the production and dissipation integrals. σ is the
-  difference of two terms that are eight times larger than σ Ē, so an error of 0.15 % in one of them gives 1.2 % in σ.
-- Halving the time step lowers the closure error from 1.22 % to 0.99 %.
+- The table holds the run with the strong form of the dissipation, ν∫q·∇²q dV. The code now uses the weak form ν∫|∇q|² dV, with the
+  gradients taken in each element: the term by which the time stepper changes the energy. The weak form is 0.11 % larger, and the budget
+  then closes to 0.40 % instead of 1.22 % (run of 2026-10-22 on the orbit of the Fourier version of 210, σ = 7.896022e-3). σ is the
+  difference of two terms that are seven times larger than σ Ē, so an error of 0.11 % in one of them gives 0.8 % in σ.
+- The exponent from the energy of the marched mode involves no space derivative and is within 0.11 %, so the mode, the period and the
+  stored orbit agree. The outflow is not the cause: the advective flux through the outflow faces is 1e-7, against S̄ = 2.4e-4.
+- With the weak form the closure error is first order in the time step: 0.40 %, 0.18 % and 0.07 % at dt, dt/2 and dt/4, which extrapolates
+  to −0.05 %. With the base flow taken one step later, U(t + dt), the error changes sign (−0.16 % at dt), so it comes from the time
+  pairing of base flow and perturbation in the time stepper.
 - Without the sponge term the budget gives 8.478e-3, 7.4 % above the Floquet exponent: the sponge damping shifts σ by 4.9e-4.
 
 ## Reference

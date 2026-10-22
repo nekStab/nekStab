@@ -12,8 +12,6 @@
 !   compute_velocity_gradient_tensor — 9-component gradient tensor
 !   compute_dissipation              — viscous dissipation term
 !   compute_production               — Reynolds stress production
-!   compute_gradients                — smooth gradient via dsavg
-!   compute_laplacian                — Laplacian via double gradient
 !
 ! Dependencies:
 !   nekstab_vectors, nekstab_nek_bridge, nekstab_matvec,
@@ -37,11 +35,9 @@ module nekstab_energy_budget
    public :: stability_energy_budget, &
              stability_energy_budget_floquet, &
              compute_velocity_gradient_tensor, &
-             compute_dissipation, compute_production, &
-             compute_gradients, compute_laplacian
+             compute_dissipation, compute_production
    logical, save :: energy_init = .false.
-   real, allocatable, save :: diss_lap_ax_s(:), diss_lap_ay_s(:), diss_lap_az_s(:)
-   real, allocatable, save :: diss_lap_bx_s(:), diss_lap_by_s(:), diss_lap_bz_s(:)
+   real, allocatable, save :: diss_gx_s(:), diss_gy_s(:), diss_gz_s(:)
    real, allocatable, save :: prod_dcdx_s(:), prod_dcdy_s(:), prod_dcdz_s(:)
 
 contains
@@ -52,9 +48,8 @@ contains
    subroutine ensure_dissipation_workspace()
       use nekstab_krylov_subspace, only: lv
 
-      if (.not. allocated(diss_lap_ax_s)) then
-         allocate (diss_lap_ax_s(lv), diss_lap_ay_s(lv), diss_lap_az_s(lv))
-         allocate (diss_lap_bx_s(lv), diss_lap_by_s(lv), diss_lap_bz_s(lv))
+      if (.not. allocated(diss_gx_s)) then
+         allocate (diss_gx_s(lv), diss_gy_s(lv), diss_gz_s(lv))
       end if
 
       !  WHY: allocate once (fixed lv) at first use; prevents per-call
@@ -387,12 +382,13 @@ contains
    !   - Mode normalisation is irrelevant to sigma_r because it cancels in
    !     the ratio (Pbar - Dbar)/(2 Ebar); Ebar carries the same scale.
    !   - The orbit integral uses a rectangle rule at the end of each step.
-   !     The integrand is periodic, so the rule is accurate, and halving dt
-   !     moved the closure of flip_flop_re62 by about a fifth of its error.
-   !     Most of the remaining error comes from the space discretisation of
-   !     the production and dissipation kernels: sigma_r is the small
-   !     difference of two larger terms (about eight times smaller than
+   !     The integrand is periodic, so the rule is accurate. The closure
+   !     error is first order in dt: on flip_flop_re62 it is 0.40 %, 0.18 %
+   !     and 0.07 % at dt, dt/2 and dt/4 (limit -0.05 %). sigma_r is the small
+   !     difference of two larger terms (about seven times smaller than
    !     either), so an error of 0.15 % in one term shows as 1 % in sigma_r.
+   !     For that reason the dissipation is the weak form, the term that the
+   !     time stepper applies (see compute_dissipation).
    !   - The factor-of-1/2 energy convention lives in the compute_* helpers
    !     (see their docstrings); production and dissipation share it so the
    !     ratio is convention-independent.
@@ -995,7 +991,7 @@ contains
          !            sigma_check = (Pbar - Dbar - Sbar) / (2 Ebar) physically, but
          !            two code conventions collapse the prefactor and flip a sign:
          !            (1) integrals(10) stores the VISCOUS ENERGY CONTRIBUTION
-         !                = -Dbar (compute_dissipation returns 0.5*q.lap(q)*nu,
+         !                = -Dbar (compute_dissipation returns -0.5*nu*|grad q|^2,
          !                whose integral is negative), so Pbar - Dbar is
          !                sum(1:9) + integrals(10), NOT minus.
          !            (2) compute_production and compute_dissipation each carry a
@@ -1013,8 +1009,8 @@ contains
 
          !        --> Closure metric: agreement between the budget-derived
          !            growth rate and the eigenvalue. A small relative error
-         !            (5e-4 on the closed lid_driven_re3600 cavity, 1.2 % on
-         !            flip_flop_re62 with its sponge and open outflow) certifies
+         !            (0.40 % on flip_flop_re62 with its sponge and open
+         !            outflow, at the dt of stage 311) certifies
          !            that eigenmode, base orbit, and budget are mutually
          !            consistent; a large one is a red flag to investigate
          !            before trusting the decomposition.
@@ -1157,8 +1153,8 @@ contains
    ! compute_dissipation — Viscous dissipation term
    !
    ! Purpose:
-   !   Computes 0.5 * (mu/rho) * u'_i * lap(u'_i) for complex mode
-   !   (Re^2 + Im^2 formulation).
+   !   Computes -0.5 * (mu/rho) * grad(u'_i) . grad(u'_i) for complex mode
+   !   (Re^2 + Im^2 formulation). Its integral is minus half the dissipation.
    !
    ! Arguments:
    !   vx_dRe, vy_dRe, vz_dRe [in] — real part of mode
@@ -1167,6 +1163,14 @@ contains
    !
    ! Notes:
    !   Factor of 0.5 is convention for complex-mode formulation.
+   !   This is the weak form: the gradients are element-local (gradm1, no
+   !   average across the faces), so the integral with bm1 is q^T A q, with A
+   !   the stiffness matrix of the time stepper. The energy of the discrete
+   !   solution changes by exactly this term. The strong form u'.lap(u'),
+   !   with gradm1 twice and dsavg between, differs by the jumps of the normal
+   !   derivative across the faces: on flip_flop_re62 at lx1 = 5 it was 0.11 %
+   !   smaller and moved the budget sigma_r by +0.82 %, because P and D are
+   !   about seven times larger than P - D. See the same note in otd.f90.
    !-----------------------------------------------------------------------
    subroutine compute_dissipation(vx_dRe, vy_dRe, vz_dRe, vx_dIm, vy_dIm, vz_dIm, dissipation)
       use nekstab_krylov_subspace, only: lv
@@ -1177,31 +1181,34 @@ contains
       real, dimension(lv), intent(out) :: dissipation
       call ensure_dissipation_workspace()
 
-      !     --> Compute Laplacians.
-      !     NOTE: the if3d guards are correctness fixes, not just
+      dissipation = 0.0d0
+      call add_gradient_squared(vx_dRe, dissipation)
+      call add_gradient_squared(vy_dRe, dissipation)
+      call add_gradient_squared(vx_dIm, dissipation)
+      call add_gradient_squared(vy_dIm, dissipation)
+      !     NOTE: the if3d guard is a correctness fix, not just
       !     performance.  In 2D runs vz fields are NOT guaranteed to be
       !     zero — they may contain uninitialized data from previous
-      !     field loads.  Without the guard, compute_laplacian would
-      !     produce nonzero Laplacians and add a spurious z-contribution.
-      call compute_laplacian(vx_dRe, diss_lap_ax_s)
-      call compute_laplacian(vy_dRe, diss_lap_ay_s)
-
-      call compute_laplacian(vx_dIm, diss_lap_bx_s)
-      call compute_laplacian(vy_dIm, diss_lap_by_s)
+      !     field loads.  Without the guard they would add a spurious
+      !     z-contribution.
       if (if3d) then
-         call compute_laplacian(vz_dRe, diss_lap_az_s)
-         call compute_laplacian(vz_dIm, diss_lap_bz_s)
+         call add_gradient_squared(vz_dRe, dissipation)
+         call add_gradient_squared(vz_dIm, dissipation)
       end if
 
-      !     --> Compute dissipation term.
-      dissipation = vx_dRe*diss_lap_ax_s + vx_dIm*diss_lap_bx_s
-      dissipation = dissipation + vy_dRe*diss_lap_ay_s + vy_dIm*diss_lap_by_s
+      dissipation = -0.5d0*dissipation*param(2)/param(1)
 
-      if (if3d) then
-         dissipation = dissipation + vz_dRe*diss_lap_az_s + vz_dIm*diss_lap_bz_s
-      end if
+   contains
 
-      dissipation = 0.5d0*dissipation*param(2)/param(1)
+      !  Adds |grad a|^2 to sum. In 2D gradm1 leaves the z derivative unset.
+      subroutine add_gradient_squared(a, sum)
+         real, dimension(lv), intent(in) :: a
+         real, dimension(lv), intent(inout) :: sum
+
+         call gradm1(diss_gx_s, diss_gy_s, diss_gz_s, a)
+         sum = sum + diss_gx_s**2 + diss_gy_s**2
+         if (if3d) sum = sum + diss_gz_s**2
+      end subroutine add_gradient_squared
 
    end subroutine compute_dissipation
 
@@ -1260,70 +1267,6 @@ contains
 
    end subroutine compute_production
 
-   !-----------------------------------------------------------------------
-   ! compute_gradients — Smoothed gradient via dsavg
-   !
-   ! Purpose:
-   !   Computes gradient of scalar field and smooths at element
-   !   interfaces using direct stiffness averaging.
-   !
-   ! Arguments:
-   !   u [in]            — input scalar field
-   !   dudx, dudy, dudz [out] — gradient components
-   !-----------------------------------------------------------------------
-   subroutine compute_gradients(u, dudx, dudy, dudz)
-      use nekstab_krylov_subspace, only: lv
-
-      real, dimension(lv), intent(in) :: u
-      real, dimension(lv), intent(out) :: dudx, dudy, dudz
-
-      call gradm1(dudx, dudy, dudz, u)
-      call dsavg(dudx); call dsavg(dudy); call dsavg(dudz)
-
-   end subroutine compute_gradients
-
-   !-----------------------------------------------------------------------
-   ! compute_laplacian — Laplacian via double gradient
-   !
-   ! Purpose:
-   !   Computes Laplacian by taking gradient twice (d²u/dx² + ...).
-   !
-   ! Arguments:
-   !   a [in]     — input scalar field
-   !   Lap_a [out] — Laplacian field
-   !-----------------------------------------------------------------------
-   subroutine compute_laplacian(a, Lap_a)
-      use nekstab_krylov_subspace, only: lv
-
-      real, dimension(lv), intent(in) :: a
-      real, allocatable, save, dimension(:) :: dadx, dady, dadz
-      real, allocatable, save, dimension(:) :: d2adx2, d2ady2, d2adz2
-      real, dimension(lv), intent(out) :: Lap_a
-      real, allocatable, save, dimension(:) :: wrk1, wrk2
-
-      if (.not. allocated(dadx)) then
-         allocate (dadx(lv), dady(lv), dadz(lv))
-         allocate (d2adx2(lv), d2ady2(lv), d2adz2(lv))
-         allocate (wrk1(lv), wrk2(lv))
-      end if
-      call compute_gradients(a, dadx, dady, dadz)
-      call compute_gradients(dadx, d2adx2, wrk1, wrk2)
-      call compute_gradients(dady, wrk1, d2ady2, wrk2)
-
-!     Only include the z second-derivative in 3D. In 2D, dadz holds garbage
-!     (compute_gradients does not zero the out-of-plane derivative), so adding
-!     d2adz2 would inject NaN/Inf into the VALID [1:nv] region of the
-!     Laplacian -> NaN dissipation integral. Mirrors the if3d guards already
-!     in compute_dissipation. (Caught on 2D cylinder_re100; 3D cases were
-!     immune because dadz is a real derivative there.)
-      if (if3d) then
-         call compute_gradients(dadz, wrk1, wrk2, d2adz2)
-         Lap_a = d2adx2 + d2ady2 + d2adz2
-      else
-         Lap_a = d2adx2 + d2ady2
-      end if
-
-   end subroutine compute_laplacian
    !-----------------------------------------------------------------------
 
 end module nekstab_energy_budget
