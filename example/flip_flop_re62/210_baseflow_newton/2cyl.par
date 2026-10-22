@@ -15,9 +15,6 @@ writeControl = runTime #timeStep
 writeInterval = 100.
 
 dealiasing = yes
-filtering = explicit
-filterWeight = 0.01
-filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt

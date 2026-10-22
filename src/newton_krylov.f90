@@ -27,7 +27,7 @@ module nekstab_newton
                                  NEKSTAB_UNIT_ARNOLDI_LOG, NEKSTAB_UNIT_GMRES_LOG, &
                                  NEKSTAB_UNIT_NEWTON_LOG, nid, nof, nsteps, param, pbase, &
                                  pr, restol, t, tbase, time, ubase, uparam, vbase, vx, vy, &
-                                 vz, wbase, wdsize, iffourierorbit
+                                 vz, wbase, wdsize, iffourierorbit, filterType
    use nekstab_fourier, only: fourier_orbit_write, fourier_orbit_init_streaming, &
                               fourier_orbit_finalize_streaming
    use nekstab_vectors, only: nopcopy
@@ -240,6 +240,26 @@ contains
       if (isNewtonFP) then
          ifbase = .false.
          call bcast(ifbase, lsize)
+      end if
+
+      !  WHY: q_filter applies the explicit velocity filter only while ifbase = .true., and
+      !  the nonlinear map runs with the ifbase that the last matvec left. With a stored orbit
+      !  the first matvec clears ifbase, so Newton iterations 2+ solve the unfiltered equations;
+      !  without a stored orbit ifbase stays set and every iteration is filtered. flip_flop_re62
+      !  with filterWeight = 0.01 converged to two orbits, T = 8.815177 and 8.815528, each with
+      !  closure 8e-6 only under its own map. The Floquet stages run unfiltered. The relaxation
+      !  filter (filtering = hpfrt) is a forcing term, independent of ifbase: no warning for it.
+      if ((isNewtonPO .or. isNewtonPO_T) .and. filterType == 1 .and. param(103) > 0.0d0 &
+          .and. nid == 0) then
+         write (6, *) '****************************************************************'
+         write (6, *) 'nekStab: WARNING: filtering = explicit with Newton for a periodic'
+         write (6, *) '  orbit. The filter acts only while ifbase is set, and ifbase'
+         write (6, *) '  changes between Newton iterations. With ifstorebase = .true. the'
+         write (6, *) '  iterations after the first are unfiltered; with .false. all are'
+         write (6, *) '  filtered. The two settings converge to different orbits (other'
+         write (6, *) '  period), and a Floquet run must use the same filter setting.'
+         write (6, *) '  Use filtering = none for Newton and Floquet runs of an orbit.'
+         write (6, *) '****************************************************************'
       end if
 
       nnewton = 0

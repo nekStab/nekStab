@@ -56,6 +56,12 @@ description for the 2.0 series; entries here are the per-tag deltas.
   Before, the check of the `EXAMPLES.md` table could not fail in a full run.
 - `scripts/inspect_nek_field.py` keeps the field statistics read by pymech when its
   own header parser rejects the header; the word size and record code are then empty.
+- Newton for periodic orbits (modes 2.1 and 2.2) prints a warning when
+  `filtering = explicit` is set. The filter acts only while the base flow advances, so
+  the Newton iterations after the first are unfiltered with `ifstorebase = .true.` and
+  filtered with `.false.`. The two settings converge to different orbits: `flip_flop_re62`
+  gave the periods 8.815177 and 8.815528. The `flip_flop_re62` 210 stage no longer sets
+  the filter, so its Newton and Floquet stages use the same unfiltered equations.
 
 ### Removed
 - Procedures with no caller: `norm_grad` (diagnostics), `k_dot_complex`
