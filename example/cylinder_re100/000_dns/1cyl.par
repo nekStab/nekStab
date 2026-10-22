@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = rst_1cyl0.f00001
+
+stopAt = endTime
+endTime = 200  # rst_ is at t=100; run 100 more time units to verify limit cycle
+
+userParam01 = 0 # DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 5  # snapshot every 5 T_c so we get ~20 frames for the limit-cycle GIF (D2)
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0

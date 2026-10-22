@@ -1,0 +1,41 @@
+{
+  "case": "slot_fst_re495/000_dns",
+  "summary": "DNS of a slot jet at Re = 495 with a synthetic free-stream turbulence inflow, to t = 100.",
+  "description": "DNS of a slot jet at Re = 495 from a uniform field, with the synthetic free-stream turbulence inflow of FST_data/FST_inflow.bin. The reference checks the time stamp of the last field and its statistics: the maximum of vx, the minimum of vy and the L2 norms of vx and vy. They are regression values of this repository: a change of the solver, the mesh or the inflow moves them. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "0.0 (DNS)",
+    "compiler": "ifx 2026.0 (c8)",
+    "date": "2026-10-11",
+    "wall_s": 246
+  },
+  "note": "Regression values of this repository (not literature values). The FST inflow is the shipped FST_data/FST_inflow.bin, so the run is deterministic; the 16 and 32 rank runs agree to the seventh digit.",
+  "quantities": {
+    "last_snapshot_time": {
+      "source": "slot0.f00001:field:time",
+      "value": 100.0,
+      "tol_abs": 0.001
+    },
+    "snapshot_vx_max": {
+      "source": "slot0.f00001:field:vx.max",
+      "value": 1.272159,
+      "tol_rel": 0.001
+    },
+    "snapshot_vx_norm": {
+      "source": "slot0.f00001:field:vx.norm",
+      "value": 376.7898,
+      "tol_rel": 0.001
+    },
+    "snapshot_vy_min": {
+      "source": "slot0.f00001:field:vy.min",
+      "value": -0.3542492,
+      "tol_rel": 0.001
+    },
+    "snapshot_vy_norm": {
+      "source": "slot0.f00001:field:vy.norm",
+      "value": 49.68181,
+      "tol_rel": 0.001
+    }
+  }
+}

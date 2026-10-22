@@ -1,47 +1,123 @@
-\obj
+# =============================================================================
+# nekStab .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Build artifacts
+# -----------------------------------------------------------------------------
+obj/
 *.o
-*.png
-examples/*core*
-fort*
-BFL*
-SPG*
-BMS*
-BF_*0.f00002
-nek5000
-*.nek5000
-*log*
 *.mod
-H*
+*.f
+*__genmod.f90
+makefile
+makefile_usr.inc
+NEKSTAB.inc
+nek5000
+nek5000.dbg
+
+# -----------------------------------------------------------------------------
+# Nek5000 runtime files
+# -----------------------------------------------------------------------------
+*.nek5000
+*.fld*
+*.f?????
+logfile
+*.log*
 *.info
+*.his
 *.dat*
-nwt*
-dRe*
-aRe*
-dIm*
-aIm*
+fort.*
+.state
 session*
 SESSION*
-makefile
-.state
-vor*
-vox*
+
+# -----------------------------------------------------------------------------
+# nekStab output files
+# -----------------------------------------------------------------------------
+# Krylov basis vectors
 KRY*
+
+# Base flow files
+BF_*
+BFL*
+
+# Eigenvalue/eigenvector files
+dRe*
+dIm*
+aRe*
+aIm*
+dRv*
+
+# Newton solver
+nwt*
+
+# Sponge/boundary
+SPG*
+BMS*
+
+# Vorticity fields (Nek5000 output)
+vor*
+!src/vortex.f90
+vox*
+
+# Restart files in examples
+res*0.f*
+
+# Tutorial figures stay out of the tree (kept with their .tex sources only).
+tutorials/**/*.png
+
+# -----------------------------------------------------------------------------
+# Core dumps
+# -----------------------------------------------------------------------------
+core
+core.*
+
+# -----------------------------------------------------------------------------
+# Editor and OS files
+# -----------------------------------------------------------------------------
 *.swp
-NEKSTAB.inc
 *~
-makefile_usr.inc
-*.pyc
-.cache
-__pycache__
-slurm*
-examples/tpjet/tpjet.f
-examples/tpjet/baseflow/tpjet.f
-examples/cylinder/baseflow/boostconv/BF_1cyl0.f00001
-examples/cylinder/baseflow/newton_dyn/BF_1cyl0.f00001
-examples/cylinder/baseflow/sfd_dyn/BF_1cyl0.f00001
-examples/cylinder/baseflow/newton/BF_1cyl0.f00001
-examples/cylinder/baseflow/newton/BF_1cyl0.f00001
-examples/cylinder/postprocessing/steady_force_sensitivity/V
-examples/cylinder/postprocessing/steady_force_sensitivity/U
 .DS_Store
-Nek5000
+.cache
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+*.pyc
+__pycache__/
+.pytest_cache/
+*.egg-info/
+
+# Generated FST inflow data (produced by `python -m nekstab.fst`)
+FST_data/
+
+# -----------------------------------------------------------------------------
+# HPC / cluster
+# -----------------------------------------------------------------------------
+slurm*
+# run.local.slurm is now tracked per-case so each folder ships a working
+# submission script. Reverts the relevant line of b057911 to align with
+# the "self-contained folder" pilot principle (2026-05-21).
+
+# -----------------------------------------------------------------------------
+# Animation output (mode animation frames + assembled mp4)
+# -----------------------------------------------------------------------------
+ANIM/
+ANIM*/
+**/ANIM/
+*.mp4
+
+# -----------------------------------------------------------------------------
+# External dependencies (cloned separately)
+# -----------------------------------------------------------------------------
+Nek5000/
+
+# -----------------------------------------------------------------------------
+# User-specific files
+# -----------------------------------------------------------------------------
+.usr
+example/cylinder/dns/benchmark_results
+
+docs/
+node_modules/

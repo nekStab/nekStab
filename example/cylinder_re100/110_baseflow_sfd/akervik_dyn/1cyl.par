@@ -1,0 +1,37 @@
+[GENERAL]
+startFrom = BF_seed_1cyl0.f00001
+
+stopAt = endTime
+endTime = 1000.0
+
+userParam01 = 1.1  # SFD (Akervik formulation -- uparam04>0)
+userParam04 = 0.166 # f = omega/2pi in cycles per time unit (St): shedding frequency of the Re=100 wake (Williamson 1996); POSITIVE -> Akervik, cutoff = omega/2
+userParam05 = 0.26  # sigma in the Akervik gain = -2 sigma = -0.52; the rule gain = -2 sigma_r asks for -0.25 (sigma_r = 0.1248, stage 310_stability_direct)
+userParam08 = 0.9  # dynamic velocity tolerance factor
+userParam09 = 100  # dynamic tolerance update stride
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-10
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-10
+residualProj = no
+density = 1.0
+viscosity = -100.0

@@ -1,0 +1,41 @@
+# TEMPLATE: baseflow_boostconv; userParam01 = 1.2; subroutine = BoostConv (src/fixedp.f90)
+#
+# BoostConv accelerates the time-stepping fixed-point iteration with a Krylov extrapolation. It has no filter and no gain to choose.
+# Seed with a DNS snapshot or a rough SFD result.
+# The working stage example/cylinder_re100/120_baseflow_boostconv runs at Re = 50, where it reaches its gate; at Re = 100 it does not
+# (README of that stage).
+# See example/_templates/110_baseflow_sfd/case.par for the other blocks.
+[GENERAL]
+# TEMPLATE: seed field, a DNS snapshot
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 500.0          # TEMPLATE: limit that the run does not reach; it stops when the gate is reached
+
+userParam01 = 1.2        # BoostConv
+
+dt = 0
+variableDt = no          # as in the working stage
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-6
+residualProj = no
+density = 1.0
+viscosity = -50.0        # TEMPLATE: -Re

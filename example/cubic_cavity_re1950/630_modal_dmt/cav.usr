@@ -1,0 +1,79 @@
+! -----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab
+
+      end
+! -----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      use nekstab_dmt, only: dmt_bank_add, dmt_bank_options
+      include 'SIZE'
+      include 'TOTAL'
+      real*8 omega1, period
+
+      if (istep.eq.0) then !change defaults
+        ifres = .false. ; call bcast(ifres,lsize)
+        ifvor = .false. ; call bcast(ifvor,lsize)
+        ifvox = .false. ; call bcast(ifvox,lsize)
+
+        if (nint(uparam(1)*100.0d0).eq.640) then ! DMT filter bank on the DNS
+          ! Filters at the frequency of the limit cycle, its second and third harmonic, and at 0 (the mean
+          ! flow). The width of each filter is 0.2 of its frequency. The slowest, the first, settles to 1e-3
+          ! in 2 ln(1000) / width = 119 time units, 11 periods. The amplitude is averaged over the last 4
+          ! periods of the 15.
+          period = 10.78909d0 ! 000_dns_period
+          omega1 = 8.0d0*atan(1.0d0)/period
+          call dmt_bank_add(omega1, 0.2d0*omega1)
+          call dmt_bank_add(2.0d0*omega1, 0.4d0*omega1)
+          call dmt_bank_add(3.0d0*omega1, 0.6d0*omega1)
+          call dmt_bank_add(0.0d0, 0.2d0*omega1)
+          call dmt_bank_options(hist_step=1000, snapshots=.false., avg_from=11.0d0*period)
+        endif
+      endif
+
+      end
+! -----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+! -----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ux = 1.0d0 ! uniform lid, as in the thesis (no regularisation of the edge singularity)
+      uy = 0.0d0
+      uz = 0.0d0
+      temp = 0.0d0
+
+      end
+! -----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ux = 1.0d0 ! uniform lid, as in the thesis (no regularisation of the edge singularity)
+      uy = 0.0d0
+      uz = 0.0d0
+      temp = 1.0d0
+
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat2
+      end

@@ -1,0 +1,22 @@
+{
+  "case": "moving_cylinder_re100/000_dns",
+  "summary": "DNS of the static cylinder (amplitude A = 0) at Re = 100 on the mesh of the moving-cylinder case, with sponge and filter. The reference checks the frequency and the amplitude of the late probe signal.",
+  "description": "Late-window dominant frequency and amplitude of v at the probe (5, 0) of 1cyl.his. userParam05 = 0, so the mesh does not move; the frequency 0.1663 is the Strouhal number of the static cylinder on this mesh. The forced stages use f = 0.1643, 1.2 % lower (see 010_dns_forced).",
+  "produced": {
+    "date": "2026-06-10",
+    "ranks": 8,
+    "mode": "userParam01=0"
+  },
+  "quantities": {
+    "dominant_frequency": {
+      "value": 0.16629992432514834,
+      "source": "analysis_metrics.dat:col1:first",
+      "tol_rel": 0.001
+    },
+    "late_amplitude": {
+      "value": 0.50332897,
+      "source": "analysis_metrics.dat:col2:first",
+      "tol_rel": 0.02
+    }
+  }
+}

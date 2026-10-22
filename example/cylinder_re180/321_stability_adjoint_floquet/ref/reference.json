@@ -1,0 +1,24 @@
+{
+  "case": "cylinder_re180/321_stability_adjoint_floquet",
+  "summary": "Adjoint Floquet analysis of the Re = 180 periodic orbit. The multipliers match the direct analysis.",
+  "produced": {
+    "date": "2026-10-06",
+    "ranks": 16,
+    "mode": "userParam01=3.21",
+    "compiler": "gfortran",
+    "order": "polynomial order 7 (SIZE of 210), sponge off, dt 0.004"
+  },
+  "quantities": {
+    "adjoint_floquet_leading_sigma": {
+      "value": 3.75232e-06,
+      "source": "Spectre_NSa.dat:col1:first",
+      "tol_abs": 0.0001
+    },
+    "adjoint_floquet_leading_omega": {
+      "value": 0.0,
+      "source": "Spectre_NSa.dat:col2:first",
+      "tol_abs": 0.001
+    }
+  },
+  "description": "Trivial (phase) Floquet mode of the Re=180 Newton orbit T = 5.189628: exact sigma = 0; mu = 1 + 1.8e-6"
+}

@@ -1,0 +1,24 @@
+{
+  "case": "cylinder_re180/311_stability_direct_floquet",
+  "summary": "Direct Floquet analysis of the Re = 180 periodic orbit. The 2D analysis finds the trivial phase mode, multiplier 1.",
+  "produced": {
+    "date": "2026-10-06",
+    "ranks": 16,
+    "mode": "userParam01=3.11",
+    "compiler": "gfortran",
+    "order": "polynomial order 7 (SIZE of 210), sponge off, dt 0.004"
+  },
+  "quantities": {
+    "direct_floquet_leading_sigma": {
+      "value": 3.399359e-06,
+      "source": "Spectre_NSd.dat:col1:first",
+      "tol_abs": 0.0001
+    },
+    "direct_floquet_leading_omega": {
+      "value": 0.0,
+      "source": "Spectre_NSd.dat:col2:first",
+      "tol_abs": 0.001
+    }
+  },
+  "description": "Trivial (phase) Floquet mode of the Re=180 Newton orbit T = 5.189628: exact sigma = 0; mu = 1 + 1.8e-6"
+}

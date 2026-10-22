@@ -1,0 +1,33 @@
+[GENERAL]
+startFrom = bfs0.f00004   # native DNS-settled field (same mesh) -> Newton polishes to machine zero
+stopAt = endTime
+endTime = 1
+
+userParam01 = 2   # Newton-GMRES for fixed points
+userParam07 = 100 # k_dim (GMRES subspace) - matches cubic/cylinder; 30 too small for BFS non-normality -> Arnoldi breakdown
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 10.
+writeDoublePrecision = no
+
+dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.01
+#filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = no
+density = 1.0
+viscosity = -500.0

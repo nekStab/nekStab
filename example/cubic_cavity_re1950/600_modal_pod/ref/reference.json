@@ -1,0 +1,83 @@
+{
+  "case": "cubic_cavity_re1950/600_modal_pod",
+  "summary": "POD of 100 snapshots of the limit cycle of the cubic cavity at Re = 1950. Two modes hold 94.3 % of the energy and turn at the frequency of the cycle.",
+  "description": "The stage reads 100 snapshots of 000_dns, one every 0.5 time units from t = 1740 to 1789.5, about 4.6 periods of the cycle, and computes the POD by the method of snapshots. For a cycle the leading modes come in a pair whose coefficients turn once per period, and the nonlinearity adds a second pair at twice the frequency. The reference checks the energy of the four leading modes, the energy of the first pair, the rates at which the first five pairs turn against 2 pi / T (1 to 5), and the largest eigenvalue. A wrong snapshot window, a wrong period or a wrong normalisation changes these numbers. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 8.4
+  },
+  "quantities": {
+    "energy_mode1_percent": {
+      "source": "pod_spectrum.dat:col3:first",
+      "value": 57.558034,
+      "tol_abs": 0.05,
+      "note": "Share of the fluctuation energy in mode 1."
+    },
+    "energy_mode2_percent": {
+      "source": "pod_spectrum.dat:col3:row2",
+      "value": 36.707663,
+      "tol_abs": 0.05,
+      "note": "Mode 2 is the partner of mode 1. The two energies differ because the orbit of the coefficients is an ellipse, not a circle."
+    },
+    "energy_pair_percent": {
+      "source": "pod_summary.dat:col3:first",
+      "value": 94.265697,
+      "tol_abs": 0.05
+    },
+    "energy_mode3_percent": {
+      "source": "pod_spectrum.dat:col3:row3",
+      "value": 2.7794953,
+      "tol_abs": 0.02,
+      "note": "Modes 3 and 4 are the second pair, at twice the frequency of the cycle."
+    },
+    "energy_mode4_percent": {
+      "source": "pod_spectrum.dat:col3:row4",
+      "value": 2.5593744,
+      "tol_abs": 0.02
+    },
+    "cumulative_energy_4_modes_percent": {
+      "source": "pod_spectrum.dat:col4:row4",
+      "value": 99.604566,
+      "tol_abs": 0.02
+    },
+    "pair_frequency_ratio": {
+      "source": "pod_summary.dat:col4:first",
+      "value": 1.0005094,
+      "tol_abs": 0.002,
+      "note": "Angular frequency of the pair (a_1, a_2), from a linear fit to the unwrapped phase over the 100 snapshots, over 2 pi / T with T = 10.78909. The fit covers 4.6 periods, which accounts for the offset of 5e-4 from 1."
+    },
+    "second_pair_frequency_ratio": {
+      "source": "pod_summary.dat:col5:first",
+      "value": 1.9998,
+      "tol_abs": 0.003,
+      "note": "Same measure for the pair (a_3, a_4): it turns at the second harmonic of the cycle."
+    },
+    "third_pair_frequency_ratio": {
+      "source": "pod_summary.dat:col6:first",
+      "value": 2.9989,
+      "tol_abs": 0.003,
+      "note": "Same measure for the pair (a_5, a_6): the third harmonic."
+    },
+    "fourth_pair_frequency_ratio": {
+      "source": "pod_summary.dat:col7:first",
+      "value": 3.9981,
+      "tol_abs": 0.003,
+      "note": "Pair (a_7, a_8): the fourth harmonic."
+    },
+    "fifth_pair_frequency_ratio": {
+      "source": "pod_summary.dat:col8:first",
+      "value": 4.9975,
+      "tol_abs": 0.003,
+      "note": "Pair (a_9, a_10): the fifth harmonic."
+    },
+    "eigenvalue_mode1": {
+      "source": "pod_spectrum.dat:col2:first",
+      "value": 8.6787665e-05,
+      "tol_rel": 0.005,
+      "note": "Largest eigenvalue of the correlation matrix of the snapshots, in the normalisation of the code."
+    }
+  }
+}

@@ -1,0 +1,36 @@
+[GENERAL]
+# Warm-start from the saturated limit cycle (ic_sat.f00001 = 000_dns_period
+# cav0.f00017, t = 1700, on the orbit: the centre-probe amplitude is flat from
+# t = 1000) so every modal snapshot is on the cycle.
+startFrom = ic_sat.f00001
+
+stopAt = endTime
+endTime = 1800  # from t=1700: 100 t.u. ~= 9.3 periods (T=10.789) at dt=0.5 -> ~200 saturated snapshots
+
+userParam01 = 0  # DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 0.5  # ~20 snapshots per period; ~200 total in endTime=100 -> POD/DMD/SPOD-ready
+writeDoublePrecision = yes  # task #69 workaround: single-prec snapshots hang Nek MPI-IO read on 16 ranks for 3D fields. Double-prec (12 MB each) reads cleanly.
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-6
+residualProj = yes
+density = 1.0
+viscosity = -1950.0

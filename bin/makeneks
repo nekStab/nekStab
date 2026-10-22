@@ -1,124 +1,565 @@
 #!/bin/bash
-set -a
+
+# ============================================================================
+# To create a conda environment suitable for NekStab/Nek5000 on macOS ARM:
+#   conda create -n nek -c conda-forge gfortran openmpi cmake
+#   conda activate nek
+# ============================================================================
+
+set -a # export all variables and functions defined in the script
+
+# Initialize flags
+debug=false
+fresh=false
+target=""
 
 #-------------------------------------------------------------------------------
-# NekStab config
-#-------------------------------------------------------------------------------
-# Ensure to modify SIZE:
-#    parameter (lpelt=lelt)
-#    include 'NEKSTAB.inc'
-#-------------------------------------------------------------------------------
-# Add to .bashrc:
-# export NEKSTAB_SOURCE_ROOT="$HOME/nekStab" #--> path to nekStab
-# export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
-# export NEK_SOURCE_ROOT="$NEKSTAB_SOURCE_ROOT/Nek5000"
-# export PATH=$NEK_SOURCE_ROOT/bin:$PATH
-#-------------------------------------------------------------------------------
-# OPTIONAL COMPILER SETTINGS
+# Helper Functions
 #-------------------------------------------------------------------------------
 
-# check presence of Intel compiler in the enviroment
-if command -v mpiifort -v 2>/dev/null; then
-    echo "Intel compiler found:"
-    echo $(mpiifort -v)
-    export FC="mpiifort"
-    export CC="mpiicx"
-    export FFLAGS+=" -extend-source" # support to long lines
-    
-    if command -v $(ifort --version | grep ^oneapi) 2>/dev/null; then
-        export FFLAGS+=" -qmkl"
-        # do not use xHost with OneAPI
-    else # not OneAPI
-        export FFLAGS+=" -mkl -xHost"
+show_usage () {
+    echo "Usage: $0 [case|clean|full_clean] [--debug] [--fresh]"
+    echo "  case       : Case name to compile"
+    echo "  clean      : Remove build files (makefile, obj/, logs)"
+    echo "  full_clean : Remove EVERYTHING (field files, plots, data, obj/)"
+    echo "  --debug    : Enable debug mode"
+    echo "  --fresh    : Clean before compilation"
+    exit 1
+}
+
+# Cross-platform sed -i (macOS requires '' argument)
+sed_inplace () {
+    if [[ $(uname -s) == "Darwin" ]]; then
+        sed -i '' "$@"
+    else
+        sed -i "$@"
     fi
-    export USR_LFLAGS+=" -I${MKLROOT}/include -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl" #optional link for old versions
-    export FFLAGS+=" -g -traceback" # Intel tracer 
-    # #export FFLAGS+=" -fpe0 -debug extended" # debugger
-else
-    echo "GCC compiler found:"
-    echo " version $(gcc --version | grep ^gcc | sed 's/^.* //g')"
-    export FC="mpif90"
-    export CC="mpicc"
-    export FFLAGS+=" -march=native -ffixed-line-length-none -w -Wall"
-    # if [[ $(gfortran -dumpversion | cut -f1 -d.) -gt 10 ]]; then
-    #     export FFLAGS+=" -fallow-argument-mismatch"
-    # fi
-    # debug flags
-    export FFLAGS+=" -g -fbacktrace" # GCC tracer 
-    #export FFLAGS+=" -Og -ggdb -Wextra -Warray-bounds -Warray-temporaries -Wconversion -Wno-argument-mismatch" 
-    #export FFLAGS+=" -finit-real=nan -ffpe-trap=invalid,zero"
-    #export FFLAGS+=" -fsanitize=leak -fsanitize=address"
+}
+
+manage_compiler_flags () {
+    local action=$1
+    local makenek_inc="$NEK_SOURCE_ROOT/core/makenek.inc"
+
+    if [ ! -f "$makenek_inc" ]; then
+        echo "Warning: makenek.inc not found at $makenek_inc"
+        return
+    fi
+
+    case $action in
+        "enable_debug")
+            echo "Removing -w flag for debug mode"
+            sed_inplace -E 's/FF77="[[:space:]]*-w[[:space:]]+-std=legacy"/FF77=" -std=legacy"/' "$makenek_inc"
+            ;;
+        "restore")
+            echo "Restoring original compiler flags"
+            sed_inplace -E 's/FF77="[[:space:]]*(-std=legacy)"/FF77="-w \1"/' "$makenek_inc"
+            ;;
+    esac
+}
+
+do_clean () {
+    echo "Cleaning up build files..."
+    [ -f makefile ] && make clean
+    echo "Removing session and log files..."
+    shopt -s nullglob
+    rm -f SESSION.NAME *log* makefile NEKSTAB.inc KRY* HES*
+    rm -f ./*.mod
+    rm -f obj/*.mod
+    shopt -u nullglob
+    echo "Cleanup completed."
+    manage_compiler_flags "restore"
+}
+
+do_full_clean () {
+    echo "=== FULL CLEAN (hardcore) ==="
+    do_clean
+    echo "Removing Nek5000 field files (*.f?????)..."
+    rm -f *.f[0-9][0-9][0-9][0-9][0-9]
+    echo "Removing output data files..."
+    rm -f *.dat *.his
+    echo "Removing plots..."
+    rm -f *.png *.pdf
+    echo "Removing binary and object files..."
+    rm -rf obj nek5000 *.o *.a
+    echo "Removing misc generated files..."
+    rm -f fort.* ioinfo SESSION.NAME.* core.[0-9]* *.nek5000
+    echo "=== FULL CLEAN COMPLETE ==="
+}
+
+validate_target () {
+    local t=$1
+    local match
+    local -a matches=()
+
+    if [ "$t" = "clean" ] || [ "$t" = "full_clean" ]; then
+        return 0
+    fi
+
+    for match in "${t}.re2" "${t}.rea" "${t}.par" "${t}.usr" "${t}.sep" "${t}.map"; do
+        if [ -f "$match" ]; then
+            return 0
+        fi
+    done
+
+    for match in *.re2 *.rea *.par *.usr *.sep *.map; do
+        [[ -e "$match" ]] && matches+=( "${match%.*}" )
+    done
+
+    if ((${#matches[@]})); then
+        printf "Error: case '%s' not recognized in %s\n" "$t" "$(pwd)"
+        printf "Available case names:\n"
+        printf "  %s\n" "${matches[@]}" | sort -u
+        return 1
+    fi
+
+    printf "Warning: no known case files found to validate against in %s\n" "$(pwd)"
+    return 0
+}
+
+# Check if gslib is compatible with current compiler; clean if not
+check_gslib_compat () {
+    local gslib_dir="$NEK_SOURCE_ROOT/3rd_party/gslib"
+    local libgs="$gslib_dir/lib/libgs.a"
+
+    [ ! -f "$libgs" ] && return 0
+
+    echo "Checking gslib compiler compatibility..."
+
+    # The library is shared by every build that uses this Nek5000 tree, and a
+    # wrong "incompatible" verdict deletes it under them. A full /tmp (a few
+    # hundred MB on the compute nodes of a cluster) or a compiler that cannot
+    # run says nothing about gslib, so the check stops before the verdict.
+    local test_dir
+    if ! test_dir=$(mktemp -d); then
+        echo "  cannot create a temporary directory; gslib check skipped"
+        return 0
+    fi
+    echo 'int main(void) { return 0; }' > "$test_dir/ok.c" 2>/dev/null
+    if ! $CC "$test_dir/ok.c" -o "$test_dir/ok" 2>/dev/null; then
+        echo "  C compiler cannot build a trivial program; gslib check skipped"
+        rm -rf "$test_dir"
+        return 0
+    fi
+    # Must CALL the function to force linker to resolve gslib symbols
+    cat > "$test_dir/t.c" << 'EOF'
+extern void fgslib_gs_setup_(void*, void*, void*, void*, void*);
+int main(void) { fgslib_gs_setup_(0,0,0,0,0); return 0; }
+EOF
+
+    if $CC "$test_dir/t.c" -L"$gslib_dir/lib" -lgs -lm -o "$test_dir/t" 2>/dev/null; then
+        echo "  gslib OK"
+        rm -rf "$test_dir"
+        return 0
+    fi
+
+    rm -rf "$test_dir"
+    echo "  gslib INCOMPATIBLE - cleaning for rebuild..."
+    rm -rf "$gslib_dir/lib" "$gslib_dir/include" "$gslib_dir/install.stamp"
+    find "$gslib_dir" \( -name '*.o' -o -name '*.a' \) -delete 2>/dev/null || true
+}
+
+# Intel compiler common flags (shared by ifx and ifort)
+setup_intel_common_flags () {
+    FFLAGS+=" -fpp"             # Fortran preprocessor
+    FFLAGS+=" -r8 -fpconstant"  # Double precision reals
+    FFLAGS+=" -fixed"
+    FFLAGS+=" -extend-source"
+
+    export PPLIST="VENDOR_BLAS"
+    if [ -z "$MKLROOT" ]; then
+        echo "Warning: MKLROOT not set, MKL linking may fail"
+    fi
+    FFLAGS+=" -qmkl=sequential"
+
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled"
+        FFLAGS+=" -g3 -traceback"
+    fi
+}
+
+# ifx-specific flags (Intel LLVM)
+setup_ifx_flags () {
+    FC="mpiifx"
+    CC="mpiicx"
+
+    setup_intel_common_flags
+
+    # Use portable x86-64-v3 in CI, native optimization otherwise
+    if [ -n "$CI" ]; then
+        FFLAGS+=" -march=x86-64-v3"  # AVX2 - portable across Intel/AMD
+    else
+        FFLAGS+=" -xHost"
+    fi
+}
+
+# ifort-specific flags (Intel Classic)
+setup_ifort_flags () {
+    FC="mpiifort"
+    # Use mpiicx if icc is not available (Intel 2024+)
+    if command -v icc >/dev/null 2>&1; then
+        CC="mpiicc"
+    else
+        CC="mpiicx"
+    fi
+
+    setup_intel_common_flags
+
+    # Extract ifort version for version-specific settings
+    MPIIFORT_VERSION_FULL=$(mpiifort --version 2>&1 | grep "(IFORT)" | head -n 1)
+    IFORT_VERSION=$(echo "$MPIIFORT_VERSION_FULL" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    IFORT_MINOR=$(echo "$IFORT_VERSION" | cut -d. -f2)
+    echo "Detected ifort version: $IFORT_VERSION"
+
+    if [ "$IFORT_VERSION" = "2021.9.0" ]; then
+        echo "Applying ifort 2021.9.0 specific settings."
+        CFLAGS+=" -diag-disable=10441 -diag-disable=42"
+        FFLAGS+=" -diag-disable=10441 -warn noalign"
+    elif [ "$IFORT_MINOR" -ge 13 ] 2>/dev/null; then
+        echo "Suppressing ifort deprecation warning (remark #10448)."
+        FFLAGS+=" -diag-disable=10448"
+    fi
+
+    # Add xHost for native optimization (skip in CI)
+    if [ -z "$CI" ]; then
+        FFLAGS+=" -xHost"
+    else
+        echo "CI: using generic optimization (no -xHost)"
+    fi
+}
+
+# GCC/gfortran flags
+setup_gcc_flags () {
+    FC="mpif90"
+    CC="mpicc"
+
+    echo "Compiler found: $(which $FC)"
+    echo "$($FC --version | head -n1)"
+
+    FFLAGS+=" -cpp"                                  # C preprocessor
+    FFLAGS+=" -fdefault-real-8 -fdefault-double-8"   # Double precision reals
+    FFLAGS+=" -w -std=legacy"                        # Suppress warnings, legacy extensions
+    FFLAGS+=" -ffixed-form"
+    FFLAGS+=" -ffixed-line-length-none"
+    FFLAGS+=" -fno-lto"  # Disable LTO to avoid linker issues with static archives
+
+    # Use portable flags in CI, native optimization otherwise
+    if [ -n "$CI" ]; then
+        FFLAGS+=" -mtune=generic"
+    else
+        FFLAGS+=" -march=native"
+    fi
+
+    if [ "$debug" = true ]; then
+        echo "Debug mode enabled"
+        FFLAGS+=" -g -fbacktrace"
+        FFLAGS+=" -Wall -Wno-analyzer-out-of-bounds -Wno-zerotrip -frecursive"
+    fi
+
+    export PPLIST="VENDOR_BLAS"
+    if [[ $(uname -s) == "Darwin" ]]; then
+        USR_LFLAGS+=" -framework Accelerate"
+        # FFTW3 from Homebrew
+        if [ -d "/opt/homebrew/opt/fftw" ]; then
+            USR_LFLAGS+=" -L/opt/homebrew/opt/fftw/lib -lfftw3"
+            FFLAGS+=" -I/opt/homebrew/opt/fftw/include"
+        elif [ -d "/usr/local/opt/fftw" ]; then
+            USR_LFLAGS+=" -L/usr/local/opt/fftw/lib -lfftw3"
+            FFLAGS+=" -I/usr/local/opt/fftw/include"
+        fi
+    else
+        USR_LFLAGS+=" -llapack -lblas -lfftw3"
+    fi
+}
+
+#-------------------------------------------------------------------------------
+# Argument Parsing
+#-------------------------------------------------------------------------------
+
+: ${NEKSTAB_SOURCE_ROOT:="$(cd "$(dirname "$BASH_SOURCE")/.." && pwd 2>/dev/null)"}
+: ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
+
+if [ ! -d "$NEKSTAB_SOURCE_ROOT" ]; then
+    echo "Error: NEKSTAB_SOURCE_ROOT does not exist: $NEKSTAB_SOURCE_ROOT"
+    exit 1
 fi
 
-case $(uname -s) in
-    Darwin) case $(uname -p) in
-            x86_64) ar="x86_64" 
-            #echo "Darwin-x86-64 architecture identified"
-            #export FFLAGS+=" -mcmodel=large"
-            ;;
-            arm)  ar="arm" 
-            #echo "Darwin-arm architecture identified"
-            # export FFLAGS+=" -mcmodel=small"
-            # Generate code for the small code model. The program and its statically defined symbols must be within 4GB of each other. Pointers are 64 bits. Programs can be statically or dynamically linked. 
-            # This is the default code model.
-            ;;
-        esac
-        ;;
+if [ ! -d "$NEK_SOURCE_ROOT" ]; then
+    echo "Error: NEK_SOURCE_ROOT does not exist: $NEK_SOURCE_ROOT"
+    exit 1
+fi
 
-    Linux) case $(uname -p) in
-            x86_64) ar="x86_64" 
-            #echo "Linux-x86-64 architecture identified"
-            export FFLAGS+=" -mcmodel=large"
+# Parse arguments (case first if present, options anywhere)
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug) debug=true; shift ;;
+        --fresh) fresh=true; shift ;;
+        --help|-h) show_usage ;;
+        --*) echo "Unknown option: $1"; show_usage ;;
+        *)
+            if [ -z "$target" ]; then
+                target="$1"
+                shift
+            else
+                echo "Unexpected argument: $1"
+                show_usage
+            fi
             ;;
-            arm)  ar="arm"
-            #echo "Linux-arm architecture identified"
-            ;;
-        esac
+    esac
+done
+
+if [ -z "$target" ]; then
+    show_usage
+fi
+
+validate_target "$target" || exit 1
+
+# Handle "clean" command
+if [ "$target" = "clean" ]; then
+    do_clean
+    exit 0
+fi
+
+# Handle "full_clean" command (hardcore - removes all output)
+if [ "$target" = "full_clean" ]; then
+    do_full_clean
+    exit 0
+fi
+
+# Handle fresh (clean + rebuild)
+if [ "$fresh" = true ]; then
+    do_clean
+fi
+
+#-------------------------------------------------------------------------------
+# Version Information
+#-------------------------------------------------------------------------------
+
+N_VERSION=$(git -C "$NEK_SOURCE_ROOT" describe --tag --long --always 2>/dev/null || git -C "$NEK_SOURCE_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+NS_VERSION=$(git -C "$NEKSTAB_SOURCE_ROOT" describe --tag --long --always 2>/dev/null || git -C "$NEKSTAB_SOURCE_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+FFLAGS=""
+
+if [ "$debug" = true ]; then
+    echo "Debug mode enabled"
+    manage_compiler_flags "enable_debug"
+fi
+
+#-------------------------------------------------------------------------------
+# Compiler Detection
+#-------------------------------------------------------------------------------
+# NEKSTAB_FC environment variable can force compiler selection:
+#   - "ifx"     : Intel LLVM compiler (recommended, modern)
+#   - "ifort"   : Intel Classic compiler (deprecated, for benchmarking)
+#   - "gcc"     : GCC/gfortran (portable, fallback)
+
+if [ -n "$CI" ]; then
+    echo "CI environment detected - using portable compiler flags"
+fi
+
+if [ "$NEKSTAB_FC" = "ifx" ] && command -v ifx >/dev/null 2>&1; then
+    echo "Using Intel Compiler LLVM (ifx) [forced via NEKSTAB_FC]..."
+    setup_ifx_flags
+
+elif [ "$NEKSTAB_FC" = "ifort" ] && command -v ifort >/dev/null 2>&1; then
+    echo "Using Intel Compiler Classic (ifort) [forced via NEKSTAB_FC]..."
+    setup_ifort_flags
+
+elif [ "$NEKSTAB_FC" = "gcc" ] || [ "$NEKSTAB_FC" = "gfortran" ]; then
+    echo "Using GCC (forced via NEKSTAB_FC)..."
+    setup_gcc_flags
+
+elif command -v ifx >/dev/null 2>&1; then
+    echo "Using Intel Compiler LLVM (ifx)..."
+    setup_ifx_flags
+
+elif command -v ifort >/dev/null 2>&1; then
+    echo "Using Intel Compiler Classic (ifort)..."
+    setup_ifort_flags
+
+else
+    setup_gcc_flags
+fi
+
+CFLAGS+=" -w"  # suppress C warnings
+
+#-------------------------------------------------------------------------------
+# Architecture Detection
+#-------------------------------------------------------------------------------
+
+case $(uname -s) in
+    Darwin)
+        [[ $(uname -m) == "arm64" ]] && FFLAGS+=" -mcmodel=small"
+        ;;
+    Linux)
+        [[ $(uname -p) == "x86_64" ]] && FFLAGS+=" -mcmodel=large"
         ;;
 esac
 
-###############################################################################
-# DONT'T TOUCH WHAT FOLLOWS !!!
-###############################################################################
+#-------------------------------------------------------------------------------
+# Final Preparations
+#-------------------------------------------------------------------------------
 
-# control version flags for user reference
-export N_VERSION=$(cd $NEK_SOURCE_ROOT && git describe --tag --long --always)
-export NS_VERSION=$(cd $NEKSTAB_SOURCE_ROOT && git describe --tag --long --always)
-export FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
-export USR="krylov_subspace.o\
-    matvec.o \
-    krylov_decomposition.o \
-    eigensolvers.o \
-    lapack_wrapper.o \
-    fixedp.o \
-    usr_extra.o \
-    utils.o \
-    IO.o \
-    postproc.o \
-    newton_krylov.o \
-    sensitivity.o \
-    "
+# Allow extra flags via environment variable
+if [ -n "$NEKSTAB_EXTRA_FFLAGS" ]; then
+    echo "Adding extra FFLAGS: $NEKSTAB_EXTRA_FFLAGS"
+    FFLAGS+=" $NEKSTAB_EXTRA_FFLAGS"
+fi
 
-echo "Nek5000 version: "$N_VERSION
-echo " using source path: $NEK_SOURCE_ROOT"
-echo "nekStab version: "$NS_VERSION
-echo " using source path: $NEKSTAB_SOURCE_ROOT"
-echo "preparing compilation with:"
-x=($(which $FC; echo $FFLAGS $USR_LFLAGS))
-echo "${x[@]}"
+FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 
-# copy static variables file to NEKSTAB.inc
-cp -v $NEKSTAB_SOURCE_ROOT/core/NEKSTAB NEKSTAB.inc
+LD="$FC"  # Linker (Fortran compiler as main program is Fortran)
 
-echo "include $NEKSTAB_SOURCE_ROOT/core/makefile_nekStab" > makefile_usr.inc
-echo "generating makefile_usr.inc ... done"
+# User-specified object files
+# IMPORTANT: Every new .o MUST appear in BOTH this USR list AND in
+# src/makefile_nekStab with its compilation rule + dependencies.
+#   Missing from USR  -> linker "undefined reference"
+#   Missing from makefile -> source never compiled (stale .o used)
+# After adding a new .o, delete obj/libnek5000.a to force re-archiving.
+USR="nek_vectors.o"
+USR+=" krylov_subspace.o"
+USR+=" krylov_inner_products.o"
+USR+=" fourier_fftw.o"
+USR+=" fourier.o"
+USR+=" krylov_decomposition.o"
+USR+=" argsort.o"
+USR+=" ks_select.o"
+USR+=" matvec.o"
+USR+=" eigensolvers.o"
+USR+=" lapack_wrapper.o"
+USR+=" fixedp.o"
+USR+=" dmt_filter.o"
+USR+=" dmt.o"
+USR+=" otd.o"
+USR+=" reynolds_force.o"
+USR+=" forcing.o"
+USR+=" main.o"
+# mode_codes.o: MODE_* integer parameters used by mode_config.o
+# (mode-code cleanup Phase 1). Order matters:
+# mode_codes must appear before mode_config so the archived
+# libnek5000.a resolves `use nekstab_mode_codes` correctly.
+USR+=" mode_codes.o"
+USR+=" mode_config.o"
+USR+=" IO.o"
+USR+=" newton_krylov.o"
+USR+=" sensitivity.o"
+USR+=" vortex.o"
+USR+=" energy_budget.o"
+USR+=" statistics.o"
+USR+=" probes.o"
+USR+=" noise.o"
+USR+=" diagnostics.o"
+USR+=" torque.o"
+USR+=" modal_pod.o"
+USR+=" modal_dmd.o"
+USR+=" modal_spod.o"
+USR+=" modal_spod_streaming.o"
+USR+=" modal_analysis.o"
+USR+=" fst.o"
+USR+=" base_mut.o"
+USR+=" usr_wrappers.o"
+USR+=" nekstab_nek_bridge.o"
+
+# Source case-specific makefile if present
+[ -f "makefile_usr" ] && source makefile_usr
+export USR
+
+# Output summary
+echo "---------------- Compilation Details ----------------"
+echo "Nek5000 version: $N_VERSION"
+echo "nekStab version: $NS_VERSION"
+echo "mpiexec version: $(mpiexec --version | head -n1) [$(which mpiexec)]"
+echo "mpirun version: $(mpirun --version | head -n1) [$(which mpirun)]"
+echo "---------------- C Compiler Details ----------------"
+echo "CC compiler: $CC ($(which $CC 2>/dev/null || echo not found))"
+echo "CC version: $($CC --version | head -n1)"
+echo "CFLAGS: $CFLAGS"
+echo "---------------- Fortran Compiler Details ----------------"
+echo "FC compiler: $FC ($(which $FC 2>/dev/null || echo not found)) [LD : $LD]"
+echo "FC version: $($FC --version | head -n1)"
+echo "FFLAGS: $FFLAGS"
+echo "USR_LFLAGS: $USR_LFLAGS"
+echo "-----------------------------------------------------"
+
+# Update makefile and static variables. Avoid touching NEKSTAB.inc when the
+# content is unchanged; Nek5000's config step treats the timestamp churn as a
+# configuration change and can abort before the actual build starts.
+if [ ! -f NEKSTAB.inc ] || ! cmp -s "$NEKSTAB_SOURCE_ROOT/src/NEKSTAB" NEKSTAB.inc; then
+    cp -v "$NEKSTAB_SOURCE_ROOT/src/NEKSTAB" NEKSTAB.inc
+else
+    echo "'$NEKSTAB_SOURCE_ROOT/src/NEKSTAB' -> 'NEKSTAB.inc' (unchanged)"
+fi
+
+# Append 'include NEKSTAB.inc' to SIZE if not present
+FILE="SIZE"
+INCLUDE_LINE="include 'NEKSTAB.inc'"
+if ! grep -q "^ *$INCLUDE_LINE" "$FILE"; then
+    echo "Appending '$INCLUDE_LINE' to '$FILE'."
+    echo -e "\n$INCLUDE_LINE" >> "$FILE"
+fi
+
+# Create makefile_usr.inc with NEKSTAB_SOURCE_ROOT
+FILE="makefile_usr.inc"
+echo "Creating/updating $FILE with NEKSTAB_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT"
+echo "NEKSTAB_SOURCE_ROOT = $NEKSTAB_SOURCE_ROOT" > "$FILE"
+echo 'include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab' >> "$FILE"
+
+: ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
+
+# Check gslib compatibility before building dependencies
+check_gslib_compat
 
 set +a -e
-$NEK_SOURCE_ROOT/bin/nekconfig $@
-if [[ $1 != "clean" ]]; then
- $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
- set -o pipefail
- touch $1.usr 
- make -j4 2>&1 | tee -a build.log
- set +o pipefail
+if [ -f .state ]; then
+    for state_var in FC FFLAGS CC CFLAGS NEK_SOURCE_ROOT; do
+        if ! grep -q "$state_var=${!state_var}" .state; then
+            echo "configuration change detected, preparing fresh build"
+            rm -f .state
+            make clean >/dev/null 2>&1 || true
+            break
+        fi
+    done
 fi
+printf 'n\n' | "$NEK_SOURCE_ROOT/bin/nekconfig" "$target"
+"$NEK_SOURCE_ROOT/bin/nekconfig" -build-dep
+set -o pipefail
+touch "${target}.usr"
+
+# Override Nek5000's auto-detected flags with our complete set
+if [ -f makefile ]; then
+    echo "Overriding FFLAGS in generated makefile..."
+    # Use | as delimiter since FFLAGS contains /
+    sed_inplace "s|^FFLAGS+=.*|FFLAGS+=${FFLAGS}|" makefile
+    if [ -n "$NEKSTAB_OPT" ]; then
+        echo "Overriding optimization level: L2 = $NEKSTAB_OPT"
+        sed_inplace "s|^L2 = .*|L2 = $NEKSTAB_OPT|" makefile
+    fi
+fi
+
+# Unset FFLAGS/CFLAGS to prevent make from reading them twice
+unset FFLAGS CFLAGS
+make -j4 2>&1 | tee -a build.log
+make_rc="${PIPESTATUS[0]:-0}"
+tee_rc="${PIPESTATUS[1]:-0}"
+[[ "$make_rc" =~ ^[0-9]+$ ]] || make_rc=0
+[[ "$tee_rc" =~ ^[0-9]+$ ]] || tee_rc=0
+set +o pipefail
+
+if [ "$make_rc" -ne 0 ]; then
+    echo "Build failed with status $make_rc."
+    exit "$make_rc"
+fi
+if [ "$tee_rc" -ne 0 ]; then
+    echo "Build output tee failed with status $tee_rc."
+    exit "$tee_rc"
+fi
+
+# Move .mod files to obj/ if it exists, otherwise remove them
+shopt -s nullglob
+mod_files=( *.mod )
+if ((${#mod_files[@]})); then
+    mkdir -p obj
+    mv -f -- "${mod_files[@]}" obj/
+fi
+shopt -u nullglob
+
+# Restore original compiler flags if debug mode was enabled
+[ "$debug" = true ] && manage_compiler_flags "restore" || true

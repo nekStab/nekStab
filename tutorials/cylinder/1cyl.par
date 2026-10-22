@@ -6,7 +6,7 @@ stopAt = endTime
 endTime = 1
 #endTime = 500
 
-# Choose the operation mode : 
+# Choose the operation mode :
 userParam01 = 2 # Base Flow computation (Newton method)
 #userParam01 = 3.1 # Eigenvalue computation (Krylov method)
 #userParam01 = 0 # DNS

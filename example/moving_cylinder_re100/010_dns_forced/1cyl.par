@@ -1,0 +1,52 @@
+[GENERAL]
+startFrom = 0 # BF_1cyl0.f00001
+
+stopAt = endTime
+endTime = 100. # replaced by 1cyl.usr: the DNS ends after 30 periods of the forcing
+
+userParam01 = 0 # standard DNS
+#userParam01 = 2.2 # Newton for forced UPO
+#userParam01 = 3.11 # Floquet direct eigenproblem
+
+userParam02 = 0.0 #
+userParam03 = 0.0 #
+userParam04 = 0.0 #
+
+userParam05 = 1.08  # amplitude of the forced transverse oscillation (diameters)
+userParam06 = 0.1643000 # frequency
+userParam07 = 200 # k_dim
+
+dt = 1.8931345E-03 # ok for DNS
+variableDt = yes # so we set based on targetCFL
+timeStepper = bdf3
+targetCFL = 0.35
+
+writeControl = runTime
+writeInterval = 25. # replaced by 1cyl.usr: one snapshot per period of the forcing
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = none
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+stressFormulation = yes
+
+[MESH]
+motion = user
+viscosity = 0.4
+numberOfBCFields = 1
+firstBCFieldIndex = 1
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-6 #9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = yes
+density = 1.0
+viscosity = -100.0

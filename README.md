@@ -1,138 +1,300 @@
-[![GCC](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml/badge.svg?branch=master)](https://github.com/ricardofrantz/nekStab/actions/workflows/gcc.yml)
-[![Documentation status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](https://nekstab.github.io/nekStabDoc/en/master/)
+![nekStab banner](assets/nekstab-readme-banner-v4.jpg)
 
-**nekStab** is a toolbox for performing bifurcation analysis using the spectral element CFD solver [Nek5000](https://github.com/Nek5000/Nek5000).
-It is released under the BSD-3-Clause license.
+| OS | Arch | Compiler | MPI | Status |
+|:---|:----:|:---------|:----|:------:|
+| Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI / MPICH | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu 24.04 | x86_64 | ifort 2024 / ifx 2025 | Intel MPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 15 | ARM64 | gfortran 14 | OpenMPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 
-The project started in 2010 with the PhD thesis of [Jean-Christophe Loiseau](https://loiseaujc.github.io/) and builds on the work of former PhD students of our group such as Frédéric Alizard, Stefania Cherubini, Alessandro Bucci, Mirko Farano, Francesco Picella and [Ricardo Frantz](https://github.com/ricardofrantz).
-Ricardo is the one who brought all the previous contributions together in a single toolbox.
+**nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
-It is actively maintained mainly by [Ricardo Frantz](https://github.com/ricardofrantz) and [Jean-Christophe Loiseau](https://loiseaujc.github.io/).
-Both of them work at [DynFluid](http://dynfluid.ensam.eu/), a fluid dynamics laboratory part of [Arts et Métiers Institute of Technology](https://artsetmetiers.fr/en).
+## Features
 
-### News
+### Steady-State & Periodic Orbit Computation
+| Method | Description |
+|--------|-------------|
+| **SFD** | Selective Frequency Damping for unstable steady states |
+| **BoostConv** | Residual acceleration for slow convergence |
+| **TDF** | Time-Delayed Feedback for periodic orbits |
+| **Newton-Krylov** | Quadratic convergence for fixed points, UPOs (natural frequency), and forced periodic orbits |
 
-- **February 2022:** The first official version of 'nekStab' is available online!
-It is released under the BSD-3-Clause license.
-Do not hesitate to contact us, have a look at the [documentation](https://nekstab.github.io/nekStabDoc/en/master/) or read the [release notes](https://github.com/nekStab/nekStab/blob/master/RELEASE.md) if you want to know more.
+### Global Stability Analysis
+| Analysis | Steady Flows | Time-Periodic (Floquet) |
+|----------|:------------:|:-----------------------:|
+| **Direct eigenmodes** | ✓ | ✓ |
+| **Adjoint eigenmodes** | ✓ | ✓ |
+| **Transient growth** | ✓ | ✓ |
+
+### Sensitivity & Receptivity
+- **Wavemaker** — structural sensitivity to feedback
+- **Energy budget** — production, dissipation, transport decomposition (steady + Floquet)
+- **Base flow sensitivity** — response to mean flow modifications
+- **Steady force sensitivity** — optimal placement for passive control (not validated in 2.0.0)
+- **Mode animation** — reconstruct eigenmode dynamics over one period
+
+### Modal Decomposition
+| Method | Description |
+|--------|-------------|
+| **POD** | Proper Orthogonal Decomposition (energy-ranked modes) |
+| **DMD** | Dynamic Mode Decomposition (frequency-ranked modes) |
+| **SPOD** | Spectral POD (frequency-resolved coherent structures) |
+| **DMT filter bank** | Online second-order filters on the DNS: the spatial structure of the flow at chosen frequencies |
+
+### Advanced Capabilities
+- **OTD modes** — real-time Lyapunov vectors for chaotic flows
+- **Linearized DNS** — perturbation evolution around base flows
+- **Scalar transport** — temperature and passive scalar stability
+- **Sponge zones** — non-reflecting boundaries for open flows
+- **Vortex identification** — λ₂, Q-criterion, Ω-criterion output
+- **FFT module** — FFTW3/MKL integration for spectral analysis with Nek5000
+
+### Why nekStab?
+- **Matrix-free**: No Jacobian storage — scales to millions of DoFs
+- **Krylov-based**: Time-stepper as linear operator — eigenvalues from snapshots
+- **Spectral accuracy**: Leverages Nek5000's high-order elements
+- **MPI parallel**: Efficient on laptops to supercomputers
+- **Validated**: Automated test suite covering 9 solver modes across 4 geometries (cylinder, backstep, flip-flop, jet)
+- **FFT included**: Smart linking to FFTW3 (GCC) or MKL (Intel) — no manual setup
+
+## Quick Reference
+
+| Mode | String | Aliases | Description |
+|:----:|--------|---------|-------------|
+| 0 | `'dns'` | | Direct Numerical Simulation |
+| 0.1 | `'linear_dns'` | `'lindns'` | Linearized DNS (perturbation) |
+| 1.1 | `'sfd'` | | Selective Frequency Damping |
+| 1.2 | `'boostconv'` | `'boost'` | BoostConv acceleration |
+| 1.3 | `'dmt'` | | Dynamic Mode Tracking, base-flow stabilization (Queguineur et al. 2019) |
+| 1.4 | `'tdf'` | | Time-Delayed Feedback |
+| 2 | `'newton_fp'` | `'newton'` | Newton for fixed points |
+| 2.1 | `'newton_po'` | `'upo'` | Newton for periodic orbits (unknown period) |
+| 2.2 | `'newton_po_t'` | `'forced_upo'` | Newton for periodic orbits (forced period) |
+| 3.1 | `'direct'` | | Direct stability eigenmodes |
+| 3.11 | `'floquet_direct'` | | Floquet direct analysis |
+| 3.2 | `'adjoint'` | | Adjoint stability eigenmodes |
+| 3.21 | `'floquet_adjoint'` | | Floquet adjoint analysis |
+| 3.3 | `'transient_growth'` | `'tg'` | Optimal perturbations |
+| 3.31 | `'floquet_tg'` | | Floquet transient growth |
+| 4.1 | `'energy_budget'` | | Kinetic energy budget |
+| 4.11 | `'energy_budget_floquet'` | | Floquet energy budget |
+| 4.2 | `'wavemaker'` | | Structural sensitivity |
+| 4.3 | `'bf_sensitivity'` | | Base flow sensitivity |
+| 4.41 | `'force_sensitivity_real'` | | Steady force sensitivity (real), not validated in 2.0.0 |
+| 4.42 | `'force_sensitivity_imag'` | | Steady force sensitivity (imag), not validated in 2.0.0 |
+| 4.43 | `'delta_forcing'` | | Delta forcing response |
+| 4.5 | `'animate_mode'` | `'animate'` | Mode animation |
+| 4.51 | `'animate_bf_deform'` | | Base flow deformation animation |
+| 4.52 | `'animate_floquet'` | | Floquet mode animation |
+| 5 | `'otd'` | | Optimally Time-Dependent modes about a frozen base flow |
+| 5.1 | `'otd_dns'` | | Optimally Time-Dependent modes about the base flow that the DNS advances |
+| 6.1 | `'pod'` | | Proper Orthogonal Decomposition |
+| 6.2 | `'dmd'` | | Dynamic Mode Decomposition |
+| 6.3 | `'spod'` | | Spectral POD |
+| 6.4 | `'dmt_bank'` | | DMT filter bank: filters on the running DNS at chosen frequencies |
+
+See [DOC.md](DOC.md) for full parameter reference.
+
+## Examples
+
+Ready-to-run cases live under `example/`, from canonical cylinder workflows to
+thermal, airfoil, cavity, channel, and Floquet examples.
+See [EXAMPLES.md](EXAMPLES.md) for the stage rationale, case catalog, and
+public validation status.
 
 ## First Steps
 
-**nekStab** is a toolbox written in 'Fortran 90' for the spectral element solver Nek500.
-If you already have C and Fortran compilers, you can install both on Ubuntu/Debian distributions with the following commands.
-
 **Prerequisites**
 
-Linux
+Linux (GCC)
 ```bash
-sudo apt-get -y install libmpich-dev libopenblas-dev cmake m4 htop
-```
-MacOS
-```bash
-brew install mpich gfortran wget git cmake htop
+sudo apt -y install build-essential gfortran libmpich-dev libopenblas-dev libfftw3-dev cmake m4 htop
 ```
 
-**Cloning the repository and Nek5000**
+macOS
+```bash
+brew install mpich gfortran fftw wget git cmake htop
+```
+
+**Installation**
 
 ```bash
-git clone --depth=50 https://github.com/nekStab/nekStab.git
+git clone --depth=1 https://github.com/nekStab/nekStab.git
 cd nekStab
-./Nek5000clone.sh
+./Nek5000setup.sh
 ```
 
-Run **vim $HOME/.bashrc** and add the following :
+| Command | What it does |
+|---------|--------------|
+| `git clone --depth=1 ...` | Downloads only the latest version (fastest, minimal download) |
+| `cd nekStab` | Enter the nekStab directory |
+| `./Nek5000setup.sh` | Downloads and configures Nek5000 inside `nekStab/Nek5000/` |
+
+> **Already have Nek5000?** Skip `./Nek5000setup.sh` and point `NEK_SOURCE_ROOT` to your existing installation (see below).
+
+**Simplest way, no file to edit:** load the environment with one line.
+
 ```bash
-export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
-export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000
-export PATH=$NEK_SOURCE_ROOT/bin:$PATH
-export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
+source ~/nekStab/exports.sh
 ```
 
-Computing the fixed point for the cylinder flow example using the Newton-Krylov solver on 4 processors is as simple as
+It sets `NEKSTAB_SOURCE_ROOT` to the folder that holds `exports.sh`, keeps a
+`NEK_SOURCE_ROOT` that you set before (an existing Nek5000), puts both `bin/` folders
+on `PATH`, removes the stack limit and turns on tab completion of `mks`. Type it in
+each new terminal, or add that same line once to the end of `~/.bashrc` (or
+`~/.zshrc`) to have it always. Use `source`, not `bash exports.sh`: a script that runs
+as a program cannot change the terminal that started it.
+
+**Or set the variables yourself** in your shell config (`~/.bashrc` or `~/.zshrc`):
+```bash
+# nekStab path
+export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
+export PATH=$NEKSTAB_SOURCE_ROOT/bin:$PATH
+
+# Nek5000 path (adjust if using existing installation)
+export NEK_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT/Nek5000  # ← or your existing path
+export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+
+# Stack/core limits for large simulations
+ulimit -s unlimited
+ulimit -c unlimited
+```
+
+| Variable / Setting | Purpose |
+|--------------------|---------|
+| `NEKSTAB_SOURCE_ROOT` | Location of nekStab source (build scripts reference this) |
+| `NEK_SOURCE_ROOT` | Location of Nek5000 (required by Nek5000 build system) |
+| `PATH` additions | Makes `mks`, `nekbmpi`, `genmap`, etc. available anywhere |
+| `ulimit -s unlimited` | Removes stack size limit — prevents crashes in large runs |
+| `ulimit -c unlimited` | Enables core dumps for debugging crashes |
+
+Then reload: `source ~/.bashrc` (or restart terminal).
+
+### Shell completion
+
+Enable tab completion for case names and common `mks` targets/options:
+
+```bash
+source "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash"
+```
+
+For zsh, load Bash completion first:
+
+```bash
+autoload -Uz bashcompinit && bashcompinit
+source "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash"
+```
+
+## Compilation
 
 Go to a given example folder and compile the code:
 ```bash
-cd ~/nekStab/examples/cylinder/baseflow/newton  
-./cmpile.sh all
-```
-alternatively you can compile with _makeneks_ followed by the case name:
-```bash
-makeneks 1cyl
+cd ~/nekStab/example/cylinder_re100/210_baseflow_newton/fp
+mks 1cyl
 ```
 
-If 'Compilation successful!' then you can run the code:
+### Compiler Selection
+
+nekStab supports multiple Fortran compilers. The build script auto-detects available compilers in this order: `ifx` → `ifort` → `gfortran`. To force a specific compiler:
+
 ```bash
-nekbmpi 1cyl 4
-```
-to follow the code output in the _logfile_ try:
-```bash
-tail -f logfile
-```
-To stop the code just:
-```bash
-killall nek5000
+NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM (recommended for Intel/AMD CPUs)
+NEKSTAB_FC=ifort mks 1cyl  # Intel Classic (available on many HPC systems)
+NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 ```
 
-For more information on compiling the code on Mac OS or optional packages, see the [**Documentation**](https://nekstab.github.io/nekStabDoc/en/master/).
+### Performance Considerations
+
+| Compiler | Performance | Notes |
+|----------|-------------|-------|
+| **ifx** (Intel LLVM) | Fastest | Requires Intel oneAPI 2024+, uses MKL |
+| **ifort** (Intel Classic) | Fast | Available on HPC systems, discontinued in oneAPI 2025 |
+| **gfortran** (GCC) | Good | Universal, uses system BLAS/LAPACK |
+
+> **Note:** Intel discontinued `ifort` in oneAPI 2025, but it remains available on many HPC systems. New installations should use `ifx`.
+
+The Intel compilers use MKL (Math Kernel Library) which provides highly optimized BLAS/LAPACK routines with runtime CPU dispatching.
+
+### Debug Mode
+
+For debugging crashes or numerical issues:
+```bash
+mks 1cyl --debug
+```
+
+| What it enables | Why it helps |
+|-----------------|--------------|
+| Debug symbols (`-g`) | Use `gdb` to inspect variables and step through code |
+| Stack traces (`-fbacktrace`) | See exact file:line when a crash occurs |
+| Compiler warnings (`-Wall`) | Catch uninitialized variables, type mismatches |
+
+> **Tip:** When a crash happens in debug mode, the output shows which subroutine and line number failed — much easier than hunting through a release build.
+
+## Running
+
+After successful compilation:
+
+```bash
+nekbmpi 1cyl 4       # Run case "1cyl" on 4 MPI processes
+tail -f logfile      # Monitor output in real-time
+killall nek5000      # Stop the simulation
+```
+
+| Command | What it does |
+|---------|--------------|
+| `nekbmpi 1cyl 4` | Launches `nek5000` via `mpirun` with 4 processes (adjust to your CPU cores) |
+| `tail -f logfile` | Streams solver output — watch convergence, time steps, diagnostics |
+| `killall nek5000` | Gracefully stops all running Nek5000 processes |
+
+> **Tip:** Use `nekbmpi 1cyl 4 &` to run in background, then `tail -f logfile` in the same terminal.
+
+For more information, see the [Documentation](DOC.md).
+
+## Mode Selection
+
+Three equivalent ways to select the operating mode. When more than one is set, the first row wins.
+
+| Method | Where | Example |
+|--------|-------|---------|
+| String (preferred for new cases) | `.usr` | `nekstab_mode = 'floquet_adjoint'` |
+| Flags | `.usr` | `isAdjoint = .true.` + `ifFloquet = .true.` |
+| uparam (legacy decimal code, kept for existing cases) | `.par` | `userParam01 = 3.21` |
+
+A `userParam01` that is not one of the codes in the table above, or an unknown
+`nekstab_mode` string, stops the run with an error that names the value. Earlier
+versions ran a DNS instead.
 
 ## Development
 
-**nekStab** is mainly developed by Jean-Christophe Loiseau and Ricardo Frantz.
-However, we welcome contributors of all levels of experience.
-If you are planning a larger contribution, we encourage you to discuss the concept here on GitHub and to interact with us regularly to ensure your efforts are targeted.
+**nekStab** is maintained by [Ricardo Frantz](https://github.com/ricardofrantz).
 
-## Help and support
+See [FORTRAN_STYLE.md](FORTRAN_STYLE.md) for the current Fortran coding style conventions and guiding principles.
 
-Although **nekStab** relies on Nek5000, none of us are active developers of Nek5000.
-If you have questions about Nek5000, please contact the dedicated [GitHub repo](https://github.com/Nek5000/Nek5000)
- and [documentation](https://nek5000.github.io/NekDoc/)
+> **See also:** [LightKrylov](https://github.com/nekStab/LightKrylov) is a modern Fortran library providing abstract Krylov methods. [neklab](https://github.com/nekStab/neklab) is the next-generation bifurcation and stability analysis toolbox for Nek5000, built on LightKrylov. Both are actively developed by [Jean-Christophe Loiseau](https://github.com/loiseaujc) and [Simon Kern](https://github.com/Simkern).
 
-### Communication
+Website: [https://nekstab.github.io/](https://nekstab.github.io/)
 
-- Mail : [Jean-Christophe Loiseau](mailto:loiseau.jc@gmail.com?subject=[GitHub]%20Information%20about%20nekStab) or [Ricardo Frantz](mailto:rasfrantz@gmail.com?subject=[GitHub]%20Information%20about%20nekStab)
-- Website : [https://nekstab.github.io/](https://nekstab.github.io/)
+## Acknowledgments
 
-### Citation
+Several capabilities in nekStab started from work shared by others:
 
-When using **nekStab**, please consider citing one of the following papers :
+- The free-stream turbulence inflow generation builds on original work by M. A. Bucci.
+- The optimally time-dependent (OTD) modes capability grew out of groundwork contributed by [Simon Kern](https://github.com/Simkern) (KTH); the implementation follows Babaee & Sapsis (2016).
+- The sponge/fringe damping was first prototyped against the [KTH Toolbox](https://github.com/KTH-Nek5000/KTH_Toolbox) and follows Nordström, Nordin & Henningson (1999) and Lundbladh et al. (1999).
 
-- [Frantz et al. (2023)](https://arxiv.org/abs/2301.12940) presents the complete theoretical framework underlying **nekStab**.
-```bibtex
-@article{frantz2023krylov,
-    author = {Frantz, R. A. S. and Loiseau, J.-Ch. and Robinet, J.-Ch.},
-    title = "{Krylov Methods for Large-Scale Dynamical Systems: Application in Fluid Dynamics}",
-    journal = {Applied Mechanics Reviews},
-    volume = {75},
-    number = {3},
-    year = {2023},
-    month = {03},
-    issn = {0003-6900},
-    doi = {10.1115/1.4056808},
-    url = {https://doi.org/10.1115/1.4056808},
-    note = {030802},
-    eprint = {https://asmedigitalcollection.asme.org/appliedmechanicsreviews/article-pdf/75/3/030802/6996354/amr\_075\_03\_030802.pdf},
-}
-```
+The full list of authors and contributors is in [AUTHORS](AUTHORS).
 
-- [Loiseau et al. (2019)](https://arxiv.org/pdf/1804.03859.pdf) presents most of the theoretical framework underlying **nekStab**.
-```bibtex
-@incollection{chapter:loiseau:2019,
-  title={Time-stepping and Krylov methods for large-scale instability problems},
-  author={Loiseau, J.-Ch. and Bucci, M. A. and Cherubini, S. and Robinet, J.-Ch.},
-  booktitle={Computational Modelling of Bifurcations and Instabilities in Fluid Dynamics},
-  pages={33--73},
-  year={2019},
-  publisher={Springer}
-}
-```
-- [Loiseau et al. (*J. Fluid Mech.*, 2014)](https://sam.ensam.eu/bitstream/handle/10985/8974/DYNFLUID-JFM-LOISEAU-2014.pdf?sequence=1&isAllowed=y) describes the first implementation of the Arnoldi solver in Nek5000.
-```bibtex
-@article{jfm:loiseau:2014,
-    title={Investigation of the roughness-induced transition: global stability analyses and direct numerical simulations},
-    author={Loiseau, J.-Ch. and Robinet, J.-Ch. and Cherubini, S. and Leriche, E.},
-    journal={J. Fluid Mech.},
-    volume={760},
-    pages={175--211},
-    year={2014},
-}
-```
+## Citation
+
+When using **nekStab**, please cite [Frantz et al. (2023)](https://doi.org/10.1115/1.4056808). See [CITATIONS.md](CITATIONS.md) for BibTeX entries and additional references.
+
+## Disclaimer
+
+This software is provided "as is", without warranty of any kind. To the extent
+permitted by law, the authors and contributors are not liable for any damage, loss
+or claim arising from its use or misuse. You are responsible for how you use it and
+for following the laws and rules that apply to you. The full terms are in
+[LICENSE](LICENSE).
+
+This is research software. It has not been validated for engineering design,
+certification or safety-critical use. Check its results independently before you
+rely on them.

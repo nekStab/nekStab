@@ -1,0 +1,53 @@
+[GENERAL]
+# startFrom = BFre25t_1cyl0.f00001  # archived to .archive_mesh_1996/ - incompatible with current 2128-elem mesh; using useric uniform IC instead
+
+stopAt = endTime
+endTime = 1.1
+
+userParam01 = 2   # Newton-GMRES for fixed points
+userParam06 = 0.2 # Ri: thermal buoyancy coupling
+userParam07 = 200 # Krylov size for the Newton solve
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 25.0
+writeDoublePrecision = yes
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[MESH]
+# BY DESIGN: the .re2 mesh carries ONLY velocity BCs (the common real-world case
+# -- you inherit a velocity mesh). numberOfBCFields=1 tells the .re2 reader to
+# read just that one field; the temperature BCs are then derived from the
+# velocity BCs in usrdat2 (cbc(:,:,2) from cbc(:,:,1): walls->'t ', inflow->'t ').
+# Without this, ifheat makes the reader look for a 2nd (temperature) BC block
+# that the velocity-only mesh does not contain -> "Error reading .re2 boundary
+# data ierr=8". This case demonstrates specifying temperature BCs via usrdat2.
+numberOfBCFields = 1
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = no
+density = 1.0
+viscosity = -30.0  # Re = 30
+
+[TEMPERATURE]
+solver = helm
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
+conductivity = -30.0 # Re*Pr with Pr = 1
+rhocp = 1.0

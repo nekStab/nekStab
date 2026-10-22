@@ -1,0 +1,35 @@
+[GENERAL]
+# BF_cav0.f00001: on-orbit snapshot of ../000_dns_period (t = 1700) with the period
+# written into its time stamp by ../000_dns_period/stamp_period.py.
+startFrom = BF_cav0.f00001
+
+stopAt = endTime
+endTime = 10.78909  # one period T of the limit cycle; the run reads the period from the time stamp of BF_cav0.f00001
+
+userParam01 = 4.11  # Floquet PKE budget post-processing
+userParam07 = 100   # k_dim, as in the Floquet stage
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -1950.0

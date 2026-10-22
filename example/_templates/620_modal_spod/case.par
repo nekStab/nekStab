@@ -1,0 +1,41 @@
+# TEMPLATE: modal_spod; userParam01 = 6.3; subroutine = modal_spod
+#
+# SPOD = Spectral Proper Orthogonal Decomposition of a long snapshot series.
+# The run does not march in time: it reads the snapshots. Input: field files named after the session
+# (for example dns0.f00001 to dns0.f00100). nekStab_usrchk of the .usr file sets modal_nsnap, modal_dt (the spacing of the
+# snapshots, the writeInterval of the DNS) and modal_nsave (the number of saved modes).
+# Working stage: example/cylinder_re100/620_modal_spod.
+[GENERAL]
+# TEMPLATE: the first snapshot
+startFrom = rst_case0.f00001
+
+stopAt = endTime
+endTime = 2050           # TEMPLATE: as in the working stage
+
+userParam01 = 6.3        # SPOD (nekstab_mode = 'spod' in the .usr file does the same)
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 0.5
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-06
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-08
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

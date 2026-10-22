@@ -1,0 +1,32 @@
+{
+  "case": "poiseuille_re5k/500_otd",
+  "summary": "Three OTD modes on the laminar channel flow at Re = 5000. The growth rates are compared with theory: viscous decay and the Orr-Sommerfeld eigenvalue.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-10",
+    "ranks": 4,
+    "mode": "userParam01=5 (OTD, frozen base flow), lpert = 3, white-noise start, endTime = 5000",
+    "compiler": "ifort 2021.9 (Jean Zay)"
+  },
+  "quantities": {
+    "otd_eigenvalue_1_final": {
+      "source": "otd_eigenvalues.dat:col2:last",
+      "value": -0.0004934802,
+      "tol_rel": 5e-4,
+      "note": "-nu (pi/2)^2: the x-independent mode u = cos(pi y / 2), exact value"
+    },
+    "otd_eigenvalue_2_final": {
+      "source": "otd_eigenvalues.dat:col3:last",
+      "value": -0.00175034,
+      "tol_rel": 5e-4,
+      "note": "real part of the Orr-Sommerfeld eigenvalue at alpha = 1 (orr_sommerfeld.py)"
+    },
+    "otd_eigenvalue_3_final": {
+      "source": "otd_eigenvalues.dat:col4:last",
+      "value": -0.00175034,
+      "tol_rel": 5e-4,
+      "note": "same eigenvalue: modes 2 and 3 span the real and the imaginary part of the Tollmien-Schlichting wave"
+    }
+  },
+  "description": "The expected values are exact or from theory, not read back from an OTD run. Mode 1 is x-independent and decays by viscosity alone: -nu (pi/2)^2 = -4.934802e-4. Modes 2 and 3 span the Tollmien-Schlichting wave of wavenumber 1, whose Orr-Sommerfeld eigenvalue at Re = 5000 is -0.00175034 +- 0.26813148 i. The eigenvalues in otd_eigenvalues.dat are the diagonal entries of the upper triangular reduced operator, so the pair appears as two real numbers whose mean is the real part sigma. At t = 5000 the run gave -4.935447e-4, -1.749857e-3 and -1.749860e-3: mode 1 is 6.4e-8 from its exact value (the error falls by a factor 12 per 1000 time units) and both entries of the pair are 2.7e-4 (relative) from sigma. In a run to t = 10000 the entries of the pair and their mean stay within 2.8e-4 of sigma from t = 5000 to the end, and mode 1 is within 2e-10 of its exact value from t = 7219. The tolerance of 5e-4 fails the pair of an earlier version of the reduced operator (-1.751402e-3 and -1.752725e-3 at t = 5000, 6.1e-4 and 1.4e-3 from sigma)."
+}

@@ -1,0 +1,46 @@
+{
+  "case": "cylinder_re100/120_baseflow_boostconv",
+  "summary": "Steady base flow of the cylinder wake at Re = 50 by BoostConv (Citro et al. 2017).",
+  "description": "Steady base flow of the Re = 50 cylinder wake by BoostConv (userParam01 = 1.2) with the defaults of src/main.f90 (bst_snp = 10, bst_skp = 10) and an explicit filter of weight 0.01. The run stops when the residual (root mean square over the domain of the change of the velocity during one time step, sampled every bst_skp steps) falls below residualTol = 1e-6; the last row of residu.dat must lie below it. The converged field is the steady flow of the Newton solution at the same Reynolds number (210_baseflow_newton/fp with viscosity = -50, five iterations, residual 9.6e-10): the four statistics below are its values. BoostConv agrees with them to 2e-5 in the extrema and 2.5e-4 in the norm. The norm sums the whole domain; with the gate at 1e-8 instead of 1e-6 the run needs t = 232 instead of 159 and the norm agrees to 8e-7, so the 2.5e-4 is the part of the field that the loose gate leaves unconverged.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "8",
+    "compiler": "ifort on Jean Zay",
+    "mode": "BoostConv (userParam01 = 1.2)"
+  },
+  "quantities": {
+    "final_residual": {
+      "source": "residu.dat:col2:last",
+      "value": 0.0,
+      "tol_abs": 1e-06,
+      "note": "Residual of the last sample; it must lie below the gate residualTol = 1e-6, which stops the run."
+    },
+    "convergence_time": {
+      "source": "residu.dat:col1:last",
+      "value": 159.4328,
+      "tol_rel": 0.25,
+      "note": "Time at which the gate is met, in convective time units. The residual falls from 2e-6 to 1e-6 over 11 time units, so a few percent of difference in its level moves the crossing by about 7 %. The settings of the README table that reach the gate do so within 6 % of this time."
+    },
+    "bf_vx_min": {
+      "source": "BF_1cyl0.f00001:field:vx.min",
+      "value": -0.1220482,
+      "tol_rel": 0.0002
+    },
+    "bf_vx_max": {
+      "source": "BF_1cyl0.f00001:field:vx.max",
+      "value": 1.164336,
+      "tol_rel": 0.0002
+    },
+    "bf_vx_norm": {
+      "source": "BF_1cyl0.f00001:field:vx.norm",
+      "value": 262.5338,
+      "tol_rel": 0.003
+    },
+    "bf_vy_max": {
+      "source": "BF_1cyl0.f00001:field:vy.max",
+      "value": 0.563611,
+      "tol_rel": 0.0002
+    }
+  }
+}

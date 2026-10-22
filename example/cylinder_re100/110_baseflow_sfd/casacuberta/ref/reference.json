@@ -1,0 +1,46 @@
+{
+  "case": "cylinder_re100/110_baseflow_sfd/casacuberta",
+  "summary": "Steady base flow of the cylinder wake at Re = 100 by selective frequency damping, Casacuberta formulation, fixed solver tolerance.",
+  "description": "Steady base flow of the Re = 100 cylinder wake by selective frequency damping, Casacuberta formulation, fixed solver tolerances (userParam01 = 1.1, userParam04 < 0). The run stops when the residual (root mean square over the domain of the change of the velocity during one time step) falls below residualTol = 1e-10; the last row of residu.dat must lie below it. The converged field is the steady flow of the Newton solution of 210_baseflow_newton (the four statistics below are the Newton values, within 4e-5 of this variant). ",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "8",
+    "compiler": "ifort on Jean Zay",
+    "mode": "Casacuberta formulation, fixed solver tolerances (userParam01 = 1.1, userParam04 < 0)"
+  },
+  "quantities": {
+    "final_residual": {
+      "source": "residu.dat:col2:last",
+      "value": 0.0,
+      "tol_abs": 1e-10,
+      "note": "Residual of the last step; it must lie below the gate residualTol = 1e-10, which stops the run."
+    },
+    "convergence_time": {
+      "source": "residu.dat:col1:last",
+      "value": 868.939,
+      "tol_rel": 0.05,
+      "note": "Time at which the gate is met, in convective time units. Measured on Jean Zay; the dynamic solver tolerance and the compiler move it by about 0.1 %."
+    },
+    "bf_vx_min": {
+      "source": "BF_1cyl0.f00001:field:vx.min",
+      "value": -0.2001774,
+      "tol_rel": 0.0001
+    },
+    "bf_vx_max": {
+      "source": "BF_1cyl0.f00001:field:vx.max",
+      "value": 1.156073,
+      "tol_rel": 0.0001
+    },
+    "bf_vx_norm": {
+      "source": "BF_1cyl0.f00001:field:vx.norm",
+      "value": 264.3375,
+      "tol_rel": 0.0001
+    },
+    "bf_vy_max": {
+      "source": "BF_1cyl0.f00001:field:vy.max",
+      "value": 0.6032416,
+      "tol_rel": 0.0001
+    }
+  }
+}

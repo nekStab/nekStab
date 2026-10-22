@@ -1,0 +1,65 @@
+{
+  "case": "cylinder_re100/140_baseflow_meanflow",
+  "summary": "Mean flow of the shedding Re = 100 cylinder wake, averaged over 25 whole periods; the base flow of stage 315.",
+  "description": "DNS of the shedding wake (userParam01 = 0) restarted from the t = 100 field of 000_dns, without sponge. 1cyl.usr opens the average at the first upward zero crossing after t = 200 of the integral of v over the domain and closes it 25 crossings later, writes the mean as BFA1cyl0.f00001 and the window as meanflow_window.dat. The period of the shedding is 6.03142 (St = 0.16580, angular frequency 1.0417); the 2D DNS of Marquet & Carini (2020, arXiv:2008.10002) at Re = 100 has the first-harmonic frequency 1.0446, 0.3 % higher. The mean flow has a recirculation bubble of length 1.416 from the rear of the cylinder; the steady flow of 210_baseflow_newton has 6.154. The values below are the regression values of this repository.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-10",
+    "ranks": "8",
+    "compiler": "ifx on nexus-dev",
+    "mode": "DNS (userParam01 = 0)",
+    "wall_s": 202.17
+  },
+  "quantities": {
+    "n_periods": {
+      "source": "meanflow_window.dat:col3:first",
+      "value": 25,
+      "tol_abs": 0.5,
+      "note": "Number of shedding periods in the average. A run that stops at endTime without closing the average has no such file."
+    },
+    "period": {
+      "source": "meanflow_window.dat:col4:first",
+      "value": 6.03141531,
+      "tol_rel": 0.0001,
+      "note": "Period from the interpolated upward zero crossings of the integral of v over the domain. The probe at (5, 0) gives 6.03154."
+    },
+    "strouhal": {
+      "source": "meanflow_window.dat:col5:first",
+      "value": 0.16579856,
+      "tol_rel": 0.0001,
+      "note": "St = 1 / period, with the cylinder diameter and the free-stream speed as scales."
+    },
+    "mean_vx_min": {
+      "source": "BFA1cyl0.f00001:field:vx.min",
+      "value": -0.1781351,
+      "tol_rel": 0.001
+    },
+    "mean_vx_max": {
+      "source": "BFA1cyl0.f00001:field:vx.max",
+      "value": 1.263934,
+      "tol_rel": 0.001
+    },
+    "mean_vx_norm": {
+      "source": "BFA1cyl0.f00001:field:vx.norm",
+      "value": 266.0743,
+      "tol_rel": 0.001
+    },
+    "mean_vy_max": {
+      "source": "BFA1cyl0.f00001:field:vy.max",
+      "value": 0.6433803,
+      "tol_rel": 0.001
+    },
+    "recirculation_length": {
+      "source": "meanflow_axis.dat:col1:first",
+      "value": 1.4157073,
+      "tol_rel": 0.01,
+      "note": "Distance from the rear of the cylinder (x = 0.5) to the end of the reversed flow on the axis. The steady flow of 210_baseflow_newton/fp has 6.154."
+    },
+    "u_min_axis": {
+      "source": "meanflow_axis.dat:col2:first",
+      "value": -0.17813511,
+      "tol_rel": 0.01,
+      "note": "Smallest streamwise velocity on the axis y = 0 (at x = 1.2). The steady flow has -0.2002 at x = 2.8."
+    }
+  }
+}

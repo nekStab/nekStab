@@ -1,0 +1,37 @@
+# NACA 0012 direct global stability — Re=2000
+
+## Physics
+Direct global linear stability of the NACA 0012 steady base flow at Re = 2000
+via Krylov-Schur. The leading eigenvalue is stable (σ < 0); the direct mode
+localizes where a perturbation grows. Its adjoint counterpart
+(`../320_stability_adjoint`) shares the same eigenvalue and localizes the
+receptivity.
+
+## nekStab Mode
+- `userParam01 = 3.1` — direct stability
+- `viscosity = -2000.0` — Re = 2000
+
+## Initial condition
+`startFrom = BF_naca00120.f00001` — the steady base flow from
+`../210_baseflow_newton/fp`, shipped with this stage (it is the same file as in
+`../320_stability_adjoint`). To regenerate it, run the 210 stage and copy its
+`BF_naca00120.f00001` here.
+
+## Run
+```bash
+mks naca0012
+sbatch run.local.slurm     # 8 ranks
+```
+
+## Latest Result
+- 8 ranks, `k_dim = 220`: σ = -0.0665382, ω = 8.00579 (`Spectre_NSd.dat` row 1).
+- Matches the adjoint eigenvalue (σ = -0.0665164, ω = 8.00577) to the
+  convergence tolerance, as expected for a direct/adjoint pair.
+
+Outputs: leading direct eigenmodes `dRenaca00120.f0000{1..6}` (written by the run;
+field files are gitignored, not tracked).
+
+Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): σ = -0.0665382, ω = 8.00579, wall time 1793 s.
+`plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged
+eigenvalues, growth rate against frequency) and `plot_mode.png` (vy of the leading mode); `ref/` holds
+copies as `bf.png`, `spectrum.png` and `mode.png`.

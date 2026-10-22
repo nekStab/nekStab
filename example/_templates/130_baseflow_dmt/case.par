@@ -1,0 +1,41 @@
+# TEMPLATE: baseflow_dmt; userParam01 = 1.3; subroutine = dmt (src/dmt.f90)
+#
+# DMT = Dynamic Mode Tracking (Queguineur et al., Phys. Fluids 31, 034101, 2019).
+# The feedback -chi (u - ubar) acts on a band around omega_c, so a steady flow is the only state without force:
+# DMT finds steady base flows (DOC.md, DMT Parameters). Working stage: example/cylinder_re100/130_baseflow_dmt.
+[GENERAL]
+# TEMPLATE: seed field, a DNS snapshot
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 800            # TEMPLATE: limit that the run does not reach; it stops when the residual falls below userParam15
+
+userParam01 = 1.3        # DMT
+userParam11 = 0.7        # TEMPLATE: omega_c, angular frequency of the oscillation to damp (leading mode of the direct stability stage)
+userParam12 = 1.0        # TEMPLATE: beta, width of the damped band
+userParam13 = 0.5        # TEMPLATE: chi, gain of the feedback -chi (u - ubar)
+userParam14 = 5.0        # t_start: the feedback starts after this time
+userParam15 = 1e-7       # tol: the run stops and writes BF_ when the residual falls below it
+
+dt = 0
+variableDt = no          # DMT needs a constant time step
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-10
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-10
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

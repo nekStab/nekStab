@@ -1,0 +1,35 @@
+{
+  "case": "cylinder_re180/410_postproc_animate_modes/upo",
+  "summary": "Animation of the Re = 180 periodic orbit over one period, T = 5.1896.",
+  "description": "Regression values of this repository (not literature values): the base-flow orbit of 210_baseflow_newton advanced over one period T = 5.189627 and written as 100 frames. The last frame is at t = T, so a run that stops early, or a time stamp of the orbit that changed, shows in the time of the last frame. The orbit is periodic, so the norms of the first and of the last frame differ by 1e-6 and the tolerance of 1e-4 holds for any rank count.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "8",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "mode": "userParam01=4.52 (animate_mode_Floquet), base flow from 210_baseflow_newton"
+  },
+  "quantities": {
+    "last_frame_time": {
+      "source": "1cyl0.f00100:field:time",
+      "value": 5.189627,
+      "tol_abs": 0.0001,
+      "note": "End of one period."
+    },
+    "frame1_vx_norm": {
+      "source": "1cyl0.f00001:field:vx.norm",
+      "value": 356.6169,
+      "tol_rel": 0.0001
+    },
+    "frame100_vx_norm": {
+      "source": "1cyl0.f00100:field:vx.norm",
+      "value": 356.6164,
+      "tol_rel": 0.0001
+    },
+    "frame100_vy_norm": {
+      "source": "1cyl0.f00100:field:vy.norm",
+      "value": 54.78414,
+      "tol_rel": 0.001
+    }
+  }
+}

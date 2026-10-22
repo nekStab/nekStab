@@ -1,0 +1,37 @@
+{
+  "case": "cubic_cavity_re1914/330_transient_growth",
+  "summary": "Optimal transient growth of the steady cubic-cavity flow at Re = 1914 for the horizon tau = 10, with the optimal perturbation and its response.",
+  "description": "Optimal energy gain of the steady cubic-cavity flow at Re = 1914 for the horizon tau = 10: the two leading eigenvalues of M^H M. plot.py also computes the kinetic energy of the stored optimal perturbation and of its response with GLL quadrature. The perturbation has unit energy, and the energy of the response divided by that of the perturbation equals G when the adjoint integration is the transpose of the forward one. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "40",
+    "nekstab": "v2.0.0",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-10"
+  },
+  "quantities": {
+    "optimal_gain": {
+      "source": "Spectre_Hp_conv.dat:col1:first",
+      "value": 229.1873,
+      "tol_rel": 0.0001,
+      "note": "Leading eigenvalue of M^H M at the horizon tau = 10 (endTime of cav.par)."
+    },
+    "second_gain": {
+      "source": "Spectre_Hp_conv.dat:col1:row2",
+      "value": 215.9559,
+      "tol_rel": 0.0001,
+      "note": "Second eigenvalue of M^H M."
+    },
+    "perturbation_energy": {
+      "source": "growth_check.dat:col3:first",
+      "value": 1.0,
+      "tol_abs": 1e-05,
+      "note": "Kinetic energy of pRecav0.f00001: the stored optimal perturbation has unit energy."
+    },
+    "response_energy_ratio_over_gain": {
+      "source": "growth_check.dat:col6:first",
+      "value": 0.997,
+      "tol_abs": 0.005,
+      "note": "Energy of orecav0.f00001 divided by the energy of pRecav0.f00001, divided by G. It is 1 when the adjoint integration is the transpose of the forward one. A response scaled by G would give 229."
+    }
+  }
+}

@@ -1,0 +1,33 @@
+[GENERAL]
+# Phase 1 of 2 -- clean DNS from the uniform IC (useric ux=1) to settle the
+# steady recirculation on THIS mesh. The settled field is the native seed for
+# the Newton solve (Phase 2: bfs.par.newton). Re=500 BFS is 2D-steady (first
+# 3D instability ~Re 750, Barkley 2008), so DNS relaxes monotonically to the
+# steady state -- no foreign restart, no mesh reload, no corruption.
+stopAt = endTime
+endTime = 400
+
+userParam01 = 0    # DNS / nonlinear
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.   # -> bfs0.f00001..4 ; the last (t=400) seeds Newton
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = no
+density = 1.0
+viscosity = -500.0

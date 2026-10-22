@@ -1,0 +1,24 @@
+{
+  "case": "flip_flop_re62/311_stability_direct_floquet",
+  "summary": "Direct Floquet analysis of the flip-flop orbit at Re = 62. The leading pair lies just outside the unit circle.",
+  "description": "Leading Floquet exponent sigma + i omega of the flip-flop orbit at Re = 62, row 1 of Spectre_NSd.dat, for the period T = 8.815172 (time stamp of BF_2cyl0.f00001). The pair is just above the imaginary axis: the Neimark-Sacker bifurcation sits at Re_c,2 = 61.17. Jean Zay (ifort, 16 ranks) and a workstation (ifx, 16 and 20 ranks) agree to 3e-9 in sigma and 1e-7 in omega; the tolerance 1e-6 is more than 300 times that scatter.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "16",
+    "compiler": "ifort on Jean Zay",
+    "nekstab_mode": "3.11 (direct Floquet)"
+  },
+  "quantities": {
+    "floquet_leading_sigma": {
+      "source": "Spectre_NSd.dat:col1:first",
+      "value": 0.007896231,
+      "tol_abs": 1e-06
+    },
+    "floquet_leading_omega": {
+      "source": "Spectre_NSd.dat:col2:first",
+      "value": 0.1407652,
+      "tol_abs": 1e-06
+    }
+  }
+}

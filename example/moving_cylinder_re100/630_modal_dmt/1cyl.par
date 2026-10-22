@@ -1,0 +1,47 @@
+[GENERAL]
+# Start: the periodic orbit of ../210_baseflow_newton at phase 0 of the forcing, copied by run.local.slurm; the time is set to 0.
+startFrom = BF_1cyl0.f00001 time=0
+
+stopAt = endTime
+endTime = 182.59 # replaced by 1cyl.usr: 30 periods of the forcing, 30 / userParam06
+
+userParam01 = 6.4 # DMT filter bank on the DNS: filters at the forcing frequency, its harmonics and 0
+
+userParam05 = 1.08 # amplitude of the forced transverse oscillation (diameters)
+userParam06 = 0.1643000 # frequency of the forcing
+
+dt = 1.8931345E-03 # replaced by 1cyl.usr: the period divided into a whole number of steps
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.35
+
+writeControl = runTime
+writeInterval = 182.59 # replaced by 1cyl.usr: one snapshot, at the end
+writeDoublePrecision = no
+
+dealiasing = yes
+# No filter: the Floquet stage runs without one, so the orbit comes from the same equations.
+filtering = none
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+stressFormulation = yes
+
+[MESH]
+motion = user
+viscosity = 0.4
+numberOfBCFields = 1
+firstBCFieldIndex = 1
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0

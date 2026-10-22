@@ -1,0 +1,8 @@
+# Optimal energy gain G(tau) of the 2D cylinder wake at Re=40 (stable base flow)
+# One run of 1cyl.par per horizon tau (endTime = tau), k_dim = 50, 8 ranks
+tau,G_nekstab
+10,18.00461
+20,75.44875
+40,274.9732
+60,384.6759
+80,345.8338

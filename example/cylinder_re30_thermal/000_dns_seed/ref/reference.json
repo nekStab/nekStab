@@ -1,0 +1,27 @@
+{
+  "case": "cylinder_re30_thermal/000_dns_seed",
+  "summary": "DNS of the heated cylinder wake at Re = 25, Ri = 0.2 from a uniform flow to t = 100.",
+  "description": "DNS of the heated cylinder wake at Re = 25, Ri = 0.2, from a uniform flow to t = 100. The stage writes the start fields of the later stages; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot to the stated tolerance. The values are those of the run named under produced.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "compiler": "ifort 2021.9 (Jean Zay)"
+  },
+  "quantities": {
+    "last_snapshot_time": {
+      "source": "1cyl0.f00004:field:time",
+      "value": 100.0,
+      "tol_abs": 0.5
+    },
+    "snapshot_vx_norm": {
+      "source": "1cyl0.f00004:field:vx.norm",
+      "value": 351.4258,
+      "tol_rel": 0.01
+    },
+    "snapshot_t_norm": {
+      "source": "1cyl0.f00004:field:t.norm",
+      "value": 51.09253,
+      "tol_rel": 0.01
+    }
+  }
+}

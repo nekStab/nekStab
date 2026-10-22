@@ -1,0 +1,68 @@
+[GENERAL]
+# Forward k-tau march at Re=1e6 (2D), no SFD. userParam01 = 0 is nekStab
+# forward mode: no SFD feedback, no eigenvalue pass, no body force.
+# STEADY-WINDOW MOMENT TEST, not a shedding run: restart from the settled
+# k-tau wake (steady_wake.f00001, header XUPTS02), march 20 t.u. with no
+# perturbation, and accumulate mean + second moments from the first step.
+# On a steady field the resolved Reynolds stress E(U^2)-E(U)^2 must be
+# numerical noise (<< O(1)); an O(1) Ruu would mean the mean product is not
+# being subtracted downstream.
+startFrom = steady_wake.f00001
+
+
+stopAt = endTime
+endTime = 20.0            # steady window: 20 t.u. of averaging is enough --
+                          # the answer (R ~ 0) does not need a long run.
+
+userParam01 = 0           # nekStab forward mode: plain march, k-tau model on.
+                          # NO userParam04/05 -- those are the SFD cutoff/gain
+                          # and must stay absent so no forcing is applied.
+userParam07 = 200         # k_dim (unused by forward mode; kept for parity with
+                          # the other stages)
+
+dt = 0.005                # FIXED, CFL~0.5, no OIFS needed.
+
+variableDt = no
+timeStepper = bdf3
+
+writeControl = runTime
+writeInterval = 20.0      # periodic field checkpoints during the shedding march
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = hpfrt          # steady-window test: match the settling config
+filterModes = 2            # (hpfrt, 2 modes, weight 5) so nothing in this run
+filterWeight = 5.0         # differs from the field that produced steady_wake.
+
+[PROBLEMTYPE]
+variableProperties = yes
+stressFormulation = yes
+
+[MESH]
+numberOfBCFields = 1
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0e-5
+residualProj = yes
+
+[VELOCITY]
+density = 1.0
+viscosity = -1000000.0    # Re = 1e6
+residualTol = 1.0e-6
+
+[TEMPERATURE]
+solver = none             # temperature slot carries nut_0 for the k-tau hooks;
+rhoCp = 1.0               # no temperature equation is solved
+conductivity = -1
+residualTol = 1.0e-6
+
+[SCALAR01]                # tke
+density = 1.0
+diffusivity = -1000000.0
+residualTol = 1.0e-6
+
+[SCALAR02]                # tau
+density = 1.0
+diffusivity = -1000000.0
+residualTol = 1.0e-6

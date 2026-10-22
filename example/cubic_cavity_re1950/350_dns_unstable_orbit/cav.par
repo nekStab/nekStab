@@ -1,0 +1,39 @@
+[GENERAL]
+# DNS of the unstable limit cycle at Re = 1950: orbit snapshot (t = 1700 of
+# ../000_dns_period) plus 1e-3 times the real part of the leading Floquet
+# eigenvector of ../311_stability_direct_floquet (make_ic.py). One probe at (0.25, 0.25, 0.25), off every symmetry plane
+# (cav.his), records the growth of the secondary mode. A file with two points gives zeros
+# in this build, so one point is used. Same tolerances and filter
+# as the Floquet run, so the DNS and the linear analysis share one discretization.
+startFrom = ic_floq.f00001 time=0
+
+stopAt = endTime
+endTime = 2000.0
+
+userParam01 = 0  # plain DNS
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.  # one checkpoint per 100 time units
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -1950.0

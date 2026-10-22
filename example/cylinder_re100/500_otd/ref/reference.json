@@ -1,0 +1,35 @@
+{
+  "case": "cylinder_re100/500_otd",
+  "summary": "OTD basis of two modes on the frozen steady wake at Re = 100. The growth rates are compared with the leading eigenvalue of the direct stage.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-10",
+    "ranks": 8,
+    "mode": "userParam01=5 (frozen base flow), lpert = 2, perturbations seeded with the leading eigenmode of 310_stability_direct",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "wall_s": 21.79
+  },
+  "quantities": {
+    "otd_eigenvalue_1_at_start": {
+      "value": 0.1247875,
+      "source": "otd_eigenvalues.dat:col2:first",
+      "tol_abs": 1.0e-4
+    },
+    "otd_eigenvalue_2_at_start": {
+      "value": 0.1247875,
+      "source": "otd_eigenvalues.dat:col3:first",
+      "tol_abs": 1.0e-4
+    },
+    "otd_ftle_1_final": {
+      "value": 0.1247875,
+      "source": "otd_ftle.dat:col2:last",
+      "tol_abs": 1.0e-4
+    },
+    "otd_ftle_2_final": {
+      "value": 0.1247875,
+      "source": "otd_ftle.dat:col3:last",
+      "tol_abs": 1.0e-4
+    }
+  },
+  "description": "The expected value of all four is the growth rate sigma = 0.1247875 of the leading eigenvalue pair of 310_stability_direct (Spectre_NSd.dat), not a value read back from an OTD run. The seeded basis spans the invariant subspace of that pair, so the eigenvalues of the reduced operator at the start and the finite-time exponents at the end equal sigma to the discretisation error of the two operators (observed 0.124756, 0.124753, 0.124754 and 0.124755, 3.2e-5 to 3.5e-5 below sigma on Jean Zay and on nexus-dev). The run stops at step 500 (t = 5.06) when the exponents change by less than 1e-6 per print step. The tolerance on the final exponents is 1e-4: the second exponent was 0.124519 when the product of the forcing with the basis assumed arrays of nv instead of lelv*lxyz points, and that value fails."
+}

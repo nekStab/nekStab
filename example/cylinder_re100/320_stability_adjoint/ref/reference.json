@@ -1,0 +1,10 @@
+{
+  "case": "cylinder_re100/320_stability_adjoint",
+  "summary": "Leading adjoint eigenvalues of the Re = 100 cylinder wake about its steady base flow.",
+  "description": "Regression values of this repository: the leading eigenvalue pair of the adjoint problem about the same base flow, row 1 of Spectre_NSa.dat. It equals the direct pair of 310_stability_direct to 1e-6.",
+  "produced": {"nekstab": "v2.0.0-rc2", "nproc": 8, "compiler": "gfortran", "date": "2026-06-11"},
+  "quantities": {
+    "leading_eig_growth": {"value": 0.1247881e+00, "tol_abs": 1e-3, "source": "Spectre_NSa.dat:col1:first"},
+    "leading_eig_freq":   {"value": 0.7336846e+00, "tol_abs": 1e-3, "source": "Spectre_NSa.dat:col2:first"}
+  }
+}

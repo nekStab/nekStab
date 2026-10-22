@@ -1,0 +1,64 @@
+{
+  "case": "tpjet_re2000/210_baseflow_newton",
+  "summary": "Newton-GMRES on the harmonically forced jet at Re = 2000: from the Re = 1900 orbit, 5 Newton iterations take the squared residual from 3.5e-6 to 9.7e-9 and give the forced orbit of period 1/0.6.",
+  "description": "Newton-GMRES (mode 2.2) finds the field q(0) for which the flow after one forcing period, T = 1 / 0.6, returns to q(0). The seed is the orbit of the jet at Re = 1900 (polynomial order 5); the run is at Re = 2000. residu_newton.dat has one row per accepted Newton iterate: the iteration, the cumulative number of time steps, the steps of the iteration, the cumulative number of Arnoldi vectors, the time integrated, the tolerance of the pressure and velocity solves, the squared residual of the map and its target. The stage ends when the squared residual falls below the target, 1e-8. BF_tpjet0.f00001 is the orbit; its time stamp is the period. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "2.2 (Newton-GMRES, forced orbit)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 2663
+  },
+  "quantities": {
+    "first_residual": {
+      "source": "residu_newton.dat:col7:first",
+      "value": 3.494146e-06,
+      "tol_rel": 0.05,
+      "note": "Squared norm of F(q) - q for the seed, the orbit of the Re = 1900 jet."
+    },
+    "final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 0.0,
+      "tol_abs": 1e-08,
+      "note": "The run stops when the squared residual is below the tolerance 1e-8; it was 9.7e-9."
+    },
+    "n_iterations": {
+      "source": "residu_newton.dat:col1:last",
+      "value": 5,
+      "tol_abs": 1.0,
+      "note": "Newton iterations, the first of them with the residual of the seed."
+    },
+    "orbit_period": {
+      "source": "BF_tpjet0.f00001:field:time",
+      "value": 1.666666666667,
+      "tol_rel": 1e-06,
+      "note": "Time stamp of the orbit: the period of the forcing, 1 / 0.6."
+    },
+    "orbit_vx_max": {
+      "source": "BF_tpjet0.f00001:field:vx.max",
+      "value": 1.165825,
+      "tol_rel": 0.01
+    },
+    "orbit_vx_min": {
+      "source": "BF_tpjet0.f00001:field:vx.min",
+      "value": -0.1286818,
+      "tol_rel": 0.02
+    },
+    "orbit_vy_max": {
+      "source": "BF_tpjet0.f00001:field:vy.max",
+      "value": 0.332183,
+      "tol_rel": 0.02
+    },
+    "orbit_vy_min": {
+      "source": "BF_tpjet0.f00001:field:vy.min",
+      "value": -0.2537511,
+      "tol_rel": 0.02
+    },
+    "orbit_pr_min": {
+      "source": "BF_tpjet0.f00001:field:pr.min",
+      "value": -0.2003843,
+      "tol_rel": 0.02
+    }
+  }
+}

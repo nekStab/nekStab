@@ -1,0 +1,38 @@
+[GENERAL]
+# TEMPLATE: SFD, Casacuberta et al. (2018); userParam01 = 1.1 with userParam04 < 0
+# Ref: Casacuberta et al., Phys. Rev. Fluids 3, 094401 (2018)
+# The negative sign of userParam04 selects this filter. With omega = 2 pi |userParam04| and sigma = userParam05 it has the cutoff
+# (sqrt(omega^2 + sigma^2) - sigma) / 2 and the gain -(sqrt(omega^2 + sigma^2) + sigma) / 2 (DOC.md).
+# Working stage: example/cylinder_re100/110_baseflow_sfd/casacuberta (f = -0.166, sigma = 0.26)
+# For a dynamic solver tolerance add userParam08, userParam09 and ifdyntol = .true. in the .usr file, as in casacuberta_dyn.
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 400.0
+
+userParam01 = 1.1        # SFD
+userParam04 = -0.12      # TEMPLATE: f = omega / 2 pi of the leading mode (Strouhal number); negative selects Casacuberta
+userParam05 = 0.05       # TEMPLATE: sigma, growth rate of that mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 1000.0
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

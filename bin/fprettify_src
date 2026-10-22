@@ -1,0 +1,148 @@
+#!/bin/bash
+#
+# fprettify_src — canonical formatter for nekStab's src/ Fortran sources.
+#
+# FORTRAN_STYLE.md is the specification; this script enforces the mechanical
+# rules of that spec that a formatter can apply automatically: indentation,
+# keyword/intrinsic case, whitespace, symbolic relational operators, line
+# length, and comment-marker hygiene (c/C/* -> '!'). The spec's judgment rules
+# (comment content/voice, module-header contract, full-name close lines,
+# double-precision literals) are not mechanical and stay manual.
+#
+# Keeps src/ in consistent shape while respecting the MIXED-format build
+# (see src/makefile_nekStab):
+#
+#   FREE-format  : most .f90 files. fprettify supplies the indentation natively;
+#                  no fixed-form column margin is applied (a margin would be
+#                  meaningless and could push lines past the 132-col free-form
+#                  limit, breaking compilation).
+#   FIXED-format : nekstab_nek_bridge.f90 (wraps Nek5000 includes), the bare
+#                  entry points main.f90 / usr_wrappers.f90 (called from
+#                  Nek5000's fixed-form .usr context), and the NEKSTAB* include.
+#                  Code sits in columns 7+; their layout is preserved as-is.
+#
+# Per file:
+#   FREE files  -> tabs->spaces, strip trailing ws, then fprettify in place.
+#   FIXED files -> HYGIENE ONLY: tabs->spaces, strip trailing ws, and modernize
+#                  legacy column-1 comments (c/C/* -> '!'). They are NOT
+#                  fprettified/joined/reflowed: these are hand-maintained
+#                  Nek5000-interface files whose hand-wrapped continuations
+#                  (e.g. main.f90's mode-dispatch conditions) are deliberate,
+#                  and fprettify (a free-form parser) cannot safely format
+#                  fixed-form code anyway.
+#
+# Robustness:
+#   * fprettify exits 0 even on a fatal parse error, so success is judged from
+#     its STDERR, not $?. A file fprettify cannot parse is left UNTOUCHED.
+#   * All work happens on a temp copy; the original is replaced only on success.
+#   * The gate matches nekStab sources only (.f90 / NEKSTAB*), never the
+#     Nek5000 core F77.
+#
+# Usage:
+#   bin/fprettify_src              # format every source in src/
+#   bin/fprettify_src src/foo.f90  # format a single file
+#
+# Requires: fprettify  (install once with:  uv tool install fprettify)
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+if ! command -v fprettify >/dev/null 2>&1; then
+    echo "error: fprettify not found on PATH (install with: uv tool install fprettify)" >&2
+    exit 1
+fi
+
+# Portable in-place sed (BSD/macOS needs the empty suffix arg).
+if [[ "$(uname)" == "Darwin" ]]; then
+    SED_INPLACE=('sed' '-i' '')
+else
+    SED_INPLACE=('sed' '-i')
+fi
+
+# Only nekStab sources; keeps the formatter off Nek5000 core F77.
+is_fortran_file() {
+    [[ "$1" == *.f90 || "$1" == *NEKSTAB* ]]
+}
+
+# The fixed-format files (must match the split in src/makefile_nekStab).
+is_fixed_form_file() {
+    case "$(basename "$1")" in
+        nekstab_nek_bridge.f90 | main.f90 | usr_wrappers.f90 | NEKSTAB*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# fprettify a temp file; return non-zero (without touching anything) when it
+# cannot parse the file. fprettify prints "ERROR: .../Fatal error occured" plus
+# a traceback to stderr but still exits 0, so we inspect stderr.
+run_fprettify() {
+    local tmp="$1" err
+    err=$(fprettify "$tmp" \
+        -c /dev/null \
+        --case 1 1 1 1 \
+        --enable-decl \
+        --enable-replacements \
+        --c-relations \
+        --whitespace 2 \
+        --strict-indent \
+        --strip-comments \
+        --line-length 132 2>&1 >/dev/null)
+    printf '%s' "$err" | grep -qiE 'fatal error|traceback|^error:' && return 1
+    return 0
+}
+
+process_file() {
+    local file="$1"
+    local tmp="${file}.fmt.tmp"
+    echo "formatting: $file"
+
+    cp "$file" "$tmp"
+    expand -t 4 "$tmp" > "$tmp.x" && mv "$tmp.x" "$tmp"
+    "${SED_INPLACE[@]}" 's/[[:space:]]*$//' "$tmp"   # strip trailing whitespace
+
+    if is_fixed_form_file "$file"; then
+        # HYGIENE ONLY: modernize legacy column-1 comment markers to '!'. In
+        # fixed-form, any c/C/* in column 1 is unconditionally a comment (code
+        # starts at column 7), so the leading marker is replaced outright --
+        # this also catches `ccccc` dividers and `Cword` comments. No fprettify,
+        # no continuation join, no margin reflow: the deliberate hand-wrapped
+        # layout of these interface files is preserved (e.g. main.f90's
+        # mode-dispatch conditions).
+        "${SED_INPLACE[@]}" -E 's/^[cC*]/!/' "$tmp"
+    else
+        # Free-form: fprettify owns the indentation; no margin, no col-6 munging.
+        if ! run_fprettify "$tmp"; then
+            rm -f "$tmp"
+            echo "  SKIPPED (fprettify could not parse it); original kept"
+            return 1
+        fi
+    fi
+
+    mv "$tmp" "$file"
+}
+
+main() {
+    if [[ $# -eq 1 ]]; then
+        local f="$1"
+        if [[ -f "$f" ]] && is_fortran_file "$f"; then
+            process_file "$f"
+        else
+            echo "error: '$f' does not exist or is not a nekStab Fortran source" >&2
+            exit 1
+        fi
+    else
+        # Format every source in src/, in a deterministic order. find returns
+        # full paths already restricted to .f90 / NEKSTAB*, so each is valid.
+        while IFS= read -r f; do
+            process_file "$f"
+        done < <(find "$PROJECT_ROOT/src" -maxdepth 1 \
+                 \( -name '*.f90' -o -name 'NEKSTAB*' \) -type f | sort)
+    fi
+    # Clean up any stray temp files.
+    find "$PROJECT_ROOT/src" -maxdepth 1 -name '*.fmt.tmp' -delete 2>/dev/null
+    echo "done."
+}
+
+main "$@"

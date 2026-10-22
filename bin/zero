@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: zero filename"
+    exit 1
+fi
+
+filename=$1
+if [[ "$(uname)" == "Darwin" ]]; then
+    sedi=(-i '')
+else
+    sedi=(-i)
+fi
+
+if [[ "$filename" == *.his ]]; then
+    n=$(head -n1 "$filename")
+    sed "${sedi[@]}" "$((n+2)),\$d" "$filename"
+    echo "" >> "$filename"
+else
+    sed "${sedi[@]}" '1s/\(0\.[0-9]\{13\}E[+-][0-9]\{2\}\)/0.0000000000000E+00/' "$filename"
+fi
+
+echo "Time zeroed in file: $filename"

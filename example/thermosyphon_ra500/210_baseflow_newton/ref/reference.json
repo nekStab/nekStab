@@ -1,0 +1,17 @@
+{
+  "case": "thermosyphon_ra500/210_baseflow_newton",
+  "summary": "Steady base flow of the thermosyphon at Ra = 500 by Newton-GMRES.",
+  "description": "Thermosyphon steady base flow at Ra=500 via Newton-GMRES",
+  "produced": {
+    "ranks": "8",
+    "nekstab_mode": "2.0 (Newton-GMRES fixed point)"
+  },
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 0.0,
+      "tol_abs": 1e-11,
+      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8)."
+    }
+  }
+}

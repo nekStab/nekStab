@@ -1,0 +1,7 @@
+# Optimal energy gain G(tau) at Re=500, nekStab (bfs.par, k_dim=64, 8 ranks)
+# against Blackburn, Barkley & Sherwin (2008) fig. 5 at the same tau (barkley2008_fig5.ref)
+tau,G_nekstab,G_reference,relative_difference
+19.916,2535.12,1997.05,+0.269
+29.913,13126.6,12273.1,+0.070
+39.838,30604.9,32250,-0.051
+57.905,61689.6,63152,-0.023

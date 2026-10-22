@@ -1,0 +1,38 @@
+[GENERAL]
+startFrom = BF_naca00120.f00001
+stopAt = endTime
+endTime = 0.09  # sampling period ~ (1/1.41)/8 - matches root naca0012.par
+
+userParam01 = 3.1        # 3.1 = direct stability
+userParam03 = 2          # schur_tgt
+userParam04 = 0          # maxmodes (0 = schur_tgt)
+userParam07 = 220   # Krylov k_dim
+userParam08 = 1     # Sponge left side
+userParam09 = 5     # Sponge right side
+userParam10 = 1.7   # Sponge strength
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -2000.0

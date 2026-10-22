@@ -1,0 +1,38 @@
+[GENERAL]
+# TEMPLATE: seed field — SFD output or coarse DNS snapshot
+startFrom = BF_seed_case0.f00001
+
+stopAt = endTime
+endTime = 1.0            # time of the map: 1 for steady Newton; for 2.1 the guess of the period; for 2.2 the period 1/f of the forcing
+
+userParam01 = 2          # 2.0 = steady Newton; 2.1 = periodic orbit; 2.2 = periodic orbit of a forced flow
+userParam07 = 100        # k_dim (GMRES Krylov subspace dimension)
+
+# 2.1: endTime is the initial guess of the period (DOC.md, Mode 2).
+# 2.2: endTime is the period 1/f of the forcing; the forcing parameters belong to the case.
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 10.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0       # TEMPLATE: -Re

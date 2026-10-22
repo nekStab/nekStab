@@ -1,0 +1,38 @@
+[GENERAL]
+# The shedding wake of 000_dns, continued from its t = 100 field. 1cyl.usr averages
+# velocity and pressure over 25 whole periods of the shedding, from the first upward zero
+# crossing of the integral of v after t = 200 (about t = 206 to t = 357). It writes the mean
+# to BFA1cyl0.f00001 and stops the run there. endTime is only an upper bound: a run that
+# reaches it without closing the average stops with an error.
+startFrom = rst_1cyl0.f00001
+
+stopAt = endTime
+endTime = 420
+
+userParam01 = 0 # DNS mode
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -100.0

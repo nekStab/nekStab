@@ -1,0 +1,50 @@
+{
+  "case": "cubic_cavity_re1950/000_dns_period",
+  "summary": "DNS of the cubic cavity at Re = 1950 until the limit cycle has saturated, and the period of the cycle from the probe signal.",
+  "description": "DNS of the cubic cavity at Re = 1950 from the steady flow of Re = 1914 until the limit cycle has saturated (t = 1800). plot.py measures the period of the probe signal at the cavity centre over t = 1400 to the end of the run, by a harmonic fit, by the FFT peak and by the zero-crossing count. The Floquet stages integrate over the fitted period. The reference holds the three estimates, the rms residual of the fit, and the mean and half-range of the probe signal. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "compiler": "ifx 2026.0 (c8)",
+    "date": "2026-10-10",
+    "wall_s": 40416
+  },
+  "quantities": {
+    "period_fit": {
+      "source": "period_fit.dat:col1:first",
+      "value": 10.78909,
+      "tol_rel": 1e-05,
+      "note": "Least-squares fit of a mean and three harmonics with a free frequency, window t = 1400 to the end of the run. The Floquet stages use this value."
+    },
+    "period_fft": {
+      "source": "period_fit.dat:col3:first",
+      "value": 10.78915,
+      "tol_rel": 0.0001,
+      "note": "Peak of the FFT of the same window, refined by a parabola. Its resolution depends on the length of the window."
+    },
+    "period_crossings": {
+      "source": "period_fit.dat:col4:first",
+      "value": 10.7891,
+      "tol_rel": 2e-05,
+      "note": "Mean time between upward zero crossings of the same window. From t = 1000 the count gives 10.798, because the window still holds the end of the saturation."
+    },
+    "fit_rms": {
+      "source": "period_fit.dat:col5:first",
+      "value": 3.64e-07,
+      "tol_abs": 1e-06,
+      "note": "Rms residual of the fit, in units of the lid speed. A window from t = 1200 gives 3.0e-06, from t = 1000 gives 9.2e-05."
+    },
+    "probe_mean": {
+      "source": "period_fit.dat:col6:first",
+      "value": 0.02673643,
+      "tol_rel": 0.001,
+      "note": "Mean term of the fit: time average of vy at the cavity centre, in units of the lid speed."
+    },
+    "probe_half_range": {
+      "source": "period_fit.dat:col7:first",
+      "value": 0.000667449,
+      "tol_rel": 0.002,
+      "note": "Half of the difference between the largest and the smallest vy at the cavity centre in the window, in units of the lid speed."
+    }
+  }
+}

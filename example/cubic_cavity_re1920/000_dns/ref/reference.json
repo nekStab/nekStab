@@ -1,0 +1,39 @@
+{
+  "case": "cubic_cavity_re1920/000_dns",
+  "summary": "DNS of the cubic cavity at Re = 1900 from rest to t = 100. It gives the start field of the Newton stage at Re = 1920.",
+  "description": "DNS of the cubic cavity at Re = 1900 from rest to t = 100. The flow is close to the steady state but still oscillates (README). The stage writes the start field of 210_baseflow_newton/fp; its reference checks that the run reached its end time with the flow in the expected state: the norms of the last snapshot and the last probe value. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-10"
+  },
+  "quantities": {
+    "last_snapshot_time": {
+      "source": "cav0.f00010:field:time",
+      "value": 100.0,
+      "tol_abs": 0.001
+    },
+    "snapshot_vx_max": {
+      "source": "cav0.f00010:field:vx.max",
+      "value": 1.00239,
+      "tol_rel": 0.001
+    },
+    "snapshot_vx_norm": {
+      "source": "cav0.f00010:field:vx.norm",
+      "value": 101.04302,
+      "tol_rel": 0.001
+    },
+    "snapshot_vy_norm": {
+      "source": "cav0.f00010:field:vy.norm",
+      "value": 60.51102,
+      "tol_rel": 0.001
+    },
+    "probe_vy_final": {
+      "source": "cav.his:col3:last",
+      "value": -0.031440771,
+      "tol_abs": 1e-05,
+      "note": "Last value of vy at the probe (0.25, 0.25, 0), column 3 of cav.his."
+    }
+  }
+}

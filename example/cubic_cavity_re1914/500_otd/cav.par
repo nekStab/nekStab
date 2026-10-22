@@ -1,0 +1,38 @@
+[GENERAL]
+startFrom = BF_cav0.f00001 # steady base flow of 210_baseflow_newton/fp, frozen
+
+stopAt = endTime
+endTime = 30.0           # about 2.8 periods of the leading pair (omega = 0.587)
+
+userParam01 = 5          # 5 = OTD (optimally time-dependent modes), base flow frozen
+# The OTD basis size is lpert in SIZE (compile time). The sponge parameters
+# (userParam08 to 10) are zero, as in 310_stability_direct.
+userParam08 = 0          # sponge left
+userParam09 = 0          # sponge right
+userParam10 = 0          # sponge strength
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 5.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -1914.0   # Re=1914

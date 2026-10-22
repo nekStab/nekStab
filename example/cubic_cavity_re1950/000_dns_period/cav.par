@@ -1,0 +1,32 @@
+[GENERAL]
+# Re=1950 period-extraction DNS with the uniform lid of the thesis. Start from the
+# steady base flow of cubic_cavity_re1914 (ic_seed.f00001 = ../../cubic_cavity_re1914/
+# 210_baseflow_newton/fp/BF_cav0.f00001): it is not a steady state at Re=1950, so the
+# change in Re seeds the Hopf mode. Re=1950 is 1.7 % above Re_c = 1916.6, so the
+# growth rate is about +2e-3 and the saturation takes some 2000 time units.
+# A fine hpts probe at the cavity centre (cav.his) gives the period by FFT.
+startFrom = ic_seed.f00001 time=0
+stopAt = endTime
+endTime = 3000.0
+userParam01 = 0          # DNS
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+writeControl = runTime
+writeInterval = 100.     # long run: one checkpoint per 100 time units
+writeDoublePrecision = no
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-7
+residualProj = yes
+writeToFieldFile = yes
+[VELOCITY]
+residualTol = 1.0E-8
+residualProj = no
+density = 1.0
+viscosity = -1950.0

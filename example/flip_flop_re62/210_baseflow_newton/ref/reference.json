@@ -1,0 +1,51 @@
+{
+  "case": "flip_flop_re62/210_baseflow_newton",
+  "summary": "Unstable periodic orbit of two side-by-side cylinders at Re = 62 (flip-flop, T = 8.8152) by Newton-GMRES.",
+  "description": "Flip-flop orbit (unstable periodic orbit) at Re = 62 by Newton-GMRES, started from the Re = 60 snapshot with the period 8.73356. The Newton iteration changes the period; the converged orbit has T = 8.815177, the time stamp of BF_2cyl0.f00001. The final residual must lie below the Newton tolerance 1e-8. The period and the five statistics of BF_2cyl0.f00001 identify the orbit; they are the values of the committed run, which the run of 2026-10-09 on 16 ranks reproduces to 1e-6. An orbit that was shipped in the 311, 321 and 411 stages from an earlier run differs by 5e-7 in the period and by up to 8e-5 in the extrema.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "16",
+    "compiler": "ifort on Jean Zay",
+    "nekstab_mode": "2.1 (Newton-GMRES UPO)"
+  },
+  "quantities": {
+    "newton_final_residual": {
+      "source": "residu_newton.dat:col7:last",
+      "value": 0.0,
+      "tol_abs": 1e-08,
+      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8)."
+    },
+    "orbit_period": {
+      "source": "BF_2cyl0.f00001:field:time",
+      "value": 8.8151767,
+      "tol_rel": 1e-05,
+      "note": "Period of the converged orbit: the time stamp of the base-flow file. The starting value is 8.73356."
+    },
+    "bf_vx_min": {
+      "source": "BF_2cyl0.f00001:field:vx.min",
+      "value": -0.1655248,
+      "tol_rel": 0.0005
+    },
+    "bf_vx_max": {
+      "source": "BF_2cyl0.f00001:field:vx.max",
+      "value": 1.308534,
+      "tol_rel": 0.0005
+    },
+    "bf_vx_norm": {
+      "source": "BF_2cyl0.f00001:field:vx.norm",
+      "value": 337.2333,
+      "tol_rel": 0.0001
+    },
+    "bf_vy_min": {
+      "source": "BF_2cyl0.f00001:field:vy.min",
+      "value": -0.7087612,
+      "tol_rel": 0.0005
+    },
+    "bf_vy_max": {
+      "source": "BF_2cyl0.f00001:field:vy.max",
+      "value": 0.6994779,
+      "tol_rel": 0.0005
+    }
+  }
+}

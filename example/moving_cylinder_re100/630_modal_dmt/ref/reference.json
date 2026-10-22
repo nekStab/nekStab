@@ -1,0 +1,72 @@
+{
+  "case": "moving_cylinder_re100/630_modal_dmt",
+  "summary": "DMT filter bank on the forced periodic orbit of the oscillating cylinder at Re = 100: the filters return the flow at the frequency of the forcing and its two harmonics, and the three harmonics rebuild the orbit to 14.5 % of its fluctuation in the near field.",
+  "description": "The DNS starts from the periodic orbit of 210_baseflow_newton at phase 0 of the forcing and runs 30 periods of the forcing (T = 1 / 0.1643 = 6.086427) on the moving mesh, with four second-order filters of mode 6.4: at the frequency of the forcing, at twice and three times that frequency, and at frequency 0 (the mean flow). Each filter returns the real and the imaginary part of the amplitude of the flow at its frequency, averaged over the last 2 periods, with phase 0 at the start of the run. At phase 0 the orbit is the mean plus the sum of the real parts of the amplitudes over all harmonics, so plot.py rebuilds the orbit of stage 210 harmonic by harmonic and measures what is left in the norm of its fluctuation, over the nodes with -2 < x < 10 and abs(y) < 4. The reference checks that remainder after one, two and three harmonics, the size of each amplitude against the mean flow, the amplitude on the cylinder wall (plot.py writes it to bank_wall.dat; the exact value follows from the wall velocity, A 2 pi f), and the time of the last field. A wrong frequency, filter width or period changes the remainders. The remainder falls by the factors 0.40, 0.59 and 0.61 from one harmonic to the next and does not reach zero: the orbit has harmonics above the third. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "40",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "6.4 (DMT filter bank)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 643
+  },
+  "quantities": {
+    "left_after_1_harmonic": {
+      "source": "bank_check.dat:col2:row2",
+      "value": 0.4011871,
+      "tol_rel": 0.02,
+      "note": "Norm of the fluctuation (orbit - mean) left in the near field after the real part of the amplitude at the forcing frequency is subtracted, over its norm before."
+    },
+    "left_after_2_harmonics": {
+      "source": "bank_check.dat:col2:row3",
+      "value": 0.23616374,
+      "tol_rel": 0.02
+    },
+    "left_after_3_harmonics": {
+      "source": "bank_check.dat:col2:row4",
+      "value": 0.14513581,
+      "tol_rel": 0.03,
+      "note": "Does not reach zero: the orbit has harmonics above the third."
+    },
+    "fundamental_over_mean": {
+      "source": "bank_check.dat:col4:row2",
+      "value": 0.58458792,
+      "tol_rel": 0.01,
+      "note": "Norm of the amplitude of the filter at the forcing frequency (real and imaginary part together) over the norm of the mean flow, in the near field."
+    },
+    "second_harmonic_over_mean": {
+      "source": "bank_check.dat:col4:row3",
+      "value": 0.219583,
+      "tol_rel": 0.01
+    },
+    "third_harmonic_over_mean": {
+      "source": "bank_check.dat:col4:row4",
+      "value": 0.13668041,
+      "tol_rel": 0.02
+    },
+    "wall_fundamental": {
+      "source": "bank_wall.dat:col2:row1",
+      "value": 1.1147907,
+      "tol_abs": 0.002,
+      "note": "Re of the y component of the amplitude of the first filter on the cylinder wall (mean over the wall nodes). The flow there is the wall velocity A 2 pi f cos(omega t), so the exact value is A 2 pi f = 1.08 * 2 pi * 0.1643 = 1.11491. The imaginary part, -1.7e-3, is a delay of one time step (omega dt = 1.5e-3)."
+    },
+    "wall_second_harmonic": {
+      "source": "bank_wall.dat:col2:row2",
+      "value": 0.0,
+      "tol_abs": 0.001,
+      "note": "The wall velocity has no second harmonic; the filter returns 6e-7."
+    },
+    "wall_mean": {
+      "source": "bank_wall.dat:col2:row4",
+      "value": 0.0,
+      "tol_abs": 0.001,
+      "note": "The mean of the wall velocity is 0; the filter at frequency 0 returns 1e-6."
+    },
+    "last_snapshot_time": {
+      "source": "bRe1cyl0.f00001:field:time",
+      "value": 182.59429066,
+      "tol_abs": 0.005,
+      "note": "30 periods of the forcing plus one time step (1.5e-3): the time loop ends on the first step past the end time."
+    }
+  }
+}

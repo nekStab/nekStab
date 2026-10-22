@@ -1,0 +1,41 @@
+[GENERAL]
+# The base flow BF_cav0.f00001 is the Newton solution of ../210_baseflow_newton/fp (copy it here).
+startFrom = BF_cav0.f00001
+
+stopAt = endTime
+endTime = 10.0         # horizon tau of the optimisation (units L/U); the tau sweep in growth_sweep.csv runs copies with other values
+
+userParam01 = 3.3        # transient growth (Krylov-Schur on M^H M); each Arnoldi step is one forward and one adjoint integration over tau
+userParam03 = 2          # schur_tgt: converge the 2 leading eigenvalues
+userParam04 = 0          # maxmodes (0 = schur_tgt)
+userParam06 = 0          # isothermal
+userParam07 = 30         # k_dim: one Arnoldi pass of 30 vectors converges 13 eigenvalues at tau = 10
+userParam08 = 0          # sponge left
+userParam09 = 0          # sponge right
+userParam10 = 0          # sponge strength
+
+dt = 0
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.0
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -1914.0   # Re=1914

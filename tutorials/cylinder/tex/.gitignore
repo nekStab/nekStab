@@ -1,0 +1,4 @@
+_markdown_main/
+main.pdf
+*.markdown.in
+*.markdown.lua

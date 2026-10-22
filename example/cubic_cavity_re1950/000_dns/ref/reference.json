@@ -1,0 +1,71 @@
+{
+  "case": "cubic_cavity_re1950/000_dns",
+  "summary": "DNS of the cubic cavity at Re = 1950 on the saturated limit cycle from t = 1700 to 1800. It writes the 200 snapshots that the POD and DMD stages read.",
+  "description": "The run starts from the on-orbit field of 000_dns_period at t = 1700 and integrates 100 time units, about 9.3 periods, with a snapshot every 0.5 time units. plot.py fits a mean and three harmonics with a free frequency to the signal of the probe at (0.25, 0.25, 0) and compares the half range of the signal in the last whole period with the first. The reference checks that the cycle keeps the period of 000_dns_period, that its amplitude stays constant, and that the last snapshot holds the expected field norms. A start field off the cycle changes the amplitude from one period to the next, and a wrong Reynolds number or mesh changes the period. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "16",
+    "nekstab": "v2.0.0",
+    "compiler": "ifx 2026.0 (c8)",
+    "date": "2026-10-11",
+    "wall_s": 3221
+  },
+  "quantities": {
+    "period_fit": {
+      "source": "cycle_check.dat:col1:first",
+      "value": 10.7891,
+      "tol_rel": 1e-05,
+      "note": "Period of the least-squares fit to vy at the probe over t = 1700 to 1800. The DNS of 000_dns_period gives 10.78909, and the Floquet stages integrate over that period."
+    },
+    "fit_rms": {
+      "source": "cycle_check.dat:col2:first",
+      "value": 5.1456e-07,
+      "tol_abs": 1e-06,
+      "note": "Rms residual of the fit, in units of the lid speed. A signal that still grows or falls leaves a larger residual."
+    },
+    "probe_mean": {
+      "source": "cycle_check.dat:col3:first",
+      "value": -0.032123355,
+      "tol_rel": 0.001,
+      "note": "Mean term of the fit: time average of vy at (0.25, 0.25, 0), in units of the lid speed."
+    },
+    "probe_half_range": {
+      "source": "cycle_check.dat:col4:first",
+      "value": 0.001413634,
+      "tol_rel": 0.002,
+      "note": "Half of the difference between the largest and the smallest vy at the probe, in units of the lid speed."
+    },
+    "amplitude_ratio": {
+      "source": "cycle_check.dat:col5:first",
+      "value": 1.0000021,
+      "tol_abs": 0.001,
+      "note": "Half range of vy in the last whole period over the half range in the first whole period. It is 1 on the cycle."
+    },
+    "last_snapshot_time": {
+      "source": "cav0.f00200:field:time",
+      "value": 1800.0,
+      "tol_abs": 0.001
+    },
+    "snapshot_vx_max": {
+      "source": "cav0.f00200:field:vx.max",
+      "value": 1.00239,
+      "tol_rel": 0.001,
+      "note": "Largest vx of the last snapshot, near the lid."
+    },
+    "snapshot_vx_norm": {
+      "source": "cav0.f00200:field:vx.norm",
+      "value": 100.9875,
+      "tol_rel": 0.001
+    },
+    "snapshot_vy_norm": {
+      "source": "cav0.f00200:field:vy.norm",
+      "value": 60.51544,
+      "tol_rel": 0.002
+    },
+    "snapshot_vz_norm": {
+      "source": "cav0.f00200:field:vz.norm",
+      "value": 8.240292,
+      "tol_rel": 0.005,
+      "note": "The flow is three-dimensional: vz is not zero."
+    }
+  }
+}

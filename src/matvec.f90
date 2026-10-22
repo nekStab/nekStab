@@ -1,0 +1,866 @@
+!-----------------------------------------------------------------------
+! matvec.f90 — Matrix-vector products and linearized forward maps
+!
+! Purpose:
+!   Provides the matrix-vector product dispatcher and all linearized
+!   map implementations (direct, adjoint, finite-difference, transient
+!   growth, force sensitivity, and Newton linearized maps).
+!
+! Public interface:
+!   prepare_linearized_solver, matvec, forward_linearized_map,
+!   forward_finite_difference_map, adjoint_linearized_map,
+!   transient_growth_map, ts_force_sensitivity_map,
+!   newton_linearized_map, compute_bvec
+!
+! Dependencies:
+!   krylov_subspace, SIZE, TOTAL, ADJOINT
+!-----------------------------------------------------------------------
+
+module nekstab_matvec
+   use nekstab_krylov_subspace, only: krylov_vector, nt, orbit_kept, orbit_modes
+   use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_finalize_streaming
+   use nekstab_vectors, only: nopcopy, nopadd2
+   use nekstab_nek_bridge, only: nekStab_log, nid, nio, param, npert, time, dt, &
+                                 nsteps, ctarg, vx, vy, vz, pr, t, lastep, fintim, &
+                                 wdsize, ifbf2d, if3d, nx1, ny1, nz1, nelv, &
+                                 isDirect, isFloquetDirect, iffindiff, isAdjoint, &
+                                 isFloquetAdjoint, isTransientGrowth, &
+                                 isFloquetTransientGrowth, ifEnergyBudget, ifWavemaker, &
+                                 ifBFSensitivity, ifForceSensReal, ifForceSensImag, &
+                                 ifDeltaForcing, ifAnimateMode, ifAnimateBFDeform, &
+                                 ifAnimateFloquet, isNewtonFP, isNewtonPO, isNewtonPO_T, &
+                                 evop, ubase, vbase, wbase, pbase, tbase, ifpert, ifadj, &
+                                 lsize, ifbase, mstep, k_dim, schur_cnt, &
+                                 istep, vxp, vyp, vzp, prp, tp, findiff_order, ampls, &
+                                 coefs, ifheat, dTdx, dTdy, dTdz, ifbuoyancy, &
+                                 buoyancy_qvol_wired,&
+                                 ifquasilaminar, ifKEnorm, ldimt, ifield, vmult, tmult, &
+                                 ifto, ifpsco, lx1, ly1, lz1
+   implicit none
+   private
+
+   !        Cached bvec/btvec for Newton UPO (avoid recomputing per matvec)
+   type(krylov_vector), save :: bvec_cache, btvec_cache
+   logical, save :: bvec_cached = .false.
+   ! Initialization flags for one-time setup in various subroutines
+   logical, save :: matvec_init = .false.
+   logical, save :: forward_linearized_map_init = .false.
+   logical, save :: orbit_closure_done = .false.
+
+   public :: prepare_linearized_solver, matvec, &
+             forward_linearized_map, &
+             forward_finite_difference_map, &
+             adjoint_linearized_map, &
+             transient_growth_map, &
+             ts_force_sensitivity_map, &
+             newton_linearized_map, compute_bvec, &
+             cache_newton_bvec
+contains
+
+!-----------------------------------------------------------------------
+! nek_advance_quiet — Advance Nek with core logfile chatter disabled
+!-----------------------------------------------------------------------
+   subroutine nek_advance_quiet()
+
+      integer :: saved_nio
+
+      saved_nio = nio
+      nio = -1
+      call nek_advance()
+      nio = saved_nio
+
+   end subroutine nek_advance_quiet
+
+!-----------------------------------------------------------------------
+! prepare_linearized_solver — Set up Nek parameters for linearized solver
+!-----------------------------------------------------------------------
+   subroutine prepare_linearized_solver
+
+      if (nid == 0) write (6, *) 'Preparing linearized solver...'
+
+!  Force single perturbation mode
+      if (param(31) > 1) then
+         call nekStab_log('ERROR: nekStab not ready for multiple perturbation modes. Setting number of perturbations to 1.')
+      end if
+      param(31) = int(1); npert = int(param(31)) ! param is real !
+      if (nid == 0) write (6, *) 'Number of perturbations set to:', npert
+
+!  Adjust time step and number of steps if end time is specified
+      if (param(10) > 0) then
+         if (nid == 0) then
+            write (6, *) 'End time specified:', param(10)
+            write (6, *) 'Current time:', time
+            write (6, *) 'Recomputing dt and nsteps to match end time...'
+         end if
+
+!     Use par-file dt if set; otherwise compute from CFL
+!     param(12) < 0 means constant dt was set in the par file
+         if (abs(param(12)) > 0) then
+            dt = abs(param(12))
+            if (nid == 0) write (6, *) 'Using dt from par file:', dt
+         else
+!        Compute maximum allowable time step based on CFL condition
+            call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
+            if (nid == 0) write (6, *) 'Maximum spatial restriction:', ctarg
+!        Calculate time step based on CFL target
+            dt = param(26)/ctarg
+!        Guard: when prepare_linearized_solver runs from userchk at istep=0
+!        before Nek's mesh metric setup completes, compute_cfl can return
+!        +Infinity (degenerate Jacobian) -> dt = param(26)/Inf = 0 -> nsteps
+!        ceiling overflows int32 -> 0-step matvec -> degenerate Krylov
+!        spectrum (task #70 in back_fstep_re500/transient_growth).
+!        Fall back to a conservative fixed dt = 1e-3 (case-agnostic; small
+!        enough to be CFL-stable at unit velocity scale for typical meshes).
+            if (.not. (dt > 0.0d0 .and. dt < 1.0d3)) then
+               if (nid == 0) write (6, *) &
+                  'WARN: compute_cfl gave unusable result (ctarg=', ctarg, &
+                  '); falling back to dt = 1e-3. Set explicit dt in .par ', &
+                  'to silence this.'
+               dt = 1.0d-3
+            end if
+         end if
+
+!     Calculate number of steps needed to reach end time
+         nsteps = ceiling(param(10)/dt)
+
+!     Adjust time step to exactly reach end time
+         dt = param(10)/nsteps
+
+         if (nid == 0) then
+            write (6, *) 'Adjusted time step dt =', dt
+            write (6, *) 'Number of steps nsteps =', nsteps
+            write (6, *) 'Total simulation time =', nsteps*dt
+         end if
+
+!     Update parameters
+         param(12) = dt
+         lastep = 0
+         fintim = nsteps*dt
+
+!     Calculate actual CFL
+         call compute_cfl(ctarg, vx, vy, vz, dt)
+         if (nid == 0) write (6, *) 'Actual CFL:', ctarg
+      end if
+
+!  Force constant time step
+      param(12) = -abs(param(12))
+      if (nid == 0) write (6, *) 'Constant time step enforced, dt =', -param(12)
+
+!  Broadcast updated parameters to all processes
+      call bcast(param, 200*wdsize) ! broadcast all params
+
+      call nekgsync ! ensures that all processes reach before any can proceed further
+
+      if (nid == 0) write (6, *) 'Linearized solver preparation complete.'
+
+   end subroutine prepare_linearized_solver
+
+!-----------------------------------------------------------------------
+! matvec — Dispatch matrix-vector product to the Arnoldi factorization
+!
+!     All subroutines need to have the same interface.
+!
+!     NOTE : The baseflow needs to be pass to (ubase, vbase, wbase, tbase)
+!     before this function is called.
+!
+!     INPUTS
+!     ------
+!
+!     qx, qy, qz, qt : nek-arrays of size lv
+!     Initial velocity and temperature components.
+!
+!     qp : nek-array of size lp
+!     Initial pressure component.
+!
+!     OUTPUTS
+!     -------
+!
+!     fx, fy, fz, ft : nek-arrays of size lv
+!     Final velocity and temperature components.
+!
+!     fp : nek-array of size lp
+!     Final pressure component.
+!-----------------------------------------------------------------------
+   subroutine matvec(f, q)
+
+      type(krylov_vector), intent(out) :: f
+      type(krylov_vector), intent(inout) :: q
+
+      !     --> Every copy of a shared grid point gets the same value. In
+      !     place, so that the Krylov basis holds the vector the solver sees.
+      call average_copies(q)
+
+      !     --> Pass the baseflow to vx, vy, vz
+      call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)
+
+      if (ifbf2d .and. if3d) then
+         call rzero(vz, nx1*ny1*nz1*nelv)
+         if (nid == 0) write (6, *) 'Forcing vz=0'
+      end if
+
+      !     --> Standard setup for the linearized solver.
+      !     NOTE: matvec_init is reset together with forward_linearized_map_init
+      !     at the end of newton_linearized_map when bvec is not cached, so that
+      !     prepare_linearized_solver re-runs each Newton iteration (dt/nsteps
+      !     may change). Resetting only forward_linearized_map_init would freeze
+      !     the operator parameters from the first iteration.
+      if (.not. matvec_init) then
+         call prepare_linearized_solver
+         matvec_init = .true.
+      end if
+
+      lastep = 0
+      fintim = param(10)
+
+!     --> Direct solver only steady and periodic!
+!     Dispatch on the decoded mode flags (mode_config.f90 is the single
+!     source of truth) instead of re-decoding uparam(01). Direct covers
+!     both the steady (isDirect, 3.1) and Floquet (isFloquetDirect, 3.11)
+!     branches that the former >=3.0 .and. <3.2 range matched.
+      if (isDirect .or. isFloquetDirect) then
+         evop = 'd'
+         if (iffindiff) then
+            if (nid == 0) write (*, *) "Using the finite-difference approximation of the Fréchet derivative."
+            call forward_finite_difference_map(f, q)
+         else
+            call forward_linearized_map(f, q)
+         end if
+      end if
+
+!     --> Adjoint solver only steady and periodic!
+!     isAdjoint (3.2) + isFloquetAdjoint (3.21) == former >=3.2 .and. <3.3.
+      if (isAdjoint .or. isFloquetAdjoint) then
+         evop = 'a'
+         call adjoint_linearized_map(f, q)
+      end if
+
+!     --> Direct-Adjoint for optimal transient growth.
+!     isTransientGrowth (3.3) + isFloquetTransientGrowth (3.31) ==
+!     former >=3.3 .and. <3.4.
+      if (isTransientGrowth .or. isFloquetTransientGrowth) then
+         evop = "p"
+         call transient_growth_map(f, q)
+      end if
+
+!     --> Adjoint solver for the steady force sensitivity analysis.
+!     The former floor(uparam(01))==4 matched every Mode 4 (post-processing)
+!     value; the equivalent is the OR of all decoded Mode 4 flags.
+      if (ifEnergyBudget .or. ifWavemaker .or. ifBFSensitivity .or. &
+          ifForceSensReal .or. ifForceSensImag .or. ifDeltaForcing .or. &
+          ifAnimateMode .or. ifAnimateBFDeform .or. ifAnimateFloquet) then
+         call ts_force_sensitivity_map(f, q)
+      end if
+
+!     --> Linearized forward map for the Newton-Krylov solver.
+!     The former floor(uparam(01))==2 matched every Mode 2 (Newton) value;
+!     the equivalent is the OR of all decoded Newton flags.
+      if (isNewtonFP .or. isNewtonPO .or. isNewtonPO_T) then
+         evop = 'n'
+         call newton_linearized_map(f, q)
+         !  When bvec is not cached (fixed-point Newton, or before the UPO
+         !  cache is populated), reset BOTH guards so that the next Newton
+         !  iteration re-runs prepare_linearized_solver (fresh dt/nsteps)
+         !  and forward_linearized_map recomputes the orbit.
+         if (.not. bvec_cached) then
+            matvec_init = .false.
+            forward_linearized_map_init = .false.
+         end if
+      end if
+
+   end subroutine matvec
+
+!-----------------------------------------------------------------------
+! average_copies — Give every copy of a shared grid point the mean value
+!
+!     Nek5000 stores a point on an element face once for each element that
+!     holds it, and all copies must hold the same value. Nek5000 averages
+!     every field it reads (projfld_c0 in setics); this does the same for
+!     each vector that goes into the linearized solver.
+!
+!     Why: the vectors of nekStab carry round-off differences of 1e-16
+!     between copies on different MPI ranks (gather-scatter order where 3
+!     or more ranks share a point; dgemm rounding of the last rows of a
+!     rank's array in the Krylov-Schur rotation). The solver adds its
+!     increment to the old field (opadd2 in perturbv), so it keeps such a
+!     difference with multiplier exactly 1. Below the critical Reynolds
+!     number the Arnoldi method then returns it as a leading mu = 1 "mode"
+!     with O(1) jumps between elements. bin/c0check finds them in files.
+!-----------------------------------------------------------------------
+   subroutine average_copies(x)
+
+      type(krylov_vector), intent(inout) :: x
+
+      integer :: ifield_saved, m
+
+      ifield_saved = ifield
+      ifield = 1
+      call opdssum(x%vx, x%vy, x%vz)
+      call opcolv(x%vx, x%vy, x%vz, vmult)
+      if (ifto) then
+         ifield = 2
+         call dssum(x%t(:, 1), lx1, ly1, lz1)
+         call col2(x%t(:, 1), tmult(:, :, :, :, 1), nt)
+      end if
+      do m = 2, ldimt
+         if (.not. ifpsco(m - 1)) cycle
+         ifield = m + 1
+         call dssum(x%t(:, m), lx1, ly1, lz1)
+         call col2(x%t(:, m), tmult(:, :, :, :, m), nt)
+      end do
+      ifield = ifield_saved
+
+   end subroutine average_copies
+
+!-----------------------------------------------------------------------
+! forward_linearized_map — Integrate linearized Navier-Stokes forward
+!
+!     Denoting by L the Jacobian of the Navier-Stokes equations, the
+!     corresponding matrix vector product is thus
+!
+!     x(t) = exp(t * L) * x(0)
+!
+!     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t)
+!     the final one (fx, fy, fz, fp, ft).
+!-----------------------------------------------------------------------
+   subroutine forward_linearized_map(f, q)
+
+      use nekstab_krylov_subspace, only: allocate_orbit, orbit_store, orbit_restore
+
+      type(krylov_vector), intent(out) :: f
+      type(krylov_vector), intent(inout) :: q
+
+      integer m
+      logical base_integrated
+
+      ! nt from globals
+
+      !     --> Setup the parameters for the linearized solver.
+      ifpert = .true.; ifadj = .false.
+      call bcast(ifpert, lsize); call bcast(ifadj, lsize)
+
+      !     --> Base flow computation control.
+      !     Two-phase logic when ifstorebase is enabled:
+      !       1st call  (forward_linearized_map_init=F): keep ifbase=T so
+      !                 nek_advance computes the base flow; orbit_store saves it.
+      !       Later calls (forward_linearized_map_init=T): set ifbase=F so
+      !                 nek_advance skips it; orbit_restore replays the stored data.
+      !     CAUTION: do NOT clear ifbase unconditionally before the conditional
+      !     below — that would make the allocate_orbit / first-store path dead.
+      ifbase = .false.
+      if (isFloquetDirect) ifbase = .true. ! activate Floquet (was 3.11)
+      if (isFloquetTransientGrowth) ifbase = .true. ! activate Floquet for intracycle transient growth (was 3.31)
+      !  The UPO baseflow-evolution path (formerly uparam==2.1/2.2) needs orbit
+      !  storage. isNewtonPO ALONE is NOT enough: that flag also only signals
+      !  the period-augmented inner product and would drop the forced-UPO 2.2
+      !  case. The exact equivalent of "uparam==2.1 .or. uparam==2.2" is the
+      !  union isNewtonPO .or. isNewtonPO_T (2.1 and 2.2 respectively).
+      if (isNewtonPO .or. isNewtonPO_T) then
+         ifbase = .true. ! activate baseflow evolution for UPO
+      end if
+      if (orbit_kept()) then
+         if (forward_linearized_map_init) then
+            ifbase = .false. ! subsequent calls: use stored orbit
+         elseif (ifbase) then
+            call allocate_orbit(nsteps) ! first call: allocate storage, or read the Fourier modes
+            if (fourier_orbit_available()) then ! modes read from disk: no base integration
+               ifbase = .false.; forward_linearized_map_init = .true.
+            end if
+         end if
+      end if
+
+!     --> Pass the initial condition for the perturbation.
+      call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1), &
+                   q%vx, q%vy, q%vz, q%pr, q%t)
+
+      base_integrated = ifbase ! this call integrates the base flow over one period
+
+      time = 0.0d+00
+      do istep = 1, nsteps
+!     --> Output current info to logfile.
+         if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                             istep == 1 .or. istep == nsteps)) &
+            write (6, "(' DIRECT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") istep, nsteps, mstep, k_dim, schur_cnt
+
+!     Integrate forward in time.
+         call nekstab_usrchk()
+         call nek_advance_quiet()
+
+         if (orbit_kept() .and. ifbase .and. .not. forward_linearized_map_init) then !storing first time
+            if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                                istep == 1 .or. istep == nsteps)) &
+               write (6, *) 'storing first series:', istep, '/', nsteps
+            call orbit_store(istep)
+         elseif (orbit_kept() .and. forward_linearized_map_init .and. .not. ifbase) then !just moving in memory
+            if (nid == 0 .and. istep == 1) write (6, *) 'using stored baseflow'
+            call orbit_restore(istep)
+         end if
+      end do
+      if (orbit_kept() .and. .not. forward_linearized_map_init .and. ifbase) then
+         ifbase = .false.; forward_linearized_map_init = .true.
+         call fourier_orbit_finalize_streaming()
+      end if
+
+!     --> Floquet: the base flow must be back at its start field after one period.
+      if (base_integrated .and. (isFloquetDirect .or. isFloquetTransientGrowth)) call orbit_closure_check()
+
+!     --> Copy the solution.
+      call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, &
+                   vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1))
+
+   end subroutine forward_linearized_map
+
+!-----------------------------------------------------------------------
+! orbit_closure_check — Does the base flow return to its start field?
+!
+!     A Floquet map linearizes the flow over one period T of a closed
+!     orbit, so the base flow integrated from the start field over T must
+!     come back to the start field. The relative defect
+!
+!     ||U(T) - U(0)|| / ||U(0)||
+!
+!     tests the period in the time stamp of the base-flow file. It is
+!     about 1e-6 for a Newton-converged orbit. It is of the order of the
+!     oscillation amplitude when the period is wrong. The check runs once,
+!     after the first sweep that integrates the base flow. The norm is the
+!     Krylov norm, so the sponge region does not count.
+!-----------------------------------------------------------------------
+   subroutine orbit_closure_check()
+
+      use nekstab_krylov_subspace, only: k_cmult, k_add2, k_norm
+
+      type(krylov_vector), allocatable :: u_start, u_end
+      real :: norm_start, norm_defect
+      integer :: alloc_stat
+
+      if (orbit_closure_done) return
+      orbit_closure_done = .true.
+
+      ! Heap storage: a krylov_vector holds the full velocity, pressure and temperature fields.
+      allocate (u_start, u_end, stat=alloc_stat)
+      if (alloc_stat /= 0) call exitti('orbit closure allocation failed$', alloc_stat)
+
+      call nopcopy(u_end%vx, u_end%vy, u_end%vz, u_end%pr, u_end%t, vx, vy, vz, pr, t)
+      call nopcopy(u_start%vx, u_start%vy, u_start%vz, u_start%pr, u_start%t, ubase, vbase, wbase, pbase, tbase)
+      u_start%time = 0.0d0
+      u_end%time = 0.0d0
+
+      call k_norm(norm_start, u_start)
+      call k_cmult(u_start, -1.0d0)
+      call k_add2(u_end, u_start) ! u_end = U(T) - U(0)
+      call k_norm(norm_defect, u_end)
+      deallocate (u_start, u_end)
+
+      if (nid == 0 .and. norm_start > 0.0d0) then
+         write (6, *) 'Orbit closure: ||U(T)-U(0)||/||U(0)|| =', norm_defect/norm_start, ' for T =', param(10)
+         if (norm_defect > 1.0d-3*norm_start .and. orbit_modes()) then
+            write (6, *) 'nekStab: ERROR: the base flow does not return to its start field'
+            write (6, *) '  after one period (closure above 1e-3). Its Fourier modes would'
+            write (6, *) '  not represent a closed orbit. Converge the orbit with Newton first.'
+         elseif (norm_defect > 1.0d-3*norm_start) then
+            ! Each literal stays below 80 characters: Intel list-directed output breaks a longer line in the middle of a word.
+            write (6, *) 'nekStab: WARNING: the base flow does not return to its start field'
+            write (6, *) '  after one period. The Floquet multipliers are not those of a closed orbit.'
+            write (6, *) '  Check the period in the time stamp of the base-flow file, the polynomial'
+            write (6, *) '  order, the sponge and that the base flow is on the orbit.'
+         end if
+      end if
+      if (orbit_modes() .and. norm_defect > 1.0d-3*norm_start) call exitti('orbit closure exceeds 1e-3$', 1)
+
+   end subroutine orbit_closure_check
+
+!-----------------------------------------------------------------------
+! forward_finite_difference_map — Approximate linearized map via FD
+!-----------------------------------------------------------------------
+   subroutine forward_finite_difference_map(f, q)
+
+      use nekstab_krylov_subspace, only: k_zero, k_copy, k_cmult, k_add2, k_norm, nv, &
+                                         allocate_orbit, orbit_store, orbit_restore
+
+      type(krylov_vector), intent(out) :: f
+      type(krylov_vector), intent(inout) :: q
+      type(krylov_vector) :: pert
+      type(krylov_vector) :: work
+
+      real :: epsilon0, dummy
+      integer :: i, m
+
+      logical, save :: init = .false.
+
+      ! nv from globals
+
+!  Setup the Nek parameters for the finite-differences approximation.
+      ifpert = .false.; ifadj = .false.
+      call bcast(ifpert, lsize); call bcast(ifadj, lsize)
+
+      call k_zero(f)
+      call k_zero(work)
+      call nopcopy(work%vx, work%vy, work%vz, work%pr, work%t, ubase, vbase, wbase, pbase, tbase)
+
+      call k_norm(dummy, work)
+      epsilon0 = 1.0d-6*dummy
+
+      if (findiff_order == 2) then
+         ampls(1) = 1; ampls(2) = -1
+         coefs(1) = 1; coefs(2) = -1
+         coefs = coefs/2.0d+00
+      else if (findiff_order == 4) then
+         ampls(1) = 1; ampls(2) = -1
+         ampls(3) = 2; ampls(4) = -2
+         coefs(1) = 8; coefs(2) = -8
+         coefs(3) = -1; coefs(4) = 1
+         coefs = coefs/12.0d+00
+      end if
+      ampls = ampls*epsilon0
+
+!  Turning-off the base flow side-by-side computation.
+!  The UPO orbit-storage path (formerly uparam==2.1/2.2) is the union
+!  isNewtonPO .or. isNewtonPO_T (2.1 + 2.2). isNewtonPO alone only controls
+!  the period-augmented inner product and would drop the forced-UPO 2.2 case.
+      ifbase = .false.
+      if (isFloquetDirect) ifbase = .true. ! activate Floquet (was 3.11)
+      if (isFloquetTransientGrowth) ifbase = .true. ! activate Floquet for intracycle transient growth (was 3.31)
+      if (isNewtonPO .or. isNewtonPO_T) then
+         init = .true. ! Use stored baseflow if ifstorebase.
+         ifbase = .true. ! activate baseflow evolution for UPO.
+      end if
+      if (orbit_kept() .and. init) ifbase = .false. ! deactivate ifbase if baseflow stored.
+
+      if (orbit_kept() .and. ifbase .and. .not. init) then
+         call allocate_orbit(nsteps)
+         if (fourier_orbit_available()) then ! modes read from disk: no base integration
+            ifbase = .false.; init = .true.
+         end if
+      end if
+
+!-----------------------------------------------------------------------
+!-----                                                             -----
+!-----     FINITE-DIFFERENCE APPROX. OF THE FRECHET DERIVATIVE     -----
+!-----                                                             -----
+!-----------------------------------------------------------------------
+
+      do i = 1, findiff_order
+
+!     Scale the perturbation.
+         call k_copy(pert, q)
+         call k_cmult(pert, ampls(i))
+         ! quasilaminar: velocity-only seed; k',tau' zeroed (mu_t prescribed)
+         if (ifquasilaminar) then
+            do m = 1, ldimt
+               call rzero(pert%t(1, m), nt)
+            end do
+         end if
+
+!     Initial condition for the each evaluation.
+         call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)
+         call nopadd2(vx, vy, vz, pr, t, pert%vx, pert%vy, pert%vz, pert%pr, pert%t)
+         if (ifbf2d .and. if3d) then
+            call rzero(vz, nv); if (nid == 0) write (6, *) 'Forcing vz=0'
+         end if
+
+!     Time-integration of the nonlinear Nek5000 equations.
+         time = 0.0d+00
+         do istep = 1, nsteps
+!     --> Output current info to logfile.
+            if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                                istep == 1 .or. istep == nsteps)) &
+               write (6, "(' DIRECT FD [',I1,'/',I1,']:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") i, &
+               findiff_order, istep, nsteps, mstep, k_dim, schur_cnt
+
+!        Nek5000 computational core.
+            call nekstab_usrchk()
+            call nek_advance_quiet()
+
+            if (i == 1 .and. orbit_kept() .and. ifbase .and. .not. init) then !storing first time
+               if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                                   istep == 1 .or. istep == nsteps)) &
+                  write (6, *) 'storing first series:', istep, '/', nsteps
+               call orbit_store(istep)
+            elseif (i > 1 .and. orbit_kept() .and. init .and. .not. ifbase) then !just moving in memory
+               if (nid == 0 .and. istep == 1) write (6, *) 'using stored baseflow'
+               call orbit_restore(istep)
+            end if
+         end do
+         if (orbit_kept() .and. .not. init .and. ifbase) then
+            ifbase = .false.; init = .true.
+            call fourier_orbit_finalize_streaming()
+         end if
+
+!     --> Copy the solution and compute the approximation of the Frechet derivative.
+         call nopcopy(work%vx, work%vy, work%vz, work%pr, work%t, vx, vy, vz, pr, t)
+         call k_cmult(work, coefs(i))
+         call k_add2(f, work)
+
+      end do
+
+!  Rescale the approximate Frechet derivative with the step size.
+      call k_cmult(f, 1.0d+00/epsilon0)
+
+   end subroutine forward_finite_difference_map
+
+!-----------------------------------------------------------------------
+! adjoint_linearized_map — Integrate adjoint Navier-Stokes forward
+!
+!     Denoting by L the adjoint Navier-Stokes operator, the corresponding
+!     matrix vector product is thus
+!
+!     x(t) = exp(t * L) * x(0)
+!
+!     where x(0) is the initial condition (qx, qy, qz, qp, qt) and x(t)
+!     the final one (fx, fy, fz, fp, ft).
+!-----------------------------------------------------------------------
+   subroutine adjoint_linearized_map(f, q)
+
+      use nekstab_krylov_subspace, only: allocate_orbit, orbit_store, orbit_restore
+
+      type(krylov_vector), intent(out) :: f
+      type(krylov_vector), intent(inout) :: q
+
+      logical, save :: init
+      data init/.false./
+
+      integer m
+
+      ! nt from globals
+
+!     --> Setup the parameters for the linearized solver.
+      ifpert = .true.; ifadj = .true.
+      call bcast(ifpert, lsize); call bcast(ifadj, lsize)
+
+!     --> Base flow handling for the adjoint.
+!     Steady adjoint (3.2): base is time-independent (ifbase=.false.).
+!     Adjoint Floquet (3.21): base is T-periodic and the adjoint integrates
+!     BACKWARD, so the stored orbit must be replayed in REVERSE. We build the
+!     orbit ONCE here with a dedicated base-only forward sweep, so that EVERY
+!     adjoint matvec -- including the first -- replays the same time-reversed
+!     orbit. (Building+perturbing in one sweep would make the first matvec
+!     integrate the adjoint against forward-order base, i.e. a different
+!     operator than later matvecs, corrupting the Arnoldi subspace.)
+      ifbase = .false.
+      if (isFloquetAdjoint) ifbase = .true. ! activate floquet (was 3.21)
+
+      if (orbit_kept() .and. init) ifbase = .false.
+
+      if (isFloquetTransientGrowth) init = .true. ! intracycle transient growth: orbit already built by forward map (was 3.31)
+
+!     --> Build the periodic base-flow orbit once (forward, base only).
+      if (orbit_kept() .and. ifbase .and. .not. init) then
+         call allocate_orbit(nsteps)
+         if (.not. fourier_orbit_available()) then ! no modes on disk: integrate the base
+            ifpert = .false.; call bcast(ifpert, lsize)
+            time = 0.0d+00
+            do istep = 1, nsteps
+               if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                                   istep == 1 .or. istep == nsteps)) &
+                  write (6, *) 'building base orbit:', istep, '/', nsteps
+               call nekstab_usrchk()
+               call nek_advance_quiet()
+               call orbit_store(istep) ! orbit(j) = U(j*dt)
+            end do
+            call orbit_closure_check()
+            call fourier_orbit_finalize_streaming()
+            ifpert = .true.; call bcast(ifpert, lsize)
+         end if
+         ifbase = .false.; init = .true.
+      end if
+
+!     --> Pass the initial condition for the perturbation.
+      call nopcopy(vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1), &
+                   q%vx, q%vy, q%vz, q%pr, q%t)
+
+      if (ifheat) call gradm1(dTdx, dTdy, dTdz, t)
+
+!     --> Adjoint integration (backward in time). When the orbit is stored,
+!     restore the base BEFORE each advance and replay it time-reversed:
+!     step 1 -> U(T)=U(0), step 2 -> U(T-dt), ..., step nsteps -> U(dt).
+      time = 0.0d+00
+      do istep = 1, nsteps
+!     --> Output current info to logfile.
+         if (nid == 0 .and. (mod(istep, max(1, nsteps/10)) == 0 .or. &
+                             istep == 1 .or. istep == nsteps)) &
+            write (6, "(' ADJOINT:',I6,'/',I6,' from',I6,'/',I6,' (',I3,')')") &
+            istep, nsteps, mstep, k_dim, schur_cnt
+
+         if (orbit_kept() .and. init) call orbit_restore(nsteps - istep + 1)
+         if (orbit_kept() .and. init .and. ifheat) then
+            call gradm1(dTdx, dTdy, dTdz, t)
+         end if
+
+         call nekstab_usrchk()
+         call nek_advance_quiet()
+      end do
+
+      if (ifbuoyancy .and. ifheat .and. .not. buoyancy_qvol_wired) then
+         call exitti('buoyancy adjoint requires userq -> nekStab_qvol$', 1)
+      end if
+
+!     --> Copy the solution.
+      call nopcopy(f%vx, f%vy, f%vz, f%pr, f%t, &
+                   vxp(:, 1), vyp(:, 1), vzp(:, 1), prp(:, 1), tp(:, :, 1))
+
+   end subroutine adjoint_linearized_map
+
+!-----------------------------------------------------------------------
+! transient_growth_map — Direct-adjoint composition for optimal growth
+!-----------------------------------------------------------------------
+   subroutine transient_growth_map(f, q)
+
+      type(krylov_vector), intent(out) :: f
+      type(krylov_vector), intent(inout) :: q
+      type(krylov_vector) :: wrk
+
+!     --> Evaluate the forward map.
+      call forward_linearized_map(wrk, q)
+
+!     --> Evaluate the adjoint map.
+      call adjoint_linearized_map(f, wrk)
+
+   end subroutine transient_growth_map
+
+!-----------------------------------------------------------------------
+! ts_force_sensitivity_map — Adjoint map for steady force sensitivity
+!-----------------------------------------------------------------------
+   subroutine ts_force_sensitivity_map(f, q)
+
+      use nekstab_krylov_subspace, only: k_sub2, k_cmult
+
+      type(krylov_vector), intent(out) :: f
+      type(krylov_vector), intent(inout) :: q
+
+!     --> Evaluate exp(t*L) * q0.
+      call adjoint_linearized_map(f, q)
+
+!     --> Evaluate (I - exp(t*L)) * q0.
+      call k_sub2(f, q)
+      call k_cmult(f, -1.0d+00)
+
+   end subroutine ts_force_sensitivity_map
+
+!-----------------------------------------------------------------------
+! newton_linearized_map — Linearized forward map for Newton-Krylov
+!-----------------------------------------------------------------------
+   subroutine newton_linearized_map(f, q)
+
+      use nekstab_krylov_subspace, only: k_sub2, k_add2s2, k_dot, k_zero, k_cmult, k_add2, &
+                                         ic_nwt, fc_nwt
+
+      type(krylov_vector), intent(out) :: f
+      type(krylov_vector), intent(inout) :: q
+      type(krylov_vector) :: bvec, btvec
+
+!     ----------------------------------
+!     -----     REGULAR NEWTON     -----
+!     ----------------------------------
+
+!     --> Evaluate exp(t*L) * q0.
+      if (iffindiff) then
+         if (nid == 0) write (*, *) "Using the finite-difference approximation of the Fréchet derivative."
+         call forward_finite_difference_map(f, q)
+      else
+         call forward_linearized_map(f, q)
+      end if
+
+!     --> Evaluate (exp(t*L) - I) * q0.
+      call k_sub2(f, q)
+
+!     ----------------------------------
+!     -----     NEWTON FOR UPO     -----
+!     ----------------------------------
+
+      if (isNewtonPO) then
+
+         if (bvec_cached) then
+!              Use cached bvec/btvec (saves 2 time-steps per matvec)
+            call k_add2s2(f, bvec_cache, q%time)
+            call k_dot(f%time, btvec_cache, q)
+         else
+!              Fallback: compute on the fly (first call or no caching)
+            call k_zero(bvec)
+            call k_zero(btvec)
+            call compute_bvec(bvec, fc_nwt)
+            call k_cmult(bvec, q%time)
+            call k_add2(f, bvec)
+            call compute_bvec(btvec, ic_nwt)
+            call k_dot(f%time, btvec, q)
+         end if
+
+         if (nid == 0) write (6, *) &
+            'Newton period correction:', f%time
+
+      else
+
+         f%time = 0.0d+00
+
+      end if
+
+   end subroutine newton_linearized_map
+
+!-----------------------------------------------------------------------
+! compute_bvec — Approximate time derivative for Newton UPO
+!-----------------------------------------------------------------------
+   subroutine compute_bvec(bvec, qbase)
+
+      use nekstab_krylov_subspace, only: k_copy, k_sub2, k_cmult
+
+      type(krylov_vector), intent(out) :: bvec
+      type(krylov_vector), intent(in) :: qbase
+      type(krylov_vector) :: wrk1, wrk2
+
+!     --> Setup the paramtemers for the solver.
+      ifpert = .false.; ifadj = .false.
+      call bcast(ifpert, lsize); call bcast(ifadj, lsize)
+
+      ifbase = .false.
+      call bcast(ifbase, lsize)
+
+!     --> Pass the initial condition.
+      call nopcopy(vx, vy, vz, pr, t, qbase%vx, qbase%vy, qbase%vz, qbase%pr, qbase%t)
+      param(10) = qbase%time
+      call prepare_linearized_solver
+      call k_copy(wrk1, qbase)
+
+!     --> Single time-step to approximate the time-derivative.
+      time = 0.0d+00
+      do istep = 1, 1
+         call nekStab_usrchk()
+         call nek_advance_quiet()
+      end do
+      call nopcopy(wrk2%vx, wrk2%vy, wrk2%vz, wrk2%pr, wrk2%t, vx, vy, vz, pr, t)
+
+!     --> Approximate the time-derivative.
+      call k_sub2(wrk2, wrk1)
+      call k_copy(bvec, wrk2)
+      call k_cmult(bvec, 1.0d0/dt)
+      bvec%time = 0.0d+00
+
+   end subroutine compute_bvec
+
+!-----------------------------------------------------------------------
+! cache_newton_bvec — Precompute and cache bvec/btvec for UPO Newton
+!
+! Called once per Newton iteration (after nonlinear_forward_map).
+! Avoids recomputing bvec/btvec at every matvec call within GMRES,
+! saving 2 nonlinear time-steps per Arnoldi iteration.
+!-----------------------------------------------------------------------
+   subroutine cache_newton_bvec(ic, fc)
+
+      type(krylov_vector), intent(in) :: ic, fc
+      real :: saved_param10
+
+!        Save param(10) — compute_bvec overwrites it with qbase%time
+      saved_param10 = param(10)
+
+      call compute_bvec(bvec_cache, fc)
+      call compute_bvec(btvec_cache, ic)
+
+!        Restore param(10) and re-prepare solver state
+!        (compute_bvec overwrites param(10), sets ifpert=.false.)
+      param(10) = saved_param10
+      call prepare_linearized_solver
+      bvec_cached = .true.
+
+      if (nid == 0) write (6, *) &
+         'Newton bvec/btvec cached for GMRES'
+
+   end subroutine cache_newton_bvec
+
+end module nekstab_matvec

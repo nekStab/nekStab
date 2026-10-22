@@ -1,0 +1,46 @@
+{
+  "case": "moving_cylinder_re100/311_stability_direct_floquet",
+  "summary": "Direct Floquet analysis of the forced periodic orbit of the cylinder in transverse oscillation at Re = 100: one converged multiplier, mu = 0.92988 (real, inside the unit circle), so the lock-in is stable.",
+  "description": "Mode 3.11 on the moving mesh, about the orbit of ../210_baseflow_newton over one period of the forcing, 1 / 0.1643 = 6.086427 (read from the time stamp of the orbit file, which is checked). Krylov-Schur with k_dim = 100 and a single Arnoldi pass converges one multiplier, mu = 0.9298793 with residual 2e-10, sigma = ln(mu) / T = -0.011945. The converged value is not the first of the list sorted by modulus: the Ritz value above it, 0.996 or less, has a residual of 5e-2 and differs from run to run (0.9957, 0.9965 and 0.937 on 40, 8 and 40 ranks). The check reads Spectre_Hd_conv.dat and Spectre_NSd_conv.dat, which hold the converged values only. An export that wrote the first values of the list put 0.9957 there and fails the check; a solver without the mesh-velocity term of the perturbation equation has no converged multiplier above modulus 0.72 (first converged value -0.172 +- 0.695i) and fails it too. dns_ratio is the mean factor per period of the near-field change of the forced DNS of ../010_dns_forced over its last five periods, 0.9253, 0.5 % below |mu_1|: the DNS relaxes onto the orbit with the leading multiplier. The values are regression values of this repository, from the run named under produced.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "3.11 (direct Floquet, forced orbit)",
+    "ranks": "40",
+    "k_dim": "100",
+    "compiler": "ifort 2021.9 on Jean Zay",
+    "date": "2026-10-10",
+    "wall_s": 1978
+  },
+  "quantities": {
+    "leading_multiplier": {
+      "source": "Spectre_Hd_conv.dat:col1:first",
+      "value": 0.9298793,
+      "tol_abs": 2e-06,
+      "note": "Real part of the converged multiplier (observed 0.9298793 on 8 and on 40 ranks)."
+    },
+    "leading_sigma": {
+      "source": "Spectre_NSd_conv.dat:col1:first",
+      "value": -0.01194469,
+      "tol_abs": 1e-06,
+      "note": "sigma = ln|mu| / T of the converged multiplier, in units of U/D."
+    },
+    "n_converged": {
+      "source": "floquet.dat:col4:first",
+      "value": 1,
+      "tol_abs": 0.5,
+      "note": "Number of converged multipliers in Spectre_Hd.dat."
+    },
+    "dns_relaxation": {
+      "source": "floquet.dat:col5:first",
+      "value": 0.92534214,
+      "tol_abs": 0.005,
+      "note": "Mean factor per period of the change of the forced DNS over its last five periods (stage 010); |mu_1| = 0.92988."
+    },
+    "orbit_period": {
+      "source": "floquet.dat:col6:first",
+      "value": 6.086427267194,
+      "tol_rel": 1e-09,
+      "note": "Time stamp of the orbit file BF_1cyl0.f00001, the length of the map: the period of the forcing, 1 / 0.1643. plot.py reads it from the orbit and writes it to floquet.dat."
+    }
+  }
+}

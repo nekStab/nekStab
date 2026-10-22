@@ -1,0 +1,114 @@
+! -----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+      call nekStab
+      end
+! -----------------------------------------------------------------------
+      subroutine nekStab_usrchk
+      include 'SIZE'
+      include 'TOTAL'
+
+      if (istep.eq.0) then !change defaults
+
+c       OTD (Optimally Time-Dependent modes): evolves lpert orthonormal
+c       perturbations alongside the DNS base flow, tracking instantaneous
+c       instability subspace.  Basis size = lpert (compile-time in SIZE).
+        nekstab_mode = 'otd'
+        call bcast(nekstab_mode,32*csize)
+
+c       Belt-and-suspenders: also set flag directly
+        ifotd = .true. ; call bcast(ifotd,lsize)
+
+c       No sponge. The base flow is steady and frozen, so nothing reflects at the
+c       outflow, and the OTD operator is then the operator of 310_stability_direct
+c       (also without sponge): the eigenvalues of the OTD reduced operator can be
+c       compared with its spectrum.
+        spng_st = 0.0d0; call bcast(spng_st, wdsize)
+
+c       OTD diagnostics and Gram-Schmidt cadence (defaults from main.f90)
+        otd_printStep = 100; call bcast(otd_printStep, isize)
+        otd_gsStep    = 10 ; call bcast(otd_gsStep,    isize)
+
+c       lpert in SIZE controls the OTD basis size (here 2: the leading complex
+c       pair). Set lpert=N and recompile for N OTD modes. See src/otd.f90:
+c       param(31)=lpert; npert=int(param(31))
+
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call nekStab_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+
+      end
+! -----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e, ijke
+
+      e = gllel(ieg)
+      if (JP.eq.0) then         ! velocity
+c        The OTD driver loads BF_1cyl0.f00001 into ubic, vbic and wbic before it
+c        calls setics. A uniform flow here replaces that base flow, and the
+c        perturbations then evolve about u = (1, 0) instead of the steady wake.
+         ux = ubic(ix,iy,iz,e)
+         uy = vbic(ix,iy,iz,e)
+         uz = wbic(ix,iy,iz,e)
+         temp = 0.0d0
+      else                      ! perturbation
+c        The OTD driver fills vxpic, vypic and vzpic (white noise or a restart)
+c        and calls setics. Zero fields here make the whole OTD basis zero:
+c        the Gram matrix is zero, the FTLE stay zero and the run reports
+c        convergence at once.
+         ijke = ix + lx1*((iy - 1) + ly1*((iz - 1) + lz1*(e - 1)))
+         ux = vxpic(ijke, jp)
+         uy = vypic(ijke, jp)
+         uz = vzpic(ijke, jp)
+         temp = 0.0d0
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+
+      call nekStab_define_obj
+
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat
+      end
+! -----------------------------------------------------------------------
+      subroutine usrdat3
+      end
+! -----------------------------------------------------------------------

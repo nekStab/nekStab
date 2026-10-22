@@ -1,0 +1,51 @@
+{
+  "case": "lid_driven_re3600/000_dns",
+  "summary": "DNS of the lid-driven cavity at Re = 3600 (aspect ratio 1.5, regularized lid) to t = 600. The flow relaxes to its steady state.",
+  "description": "DNS of the lid-driven cavity (aspect ratio 1.5, regularized lid, Re = 3600, lx1 = 12) from the lid profile to t = 600. Re = 3600 is below the first Hopf bifurcation, so the flow relaxes to the steady state with the rate of the leading eigenvalue, 0.0168: the change of the field between t = 500 and t = 600 is 2.4e-5 in the norm of u. The two norm checks use the steady value (the t = 600 value of the run) for the snapshots at t = 500 and t = 600, so a run that has not relaxed by t = 500 fails.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-09",
+    "ranks": "4",
+    "compiler": "ifort on Jean Zay",
+    "mode": "userParam01=0 (DNS)"
+  },
+  "quantities": {
+    "probe1_final": {
+      "source": "cav.his:col2:last",
+      "value": 0.008643553,
+      "tol_rel": 0.0002,
+      "note": "Probe at (0.25, 0.25), last row (t = 600)."
+    },
+    "probe2_final": {
+      "source": "cav.his:col3:last",
+      "value": 0.01263754,
+      "tol_rel": 0.0002
+    },
+    "probe3_final": {
+      "source": "cav.his:col4:last",
+      "value": 0.006049668,
+      "tol_rel": 0.0002
+    },
+    "vx_norm_t500": {
+      "source": "cav0.f00005:field:vx.norm",
+      "value": 17.85437,
+      "tol_rel": 0.0001,
+      "note": "Snapshot at t = 500; the reference value is the steady value (t = 600)."
+    },
+    "vx_norm_t600": {
+      "source": "cav0.f00006:field:vx.norm",
+      "value": 17.85437,
+      "tol_rel": 0.0001
+    },
+    "vx_min_t600": {
+      "source": "cav0.f00006:field:vx.min",
+      "value": -0.3325453,
+      "tol_rel": 0.001
+    },
+    "vy_max_t600": {
+      "source": "cav0.f00006:field:vy.max",
+      "value": 0.3116753,
+      "tol_rel": 0.001
+    }
+  }
+}

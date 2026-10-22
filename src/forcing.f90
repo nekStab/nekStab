@@ -1,0 +1,594 @@
+!-----------------------------------------------------------------------
+! forcing.f90 — Volume forcing and sponge zone routines
+!
+! Purpose:
+!   Provides volume forcing callbacks for Nek5000 (velocity and
+!   temperature), sponge zone initialization and evaluation, and
+!   the smooth step function for sponge profiles.
+!
+! Public interface:
+!   nekStab_forcing      — velocity forcing callback (SFD/TDF/sponge)
+!   nekStab_forcing_temp — temperature forcing callback
+!   activate_sponge      — initialize sponge zone
+!   spng_init            — set sponge parameters and reference fields
+!   spng_set             — compute sponge spatial function
+!   fringe_step          — smooth step function for fringe profiles
+!
+! Dependencies:
+!   nekstab_nek_bridge, krylov_subspace, nekstab_reynolds
+!-----------------------------------------------------------------------
+
+module nekstab_forcing_mod
+   use nekstab_nek_bridge, only: ifbuoyancy, buoyancy_qvol_wired, buoyancy_dir, &
+                                 thermal_buoyancy_coeff, lsize, wdsize, gllel, &
+                                 nx1, ny1, nz1, fcx, fcy, fcz, if3D, ifheat, ifadj, &
+                                 jp, t, tp, vx, vy, vz, vxp, vyp, vzp, spng_st, &
+                                 spng_fn, spng_vr, spng_vt, spng_wl, spng_wr, &
+                                 spng_dl, spng_dr, acc_spg, xLspg, yLspg, zLspg, &
+                                 xRspg, yRspg, zRspg, ifotd, otdfx, otdfy, otdfz, &
+                                 lx1, ly1, lz1, lelv, xm1, ym1, zm1, fct, nid, bm1s, &
+                                 ifto, ifpo, ldim, ndim, xmn, xmx, ymn, ymx, zmn, zmx, &
+                                 nfield, ifmvbd, nelv, bm1, ifaxis, lxd, lyd, lzd, &
+                                 rxm1, rym1, sxm1, sym1
+   use nekstab_reynolds, only: reynolds_add
+   implicit none
+   private
+   ! Mesh-velocity term of the perturbation equation, one column per velocity
+   ! component, and the work array of divws (see ale_mesh_velocity_term).
+   real, allocatable, save :: ale_term(:, :), ale_work(:)
+   ! Correction of the adjoint convection term in axisymmetric geometry, one
+   ! column per velocity component, and a work array (see axisymmetric_adjoint_term).
+   real, allocatable, save :: axi_term(:, :), axi_work(:, :)
+   public :: nekStab_forcing, nekStab_forcing_temp, &
+             nekStab_set_buoyancy, nekStab_qvol, &
+             activate_sponge, spng_init, spng_set, fringe_step
+contains
+
+!-----------------------------------------------------------------------
+! nekStab_set_buoyancy — Configure Boussinesq buoyancy forcing
+!
+! Purpose:
+!   Enables the shared Boussinesq coupling ff_i += coeff*dir_i*T
+!   and broadcasts the configuration to all MPI ranks.
+!-----------------------------------------------------------------------
+   subroutine nekStab_set_buoyancy(dx, dy, dz, coeff)
+      real, intent(in) :: dx, dy, dz, coeff
+
+      ifbuoyancy = .true.
+      buoyancy_qvol_wired = .false.
+      buoyancy_dir(1) = dx
+      buoyancy_dir(2) = dy
+      buoyancy_dir(3) = dz
+      thermal_buoyancy_coeff = coeff
+
+      call bcast(ifbuoyancy, lsize)
+      call bcast(buoyancy_qvol_wired, lsize)
+      call bcast(buoyancy_dir, 3*wdsize)
+      call bcast(thermal_buoyancy_coeff, wdsize)
+
+   end subroutine nekStab_set_buoyancy
+
+!-----------------------------------------------------------------------
+! nekStab_forcing — Velocity forcing callback
+!
+! Purpose:
+!   Adds nekStab volume forcing (SFD, TDF, sponge, OTD) at each
+!   grid point. Called by Nek5000 during the solve.
+!
+! Arguments:
+!   ffx, ffy, ffz [inout] -- force components, accumulated
+!   ix, iy, iz    [in]    -- local grid indices
+!   ieg            [in]    -- global element number
+!-----------------------------------------------------------------------
+   subroutine nekStab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
+      real, intent(inout) :: ffx, ffy, ffz
+      integer, intent(in) :: ix, iy, iz, ieg
+      integer :: iel, ip
+      real :: tloc
+
+      iel = gllel(ieg) ! local element number
+      ! compute the corresponding index in the pertubation arrays
+      ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
+
+      ! here we add other forcings (SFD, TDF, if any)
+      ffx = ffx + fcx(ix, iy, iz, iel)
+      ffy = ffy + fcy(ix, iy, iz, iel)
+      if (if3D) ffz = ffz + fcz(ix, iy, iz, iel)
+
+      if (ifbuoyancy .and. ifheat) then
+         if (jp == 0 .or. .not. ifadj) then
+            if (jp == 0) then
+               tloc = t(ix, iy, iz, iel, 1)
+            else
+               tloc = tp(ip, 1, jp)
+            end if
+            ffx = ffx + buoyancy_dir(1)*thermal_buoyancy_coeff*tloc
+            ffy = ffy + buoyancy_dir(2)*thermal_buoyancy_coeff*tloc
+            if (if3D) then
+               ffz = ffz + buoyancy_dir(3)*thermal_buoyancy_coeff*tloc
+            end if
+         end if
+      end if
+
+      if (spng_st /= 0) then
+
+         ! compute the corresponding index in the pertubation arrays
+         ! computed once above for buoyancy and sponge forcing
+         if (jp == 0) then ! dns
+            ffx = ffx + spng_fn(ip)*(spng_vr(ip, 1) - vx(ix, iy, iz, iel))*spng_st
+            ffy = ffy + spng_fn(ip)*(spng_vr(ip, 2) - vy(ix, iy, iz, iel))*spng_st
+            if (if3D) ffz = ffz + spng_fn(ip)*(spng_vr(ip, ndim) - vz(ix, iy, iz, iel))*spng_st
+         else ! perturbation
+            ffx = ffx - spng_fn(ip)*vxp(ip, jp)*spng_st
+            ffy = ffy - spng_fn(ip)*vyp(ip, jp)*spng_st
+            if (if3D) ffz = ffz - spng_fn(ip)*vzp(ip, jp)*spng_st
+
+         end if
+
+      end if
+
+      if (ifotd .and. jp /= 0) then
+         ip = ix + lx1*((iy - 1) + ly1*((iz - 1) + lz1*(iel - 1)))
+         ffx = ffx - otdfx(ip, jp)
+         ffy = ffy - otdfy(ip, jp)
+         if (if3D) ffz = ffz - otdfz(ip, jp)
+      end if
+
+      ! Mesh velocity of a moving mesh: Nek5000 adds B div(w u) to the base flow
+      ! only. The first grid point of a forcing evaluation computes it for the
+      ! whole perturbation field.
+      if (ifmvbd .and. jp /= 0) then
+         if (ix == 1 .and. iy == 1 .and. iz == 1 .and. iel == 1) call ale_mesh_velocity_term()
+         ffx = ffx + ale_term(ip, 1)
+         ffy = ffy + ale_term(ip, 2)
+         if (if3D) ffz = ffz + ale_term(ip, 3)
+      end if
+
+      ! Axisymmetric adjoint: the adjoint convection term of Nek5000 has no
+      ! radius in its integration weights. Same pattern as the mesh velocity
+      ! term above: the first grid point computes the correction for the
+      ! whole perturbation field.
+      if (ifadj .and. ifaxis .and. .not. if3D .and. jp /= 0) then
+         if (ix == 1 .and. iy == 1 .and. iz == 1 .and. iel == 1) call axisymmetric_adjoint_term()
+         ffx = ffx + axi_term(ip, 1)
+         ffy = ffy + axi_term(ip, 2)
+      end if
+
+      ! Frozen Reynolds-stress force: state-independent, so only on the
+      ! jp == 0 residual. It is present in every finite-difference
+      ! evaluation and cancels in the difference; an analytic
+      ! perturbation equation does not gain a constant source.
+      if (jp == 0) call reynolds_add(ffx, ffy, ffz, ix, iy, iz, iel)
+
+   end subroutine nekStab_forcing
+
+!-----------------------------------------------------------------------
+! ale_mesh_velocity_term — Mesh-velocity term of a perturbation on a moving mesh
+!
+! Purpose:
+!   On a moving mesh Nek5000 solves the base flow in the arbitrary
+!   Lagrangian-Eulerian form
+!      d(B u)/dt = B div(w u) - B (u.grad) u + ...
+!   with the mesh velocity w. The routine admeshv adds the term B div(w u).
+!   The perturbation solver of Nek5000 has the convection by the base flow
+!   and the mass matrices of the earlier steps, but not this term. Without
+!   it the linearized map is not the derivative of the nonlinear map: a
+!   Newton iteration on the periodic orbit of a moving cylinder stalls, and
+!   the Floquet multipliers are wrong. The mesh velocity does not depend on
+!   the flow, so the term of the perturbation u' is B div(w u').
+!
+!   divws returns B div(w u'_i). The forcing is multiplied by B again in
+!   makeufp, so this routine divides by B. nekStab_forcing adds the result
+!   to the forcing of the perturbation jp.
+!
+!   The routine runs at the first grid point of a forcing evaluation. There
+!   the perturbation, the mesh velocity and the metric terms have the values
+!   that admeshv uses for the base flow in the same step.
+!-----------------------------------------------------------------------
+   subroutine ale_mesh_velocity_term()
+      integer :: n
+
+      n = nx1*ny1*nz1*nelv
+      if (.not. allocated(ale_term)) then
+         allocate (ale_term(lx1*ly1*lz1*lelv, 3), ale_work(lx1*ly1*lz1*lelv))
+      end if
+      ale_term = 0.0d0
+
+      call divws(ale_term(1, 1), vxp(1, jp), ale_work, nelv, 1)
+      call divws(ale_term(1, 2), vyp(1, jp), ale_work, nelv, 2)
+      call invcol2(ale_term(1, 1), bm1, n)
+      call invcol2(ale_term(1, 2), bm1, n)
+      if (if3D) then
+         call divws(ale_term(1, 3), vzp(1, jp), ale_work, nelv, 3)
+         call invcol2(ale_term(1, 3), bm1, n)
+      end if
+
+   end subroutine ale_mesh_velocity_term
+
+!-----------------------------------------------------------------------
+! axisymmetric_adjoint_term — Radius weight of the adjoint convection term
+!
+! Purpose:
+!   The adjoint momentum equation has the term -(grad U)^T u*. Nek5000
+!   computes it in convop_adj on the dealiased mesh: it integrates the
+!   product against the basis functions with the weights of
+!   set_dealias_rx and divides by the mass matrix bm1. On an axisymmetric
+!   mesh bm1 contains the radius and those weights do not. The term is then
+!   too large by the factor 1/r. In the adjoint run of the forced jet
+!   (userParam01 = 3.21) the pressure residual of the solver grew by a
+!   factor of about 1.4 per time step after the first ten steps.
+!
+!   This routine computes the term again with the radius in the weights and
+!   returns the difference between the term of Nek5000 and the correct
+!   term. nekStab_forcing adds the difference to the forcing. makeufp
+!   multiplies the forcing by B, and advabp_adjoint subtracts B times the
+!   term of Nek5000. The sum is B times the correct term. A Nek5000 that has
+!   the radius in its weights gives a difference of zero.
+!
+!   At the forcing evaluation, vx and vy are the base flow and vxp and vyp
+!   the adjoint field of the previous step. These are the data that
+!   advabp_adjoint passes to convop_adj in the same step.
+!
+!   The routine runs at the first grid point of a forcing evaluation.
+!-----------------------------------------------------------------------
+   subroutine axisymmetric_adjoint_term()
+      integer, parameter :: ltd = lxd*lyd*lzd
+      integer :: e, i, j, l, n, nxyz
+      real :: zd(lxd), wd(lxd)
+      real :: fx(ltd), fy(ltd), ryd(ltd), metric(ltd, 4)
+      real :: ux(ltd), uy(ltd), urx(ltd), usx(ltd), utx(ltd)
+      real :: ury(ltd), usy(ltd), uty(ltd), uf4(ltd), uf5(ltd)
+
+      n = nx1*ny1*nz1*nelv
+      nxyz = nx1*ny1*nz1
+      if (.not. allocated(axi_term)) then
+         allocate (axi_term(lx1*ly1*lz1*lelv, 2), axi_work(lx1*ly1*lz1*lelv, 3))
+      end if
+      axi_term = 0.0d0
+      axi_work = 0.0d0
+
+      ! The term of Nek5000. Column 3 of axi_work takes the unused z component.
+      call convop_adj(axi_term(1, 1), axi_term(1, 2), axi_work(1, 3), vx, vy, vz, &
+                      vxp(1, jp), vyp(1, jp), vzp(1, jp))
+
+      ! The same term with the radius in the integration weights. The weights
+      ! are built here, not taken from set_dealias_rx, so that the result does
+      ! not depend on whether Nek5000 has the radius in them.
+      call zwgl(zd, wd, lxd)
+      do e = 1, nelv
+         call intp_rstd(metric(1, 1), rxm1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(metric(1, 2), rym1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(metric(1, 3), sxm1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(metric(1, 4), sym1(1, 1, 1, e), lx1, lxd, .false., 0)
+         call intp_rstd(ryd, ym1(1, 1, 1, e), lx1, lxd, .false., 0)
+         l = 0
+         do j = 1, lyd
+            do i = 1, lxd
+               l = l + 1
+               metric(l, :) = metric(l, :)*wd(i)*wd(j)*ryd(l)
+            end do
+         end do
+
+         ! Adjoint field and base flow on the fine mesh.
+         call intp_rstd(fx, vxp((e - 1)*nxyz + 1, jp), lx1, lxd, .false., 0)
+         call intp_rstd(fy, vyp((e - 1)*nxyz + 1, jp), lx1, lxd, .false., 0)
+         call intp_rstd(ux, vx(1, 1, 1, e), lx1, lxd, .false., 0)
+         call grad_rst(urx, usx, utx, ux, lxd, .false.)
+         call intp_rstd(uy, vy(1, 1, 1, e), lx1, lxd, .false., 0)
+         call grad_rst(ury, usy, uty, uy, lxd, .false.)
+
+         do l = 1, lxd*lyd
+            uf4(l) = fx(l)*(metric(l, 1)*urx(l) + metric(l, 3)*usx(l)) &
+                     + fy(l)*(metric(l, 1)*ury(l) + metric(l, 3)*usy(l))
+            uf5(l) = fx(l)*(metric(l, 2)*urx(l) + metric(l, 4)*usx(l)) &
+                     + fy(l)*(metric(l, 2)*ury(l) + metric(l, 4)*usy(l))
+         end do
+
+         ! Back to the coarse mesh.
+         call intp_rstd(axi_work((e - 1)*nxyz + 1, 1), uf4, lx1, lxd, .false., 1)
+         call intp_rstd(axi_work((e - 1)*nxyz + 1, 2), uf5, lx1, lxd, .false., 1)
+      end do
+      call invcol2(axi_work(1, 1), bm1, n)
+      call invcol2(axi_work(1, 2), bm1, n)
+
+      axi_term(1:n, 1) = axi_term(1:n, 1) - axi_work(1:n, 1)
+      axi_term(1:n, 2) = axi_term(1:n, 2) - axi_work(1:n, 2)
+
+   end subroutine axisymmetric_adjoint_term
+
+!-----------------------------------------------------------------------
+! nekStab_qvol — Temperature forcing callback for adjoint buoyancy
+!
+! Purpose:
+!   Adds the transpose of the Boussinesq momentum forcing to the
+!   adjoint temperature equation.
+!-----------------------------------------------------------------------
+   subroutine nekStab_qvol(qvol, ix, iy, iz, ieg)
+      real, intent(inout) :: qvol
+      integer, intent(in) :: ix, iy, iz, ieg
+      integer :: iel, ip
+      real :: vdot
+
+      if (ifbuoyancy .and. ifheat .and. ifadj .and. jp > 0) then
+         iel = gllel(ieg)
+         ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
+         vdot = buoyancy_dir(1)*vxp(ip, jp) + buoyancy_dir(2)*vyp(ip, jp)
+         if (if3D) vdot = vdot + buoyancy_dir(3)*vzp(ip, jp)
+         qvol = qvol + thermal_buoyancy_coeff*vdot
+         buoyancy_qvol_wired = .true.
+      end if
+
+   end subroutine nekStab_qvol
+
+!-----------------------------------------------------------------------
+! nekStab_forcing_temp — Temperature forcing callback
+!
+! Purpose:
+!   Adds nekStab temperature forcing (sponge) at each grid point.
+!
+! Arguments:
+!   temp           [inout] -- temperature force, accumulated
+!   ix, iy, iz     [in]    -- local grid indices
+!   ieg            [in]    -- global element number
+!   m              [in]    -- scalar field index
+!-----------------------------------------------------------------------
+   subroutine nekStab_forcing_temp(temp, ix, iy, iz, ieg, m)
+      real, intent(inout) :: temp
+      integer, intent(in) :: ix, iy, iz, ieg
+      integer, intent(in) :: m
+      integer :: iel, ip
+
+      ! local element number
+      iel = gllel(ieg)
+      ! compute the corresponding index in the pertubation arrays
+      ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
+      if (jp == 0) temp = temp + fct(ix, iy, iz, iel, m)
+
+      if (spng_st /= 0) then
+
+         ! compute the corresponding index in the pertubation arrays
+         ! computed once above for temperature sponge forcing
+         if (jp == 0) then ! dns ! t(1,1,1,1,ifield-1)
+            temp = temp + spng_fn(ip)*(spng_vt(ip, m) - t(ix, iy, iz, iel, m))*spng_st
+         else ! perturbation   ! tp(lpx1*lpy1*lpz1*lpelt,ldimt,lpert)
+            temp = temp - spng_fn(ip)*tp(ip, m, jp)*spng_st
+         end if
+
+      end if
+
+   end subroutine nekStab_forcing_temp
+
+!-----------------------------------------------------------------------
+! activate_sponge — Initialize sponge zone and mask mass matrix
+!
+! Purpose:
+!   Sets up the sponge zone function and zeros the mass matrix
+!   inside the sponge region so eigensolver ignores that region.
+!-----------------------------------------------------------------------
+   subroutine activate_sponge
+      use nekstab_krylov_subspace, only: nv
+      integer i
+      if (spng_st /= 0) then !sponge on
+
+         if (nid == 0) write (6, *)
+         if (nid == 0) write (6, *) ' Initializing sponge...'
+         if (nid == 0) write (6, *) ' Sponge strenght:', spng_st
+         if (spng_st < 0) then
+            spng_st = abs(spng_st)
+            if (nid == 0) write (6, *) ' Ensure positive sponge strenght:', spng_st
+         end if
+         call spng_init
+
+         !     applying sponge function to BM1 matrix to remove the sponge zone from eigensolver
+         do i = 1, nv
+            if (spng_fn(i) /= 0) bm1s(i, 1, 1, 1) = 0.0d0
+         end do
+
+         !  outposting BM1s to disk for check
+         !  ifto_sav = ifto; ifpo_sav = ifpo
+         !  ifvo=.false.; ifpo = .false.; ifto = .true.
+         !  call outpost(vx,vy,vz,pr,bm1s,'BMS')
+         !  ifvo=.true.; ifpo = ifpo_sav; ifto = ifto_sav
+
+         if (nid == 0) write (6, *) 'Sponge activated.'
+         if (nid == 0) write (6, *)
+      end if
+
+   end subroutine activate_sponge
+
+!-----------------------------------------------------------------------
+! spng_init — Compute sponge widths and save reference fields
+!-----------------------------------------------------------------------
+   subroutine spng_init
+      use nekstab_krylov_subspace, only: nv
+      integer :: m
+
+      acc_spg = abs(acc_spg)
+
+      spng_wl(1) = (1.0d0 - acc_spg)*xLspg ! Left flat/outer fringe width in x
+      spng_wl(2) = (1.0d0 - acc_spg)*yLspg
+      if (if3D) spng_wl(3) = (1.0d0 - acc_spg)*zLspg
+
+      spng_wr(1) = (1.0d0 - acc_spg)*xRspg ! Right flat/outer fringe width in x
+      spng_wr(2) = (1.0d0 - acc_spg)*yRspg
+      if (if3D) spng_wr(3) = (1.0d0 - acc_spg)*zRspg
+
+      spng_dl(1) = (acc_spg)*xLspg ! Left smooth-ramp fringe width in x
+      spng_dl(2) = (acc_spg)*yLspg
+      if (if3D) spng_dl(3) = (acc_spg)*zLspg
+
+      spng_dr(1) = (acc_spg)*xRspg ! Right smooth-ramp fringe width in x
+      spng_dr(2) = (acc_spg)*yRspg
+      if (if3D) spng_dr(3) = (acc_spg)*zRspg
+
+      if (nid == 0) then
+         write (6, *) '  Left  section width x y z:', spng_wl
+         write (6, *) '  Right section width x y z:', spng_wr
+         write (6, *) '  Left  drop/rise width x y z:', spng_dl
+         write (6, *) '  Right drop/rise width x y z:', spng_dr
+      end if
+
+      !     save reference field -> sponge value reference
+      call opcopy(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, NDIM), vx, vy, vz) !only DNS
+      !  Sponge reference for EVERY scalar field (temperature + passive scalars
+      !  such as RANS tke/tau).  Without this, spng_vt(:,m>1) stays 0 and the
+      !  sponge would damp those scalars toward 0 instead of the inflow/base value.
+      do m = 1, nfield - 1
+         call copy(spng_vt(1, m), t(1, 1, 1, 1, m), nv)
+      end do
+      call spng_set ! -> compute spng_fn
+
+   end subroutine spng_init
+
+!-----------------------------------------------------------------------
+! spng_set — compute the spatial fringe (sponge) mask spng_fn on the mesh
+!
+! Implementation based on the fringe-region mask described by
+! Nordstrom, Nordin & Henningson (1999) and Lundbladh et al. (1999).
+!-----------------------------------------------------------------------
+   subroutine spng_set
+      use nekstab_krylov_subspace, only: nv
+      integer :: idir
+      real :: bmin(ldim), bmax(ldim)
+      real :: xxmin, xxmax, xxmin_c, xxmax_c
+      logical :: ltmp, ltmp2
+      real lcoord(lx1*ly1*lz1*lelv)
+      common/SCRUZ/lcoord
+
+      call rzero(spng_fn, nv)
+
+      bmin(1) = xmn
+      bmax(1) = xmx
+      bmin(2) = ymn
+      bmax(2) = ymx
+      if (if3D) then
+         bmin(3) = zmn
+         bmax(3) = zmx
+      end if
+
+      do idir = 1, ndim
+         if (spng_wl(idir) > 0.0d0 .or. spng_wr(idir) > 0.0d0) then
+            if (spng_wl(idir) < spng_dl(idir) .or. spng_wr(idir) < spng_dr(idir)) then
+               if (nid == 0) write (6, *) 'Wrong sponge parameters!'
+            end if
+
+            xxmax = bmax(idir) - spng_wr(idir)
+            xxmin = bmin(idir) + spng_wl(idir)
+            xxmax_c = xxmax + spng_dr(idir)
+            xxmin_c = xxmin - spng_dl(idir)
+
+            if (xxmax <= xxmin) then
+               if (nid == 0) write (6, *) 'Sponge too wide'
+            else
+               call load_fringe_coordinate(idir, lcoord, nv)
+               call accumulate_fringe_dimension(idir, lcoord, nv, xxmin_c, xxmin, xxmax, xxmax_c)
+            end if
+         end if
+      end do
+
+      ! SPG diagnostic dump: write the mask as the scalar field with no
+      ! pressure. outpost2 takes nfldt before the 3-char name; the ifto/
+      ! ifpo toggle is the pinned SPG-outpost contract (sponge-spec sec 2).
+      ltmp = ifto; ltmp2 = ifpo
+      ifto = .true.; ifpo = .false.
+      call outpost2(spng_vr(1, 1), spng_vr(1, 2), spng_vr(1, ndim), spng_fn, spng_fn, 1, 'SPG')
+      ifto = ltmp; ifpo = ltmp2
+
+   contains
+
+      ! Coordinate selection for the Nordstrom, Nordin & Henningson (1999)
+      ! and Lundbladh et al. (1999) fringe-region mask pass.
+      subroutine load_fringe_coordinate(idir_in, coord, ncoord)
+         integer, intent(in) :: idir_in, ncoord
+         real, intent(out) :: coord(ncoord)
+
+         select case (idir_in)
+         case (1)
+            call copy(coord, xm1, ncoord)
+         case (2)
+            call copy(coord, ym1, ncoord)
+         case (3)
+            call copy(coord, zm1, ncoord)
+         end select
+
+      end subroutine load_fringe_coordinate
+
+      ! Max-accumulation pass for the Nordstrom, Nordin & Henningson (1999)
+      ! and Lundbladh et al. (1999) one-dimensional fringe ramps.
+      subroutine accumulate_fringe_dimension(idir_in, coord, ncoord, left_outer, left_inner, right_inner, right_outer)
+         integer, intent(in) :: idir_in, ncoord
+         real, intent(in) :: coord(ncoord)
+         real, intent(in) :: left_outer, left_inner, right_inner, right_outer
+         integer :: ipt
+         real :: lambda
+
+         do ipt = 1, ncoord
+            lambda = fringe_profile_value(coord(ipt), spng_wl(idir_in), spng_wr(idir_in), &
+                                          left_outer, left_inner, right_inner, right_outer)
+            spng_fn(ipt) = max(spng_fn(ipt), lambda)
+         end do
+
+      end subroutine accumulate_fringe_dimension
+
+      ! Pure one-dimensional ramp for the Nordstrom, Nordin & Henningson
+      ! (1999) and Lundbladh et al. (1999) fringe-region profile.
+      pure real function fringe_profile_value(r, left_width, right_width, left_outer, left_inner, right_inner, right_outer)
+         real, intent(in) :: r, left_outer, left_inner, right_inner, right_outer
+         real, intent(in) :: left_width, right_width
+
+         if (r <= left_outer) then
+            fringe_profile_value = 1.0d0
+         else if (r < left_inner) then
+            fringe_profile_value = fringe_step((left_inner - r)/left_width)
+         else if (r <= right_inner) then
+            fringe_profile_value = 0.0d0
+         else if (r < right_outer) then
+            fringe_profile_value = fringe_step((r - right_inner)/right_width)
+         else
+            fringe_profile_value = 1.0d0
+         end if
+
+      end function fringe_profile_value
+
+   end subroutine spng_set
+
+!-----------------------------------------------------------------------
+! fringe_step — smooth step ramp primitive for fringe-region profiles
+!
+! Implementation based on the Nordstrom, Nordin & Henningson (1999)
+! and Lundbladh et al. (1999) fringe-region smooth-step specification.
+!-----------------------------------------------------------------------
+   pure real function fringe_step(x)
+      real, intent(in) :: x
+
+      if (x <= 0.0010d0) then
+         fringe_step = 0.0d0
+      else if (x <= 0.9990d0) then
+         fringe_step = 1.0d0/(1.0d0 + exp(1.0d0/(x - 1.0d0) + 1.0d0/x))
+      else
+         fringe_step = 1.0d0
+      end if
+
+   end function fringe_step
+
+end module nekstab_forcing_mod
+
+subroutine nekStab_set_buoyancy(dx, dy, dz, coeff)
+   use nekstab_forcing_mod, &
+      only: mod_nekStab_set_buoyancy => nekStab_set_buoyancy
+   implicit none
+   real, intent(in) :: dx, dy, dz, coeff
+
+   call mod_nekStab_set_buoyancy(dx, dy, dz, coeff)
+
+end subroutine nekStab_set_buoyancy
+
+subroutine nekStab_qvol(qvol, ix, iy, iz, ieg)
+   use nekstab_forcing_mod, only: mod_nekStab_qvol => nekStab_qvol
+   implicit none
+   real, intent(inout) :: qvol
+   integer, intent(in) :: ix, iy, iz, ieg
+
+   call mod_nekStab_qvol(qvol, ix, iy, iz, ieg)
+
+end subroutine nekStab_qvol

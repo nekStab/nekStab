@@ -1,0 +1,60 @@
+{
+  "case": "cubic_cavity_re1950/630_modal_dmt",
+  "summary": "DMT filter bank on the limit cycle of the cubic cavity at Re = 1950: the filters return the spatial structure of the flow at the frequency of the cycle and its two harmonics, and the three harmonics rebuild the flow to 1.9 % of its fluctuation.",
+  "description": "The DNS starts from the on-orbit field of 000_dns_period and runs 15 periods of the cycle (T = 10.78909) with four second-order filters of mode 6.4: at the frequency of the cycle, at twice and three times that frequency, and at frequency 0 (the mean flow). Each filter returns the real and the imaginary part of the amplitude of the flow at its frequency, averaged over the last 4 periods. plot.py rebuilds the last field from the filters, the mean plus the real part of the amplitude of harmonic k times exp(i k omega t), and measures what is left in the norm of the fluctuation. The reference checks that remainder after one, two and three harmonics, the size of each amplitude against the mean flow, how well each filter has settled by the start of the averaging window, and the time of the last field. A wrong frequency, filter width or period changes the remainders. The values are those of the run named under produced.",
+  "produced": {
+    "ranks": "40",
+    "nekstab": "v2.0.0",
+    "nekstab_mode": "6.4 (DMT filter bank)",
+    "compiler": "ifort 2021.9 (Jean Zay)",
+    "date": "2026-10-11",
+    "wall_s": 1292
+  },
+  "quantities": {
+    "left_after_1_harmonic": {
+      "source": "bank_check.dat:col2:row2",
+      "value": 0.22741233,
+      "tol_rel": 0.02,
+      "note": "Norm of the fluctuation (u - mean) left after the fundamental is subtracted, over its norm before. The POD of stage 600 puts 94.27 % of the fluctuation energy in its first pair, which leaves sqrt(1 - 0.9427) = 0.239 of the norm; the two windows differ."
+    },
+    "left_after_2_harmonics": {
+      "source": "bank_check.dat:col2:row3",
+      "value": 0.059123431,
+      "tol_rel": 0.02
+    },
+    "left_after_3_harmonics": {
+      "source": "bank_check.dat:col2:row4",
+      "value": 0.019239505,
+      "tol_rel": 0.03,
+      "note": "Does not reach zero: the cycle is unstable to a slow mode (period 43.5) and the flow has harmonics above the third."
+    },
+    "fundamental_over_mean": {
+      "source": "bank_check.dat:col3:row2",
+      "value": 0.086923156,
+      "tol_rel": 0.01,
+      "note": "Norm of the amplitude of the filter at the frequency of the cycle (real and imaginary part together) over the norm of the mean flow."
+    },
+    "second_harmonic_over_mean": {
+      "source": "bank_check.dat:col3:row3",
+      "value": 0.021074569,
+      "tol_rel": 0.01
+    },
+    "third_harmonic_over_mean": {
+      "source": "bank_check.dat:col3:row4",
+      "value": 0.0056924913,
+      "tol_rel": 0.02
+    },
+    "settling_of_slowest_filter": {
+      "source": "bank_settle.dat:col2:min",
+      "value": 0.99335735,
+      "tol_abs": 0.01,
+      "note": "Amplitude of a filter at the start of the averaging window (11 periods) over its value at the end, smallest of the three. A filter that has not settled gives a ratio well below 1; the filters here change by less than 1 % over the last 4 periods."
+    },
+    "last_snapshot_time": {
+      "source": "cav0.f00001:field:time",
+      "value": 161.83635,
+      "tol_abs": 0.001,
+      "note": "15 periods of the cycle."
+    }
+  }
+}

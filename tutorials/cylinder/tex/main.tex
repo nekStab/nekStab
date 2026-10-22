@@ -1,0 +1,506 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb}           % load before newtxmath to avoid \Bbbk clash
+\usepackage{newtxmath,natbib}
+\usepackage{color}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{import}
+\usepackage{cleveref}
+\usepackage{nicefrac}
+\usepackage{verbatim}
+\usepackage{tcolorbox}
+\usepackage{soul}
+\usepackage{minted,nicefrac}
+\usepackage[fencedCode,hybrid,hashEnumerators]{markdown}
+\begin{document}
+
+\title{Tutorial on the flow past a circular cylinder using nekStab}
+\author{Ricardo A S Frantz}
+\date{March 2026}
+\maketitle
+\begin{markdown}
+
+# Preparing the computational environment
+
+## macOS
+To install [brew](https://brew.sh/), just paste the installation command in a new terminal shell.
+For changes to take effect, close and re-open your current shell.
+Then ensure you have the latest version of XCode Command Line Tools. \textbf{Do not download} the full 20 GB XCode from the App Store!
+```bash
+xcode-select --install
+```
+If you have problems with XCode follow [this steps](https://gist.github.com/Justintime50/2349ff5e62555aa097acbf519bbc27af) 
+update and install packages:
+```bash
+brew update && brew upgrade
+brew install mpich gfortran wget git cmake htop vim
+```
+if you have problems try:
+```bash
+brew cleanup
+brew doctor
+```
+or eventually replace the package \texttt{mpich} by \texttt{open-mpi}.
+To have python3 do:
+```bash
+python -m pip install -U pip
+python -m pip install -U matplotlib scipy
+```
+
+## Ubuntu (including Windows Subsystem for Linux)
+In Ubuntu, instead of using brew, update and install packages using apt:
+```bash
+sudo apt update && apt upgrade
+sudo apt -y install open-mpi libopenblas-dev cmake m4 htop vim build-essential
+sudo apt autoremove
+```
+Note that using \textit{mpich} in WSL does not seem to work.
+
+Also, to be able to use python to plot the scripts you need:
+```bash
+sudo apt install python3-scipy python3-matplotlib
+```
+you also should add to your \textit{.bashrc}:
+```bash
+export DISPLAY=:0
+```
+## Conda (experimental)
+Install Anaconda from \url{https://www.anaconda.com/}, then 
+create and activate a new environment:
+```bash
+conda create --name nek
+conda activate nek
+```
+Install packages using \textit{conda}:
+```bash
+conda install -c conda-forge gfortran openmpi 
+```
+or eventually replace the package \texttt{openmpi} by \texttt{mpich}.
+```bash
+conda remove openmpi
+conda install -c conda-forge mpich
+```
+You can later remove the environment:
+```bash
+conda deactivate
+conda remove --name nek --all
+conda env list
+```
+
+\newpage
+# Cloning the repositories from GitHub
+
+It is recommended you clone the repositories directly to your HOME folder.
+To make it faster we can copy only the latest revision.
+From a terminal window:
+```bash
+cd
+git clone --depth=1 https://github.com/nekStab/nekStab.git
+```
+
+```bash
+cd nekStab
+git clone --depth=1 https://github.com/nekStab/Nek5000.git
+```
+
+If you are not able to clone and have to manually download the compressed repositories, you might encounter permission issues that can be fixed with:
+```bash
+chmod +x myscript.sh
+```
+## Adding the sources
+
+To set up the environment, source the path script from the tutorial folder:
+```bash
+cd ~/nekStab/tutorials/cylinder
+source path.sh
+```
+This adds the nekStab and Nek5000 \texttt{bin/} directories to your \texttt{PATH}. You need to source it once per terminal session.
+% To ensure everything is working, execute the command: 
+% ```bash
+% nek
+% ```
+% If the sources are working correctly, the code should print:
+% ```bash
+% EXIT: Cannot open rea file!          1
+% an error occured: dying ...
+% ```
+\newpage
+# Compiling the case
+
+Navigate to the tutorial folder and compile the code:
+```bash
+cd ~/nekStab/tutorials/cylinder
+source path.sh
+mks 1cyl
+```
+On the first build the code will compile the 3rd party libraries and all nekStab modules. Subsequent builds only recompile changed files:
+```bash
+#############################################################
+#                  Compilation successful!                  #
+#############################################################
+```
+
+You are good to proceed to the next steps!
+
+## Troubleshooting
+
+If you receive the error \textbf{command not found: nekbmpi}, source the path script:
+```bash
+source path.sh
+```
+
+\end{markdown}
+
+
+
+
+\newpage
+\section{Using \textit{vim}}
+You can edit the file in the next session using either a graphical text editor (such as Sublime Text, gedit, Atom, or Visual Studio Code) or a command-line text editor like Vim. Vim is a powerful and versatile text editor available on most Unix-like systems. Here's a basic guide on how to edit a file, save, and exit:
+\begin{enumerate}
+    \item Open a file with Vim:
+    \begin{verbatim}
+    vim filename.txt
+    \end{verbatim}
+    Replace filename.txt with the name of the file you want to edit. If the file doesn't exist, Vim will create a new one.
+    \item Vim starts in "normal mode" by default. To enter "insert mode" and begin editing the file, press i. You can now edit the file like you would in any other text editor.
+    \item Once you've made your changes, press Esc to return to normal mode.
+    \item To save your changes, type :w and press Enter. This writes your changes to the file.
+    \item To exit Vim, type :q and press Enter. If you've made changes and want to save and exit in one command, type :wq instead.
+    \item If you want to exit Vim without saving your changes, type :q! and press Enter. This will discard any changes made since the last save.
+\end{enumerate}
+
+To summarize, the most common Vim commands are:
+\begin{itemize}
+    \item i $\rightarrow$ Enter insert mode
+    \item Esc $\rightarrow$ Return to normal mode
+    \item :w $\rightarrow$ Save changes
+    \item :q $\rightarrow$ Quit Vim
+    \item :wq $\rightarrow$ Save changes and quit Vim
+    \item :q! $\rightarrow$ Discard changes and quit Vim
+\end{itemize}
+
+\newpage
+\section{Introduction}
+
+The flow past a circular cylinder is a classic problem in fluid dynamics and has been the subject of numerous studies over the years. The dynamics of the flow past a circular cylinder is complex and can exhibit a variety of interesting phenomena, including vortex shedding, flow separation, and turbulence.
+
+When a fluid flows past a circular cylinder, it can either stay attached to the cylinder or separate from it, depending on the speed of the flow and the viscosity of the fluid. At low flow speeds, the fluid flows smoothly around the cylinder, and there is no separation. However, as the flow speed increases, the fluid begins to separate from the cylinder and form vortices on either side of the cylinder. These vortices are shed alternately from each side of the cylinder and produce a characteristic pattern of vortices in the wake of the cylinder.
+This phenomenon is known as vortex shedding and is a key feature of the flow past a circular cylinder.
+
+As the flow speed increases further, the vortex shedding becomes more complex, and multiple vortices are shed simultaneously. This leads to a series of bifurcations in the flow, where the flow undergoes sudden changes in behavior as the speed of the flow increases. These bifurcations can be seen as a series of transitions from laminar flow to periodic vortex shedding, and then to chaotic flow.
+
+\subsection{Primary instability}
+
+At low Reynolds numbers, the flow is two-dimensional, steady and symmetric with respect to the cross-stream direction. The most well-known bifurcation in the flow past a circular cylinder is the Hopf bifurcation, which occurs as the first bifurcation in the flow and is connected to the loss of temporal symmetry as the periodic vortex shedding becomes unstable initiating the process of transition to turbulence.
+
+The flow becomes unstable at a critical Reynolds number, $Re_{c,1} = UD/\nu \approx 46.6$. This bifurcation is marked by the emergence of periodic fluctuations in the cylinder's wake, which can be represented by a single frequency in Fourier space, characterized by a Strouhal number $St_c \simeq 0.116$. This primary instability serves as a classic example of a supercritical Hopf-type bifurcation. Numerous wake flows display instabilities leading to the onset of periodic vortex shedding, which results in their classification as \emph{flow oscillators}. In figure \ref{fig:marquet2} and figure \ref{fig:marquet3} one can observe the base flow and the evolution of the growth rate and frequency as a function of the Reynolds number.
+
+\begin{figure}\centering
+    \includegraphics[width=\textwidth]{marquet2008_fig2.png}
+    \caption{Cylinder base flow: spatial distribution of the vorticity for the Reynolds number $Re = 46.8$. The dash-dotted line is the dividing streamline delimiting the recirculation flow. Only a small portion of the computational domain is shown. Reproduced from \cite{marquet2008sensitivity}}
+    \label{fig:marquet2}
+\end{figure}
+
+\begin{figure}\centering
+    \includegraphics[width=\textwidth]{marquet2008_fig3.png}
+    \caption{Cylinder flow. (a) Growth rate $\lambda$ and (b) frequency $f_s = \omega/2\pi$ of the leading global mode as a function of the Reynolds number $Re$. The critical Reynolds number $Re_c$ is shown by the vertical dashed line. Reproduced from \cite{marquet2008sensitivity}}
+    \label{fig:marquet3}
+\end{figure}
+
+
+% \subsection{Secondary instability}
+% We now focus on the Floquet analysis of three-dimensional modes evolving in a two-dimensional time-periodic base flow formed in the wake of a circular cylinder.
+% This problem has been studied in detail by Barkley \& Henderson~\cite{jfm:barkley:1996} on the basis of a Fourier expansion in the spanwise direction, as is the gold standard for demonstrating a (secondary) pitchfork bifurcation.
+% In addition, this symmetry-breaking bifurcation~\cite{nayfeh2008applied} is characterized by a single real eigenvalue that becomes positive, corresponding to a single Floquet multiplier that leaves the unit cycle by $\mu=1$.
+% At this point, the flow experiences a steady bifurcation (synchronous with the underlying periodic orbit), thus not altering the temporal structure of the flow.
+% The frequency of the underlying limit cycle remains the same, but the spanwise invariance of the flow is broken, resulting in a three-dimensionalization of the flow.
+% Barkley \& Henderson~\cite{jfm:barkley:1996} report a secondary instability to what is called mode A occurring at $Re_{c,2} \simeq 188.5\pm 1$ with a critical wavenumber $\beta_c = 1.585$ in the spanwise direction, corresponding to a length of nearly four diameters in the spanwise direction.
+% Using a domain $(L_i,L_h,L_o)=-15D,\pm 22D,25D$, they report a limit cycle oscillating with $St=0.1954$ at $Re=190$, and a leading synchronous Floquet mode with $\mu= 1.034$. 
+% Later Giannetti, Camarri, and Luchini~\cite{giannetti2010structural}, employing a finite element code and a domain $(L_i,L_h,L_o)=-16.5D,\pm 11D,34.5D$, calculated $Re_{c,2} \simeq 189.77$ and some reference values at $Re=190$ for the limit cycle frequency $St=0.1971$ and $\mu=1.002$ for mode A. 
+% Recently, Giannetti, Camarri, and Citro~\cite{giannetti2019sensitivity}, using a spectral element code and a domain $(L_i,L_h,L_o)=-15D,\pm 15D,35D$, obtained $Re_{c,2} \simeq 189.71$ and reported a limit cycle with $St=0.1962$ at $Re=190$, as well as $\mu=1.009$ for mode A.
+
+% Barkley~\cite{barkley2005confined} mentions that accurate estimates of Floquet stability analyses can be obtained in smaller domains $(L_i,L_h,L_o)=-8D,\pm 8D,25D$.
+% Since \texttt{nekStab} relies on the spectral element solver \texttt{Nek5000}, which does not use a Fourier decomposition in the spanwise direction, a finite-span domain is specified. A limit cycle can be computed directly in the 3D domain, or due to the geometry of the flow computational time can be saved simply by setting the spanwise velocity component to zero or by extruding a 2D solution into a 3D mesh (\eg using the \texttt{pymech}~\cite{pymech} package).
+% In our case, using the Newton-Krylov method for stabilizing UPOs, we first perform a DNS at subcritical $Re=187$ and thus transients from the initial condition are convected out of the computational domain, obtaining a 2D subcritical periodic orbit in the 3D domain.
+% The orbit period is measured from the DNS and used as an initial guess for the Newton GMRES algorithm, together with a snapshot of the orbit.
+% In this way, we can gradually stabilize the UPOs at supercritical Reynolds numbers.
+% A Krylov subspace of dimension $m=64$ is used, both for base flow and Floquet stability calculations.
+% Due to the almost degenerate nature of the eigenvalues, a Krylov-Schur iteration is used for the convergence of at least 4 direct modes.
+% The evolution of Floquet multipliers \textit{moduli} is shown in \cref{fig:cyl_spec}, as well as the best linear fit for their evolution along the Reynolds number. 
+% The fully 3D leading unstable Floquet mode at $Re=190$ is shown in \cref{fig:cyl_spec:mode} and shows excellent qualitative agreement with the unstable mode presented in Barkley \& Henderson~\cite{jfm:barkley:1996} and also in Blackburn and Lopez~\cite{blackburn2005symmetry}.
+% Our estimate for the critical Reynolds number $Re_{c,2}=189$ using a domain with $\beta_c=1.585$ agrees very well with the range of values reported by Barkley \& Henderson~\cite{jfm:barkley:1996} as well as Giannetti, Camarri and Luchini~\cite{giannetti2010structural}, despite our necessity to fix a spanwise wavenumber that could not precisely match the critical one reported, as well as a different mesh strategy, domain size, and polynomial order.
+% Specifically, our $\mu=1.012$ at $Re=190$ differs by 2.15\% with $\mu=1.034$ by Barkley~\cite{barkley2005confined} and 1\% with $\mu=1.002$ by Giannetti, Camarri, and Luchini~\cite{giannetti2010structural}.
+
+
+\newpage
+\section{Governing equations and numerical setup}
+
+The dynamics of the flow are governed by the incompressible Navier-Stokes equations (NSE), in the form:
+\begin{align}
+\dfrac{\partial \mathbf{U}}{\partial t} + \nabla \cdot \left( \mathbf{U} \otimes \mathbf{U} \right) &= -\nabla P + \dfrac{1}{Re} \nabla^2 \mathbf{U},\\
+\nabla \cdot \mathbf{U}&=0.
+\end{align}
+where $\mathbf{U}=(U,V)^T$ is the velocity vector (with steamwise and cross-section velocity components) and P is the pressure field. The Reynolds number is defined as
+%
+\begin{equation}
+    Re = \dfrac{U_{in} D}{\nu},
+\end{equation}
+%
+where $U_{in}$ is the (constant) velocity at the inflow, $D$ the cylinder diameter, and $\nu$ the (constant) kinematic viscosity coefficient of the fluid.
+The NSE are completed with the following boundary conditions: $\mathbf{U} = (1, 0)$ at the inlet, an outflow boundary condition at the outlet, (Neumann) symmetric boundary conditions on the lateral boundaries and (Dirichlet) no-slip conditions $\mathbf{U} = 0$ on the solid wall around the cylinder.
+
+The NSE are solved using the incompressible flow solver Nek5000 which is based on the spectral element method (SEM).
+A non-staggered formulation has been used: the velocity field is discretized using $Nth$ degree Lagrange interpolants, defined on the Gauss-Lobatto-Legendre quadrature points, as basis and trial functions, while the pressure field is discretized using Lagrange interpolants of degree $N-2$ defined on the Gauss-Legendre quadrature points.
+Finally, time integration is performed using the BDF3/EXT3 scheme: integration of the viscous terms relies on backward differentiation (BDF3), while the convective terms are integrated explicitly using a third order accurate extrapolation (EXT3).
+   
+The domain is discretized by a two-dimensional mesh composed of 1996 spectral elements (66 in the flow direction and 32 in the cross-section). The cylinder has a diameter of $D=1$ and the inflow velocity is set to $U_{in}=1$, in a way that the Reynolds number reduces to the inverse of the kinematic viscosity coefficient.
+Note that here that the nondimensional frequency expressed by the Strouhal number $St=fD/U_{in}$ reduces to $St=f$.
+To limit the computational cost, we consider Lagrange interpolants of order $N=5$, which shows good convergence compared to $N=7$ which leads to a total of 71 856 grid points.
+We consider a third-order accurate temporal scheme and a time-step that satisfies $\mathrm{Co} \le 0.5$ for all simulations. In the code, the user does not need to specify a time step as it will be computed on the fly to match the target $\mathrm{Co}$ specified by the user.
+
+\newpage
+\subsection{Linear Stability Analysis}
+Examining the global stability of a system is crucial for detecting bifurcations and identifying stable or unstable eigenpairs (combinations of eigenvalues and eigenvectors) or modes, which are associated with the transition to turbulence.
+We will analyze small disturbances, denoted by $\mathbf{u}$, that occur in the vicinity of a solution (specifically, a steady solution) of the Navier-Stokes equations (NSE), represented by the vector $\mathbf{U}_b$. 
+This solution is calculated using a Newton method, which will be discussed in the following section.
+The linearized Navier-Stokes equations (LNSE) describe the behavior of these disturbances in relation to the base flow:
+\begin{align}
+\dfrac{\partial \mathbf{u}}{\partial t} + \left( \mathbf{u} \cdot \nabla \right) \mathbf{U}_b +\left( \mathbf{U}_b \cdot \nabla \right) \mathbf{u} &=
+-\nabla p + \dfrac{1}{Re} \nabla^2 \mathbf{u},\\
+\nabla \cdot \mathbf{u}&=0.
+\end{align}
+where the base flow vector $\mathbf{U}_b=(U_b,V_b)^T$ and the fluctuations vector are given by $\mathbf{u}=(u,v)^T$. 
+By projecting the LNSE onto a divergence-free vector space, we obtain a more concise form:
+\begin{equation*}
+    \dfrac{\partial \mathbf{u}}{\partial t}=\mathbf{A}\mathbf{u}.
+\end{equation*}
+
+In this equation, $\mathbf{A}$ represents the projection of the LNSE operator onto the divergence-free vector space. The long-term behavior of a small disturbance $\mathbf{u}$ is determined by the eigenspectrum of $\mathbf{A}$.
+
+%add the eigenvalue problem ! 
+
+However, computing the leading eigenvalues of $\mathbf{A}$ directly is challenging due to its large dimensions after discretization of the problem (even using SEM). In practice, we do not even attempt to construct $\mathbf{A}$. 
+Instead, we use a time-stepper method that calculates approximations for the leading eigenvalue pairs of the exponential propagator:
+\begin{equation*}
+    \mathbf{M}(\Delta t)=e^{\mathbf{A}\Delta t}.
+\end{equation*}
+in doing so we only need the action of $\mathbf{A}$ on a vector (matrix-vector product) which is equivalent to time-stepping the LNSE. The action of this propagator on an initial vector (that can be composed by random noise) is computed by marching the LNSE from $t = 0$ to $t = \Delta t$.
+Then, iterative eigenvalue solvers project the propagator $\mathbf{M}$ onto an orthonormal set of vectors that span a Krylov subspace of size $k$, resulting in a low-dimensional $k \times k$ Hessenberg matrix $\mathbf{H}$.
+
+Due to the smaller size of $\mathbf{H}$, its eigenvalues $\mu$ can be easily computed and are related to the eigenvalues of the LNSE operator $\mathbf{M}$ via the transformation
+\begin{equation*}
+    \lambda_k=\dfrac{\log(\mu_k)}{\tau}
+\end{equation*}
+where $\tau$ is the integration period (\textit{endTime}).
+The complex eigenvalues of $\mathbf{M}$ (approximated by the eigenvalues of $\mathbf{H}$) are $\lambda_k = \sigma_k + i\omega_k$, where the real part corresponds to the growth rate and the imaginary part to the angular frequency $\omega=2\pi f$.
+
+We obtain $\mathbf{H}$ with the Arnoldi iteration, which generates an orthonormal basis for the Krylov subspace and forms an upper Hessenberg matrix whose eigenvalues approximate those of the original matrix.
+
+% The unit disk form of the eigenspectrum $\mathbf{H}$ is related to the fact that the eigenvalues of the exponential propagator are complex exponentials. When computing the linear stability, the exponential propagator's eigenvalues are in the form $e^{\lambda \Delta t}$, where $\lambda$ is the eigenvalue of the original linear system. Therefore, the magnitude of the eigenvalues of the exponential propagator is $e^{\sigma \Delta t}$, where $\sigma$ is the real part of the original eigenvalue $\lambda$.
+
+\newpage
+\section{Computing the Base Flow (BF)}
+
+In this example we are going to compute the base flow (a vector field that is a solution to the NSE) at the Reynolds number $Re=100$. We will use a Newton-Krylov method. Details on the method are given in \cite{frantz2023krylov}. 
+To speed up computations, the base flow at $Re=40$ is provided in the folder and it should be used as an initial condition.
+
+\begin{markdown}
+Start by editing \texttt{1cyl.par}, and setting an initial condition (\textit{startFrom}), integration time (\textit{endTime}) and \textit{userParam} to Newton-Krylov mode:
+```bash
+startFrom = BFRe40_1cyl0.f00001
+endTime = 1.0
+userParam01 = 2
+```
+You can change (absolute) solver tolerances, to obtain more precise solutions:
+```bash
+[PRESSURE]
+residualTol = 1.0E-06
+[VELOCITY]
+residualTol = 1.0E-06
+```
+Here we consider the minimum value to reduce the computational cost, but you can choose between $10^{-6}$ and $10^{-11}$. nekStab will automatically set as target for the base flow computation the larger value between the two solvers.
+
+The Reynolds number is specified in the end of \texttt{1cyl.par}, note that it should be entered as a \textbf{negative value} for Nek5000 to consider the problem as non-dimensional:
+```bash
+[VELOCITY]
+viscosity = -100.0 # Reynolds number (given as negative value)
+```
+\hline
+\bigskip
+You can now execute the code with:
+```bash
+nekbmpi 1cyl 4
+```
+and follow the evolution of the output with:
+```bash
+tail -f logfile
+```
+Use ``Ctrl+c'' to exit.  
+
+To discover how many core your computer have just use:
+```bash
+htop
+```
+If you need to stop the code:
+```bash
+killall nek5000
+```
+
+Otherwise, as the code completes you can plot the residual evolution that is written to \textit{residu.dat}:
+```bash
+python3 plot_newton.py
+```
+\end{markdown}
+You will see the residual evolution (decay) as a function of the number of the linearized calls (see figure \ref{fig:residuu}). 
+Note that we can observe the quadratic decay characteristic of the Newton method.
+
+\begin{figure}\centering
+    \includegraphics[width=0.7\textwidth]{residu_newton.png}
+    \caption{Residual evolution for the computation of the base flow at $Re=100$ from the initial condition at $Re=40$ using the Newton-Krylov method.}
+    \label{fig:residuu}
+\end{figure}
+
+\newpage
+\section{Computing the (direct) eigenvalue problem}
+
+After calculating the base flow, which is automatically stored in the file \texttt{BF\_1cyl0.f00001}, one can proceed to compute the linear stability analysis to characterize the stability properties of the same.
+\begin{markdown}
+To achieve this, we need to modify \texttt{1cyl.par} once more, updating the initial condition (\textit{startFrom}) to the computed base flow, setting the integration time (\textit{endTime}), and configuring \textit{userParam} for the direct eigenproblem mode:
+```bash
+startFrom = BF_1cyl0.f00001
+endTime = 1.
+userParam01 = 3.1
+```
+\hline
+\bigskip
+As in the previous section, you can execute the code using the following command:
+```bash
+nekbmpi 1cyl 4
+```
+To monitor the progress of the output, use:
+```bash
+tail -f logfile
+```
+To exit, press ``Ctrl+c''.
+
+% Reading Spectre_NSd.dat
+% Mode:  1 0.1275481 0.7447225
+%       f= 0.11852626710675403
+
+Upon completion, you can plot both spectrum (shown in figure \ref{fig:spectra}):
+```bash
+python3 plot_spectra.py
+...
+Reading Spectre_NSd.dat
+Mode:  1
+ sigma= 0.1277300
+ omega= 0.7453432
+     f= 0.1186249
+```
+\end{markdown}
+\begin{figure}\centering
+    \includegraphics[width=0.49\textwidth]{Spectre_H.png}
+    \includegraphics[width=0.49\textwidth]{Spectre_NS.png}
+    \caption{Spectral analysis of the LNSE: (left) Eigenspectrum of the Hessenberg matrix and (right) Eigenspectrum of the LNSE or analogous to the exponential propagator $\mathbf{M}$.}
+    \label{fig:spectra}
+\end{figure}
+
+\newpage
+\section{Run a DNS}
+Now that you have computed a base flow and its eigenvalues, we can run a DNS from the base flow to verify if the same will be stable or unstable and check the frequency of the vortex shedding.
+
+\begin{markdown}
+To achieve this, we need to modify \texttt{1cyl.par} once more, updating the initial condition (\textit{startFrom}) to the computed base flow, setting the integration time (\textit{endTime}), and configuring \textit{userParam} for the direct eigenproblem mode:
+```bash
+startFrom = BF_1cyl0.f00001
+endTime = 500.
+userParam01 = 0
+```
+\hline
+\bigskip
+You can execute the code using the following command:
+```bash
+nekbmpi 1cyl 4
+```
+To monitor the progress of the output, use:
+```bash
+tail -f logfile
+```
+To exit, press ``Ctrl+c''.
+
+Upon completion, you can plot the spectrum:
+```bash
+python3 plot_fft.py
+```
+To have a clear peak in the spectrum one can increase the skip time \texttt{tskps}.
+\end{markdown}
+
+\newpage
+In the following figure \ref{fig:dns}, one can observe the vertical velocity signal from a probe located in the center axis at $(x,y)=(5,0)$ (note that at this position the mean of the vertical velocity is zero). We compute the Hilbert transform and extract the envelope of the signal, in blue, and observe the linear amplification region and the arrival of nonlinear saturation. Also, one can plot the phase space of the signal and observe that the dynamics settle in a periodic orbit.
+
+\begin{figure}\centering
+    \includegraphics[width=0.49\textwidth]{his1_fft.png}
+    \includegraphics[width=0.49\textwidth]{his1_log.png}\\
+    \includegraphics[width=0.49\textwidth]{his1_phase_space.png}    
+    \caption{(upper, left) Vertical velocity and FFT spectrum; (upper, right) Log plot and Hilbert transform of the signal (in blue); (bottom) Phase space plot of the velocity signal.} 
+    \label{fig:dns}
+\end{figure}
+
+Note that the linear stability predicted $f \simeq 0.119$ while the frequency found in the FFT spectrum peak is $St \simeq 0.166$. This discrepancy is explained by the nonlinear distortion of the baseflow that increases as we depart from the bifurcation point. This means that the two values should be very close just after bifurcation and the discrepancy should increase as we are far away from the bifurcation point.
+
+At $Re=100$ one can observe a discrepancy between the linear stability frequency ($f \simeq 0.119$) and the frequency found in the FFT (Fast Fourier Transform) spectrum peak ($St \simeq 0.166$). This discrepancy can be attributed to the increase in the nonlinear distortion which can be seen as the amplitude of the difference between the instantaneous flow and the base flow. 
+This becomes more pronounced as we move further from the bifurcation point.
+
+In a fluid dynamics context, the bifurcation point is the point where the flow transitions from one state to another, often due to a change in a control parameter such as the Reynolds number or flow speed. 
+As we move away from this point, the flow becomes increasingly nonlinear, which can result in differences between the predictions made by linear stability analysis and the actual behavior observed in experiments or numerical simulations. Just after the bifurcation point, the two values should be very close, indicating that the flow is close to the linear regime. However, as we move further from the bifurcation point, the discrepancy between the two values should increase, highlighting the increasing influence of nonlinear effects on the flow. This is explored in figure \ref{fig:bark}.
+
+\begin{figure}\centering
+    \includegraphics[width=\textwidth]{barkley_mean.png}
+    \caption{(a) Frequencies and (b) growth rates as a function of Reynolds number. In (a) the bold curve labelled $St$ is frequency from the vortex shedding obtained by DNS. All other results in (a) and (b) are from linear stability computation. Thin curves are for the base flow. Triangles are for the mean flow. Note that the discrepancy between the frequency predicted by linear stability analysis and the frequency from the DNS is more pronounced as the Reynolds number increase.
+    Note also that the linear stability analysis conducted on the mean flow (instead of the base flow) yields eigenvalues with zero growth rate, which is expected as the flow is saturated and nothing is growing or decaying. Vertical dashed lines indicate $Re_c$. Reproduced from \cite{barkley2006linear}.} 
+    \label{fig:bark}
+\end{figure}
+
+
+
+
+% Here is a numbered list that contains a nested list:
+
+% #. First, get these ingredients:
+
+%       * carrots
+%       * celery
+%       * lentils
+
+% #. Boil some water.
+
+% #. Dump everything in the pot and follow this algorithm:
+
+%         find wooden spoon
+%         uncover pot
+%         stir
+%         cover pot
+%         balance wooden spoon precariously on pot handle
+%         wait 10 minutes
+%         goto first step (or shut off burner when done)
+
+%     Do not bump wooden spoon or it will fall.
+
+% \setkeys{Gin}{width=.5\linewidth}
+% ![This is alt text to describe my image.](example-image.jpg "An example image provided by the \texttt{mwe} package.")
+
+\bibliographystyle{plainnat}
+\bibliography{bib}
+
+\clearpage
+\newpage
+\section*{Suggested exercises}
+\begin{itemize}
+\item Choose a different Reynolds number and repeat the base flow computation and stability analysis. Compare the growth rate and frequency with the results at $Re=100$.
+\item Conduct a Direct Numerical Simulation (DNS) and compare the frequency from the FFT with the linear stability prediction.
+\item Use ParaView to open the \texttt{.nek5000} files and visualize the base flow and eigenmodes. (Download the latest version from \url{https://www.paraview.org/download}; distribution packages may not support Nek5000 files.)
+\item Investigate how non-linear effects alter the flow dynamics as $Re$ increases. Compare the eigenvalue frequency with the vortex shedding frequency from DNS at several Reynolds numbers.
+\item Compare your findings with published results, e.g.\ the critical Reynolds number $Re_c \simeq 46.6$ and critical frequency $St_c \simeq 0.116$.
+\end{itemize}
+\end{document}

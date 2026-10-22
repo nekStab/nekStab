@@ -1,0 +1,39 @@
+{
+  "case": "moving_cylinder_re100/010_dns_forced",
+  "summary": "DNS of the Re = 100 cylinder in forced transverse oscillation (A = 1.08, f = 0.1643) from rest. The wake locks to the forcing: its period equals the forcing period and the field at the same phase of the forcing stops changing.",
+  "description": "The mesh moves with the cylinder (userParam05 = 1.08 diameters, userParam06 = 0.1643), without sponge and without filter, so that the flow can settle on a periodic orbit of the forcing period. The run writes one field per forcing period, all at phase 0. plot.py measures the period of v at the probe (5, 0) over the last 10 periods and the change between the last two fields in the near field (-2 < x < 10, |y| < 4). The expected period is the forcing period 1 / 0.1643 = 6.086427, not a value read back from a run. The near-field change falls by a factor 0.88 per period after period 12 (3e-1 at period 2, 4.7e-5 at period 30). The change over all nodes is larger (1.1e-3 at period 30) because the far wake, left by the start-up, leaves the domain slowly; it is not used. The amplitude of v at the probe is a regression value of this repository.",
+  "produced": {
+    "nekstab": "v2.0.0",
+    "date": "2026-10-10",
+    "ranks": "12",
+    "compiler": "ifx on nexus-dev",
+    "mode": "DNS (userParam01 = 0), 30 periods of the forcing",
+    "wall_s": 1051
+  },
+  "quantities": {
+    "probe_period": {
+      "source": "lockin.dat:col1:first",
+      "value": 6.0864273,
+      "tol_rel": 0.0001,
+      "note": "Mean spacing of the upward zero crossings of v at the probe over the last 10 periods equals the forcing period (observed 6.086385, 6.9e-6 relative)."
+    },
+    "last_change": {
+      "source": "lockin.dat:col3:first",
+      "value": 0.0,
+      "tol_abs": 0.0002,
+      "note": "Relative change of the velocity between the last two fields (both at phase 0) in the near field (observed 4.7e-5)."
+    },
+    "probe_amplitude": {
+      "source": "lockin.dat:col5:first",
+      "value": 0.72388805,
+      "tol_rel": 0.005,
+      "note": "Half the range of v at the probe over the last 5 periods (regression value)."
+    },
+    "n_fields": {
+      "source": "lockin.dat:col6:first",
+      "value": 30,
+      "tol_abs": 0.5,
+      "note": "One field per forcing period: the run reached 30 periods."
+    }
+  }
+}

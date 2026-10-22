@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Check that a Nek5000 field file is continuous between elements.
+
+Nek5000 stores each grid point on an element face once for every element
+that holds it. In a correct field all copies of a point have the same value.
+An eigenmode whose copies disagree is not a flow field: the linearized
+solver keeps the disagreement unchanged, so the mode has mu = 1 exactly.
+This happens most on many MPI ranks with few elements per rank.
+
+Usage:
+
+    c0check FIELD [FIELD ...]
+    c0check --coords BF_case0.f00001 dRecase0.f00002
+
+The tool reads the coordinates from the file itself or from --coords. It
+reports the largest jump between copies, relative to the field maximum. It
+sorts the shared points by the number of MPI ranks that hold them.
+Nek5000 writes the ranks one after the other in increasing element order.
+So a new rank starts where the element number falls. Two ranks whose
+elements continue in order count as one. Exit status 1 means that at least
+one file has jumps above the limit. A restart does not repair such a file:
+Nek5000 averages the copies when it reads a file. The average of a jump is
+not a mode.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import numpy.typing as npt
+
+HDR_BYTES = 132
+TEST_FLOAT = 6.54321
+
+FloatArray = npt.NDArray[np.float64]
+IntArray = npt.NDArray[np.int64]
+
+
+@dataclass
+class Field:
+    """Data of one field file, element by element."""
+
+    path: Path
+    wdsize: int
+    nxyz: int
+    ndim: int
+    elmap: IntArray
+    coords: FloatArray | None
+    """Shape (nel, ndim, nxyz), or None when the file has no mesh."""
+    comps: dict[str, FloatArray]
+    """Velocity components and scalars, each of shape (nel, nxyz)."""
+
+
+def read_field(path: Path) -> Field:
+    """Read a packed Nek5000 field file with one output file per step."""
+    raw = path.read_bytes()
+    parts = raw[:HDR_BYTES].decode("ascii", errors="replace").split()
+    if len(parts) < 12 or parts[0] != "#std":
+        raise ValueError(f"{path}: not a Nek5000 field file")
+    wdsize = int(parts[1])
+    nx, ny, nz = int(parts[2]), int(parts[3]), int(parts[4])
+    nel_file, nel_total = int(parts[5]), int(parts[6])
+    if nel_file != nel_total:
+        raise ValueError(
+            f"{path}: the field is split over several files, read each with its own map"
+        )
+    rdcode = parts[11]
+    tag = raw[HDR_BYTES : HDR_BYTES + 4]
+    order = next(
+        (o for o in "<>" if abs(np.frombuffer(tag, f"{o}f4")[0] - TEST_FLOAT) < 1e-5),
+        None,
+    )
+    if order is None:
+        raise ValueError(f"{path}: the test float is not {TEST_FLOAT}")
+    pos = HDR_BYTES + 4
+    elmap = np.frombuffer(raw, f"{order}i4", nel_file, pos).astype(np.int64)
+    pos += 4 * nel_file
+    nxyz = nx * ny * nz
+    ndim = 3 if nz > 1 else 2
+    real = f"{order}f{wdsize}"
+
+    def block(ncomp: int) -> FloatArray:
+        nonlocal pos
+        count = nel_file * ncomp * nxyz
+        data = np.frombuffer(raw, real, count, pos).astype(np.float64)
+        pos += count * wdsize
+        return data.reshape(nel_file, ncomp, nxyz)
+
+    coords = None
+    comps: dict[str, FloatArray] = {}
+    i = 0
+    while i < len(rdcode):
+        code = rdcode[i]
+        if code == "X":
+            coords = block(ndim)
+        elif code == "U":
+            vel = block(ndim)
+            for k, name in enumerate("uvw"[:ndim]):
+                comps[name] = vel[:, k, :]
+        elif code == "P":
+            block(1)
+        elif code == "T":
+            comps["T"] = block(1)[:, 0, :]
+        elif code == "S":
+            nscal = int(rdcode[i + 1 : i + 3])
+            for s in range(nscal):
+                comps[f"s{s + 1}"] = block(1)[:, 0, :]
+            i += 2
+        i += 1
+    return Field(path, wdsize, nxyz, ndim, elmap, coords, comps)
+
+
+def ranks_from_map(elmap: IntArray) -> IntArray:
+    """Return the MPI rank of each element in file order.
+
+    A new rank starts where the global element number falls.
+    """
+    return np.concatenate([[0], np.cumsum(np.diff(elmap) < 0)]).astype(np.int64)
+
+
+@dataclass
+class Report:
+    """Result of the continuity check of one file."""
+
+    nranks: int
+    max_rel_jump: float
+    rel_jump_by_comp: dict[str, float]
+    shared_by_nranks: dict[int, tuple[int, int]]
+    """Number of ranks: (shared points, points above the limit)."""
+    worst: list[tuple[float, float, float, float]]
+    """(x, y, z, relative jump) of the worst points."""
+
+
+def check(field: Field, coords: FloatArray, limit: float, nworst: int = 5) -> Report:
+    """Group the copies of each point by position and measure their spread."""
+    xyz = coords.transpose(0, 2, 1).reshape(-1, field.ndim)
+    scale = float(np.ptp(xyz, axis=0).max()) or 1.0
+    # A key of 1e-9 times the domain size separates distinct GLL points of any mesh.
+    key = np.round(xyz / scale * 1e9).astype(np.int64)
+    _, loc, ncopy = np.unique(key, axis=0, return_inverse=True, return_counts=True)
+    loc = loc.ravel()
+    nloc = ncopy.size
+    rank = np.repeat(ranks_from_map(field.elmap), field.nxyz)
+    pairs = np.unique(np.c_[loc, rank], axis=0)
+    nrank_at = np.bincount(pairs[:, 0], minlength=nloc)
+
+    jump = np.zeros(nloc)
+    rel_by_comp: dict[str, float] = {}
+    for name, values in field.comps.items():
+        v = values.ravel()
+        vmax = np.full(nloc, -np.inf)
+        vmin = np.full(nloc, np.inf)
+        np.maximum.at(vmax, loc, v)
+        np.minimum.at(vmin, loc, v)
+        size = float(np.abs(v).max()) or 1.0
+        rel = (vmax - vmin) / size
+        rel_by_comp[name] = float(rel.max())
+        jump = np.maximum(jump, rel)
+
+    shared = ncopy > 1
+    table: dict[int, tuple[int, int]] = {}
+    for k in np.unique(nrank_at[shared]):
+        sel = shared & (nrank_at == k)
+        table[int(k)] = (int(sel.sum()), int((sel & (jump > limit)).sum()))
+
+    first = np.zeros(nloc, np.int64)
+    first[loc[::-1]] = np.arange(loc.size)[::-1]
+    worst = []
+    for i in np.argsort(-jump)[:nworst]:
+        if jump[i] <= limit:
+            break
+        p = xyz[first[i]]
+        worst.append(
+            (
+                float(p[0]),
+                float(p[1]),
+                float(p[2]) if field.ndim == 3 else 0.0,
+                float(jump[i]),
+            )
+        )
+    return Report(int(rank.max()) + 1, float(jump.max()), rel_by_comp, table, worst)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Check each file and print one report per file."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("fields", nargs="+", type=Path, help="Nek5000 field files")
+    parser.add_argument(
+        "--coords", type=Path, help="file with the mesh, if the fields have none"
+    )
+    parser.add_argument(
+        "--limit",
+        type=float,
+        help="largest accepted jump relative to the field maximum (default 1e-10 for 64-bit files, 1e-5 for 32-bit)",
+    )
+    args = parser.parse_args(argv)
+
+    mesh = read_field(args.coords).coords if args.coords else None
+    broken = 0
+    for path in args.fields:
+        field = read_field(path)
+        coords = field.coords if field.coords is not None else mesh
+        if coords is None:
+            print(f"{path}: no coordinates in the file, give --coords")
+            return 2
+        limit = (
+            args.limit
+            if args.limit is not None
+            else (1e-10 if field.wdsize == 8 else 1e-5)
+        )
+        rep = check(field, coords, limit)
+        bad = sum(b for _, b in rep.shared_by_nranks.values())
+        status = "BROKEN" if bad else "ok"
+        broken += bool(bad)
+        comps = ", ".join(f"{k} {v:.1e}" for k, v in rep.rel_jump_by_comp.items())
+        print(
+            f"{path}: {status}  ranks {rep.nranks}  largest jump / field maximum: {comps}"
+        )
+        for k, (n, b) in sorted(rep.shared_by_nranks.items()):
+            print(f"    points shared by {k} rank(s): {n:8d}   above {limit:.0e}: {b}")
+        for x, y, z, j in rep.worst:
+            print(f"    x = {x:.4g}, y = {y:.4g}, z = {z:.4g}: jump {j:.2e}")
+    return 1 if broken else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

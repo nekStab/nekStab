@@ -1,0 +1,36 @@
+[GENERAL]
+# BF_cav0.f00001: on-orbit snapshot of ../000_dns_period (t = 1700) with the period
+# written into its time stamp by ../000_dns_period/stamp_period.py.
+startFrom = BF_cav0.f00001
+
+stopAt = endTime
+endTime = 10.78909  # one period T of the limit cycle (Floquet integrates over T)
+
+userParam01 = 3.11  # Direct Floquet stability around UPO
+userParam07 = 100   # k_dim; one matvec integrates one period (7500 steps, about 6 min on 16 ranks), so 192 would not fit in 24 h
+
+dt = 0
+variableDt = yes
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 10.78909  # write at each Floquet period
+writeDoublePrecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = no
+density = 1.0
+viscosity = -1950.0
