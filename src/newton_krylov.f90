@@ -521,7 +521,6 @@ contains
       ! pressure and temperature fields, far too large for the stack.
       type(krylov_vector), allocatable :: q_trial, f_trial
       integer :: trial, best_trial, alloc_stat
-      integer :: base_nsteps, trial_nsteps
       real :: alpha, trial_residual, best_residual, best_alpha
       real :: base_period, trial_period
       logical :: accepted, trial_finite
@@ -535,7 +534,6 @@ contains
       best_alpha = 0.0d0
       best_trial = -1
       base_period = q%time
-      base_nsteps = nsteps
       alpha = 1.0d0
 
       do trial = 0, max_backtracks
@@ -555,11 +553,11 @@ contains
          if (nid == 0) then
             if (isNewtonPO .or. isNewtonPO_T) then
                write (6, "('  BACKTRACK iter=',I3,' trial=',I2, &
-            &      ' alpha=',1PE12.4,' period=',1PE15.6,' nsteps=',I6, &
-            &      ' base_period=',1PE15.6,' base_nsteps=',I6, &
+            &      ' alpha=',1PE12.4,' period=',1PE15.6, &
+            &      ' base_period=',1PE15.6, &
             &      ' residual=',1PE15.6,' ref=',1PE15.6)") &
-                  newton_iter, trial, alpha, trial_period, trial_nsteps, &
-                  base_period, base_nsteps, trial_residual, armijo_reference
+                  newton_iter, trial, alpha, trial_period, &
+                  base_period, trial_residual, armijo_reference
             else
                write (6, "('  BACKTRACK iter=',I3,' trial=',I2, &
             &      ' alpha=',1PE12.4,' residual=',1PE15.6,' ref=',1PE15.6)") &
@@ -616,20 +614,16 @@ contains
          call k_copy(q_trial, q)
          call k_add2s2(q_trial, dq, -alpha_in) ! damps dq%time too (UPO period)
          trial_period = q_trial%time
-         trial_nsteps = nsteps
 
          if (isNewtonPO .or. isNewtonPO_T) then
             ! A non-finite or non-positive trial period must never reach Nek.
             if (.not. (is_finite(q_trial%time) .and. q_trial%time > 0.0d0)) then
                res_out = huge(res_out)
                finite_out = .false.
-               trial_nsteps = -1
                return
             end if
             param(10) = q_trial%time
-            call prepare_linearized_solver
-            trial_nsteps = nsteps
-            call ensure_trial_orbit_storage(nsteps)
+            call prepare_linearized_solver ! same step count, dt = trial period / count
          end if
 
          call nonlinear_forward_map(f_trial, q_trial)
@@ -641,27 +635,6 @@ contains
          finite_out = is_finite(res_out)
 
       end subroutine evaluate_trial
-
-      subroutine ensure_trial_orbit_storage(required_nsteps)
-         integer, intent(in) :: required_nsteps
-         integer :: allocated_nsteps
-
-         if (.not. ifstorebase) return
-         if (.not. (isNewtonPO .or. isNewtonPO_T)) return
-
-         allocated_nsteps = 0
-         if (allocated(uor)) allocated_nsteps = size(uor, 2)
-         if (allocated_nsteps >= required_nsteps) return
-
-         ! q_trial%time = q%time - alpha*dq%time is linear in alpha.
-         ! Depending on the sign of dq%time, a damped UPO trial can be longer
-         ! than the orbit arrays allocated for the iteration's original period,
-         ! so grow the storage before nonlinear_forward_map writes snapshots.
-         if (nid == 0) write (6, "('  BACKTRACK reallocating orbit storage from ',I6, &
-      &      ' to ',I6,' steps')") allocated_nsteps, required_nsteps
-         call allocate_orbit(required_nsteps)
-
-      end subroutine ensure_trial_orbit_storage
 
       subroutine accept_trial(res_in)
          real, intent(in) :: res_in

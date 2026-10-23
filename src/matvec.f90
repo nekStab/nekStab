@@ -150,6 +150,13 @@ contains
 !     Calculate actual CFL
          call compute_cfl(ctarg, vx, vy, vz, dt)
          if (nid == 0) write (6, *) 'Actual CFL:', ctarg
+!     The kept count fixes dt = T/N, so the CFL number follows the period.
+         if (nsteps_frozen > 0 .and. param(26) > 0.0d0 .and. ctarg > 1.5d0*param(26) &
+             .and. nid == 0) then
+            write (6, *) 'nekStab: WARNING: CFL number above 1.5 x targetCFL:', ctarg
+            write (6, *) '  Newton keeps the step count of its first iteration and the period grew.'
+            write (6, *) '  Restart Newton from the last nwt file to choose a new step count.'
+         end if
       end if
 
 !  Force constant time step
