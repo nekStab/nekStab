@@ -46,6 +46,8 @@ module nekstab_matvec
    logical, save :: matvec_init = .false.
    logical, save :: forward_linearized_map_init = .false.
    logical, save :: orbit_closure_done = .false.
+   ! Step count per period that Newton for periodic orbits keeps fixed; 0 = none.
+   integer, save, public :: nsteps_frozen = 0
 
    public :: prepare_linearized_solver, matvec, &
              forward_linearized_map, &
@@ -93,9 +95,17 @@ contains
             write (6, *) 'Recomputing dt and nsteps to match end time...'
          end if
 
+!     Newton for periodic orbits keeps the step count of its first iteration.
+!     WHY: the time-discrete orbit depends on dt. A count chosen again at each
+!     iteration depends on the path of the iterations: flip_flop_re62 ended at
+!     1212, 1216 and 1221 steps in three runs, the period moved by 4e-5 and the
+!     leading Floquet exponent by 3.3e-6 (tolerance of the 311 stage 1e-6).
+         if (nsteps_frozen > 0) then
+            dt = param(10)/nsteps_frozen
+            if (nid == 0) write (6, *) 'Using the step count kept by Newton:', nsteps_frozen
 !     Use par-file dt if set; otherwise compute from CFL
 !     param(12) < 0 means constant dt was set in the par file
-         if (abs(param(12)) > 0) then
+         else if (abs(param(12)) > 0) then
             dt = abs(param(12))
             if (nid == 0) write (6, *) 'Using dt from par file:', dt
          else
@@ -140,6 +150,13 @@ contains
 !     Calculate actual CFL
          call compute_cfl(ctarg, vx, vy, vz, dt)
          if (nid == 0) write (6, *) 'Actual CFL:', ctarg
+!     The kept count fixes dt = T/N, so the CFL number follows the period.
+         if (nsteps_frozen > 0 .and. param(26) > 0.0d0 .and. ctarg > 1.5d0*param(26) &
+             .and. nid == 0) then
+            write (6, *) 'nekStab: WARNING: CFL number above 1.5 x targetCFL:', ctarg
+            write (6, *) '  Newton keeps the step count of its first iteration and the period grew.'
+            write (6, *) '  Restart Newton from the last nwt file to choose a new step count.'
+         end if
       end if
 
 !  Force constant time step

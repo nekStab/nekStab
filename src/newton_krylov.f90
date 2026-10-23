@@ -27,11 +27,11 @@ module nekstab_newton
                                  NEKSTAB_UNIT_ARNOLDI_LOG, NEKSTAB_UNIT_GMRES_LOG, &
                                  NEKSTAB_UNIT_NEWTON_LOG, nid, nof, nsteps, param, pbase, &
                                  pr, restol, t, tbase, time, ubase, uparam, vbase, vx, vy, &
-                                 vz, wbase, wdsize, iffourierorbit
+                                 vz, wbase, wdsize, iffourierorbit, filterType
    use nekstab_fourier, only: fourier_orbit_write, fourier_orbit_init_streaming, &
                               fourier_orbit_finalize_streaming
    use nekstab_vectors, only: nopcopy
-   use nekstab_matvec, only: cache_newton_bvec, matvec, prepare_linearized_solver
+   use nekstab_matvec, only: cache_newton_bvec, matvec, nsteps_frozen, prepare_linearized_solver
    use nekstab_krylov_decomposition, only: arnoldi_factorization
    use nekstab_lapack, only: lstsq
    use nekstab_diagnostics, only: outpost_vort
@@ -242,6 +242,26 @@ contains
          call bcast(ifbase, lsize)
       end if
 
+      !  WHY: q_filter applies the explicit velocity filter only while ifbase = .true., and
+      !  the nonlinear map runs with the ifbase that the last matvec left. With a stored orbit
+      !  the first matvec clears ifbase, so Newton iterations 2+ solve the unfiltered equations;
+      !  without a stored orbit ifbase stays set and every iteration is filtered. flip_flop_re62
+      !  with filterWeight = 0.01 converged to two orbits, T = 8.815177 and 8.815528, each with
+      !  closure 8e-6 only under its own map. The Floquet stages run unfiltered. The relaxation
+      !  filter (filtering = hpfrt) is a forcing term, independent of ifbase: no warning for it.
+      if ((isNewtonPO .or. isNewtonPO_T) .and. filterType == 1 .and. param(103) > 0.0d0 &
+          .and. nid == 0) then
+         write (6, *) '****************************************************************'
+         write (6, *) 'nekStab: WARNING: filtering = explicit with Newton for a periodic'
+         write (6, *) '  orbit. The filter acts only while ifbase is set, and ifbase'
+         write (6, *) '  changes between Newton iterations. With ifstorebase = .true. the'
+         write (6, *) '  iterations after the first are unfiltered; with .false. all are'
+         write (6, *) '  filtered. The two settings converge to different orbits (other'
+         write (6, *) '  period), and a Floquet run must use the same filter setting.'
+         write (6, *) '  Use filtering = none for Newton and Floquet runs of an orbit.'
+         write (6, *) '****************************************************************'
+      end if
+
       nnewton = 0
       newton_open = .true.
       newton: do i = 1, maxiter_newton
@@ -262,6 +282,7 @@ contains
          end if
 
          call prepare_linearized_solver ! Compute nsteps and Nek parameters
+         if (i == 1 .and. (isNewtonPO .or. isNewtonPO_T)) nsteps_frozen = nsteps ! one count for all iterations
 
          if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
             call allocate_orbit(nsteps)
@@ -457,6 +478,7 @@ contains
          end if
       end if
 
+      nsteps_frozen = 0 ! later stages of the same run choose their own count
       call close_newton_log_units()
 
    end subroutine newton_krylov
@@ -499,7 +521,6 @@ contains
       ! pressure and temperature fields, far too large for the stack.
       type(krylov_vector), allocatable :: q_trial, f_trial
       integer :: trial, best_trial, alloc_stat
-      integer :: base_nsteps, trial_nsteps
       real :: alpha, trial_residual, best_residual, best_alpha
       real :: base_period, trial_period
       logical :: accepted, trial_finite
@@ -513,7 +534,6 @@ contains
       best_alpha = 0.0d0
       best_trial = -1
       base_period = q%time
-      base_nsteps = nsteps
       alpha = 1.0d0
 
       do trial = 0, max_backtracks
@@ -533,11 +553,11 @@ contains
          if (nid == 0) then
             if (isNewtonPO .or. isNewtonPO_T) then
                write (6, "('  BACKTRACK iter=',I3,' trial=',I2, &
-            &      ' alpha=',1PE12.4,' period=',1PE15.6,' nsteps=',I6, &
-            &      ' base_period=',1PE15.6,' base_nsteps=',I6, &
+            &      ' alpha=',1PE12.4,' period=',1PE15.6, &
+            &      ' base_period=',1PE15.6, &
             &      ' residual=',1PE15.6,' ref=',1PE15.6)") &
-                  newton_iter, trial, alpha, trial_period, trial_nsteps, &
-                  base_period, base_nsteps, trial_residual, armijo_reference
+                  newton_iter, trial, alpha, trial_period, &
+                  base_period, trial_residual, armijo_reference
             else
                write (6, "('  BACKTRACK iter=',I3,' trial=',I2, &
             &      ' alpha=',1PE12.4,' residual=',1PE15.6,' ref=',1PE15.6)") &
@@ -594,20 +614,16 @@ contains
          call k_copy(q_trial, q)
          call k_add2s2(q_trial, dq, -alpha_in) ! damps dq%time too (UPO period)
          trial_period = q_trial%time
-         trial_nsteps = nsteps
 
          if (isNewtonPO .or. isNewtonPO_T) then
             ! A non-finite or non-positive trial period must never reach Nek.
             if (.not. (is_finite(q_trial%time) .and. q_trial%time > 0.0d0)) then
                res_out = huge(res_out)
                finite_out = .false.
-               trial_nsteps = -1
                return
             end if
             param(10) = q_trial%time
-            call prepare_linearized_solver
-            trial_nsteps = nsteps
-            call ensure_trial_orbit_storage(nsteps)
+            call prepare_linearized_solver ! same step count, dt = trial period / count
          end if
 
          call nonlinear_forward_map(f_trial, q_trial)
@@ -619,27 +635,6 @@ contains
          finite_out = is_finite(res_out)
 
       end subroutine evaluate_trial
-
-      subroutine ensure_trial_orbit_storage(required_nsteps)
-         integer, intent(in) :: required_nsteps
-         integer :: allocated_nsteps
-
-         if (.not. ifstorebase) return
-         if (.not. (isNewtonPO .or. isNewtonPO_T)) return
-
-         allocated_nsteps = 0
-         if (allocated(uor)) allocated_nsteps = size(uor, 2)
-         if (allocated_nsteps >= required_nsteps) return
-
-         ! q_trial%time = q%time - alpha*dq%time is linear in alpha.
-         ! Depending on the sign of dq%time, a damped UPO trial can be longer
-         ! than the orbit arrays allocated for the iteration's original period,
-         ! so grow the storage before nonlinear_forward_map writes snapshots.
-         if (nid == 0) write (6, "('  BACKTRACK reallocating orbit storage from ',I6, &
-      &      ' to ',I6,' steps')") allocated_nsteps, required_nsteps
-         call allocate_orbit(required_nsteps)
-
-      end subroutine ensure_trial_orbit_storage
 
       subroutine accept_trial(res_in)
          real, intent(in) :: res_in

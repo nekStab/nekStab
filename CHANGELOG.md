@@ -56,6 +56,21 @@ description for the 2.0 series; entries here are the per-tag deltas.
   Before, the check of the `EXAMPLES.md` table could not fail in a full run.
 - `scripts/inspect_nek_field.py` keeps the field statistics read by pymech when its
   own header parser rejects the header; the word size and record code are then empty.
+- Newton for periodic orbits (modes 2.1 and 2.2) prints a warning when
+  `filtering = explicit` is set. The filter acts only while the base flow advances, so
+  the Newton iterations after the first are unfiltered with `ifstorebase = .true.` and
+  filtered with `.false.`. The two settings converge to different orbits: `flip_flop_re62`
+  gave the periods 8.815177 and 8.815528. The `flip_flop_re62` 210 stage no longer sets
+  the filter, so its Newton and Floquet stages use the same unfiltered equations.
+- Newton for periodic orbits keeps the time-step count of its first iteration. Before, it
+  chose the count again from the CFL number at each iteration, so the count depended on the
+  path of the iterations, and the time-discrete orbit with it: `flip_flop_re62` ended at 1212
+  to 1221 steps per period, the periods were 4e-5 apart and the leading Floquet exponent moved
+  by 4e-6, above the 1e-6 tolerance of stage 311. The runs with and without a stored orbit now
+  agree to 4.2e-6 in the period and 1.1e-7 in the exponent. A warning appears when the kept
+  count gives a CFL number above 1.5 times `targetCFL`. The `flip_flop_re62` references are
+  new (210, 311, 321, 411; T = 8.815129, sigma = 7.900166e-3), and the 210 reference checks the
+  step count (1199).
 
 ### Removed
 - Procedures with no caller: `norm_grad` (diagnostics), `k_dot_complex`

@@ -2,21 +2,21 @@
 
 ## Physics
 2D flow around two side-by-side cylinders at Re = 62. Floquet analysis of the
-periodic flip-flop orbit (T = 8.815172) to detect secondary instabilities. The
+periodic flip-flop orbit (T = 8.815129) to detect secondary instabilities. The
 Neimark-Sacker (flip-flop) bifurcation sits at Re_c,2 ≈ 61.17, so at Re = 62 the
 leading multiplier is just above the imaginary axis.
 
 ## nekStab Mode
 - `userParam01 = 3.11` — direct Floquet analysis
 - `userParam07 = 100` — Krylov subspace dimension
-- `endTime = 8.815172` — orbit period. The run takes the period from the time stamp of `BF_2cyl0.f00001`, which holds the same number,
+- `endTime = 8.815129` — orbit period. The run takes the period from the time stamp of `BF_2cyl0.f00001`, which holds the same number,
   and replaces `endTime` with it. The first version of this stage carried the starting value of the Newton iteration, 8.73356.
 - `maxmodes = 10` in `2cyl.usr` — the run writes ten converged modes
 - `viscosity = -62.0` — Re = 62
 
 ## Initial condition
 `startFrom = BF_2cyl0.f00001` — an orbit of `../210_baseflow_newton`, shipped here
-(T = 8.815172; the committed run of 210 gives T = 8.815177).
+(T = 8.815129, Newton at 1199 steps per period).
 
 ## Run
 ```bash
@@ -24,12 +24,15 @@ mks 2cyl
 sbatch --ntasks=16 --mem-per-cpu=2000 run.local.slurm
 ```
 
-## Result (2026-10-09, Jean Zay, `ifort`, 16 ranks)
+## Result (2026-10-23, Jean Zay, `ifort`, 40 ranks)
 - `Spectre_NSd_conv.dat` has ten rows, the ten leading converged multipliers (`maxmodes = 10`).
-- Leading multiplier: sigma = 0.007896230, omega = +/-0.1407652 (just above zero - consistent with
-  Re = 62 barely above the secondary bifurcation). The run of 2026-06-11 gave sigma = 0.007896231.
-- Rows 3 and 4 are real multipliers at sigma = 3.3e-6 and 6.5e-11, that is |mu| = 1 to within 3e-5.
-- Wall time = 1131 s
+- Leading multiplier: sigma = 0.007900166, omega = +/-0.1407729 (just above zero - consistent with
+  Re = 62 barely above the secondary bifurcation).
+  The orbit of Newton without a stored orbit gives sigma = 0.007900280, omega = +/-0.1407727.
+  The orbit converged at 1212 steps per period (reference until 2026-10-23) gave sigma = 0.007896231: the exponent depends on the
+  step count of the Newton run by more than the tolerance 1e-6.
+- Row 3 is a real multiplier at sigma = 4.4e-7, that is |mu| = 1 to within 4e-6.
+- Wall time = 536 s
 
 ## Reference (ref/)
 - `reference.json` — leading Floquet multiplier (σ, ω) from `Spectre_NSd.dat`
