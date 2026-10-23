@@ -31,7 +31,7 @@ module nekstab_newton
    use nekstab_fourier, only: fourier_orbit_write, fourier_orbit_init_streaming, &
                               fourier_orbit_finalize_streaming
    use nekstab_vectors, only: nopcopy
-   use nekstab_matvec, only: cache_newton_bvec, matvec, prepare_linearized_solver
+   use nekstab_matvec, only: cache_newton_bvec, matvec, nsteps_frozen, prepare_linearized_solver
    use nekstab_krylov_decomposition, only: arnoldi_factorization
    use nekstab_lapack, only: lstsq
    use nekstab_diagnostics, only: outpost_vort
@@ -282,6 +282,7 @@ contains
          end if
 
          call prepare_linearized_solver ! Compute nsteps and Nek parameters
+         if (i == 1 .and. (isNewtonPO .or. isNewtonPO_T)) nsteps_frozen = nsteps ! one count for all iterations
 
          if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
             call allocate_orbit(nsteps)
@@ -477,6 +478,7 @@ contains
          end if
       end if
 
+      nsteps_frozen = 0 ! later stages of the same run choose their own count
       call close_newton_log_units()
 
    end subroutine newton_krylov
