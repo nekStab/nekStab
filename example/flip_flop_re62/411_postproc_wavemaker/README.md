@@ -28,7 +28,7 @@ from the outflow. The header of `src/energy_budget.f90` has the derivation and t
 - 2D flow around two side-by-side cylinders, `viscosity = -62` (Re = 62), 5092 elements, `lx1 = 5`, `lxd = 7`, `lpmin = 8` (use 8 ranks or more).
 - `userParam01 = 4.11`, `maxmodes = 2` in `2cyl.usr`: the leading pair of Floquet modes, which has one growth rate.
 - `startFrom = BF_2cyl0.f00001`, the orbit of stage 210, shipped here and in 311 and 321.
-- The period is the time stamp of `BF_2cyl0.f00001`, T = 8.815172, the same period that the Floquet stages use.
+- The period is the time stamp of `BF_2cyl0.f00001`, T = 8.815129, the same period that the Floquet stages use.
   `endTime` of the `.par` file is replaced by it, and the run prints a warning when the two differ by more than 1e-6 relative.
   An earlier version of this stage carried T = 8.73356, the starting value of the Newton iteration of stage 210, which is 0.9 % short.
 - One pass over the orbit takes 1224 time steps of about 7.2e-3. The run makes two passes (`dRe`, `dIm`) for each of the two modes.
@@ -46,34 +46,33 @@ cp ../311_stability_direct_floquet/Spectre_NSd_conv.dat .     # only after a new
 
 The budget reads the direct modes and rows 1 and 2 of `Spectre_NSd_conv.dat` (σ, ω of each mode). The adjoint modes are only used by `plot.py`.
 
-## Result (workstation, 8 ranks, `ifx`)
+## Result (2026-10-23, Jean Zay, `ifort`, 40 ranks)
 
-Wall time 79.5 s. The Floquet exponent of stage 311 is σ = 7.89623e-3 (ω = 0.1407652).
+Wall time 34.6 s. The Floquet exponent of stage 311 is σ = 7.900166e-3 (ω = 0.1407729).
 
 | quantity | mode 1 | mode 2 |
 |---|---|---|
-| σ from the budget (line 14 of the file) | 7.9926e-3 (1.22 % above); 7.9279e-3 (0.40 % above) with the weak-form dissipation | 7.9926e-3 |
-| σ from the energy of the marched mode, ln(E(T)/E(0))/(2T) (line 16) | 7.8874e-3 (0.11 % below) | 7.8874e-3 |
-| production P̄ | 3.3564e-2 | 3.3564e-2 |
-| dissipation D̄ | 2.9306e-2; 2.9337e-2 in the weak form | 2.9306e-2 |
-| sponge damping S̄ | 2.436e-4 | 2.436e-4 |
-| energy Ē | 0.50234 | 0.50234 |
+| σ from the budget (line 14 of the file) | 7.9320e-3 (0.40 % above) | 7.9320e-3 |
+| σ from the energy of the marched mode, ln(E(T)/E(0))/(2T) (line 16) | 7.8914e-3 (0.11 % below) | 7.8914e-3 |
+| production P̄ | 3.3566e-2 | 3.3566e-2 |
+| dissipation D̄ (weak form) | 2.9338e-2 | 2.9338e-2 |
+| sponge damping S̄ | 2.437e-4 | 2.437e-4 |
+| energy Ē | 0.50233 | 0.50233 |
 
 The terms are in the normalisation of the code, where σ = (P̄ − D̄ − S̄)/Ē. Modes 1 and 2 are the two members of one conjugate pair.
 
-The same stage on Jean Zay (`ifort`, 8 ranks, with the modes of the 311 and 321 runs of that day, wall time 128 s) gives P̄ = 3.3563e-2, Ē = 0.50233,
-σ from the budget 7.9926e-3 and σ from the energy 7.8874e-3. The two compilers agree to 5e-5 in relative terms.
+On the earlier orbit (1212 steps per period) a workstation (`ifx`) and Jean Zay (`ifort`) agreed to 5e-5 in relative terms.
 
-- The table holds the run with the strong form of the dissipation, ν∫q·∇²q dV. The code now uses the weak form ν∫|∇q|² dV, with the
-  gradients taken in each element: the term by which the time stepper changes the energy. The weak form is 0.11 % larger, and the budget
-  then closes to 0.40 % instead of 1.22 % (run of 2026-10-22 on the orbit of the Fourier version of 210, σ = 7.896022e-3). σ is the
+- The code uses the weak form of the dissipation, ν∫|∇q|² dV, with the gradients taken in each element: the term by which the time
+  stepper changes the energy. The strong form ν∫q·∇²q dV is 0.11 % smaller, and with it the budget closed to 1.22 % instead of 0.40 %
+  (runs of 2026-10-22 on an earlier orbit, σ = 7.896022e-3). σ is the
   difference of two terms that are seven times larger than σ Ē, so an error of 0.11 % in one of them gives 0.8 % in σ.
 - The exponent from the energy of the marched mode involves no space derivative and is within 0.11 %, so the mode, the period and the
   stored orbit agree. The outflow is not the cause: the advective flux through the outflow faces is 1e-7, against S̄ = 2.4e-4.
-- With the weak form the closure error is first order in the time step: 0.40 %, 0.18 % and 0.07 % at dt, dt/2 and dt/4, which extrapolates
+- With the weak form the closure error is first order in the time step (earlier orbit): 0.40 %, 0.18 % and 0.07 % at dt, dt/2 and dt/4, which extrapolates
   to −0.05 %. With the base flow taken one step later, U(t + dt), the error changes sign (−0.16 % at dt), so it comes from the time
   pairing of base flow and perturbation in the time stepper.
-- Without the sponge term the budget gives 8.478e-3, 7.4 % above the Floquet exponent: the sponge damping shifts σ by 4.9e-4.
+- Without the sponge term the budget gave 8.478e-3 (earlier orbit), 7.4 % above the Floquet exponent: the sponge damping shifts σ by 4.9e-4.
 
 ## Reference
 

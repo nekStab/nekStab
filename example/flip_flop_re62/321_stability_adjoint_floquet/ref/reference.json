@@ -1,23 +1,23 @@
 {
   "case": "flip_flop_re62/321_stability_adjoint_floquet",
   "summary": "Adjoint Floquet analysis of the flip-flop orbit at Re = 62. The leading pair matches the direct analysis.",
-  "description": "Leading adjoint Floquet pair of the same orbit (period T = 8.815172), row 1 of Spectre_NSa.dat. It matches the direct pair of stage 311 (0.00789623 +/- 0.1407652): the adjoint exponent is 6.7e-6 lower. Jean Zay (ifort) and a workstation (ifx), both 16 ranks, agree to 1e-9; the tolerance is 1e-6.",
+  "description": "Leading adjoint Floquet pair of the same orbit (period T = 8.815129), row 1 of Spectre_NSa.dat. It matches the direct pair of stage 311 (0.007900166 +/- 0.1407729): the adjoint exponent is 6.7e-6 lower. The tolerance is 1e-6.",
   "produced": {
     "nekstab": "v2.0.0",
-    "date": "2026-10-09",
-    "ranks": "16",
+    "date": "2026-10-23",
+    "ranks": "40",
     "compiler": "ifort on Jean Zay",
     "nekstab_mode": "3.21 (adjoint Floquet)"
   },
   "quantities": {
     "adjoint_leading_sigma": {
       "source": "Spectre_NSa.dat:col1:first",
-      "value": 0.007889578,
+      "value": 0.007893515,
       "tol_abs": 1e-06
     },
     "adjoint_leading_omega": {
       "source": "Spectre_NSa.dat:col2:first",
-      "value": 0.140761,
+      "value": 0.1407687,
       "tol_abs": 1e-06
     }
   }
