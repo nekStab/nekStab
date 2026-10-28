@@ -37,7 +37,7 @@ The gate of this variant is 1e-6, so the field still carries the slowly decaying
 `ref/reference.json` checks six quantities. The last residual of `residu.dat` must lie below the gate (tolerance equal to the gate, so a
 run that stops at `endTime` fails). The time of the last row must be within 5 % of 466.34. The four statistics of `BF_1cyl0.f00001`
 must be within 1e-2 of the Newton values above. `python3 ../../../../scripts/check_against_ref.py .` runs the check; the figures of the
-run are `plot_ic.png` (the seed), `plot_bf.png` (the converged field), `plot_residual.png`, `plot_residual_vs_walltime.png`.
+run are `plot_ic.png` (the seed), `plot_bf.png` (the converged field), `plot_residual.png`.
 
 ## Run
 
