@@ -29,7 +29,7 @@ the frequency of the steady flow is 30 % below. The ratio of the mean-flow frequ
 published values. The published values come from another mesh and discretisation (47 000 triangles). The mean-flow values differ from them by
 0.2e-3 in σ and 0.3 % in ω, the steady-flow values by 0.7 % in σ and in ω.
 
-The leading mode (figure, b and c) is a wave along the wake. The zero crossings of v on the axis are 2.6 diameters apart downstream of x = 6, a
+The leading mode about the mean flow (figure, a) is a wave along the wake. The zero crossings of v on the axis are 2.6 diameters apart downstream of x = 6, a
 wavelength of 5.2, and the largest v on the axis is at x = 2.7.
 
 ## Reference
@@ -39,9 +39,9 @@ mean-flow values (σ within 2e-3 of 0.0020, ω within 1 % of 1.0322). It checks 
 and that the residual of the leading pair is below 1e-5. A run about the steady flow (σ = 0.1248, ω = 0.7337) fails five of the six checks.
 `python3 ../../../scripts/check_against_ref.py .` runs the check.
 
-`plot.py` writes `plot_meanflow_stability.png`: (a) the leading eigenvalue of the mean flow and of the steady flow with the DNS frequency as a
-horizontal line, (b) and (c) the real part of the leading mode, u and v. It reads the steady-flow spectrum of `../310_stability_direct/direct` and the DNS period of
-`../140_baseflow_meanflow` when they are present. `ref/meanflow_stability.png` is the figure of the run named in `ref/reference.json`.
+`plot.py` writes `plot_meanflow_stability.png`: the transverse velocity v of the real part of the leading direct mode, (a) about the mean flow of this stage and
+(b) about the steady flow of `../310_stability_direct/direct`. Both panels have the same window, the same colour scale and the same normalisation (maximum of |v| equal to 1, positive sign there). The subtitles give σ and f = ω/2π of the leading pair
+(mean flow 0.0022 and 0.1638, steady flow 0.1248 and 0.1168). `ref/meanflow_stability.png` is the figure of the run named in `ref/reference.json`.
 `plot_bf.png` (`ref/bf.png`) is the velocity magnitude of the mean flow, drawn the way stage 310 draws its steady base flow.
 `plot_spectrum.png` (`ref/spectrum.png`) is the full Ritz spectrum of this stage as sigma against f, with the steady-flow spectrum of stage 310 in gray. Converged values are stars and the legend gives σ and f of the leading one.
 
