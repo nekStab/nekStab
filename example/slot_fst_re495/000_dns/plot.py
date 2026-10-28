@@ -131,7 +131,8 @@ def main():
                 psd = np.abs(np.fft.rfft(vy_s - vy_s.mean()))**2 / n
 
             fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.5))
-            ax.semilogy(freqs, psd, lw=0.7, color='C0')
+            # Linear axis: a log axis shows mostly the leakage floor.
+            ax.plot(freqs, psd, lw=0.7, color='C0', marker='o', ms=2)
             valid = (freqs > 0.01) & (freqs < 0.5)
             if valid.any():
                 i_peak = int(np.argmax(psd[valid]))
