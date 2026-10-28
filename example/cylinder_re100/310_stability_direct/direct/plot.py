@@ -4,7 +4,7 @@
 Panel sequence (canonical stability lane with twin leading-mode components):
   plot_bf.png               - converged base flow (velocity magnitude)
   plot_spectrum_circle.png  - Hessenberg eigenvalues on the unit circle
-  plot_spectrum_ns_log.png  - Navier-Stokes spectrum, signed-log growth rate
+  plot_spectrum_ns_log.png  - Navier-Stokes spectrum, growth rate sigma against frequency f
   plot_mode_vx.png          - leading eigenmode, streamwise component (v_x)
   plot_mode_vy.png          - leading eigenmode, transverse component (v_y)
 
@@ -75,30 +75,28 @@ def main():
         print(f'Saved {CASE_DIR / "plot_spectrum_circle.png"}')
         plt.close(fig)
 
-    # PANEL 3 — Navier-Stokes spectrum, signed-log growth rate
+    # PANEL 3 — Navier-Stokes spectrum, growth rate against frequency
     spec_ns = CASE_DIR / 'Spectre_NSd.dat'
     if spec_ns.exists():
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        # Load + plot manually so we can apply the signed-log transform on the growth axis.
+        # Load + plot manually so we can convert omega to f on the frequency axis.
         data = np.genfromtxt(str(spec_ns))
         if data.ndim == 1:
             data = data.reshape(1, -1)
-        # Columns: typically sigma (growth), omega/f (frequency), residual; check headers
+        # Columns: sigma (growth), omega (angular frequency, in U/D), residual; check headers
         if data.shape[1] >= 3:
             sig = data[:, 0]
-            freq = data[:, 1]
+            freq = data[:, 1] / (2 * np.pi)
             res = data[:, 2]
             converged = res < 1e-5
-            # signed log on growth rate
-            sig_slog = np.sign(sig) * np.log10(1.0 + np.abs(sig))
-            ax.scatter(sig_slog[~converged], freq[~converged], s=8,
-                       c='lightgray', edgecolors='none', label='unconverged')
-            ax.scatter(sig_slog[converged], freq[converged], s=14,
-                       c='C3', edgecolors='k', linewidths=0.4, label='converged')
-            ax.axvline(0, color='k', lw=0.6, ls='--')
-            ax.set_xlabel(r'$\mathrm{sgn}(\sigma)\,\log_{10}(1+|\sigma|)$')
-            ax.set_ylabel(r'$f$')
-            ax.set_title(r'NS spectrum (signed-log growth)', fontsize=8)
+            ax.plot(freq[~converged], sig[~converged], ls='none', marker='o', ms=3,
+                    color='lightgray', label='unconverged')
+            ax.plot(freq[converged], sig[converged], ls='none', marker='o', ms=5,
+                    color='C3', mec='k', mew=0.4, label='converged')
+            ax.axhline(0, color='k', lw=0.6, ls='--')
+            ax.set_xlabel(r'$f = \omega/2\pi$')
+            ax.set_ylabel(r'$\sigma$')
+            ax.set_title(r'NS spectrum', fontsize=8)
             ax.legend(fontsize=7, loc='best')
             ax.grid(True, ls=':', lw=0.3, alpha=0.5)
             ax.spines['right'].set_visible(False)
