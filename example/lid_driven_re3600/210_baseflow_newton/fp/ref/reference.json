@@ -1,10 +1,10 @@
 {
   "case": "lid_driven_re3600/210_baseflow_newton/fp",
-  "summary": "Steady base flow of the lid-driven cavity at Re = 3600 by Newton-GMRES from the DNS state.",
-  "description": "Steady base flow of the lid-driven cavity by Newton-GMRES from the t = 600 DNS state of 000_dns (lx1 = 12). The first residual is 4.4e-9: at this order the DNS state, computed with the explicit filter, is a fixed point of the unfiltered map to that level, and Newton ends in two iterations at the tolerance 1e-9. At lx1 = 6 the first residual was 3.5e-5 and Newton went to a second, unstable steady state.",
+  "summary": "Steady base flow of the lid-driven cavity at Re = 3600 by Newton-GMRES from the t = 100 DNS state.",
+  "description": "Steady base flow of the lid-driven cavity by Newton-GMRES from the t = 100 DNS state of 000_dns (lx1 = 12). The seed is a fixed point to 4.3e-7 (squared L2 norm of the residual), and Newton needs 10 iterations and 117 Krylov vectors to reach the tolerance 1e-12. The tolerance applies to the squared norm, and the slowest mode decays at rate 0.0168 over the unit Newton time, so the field error is about sqrt(tol)/0.0167. At the tolerance 1e-9 the field stays 3e-3 from the steady state; at 1e-12 the seeds t = 100 and t = 600 give the same field to 8e-5.",
   "produced": {
     "nekstab": "v2.0.0",
-    "date": "2026-10-09",
+    "date": "2026-10-28",
     "ranks": "4",
     "compiler": "ifort on Jean Zay",
     "mode": "userParam01=2 (Newton-GMRES fixed point)"
@@ -13,38 +13,38 @@
     "newton_final_residual": {
       "source": "residu_newton.dat:col7:last",
       "value": 0.0,
-      "tol_abs": 1e-09,
-      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8, 1e-9)."
+      "tol_abs": 1e-12,
+      "note": "Final Newton residual (column 7) must not exceed the Newton tolerance (column 8, 1e-12)."
     },
     "newton_first_residual": {
       "source": "residu_newton.dat:col7:row1",
-      "value": 4.371367e-09,
+      "value": 4.347926e-07,
       "tol_rel": 0.1,
-      "note": "Residual of the DNS seed; it measures how well the DNS state is a fixed point of the unfiltered map."
+      "note": "Residual of the t = 100 DNS seed."
     },
     "bf_vx_min": {
       "source": "BF_cav0.f00001:field:vx.min",
-      "value": -0.3323821,
+      "value": -0.3323461,
       "tol_rel": 0.0001
     },
     "bf_vx_norm": {
       "source": "BF_cav0.f00001:field:vx.norm",
-      "value": 17.85441,
+      "value": 17.85344,
       "tol_rel": 0.0001
     },
     "bf_vy_min": {
       "source": "BF_cav0.f00001:field:vy.min",
-      "value": -0.4627067,
+      "value": -0.4627009,
       "tol_rel": 0.0001
     },
     "bf_vy_max": {
       "source": "BF_cav0.f00001:field:vy.max",
-      "value": 0.3116753,
+      "value": 0.3116776,
       "tol_rel": 0.0001
     },
     "bf_vy_norm": {
       "source": "BF_cav0.f00001:field:vy.norm",
-      "value": 13.74875,
+      "value": 13.74771,
       "tol_rel": 0.0001
     }
   }

@@ -40,8 +40,9 @@ python3 plot.py
 ## Workflow
 1. `000_dns`: DNS from the lid profile to t = 600 (steady flow), snapshots `cav0.f00001` to
    `cav0.f00006`.
-2. `210_baseflow_newton/fp`: copy `cav0.f00006` of step 1 to `BF_cav0.f00001`; Newton-GMRES
-   converges in two iterations and writes the base flow `BF_cav0.f00001`.
+2. `210_baseflow_newton/fp`: copy `cav0.f00001` (t = 100) of step 1 to `BF_cav0.f00001`;
+   Newton-GMRES converges in 10 iterations to the tolerance 1e-12 and writes the base flow
+   `BF_cav0.f00001`.
 3. `310_stability_direct` and `320_stability_adjoint`: copy the `BF_cav0.f00001` of step 2.
 
 ## Resolution

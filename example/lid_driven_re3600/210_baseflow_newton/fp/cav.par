@@ -1,5 +1,5 @@
 [GENERAL]
-# TEMPLATE: seed field — SFD output or coarse DNS snapshot
+# seed: cav0.f00001 (t = 100) of ../../000_dns, copied to BF_cav0.f00001
 startFrom = BF_cav0.f00001
 
 stopAt = endTime
@@ -21,7 +21,7 @@ targetCFL = 0.5
 
 writeControl = runTime
 writeInterval = 10.0
-writeDoublePrecision = no
+writeDoublePrecision = yes
 
 dealiasing = yes
 filtering = explicit
@@ -30,12 +30,12 @@ filterCutoffRatio = 0.84
 
 [PRESSURE]
 preconditioner = semg_xxt
-residualTol = 1.0E-9
+residualTol = 1.0E-12
 residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-9
+residualTol = 1.0E-12
 residualProj = no
 density = 1.0
 viscosity = -3600.0   # Re=3600
