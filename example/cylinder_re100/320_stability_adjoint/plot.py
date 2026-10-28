@@ -115,10 +115,7 @@ def main():
             ax.axhline(0, color='k', lw=0.6, ls='--')
             ax.set_xlabel(r'$f = \omega/2\pi$')
             ax.set_ylabel(r'$\sigma$')
-            ax.legend(fontsize=7, loc='best')
-            ylim = ax.get_ylim()
-            ax.axhspan(min(ylim[0], -0.2), 0, facecolor='gray', alpha=0.3, zorder=-1)
-            ax.set_title(r'$\sigma$ vs $f$ (adjoint)', fontsize=8)
+            ax.legend(fontsize=7, loc='upper center', bbox_to_anchor=(0.5, -0.22), ncol=1)  # below the axes: inside it hides Ritz values
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         fig.savefig(CASE_DIR / 'plot_spectrum.png', dpi=600, bbox_inches='tight')

@@ -147,7 +147,7 @@ def plot_spectrum(nk) -> None:
     ax.set_xlabel(r"$f = \omega/2\pi$ ($U/D$)")
     ax.set_ylabel(r"$\sigma$ ($U/D$)")
     ax.set_title("(a) Ritz spectrum, mean flow and steady flow", loc="left", fontsize=8)
-    ax.legend(fontsize=6, loc="best")
+    ax.legend(fontsize=6, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=2)  # below the axes: inside it hides Ritz values
     output = CASE_DIR / "plot_spectrum.png"
     fig.savefig(output, dpi=400, bbox_inches="tight")
     print(f"Saved {output}")
