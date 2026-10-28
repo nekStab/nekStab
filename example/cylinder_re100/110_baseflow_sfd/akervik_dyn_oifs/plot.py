@@ -5,7 +5,7 @@ This figure must compare against both non-OIFS baselines.  OIFS reduces
 the number of timesteps substantially, but it is a case-specific acceleration;
 the residual panel makes the speed/accuracy tradeoff explicit.
 
-OUTPUTS: plot_ic.png, plot_residual.png, plot_bf.png
+OUTPUTS: plot_ic.png, plot_residual.png, plot_residual_walltime.png, plot_bf.png
 """
 from pathlib import Path
 import sys, re
@@ -83,6 +83,18 @@ def plot_residual(ax, case, x, label_suffix=''):
             color=case['color'], zorder=case['zorder'])
 
 
+STEP = re.compile(r"^Step\s+\d+, t=\s*\S+, DT=\s*\S+, C=\s*\S+\s+(\S+)\s+\S+")
+
+
+def load_walltime(case):
+    """Wall time (s) of each time step, from the Step lines of the logfile next to residu.dat; None without a logfile."""
+    log = (BASEFLOW_DIR / case['rel_path']).parent / 'logfile'
+    if not log.exists():
+        return None
+    wall = [float(m.group(1)) for m in map(STEP.match, log.read_text(errors='replace').splitlines()) if m]
+    return np.array(wall) if len(wall) >= case['steps'] else None
+
+
 def load_available_cases():
     cases = []
     for case in CASES:
@@ -94,6 +106,7 @@ def load_available_cases():
         entry['time'] = t
         entry['residual'] = r
         entry['steps'] = len(t)
+        entry['wall'] = load_walltime(entry)
         cases.append(entry)
     return cases
 
@@ -178,6 +191,28 @@ def main():
                        handlelength=1.2, borderpad=0.25)
         output = CASE_DIR / 'plot_residual.png'
         fig.savefig(output, dpi=600, bbox_inches='tight')
+        print(f'Saved {output}')
+        plt.close(fig)
+
+    # PANEL: RESIDUAL AGAINST WALL TIME — the cost of each variant; runs without a logfile are left out
+    timed = [case for case in cases if case['wall'] is not None]
+    if timed:
+        fig, ax_wall = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 0.8,
+                                                    nk.COL_WIDTH * 0.55))
+        for case in timed:
+            wall = case['wall'][:case['steps']]
+            plot_residual(ax_wall, case, wall,
+                          label_suffix=f" ({wall[-1]:.0f} s)")
+        gate = residual_gate(CASE_DIR)
+        if gate:
+            ax_wall.axhline(gate, lw=0.5, c='k', ls=':', label=f'gate {gate:.0e}')
+        ax_wall.grid(True, which='both', lw=0.25, alpha=0.35)
+        ax_wall.set_xlabel('wall time (s)')
+        ax_wall.set_ylabel(r'$\|r\|$')
+        ax_wall.legend(fontsize=4.8, loc='upper right',
+                       handlelength=1.2, borderpad=0.25)
+        output = CASE_DIR / 'plot_residual_walltime.png'
+        fig.savefig(output, dpi=400, bbox_inches='tight')
         print(f'Saved {output}')
         plt.close(fig)
 
