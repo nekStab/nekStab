@@ -43,7 +43,7 @@ and that the residual of the leading pair is below 1e-5. A run about the steady 
 horizontal line, (b) and (c) the real part of the leading mode, u and v. It reads the steady-flow spectrum of `../310_stability_direct/direct` and the DNS period of
 `../140_baseflow_meanflow` when they are present. `ref/meanflow_stability.png` is the figure of the run named in `ref/reference.json`.
 `plot_bf.png` (`ref/bf.png`) is the velocity magnitude of the mean flow, drawn the way stage 310 draws its steady base flow.
-`plot_spectrum.png` (`ref/spectrum.png`) is the full Ritz spectrum of this stage as sigma against f, with the steady-flow spectrum of stage 310 in gray.
+`plot_spectrum.png` (`ref/spectrum.png`) is the full Ritz spectrum of this stage as sigma against f, with the steady-flow spectrum of stage 310 in gray. Converged values are stars and the legend gives σ and f of the leading one.
 
 ## Run
 

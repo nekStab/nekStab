@@ -101,23 +101,28 @@ def draw_base_flow(nk, ax, field_file: Path) -> None:
 
 
 def draw_spectrum(ax, spectrum_file: Path, name: str, color: str, marker: str) -> None:
-    """Plot the Ritz values of one spectrum file as sigma against f; converged values are larger with a black edge."""
+    """Plot the Ritz values of one spectrum file as sigma against f; converged values are stars with a black edge and the legend gives sigma and f of the leading one."""
     data = np.loadtxt(spectrum_file, ndmin=2)
     sigma = data[:, 0]
     freq = data[:, 1] / (2.0 * np.pi)
     conv = data[:, 2] < 1e-5
     print(f"{name}: {len(sigma)} values, {int(conv.sum())} converged")
     ax.plot(freq[~conv], sigma[~conv], ls="none", marker=marker, ms=3, color=color, label=name)
+    label = f"{name}, converged"
+    lead = np.flatnonzero(conv & (freq > 0))
+    if len(lead):
+        k = lead[np.argmax(sigma[lead])]
+        label = rf"{name}, converged: $\sigma$ = {sigma[k]:.4f}, $f$ = {freq[k]:.4f}"
     ax.plot(
         freq[conv],
         sigma[conv],
         ls="none",
-        marker=marker,
-        ms=6,
+        marker="*",
+        ms=10,
         color=color,
         mec="k",
         mew=0.5,
-        label=f"{name}, converged",
+        label=label,
     )
 
 
