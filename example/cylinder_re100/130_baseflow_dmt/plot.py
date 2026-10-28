@@ -82,7 +82,9 @@ def save_residual(nk, path, gate, output):
         marker="o",
         ms=2,
         markevery=max(1, len(time) // 40),
-        label=f"DMT ({time[-1]:.1f} t.u.)",
+        # The legend names the DMT settings, read from the .par, not the run length.
+        label=rf"DMT $\omega_c$ = {par_value('userParam11')}, "
+        rf"$\beta$ = {par_value('userParam12')}, $\chi$ = {par_value('userParam13')}",
     )
     ax.axhline(gate, color="k", ls=":", lw=0.5, label=f"gate {gate:.0e}")
     ax.set_xlabel(r"$t$")
