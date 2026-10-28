@@ -4,7 +4,7 @@
 Panel sequence (baseflow lane + extra dyn_tol panel):
   plot_ic.png                - initial condition (seed from startFrom)
   plot_residual.png          - SFD dyn vs fixed-tol residual, with auto-cap ylim
-  plot_dynamic_tolerance.png - tolerance schedule (current/requested/used/cap)
+  plot_dynamic_tolerance.png - velocity solver tolerance used at each update, with the gate
   plot_bf.png                - converged base flow
 
 OUTPUTS: plot_ic.png, plot_residual.png, plot_dynamic_tolerance.png, plot_bf.png
@@ -114,20 +114,15 @@ def main():
         if dyn_data.ndim == 1: dyn_data = dyn_data.reshape(1, -1)
 
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
+        # The requested tolerance equals the used one except where the gate floors it, and the cap column is
+        # zero, so the figure shows the used tolerance and the gate only. The tolerance is userParam08 times the
+        # residual, so a residual curve would lie on top of it.
+        ax.semilogy(dyn_data[:, 0], dyn_data[:, 4], 's-', ms=2.0, lw=0.7, color='C2',
+                    markevery=max(1, len(dyn_data) // 40), label='velocity solver tolerance')
         if residu_data.shape[1] >= 4:
-            ax.semilogy(residu_data[:, 0], residu_data[:, 3], color='0.35',
-                        lw=0.7, label='current tol')
-        if dyn_data.shape[1] >= 4:
-            ax.semilogy(dyn_data[:, 0], dyn_data[:, 3], 'o-', ms=2.0,
-                        lw=0.6, color='C1', label='requested')
-        if dyn_data.shape[1] >= 5:
-            ax.semilogy(dyn_data[:, 0], dyn_data[:, 4], 'o-', ms=2.0,
-                        lw=0.6, color='C2', label='used')
-        if dyn_data.shape[1] >= 6 and np.any(dyn_data[:, 5] > 0.0):
-            ax.semilogy(dyn_data[:, 0], dyn_data[:, 5], '--',
-                        lw=0.6, color='C3', label='cap')
+            ax.axhline(residu_data[-1, 3], color='k', ls=':', lw=0.6, label='gate')
         ax.set_xlabel(r'$t$')
-        ax.set_ylabel('solver tol')
+        ax.set_ylabel('solver tolerance')
         ax.legend(fontsize=6, loc='best')
         ax.grid(True, which='both', ls=':', lw=0.3, alpha=0.5)
         ax.spines['right'].set_visible(False); ax.spines['top'].set_visible(False)
