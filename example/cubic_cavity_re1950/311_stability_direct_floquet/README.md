@@ -17,6 +17,7 @@ stamp by `stamp_period.py`. nekStab reads the Floquet period from that time
 stamp (`matvec.f90`, `param(10) = qbase%time`). The base flow and this stage
 use the same polynomial order (`lx1 = 6`); a file of another order stops the
 run with a message.
+`ref/bf.png` shows its speed |u| on the planes z = 0 (a) and x = 0 (b), in units of the lid speed U.
 
 ## Result — an unstable pair of Floquet multipliers
 69 of 100 modes converged (`eigentol = 1e-4`, residuals near 1e-16):
@@ -43,5 +44,5 @@ repository, not a literature value).
 ```bash
 mks cav
 sbatch run.local.slurm
-python3 plot.py   # spectrum -> plot_spectrum.png
+python3 plot.py   # spectrum -> plot_spectrum.png, base flow -> plot_bf.png
 ```
