@@ -91,8 +91,8 @@ def main():
     if residu.exists():
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
         if baseline_residu.exists():
-            nk.plot_residuals(ax, baseline_residu, label='Akervik fixed', color='0.45')
-        nk.plot_residuals(ax, residu, label='Akervik dyn', color='C1')
+            nk.plot_residuals(ax, baseline_residu, label='Akervik fixed', color='0.45', lw=2.0, marker='x')
+        nk.plot_residuals(ax, residu, label='Akervik dyn', color='C1', lw=1.0, marker='o')
         gate = residual_gate(CASE_DIR)
         if gate:
             ax.axhline(gate, color='k', ls=':', lw=0.5, label=f'gate {gate:.0e}')

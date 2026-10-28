@@ -25,6 +25,8 @@ CASES = [
         'label': 'Casacuberta fixed',
         'color': '0.35',
         'linestyle': '--',
+        'marker': 'x',
+        'lw': 2.2,
         'zorder': 1,
     },
     {
@@ -32,6 +34,8 @@ CASES = [
         'label': 'Casacuberta dyn',
         'color': 'C1',
         'linestyle': '-',
+        'marker': 'o',
+        'lw': 1.4,
         'zorder': 2,
     },
     {
@@ -39,6 +43,8 @@ CASES = [
         'label': 'Casacuberta dyn OIFS',
         'color': 'C3',
         'linestyle': '-',
+        'marker': '^',
+        'lw': 0.9,
         'zorder': 3,
     },
 ]
@@ -63,7 +69,11 @@ def plot_residual(ax, case, x, label_suffix=''):
     style = {
         'color': case['color'],
         'linestyle': case['linestyle'],
-        'lw': 0.65 if case['label'] == 'SFD fixed' else 0.85,
+        'lw': case['lw'],
+        'marker': case['marker'],
+        'ms': 3.0,
+        # about 12 markers per curve; the thickest curve (fixed) lies at the back
+        'markevery': max(1, len(x) // 12),
         'zorder': case['zorder'],
     }
     label = f"{case['label']}{label_suffix}"

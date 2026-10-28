@@ -13,6 +13,8 @@ plot_compare.png
         Newton prints no `Step` line per iteration: its wall time is the total elapsed time
         scaled by the fraction of the total time integrated.
 The legend gives the wall time of each run.
+plot_compare_akervik.png and plot_compare_casacuberta.png: the fixed, dyn and dyn OIFS runs of one formulation,
+    against the time step (a) and the wall time (b); see formulation_figure().
 
 USAGE: python plot_compare.py [PATTERN]
     PATTERN is the folder of a run, with {v} for its path from the family folder (for example 110_baseflow_sfd/akervik)
@@ -24,6 +26,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+import matplotlib.ticker
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -80,6 +83,59 @@ def load(folder, residual_file, tcol, rcol):
     return t, res, wall, elapsed
 
 
+def formulation_figure(name, pattern):
+    """Residual of the fixed, dyn and dyn OIFS runs of one formulation, against time step and wall time.
+
+    Writes HERE / f"plot_compare_{name}.png". A run without residu.dat or logfile is skipped with a message.
+    The gate lines are the largest residualTol of each run's own 1cyl.par.
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.2), layout="constrained")
+    gates = set()
+    # suffix, line width, marker, colour; the thickest line is drawn first, at the back
+    runs = (("", 2.4, "x", "C0"), ("_dyn", 1.6, "o", "C1"), ("_dyn_oifs", 0.9, "^", "C4"))
+    for zorder, (suffix, lw, marker, colour) in enumerate(runs):
+        run = f"{name}{suffix}"
+        folder = Path(pattern.format(v=f"110_baseflow_sfd/{run}", d=f"110_baseflow_sfd-{run}"))
+        if not (folder / "residu.dat").exists() or not (folder / "logfile").exists():
+            print(f"skipped {run}: no residu.dat or logfile in {folder}")
+            continue
+        t, res, wall, elapsed = load(folder, "residu.dat", 0, 1)
+        steps = np.arange(1, len(res) + 1)
+        for ax, x in zip(axes, (steps, wall)):
+            ax.plot(
+                x,
+                res,
+                lw=lw,
+                marker=marker,
+                ms=5.0,
+                markevery=spread(len(x), 12),
+                color=colour,
+                zorder=zorder + 1,
+                label=f"{run} ({len(res)} steps, {elapsed:.0f} s)",
+            )
+        par = (HERE / run / "1cyl.par").read_text(errors="replace")
+        gates.add(max(float(v) for v in re.findall(r"^\s*residualTol\s*=\s*(\S+)", par, re.M)))
+    for value in sorted(gates, reverse=True):
+        for ax in axes:
+            ax.axhline(value, color="k", lw=0.8, ls=":", label=f"gate {value:.0e}")
+    for ax in axes:
+        ax.set_yscale("log")
+        ax.set_ylabel("residual (nondimensional)")
+    axes[0].set_xlabel("time step")
+    # Four ticks at most: five-digit step counts overlap otherwise.
+    axes[0].xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
+    axes[1].set_xlabel("wall time (s)")
+    axes[0].set_title("(a) Residual against time step", loc="left", fontsize=9)
+    axes[1].set_title("(b) Residual against wall time", loc="left", fontsize=9)
+    # One legend for both panels, outside the axes: inside it hides the curves.
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, frameon=True, fontsize=6.5, loc="outside right upper")
+    out = HERE / f"plot_compare_{name}.png"
+    fig.savefig(out, dpi=400)
+    plt.close(fig)
+    print(f"Saved {out}")
+
+
 def main():
     pattern = sys.argv[1] if len(sys.argv) > 1 else str(HERE.parent / "{v}")
     fig, axes = plt.subplots(1, 2, figsize=(10.0, 3.6), layout="constrained")
@@ -117,6 +173,8 @@ def main():
     fig.savefig(out, dpi=400)
     plt.close(fig)
     print(f"Saved {out}")
+    for name in ("akervik", "casacuberta"):
+        formulation_figure(name, pattern)
 
 
 if __name__ == "__main__":

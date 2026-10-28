@@ -18,8 +18,8 @@ Compare with ../akervik (fixed tolerance) and ../akervik_dyn_oifs (OIFS); the fa
 
 ## Result (Jean Zay, 8 ranks, `ifort`)
 
-- The residual meets the gate 1e-10 at t = 668.26 after 66477 time steps; it ends at 9.981e-11
-  and started at 2.09e-04. Wall time 480 s.
+- The residual meets the gate 1e-10 at t = 668.13 after 66464 time steps; it ends at 9.999e-11
+  and started at 2.09e-04. Wall time 496 s.
 - Over the last fifth of the run the residual falls as exp(-0.0234 t).
 - The converged field against the Newton solution of `../../210_baseflow_newton` (a different method for the same steady flow):
 
@@ -35,9 +35,9 @@ The strict gate brings the field to 4e-5 of the Newton solution in every statist
 ## Reference
 
 `ref/reference.json` checks six quantities. The last residual of `residu.dat` must lie below the gate (tolerance equal to the gate, so a
-run that stops at `endTime` fails). The time of the last row must be within 5 % of 668.26. The four statistics of `BF_1cyl0.f00001`
+run that stops at `endTime` fails). The time of the last row must be within 5 % of 668.13. The four statistics of `BF_1cyl0.f00001`
 must be within 1e-4 of the Newton values above. `python3 ../../../../scripts/check_against_ref.py .` runs the check; the figures of the
-run are `plot_ic.png` (the seed), `plot_bf.png` (the converged field), `plot_residual.png`, `plot_dynamic_tolerance.png`.
+run are `plot_ic.png` (the seed), `plot_bf.png` (the converged field), `plot_residual.png`, `plot_dynamic_tolerance.png`. `ref/compare.png` (made by `../plot_compare.py` from the runs of 2026-10-28) overlays the residual of the fixed, dyn and dyn OIFS runs against the time step and against the wall time.
 
 ## Run
 

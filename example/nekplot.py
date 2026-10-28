@@ -419,8 +419,11 @@ def plot_spectrum_NS(ax, dat_file, tolerance=1e-6, freq=True):
 
 # ── Convergence plotting ──────────────────────────────────────────────
 
-def plot_residuals(ax, dat_file, label=None, color='k'):
-    """Plot SFD/BoostConv residuals (residu.dat: time, L2, L2_t)."""
+def plot_residuals(ax, dat_file, label=None, color='k', lw=0.8, marker='o'):
+    """Plot SFD/BoostConv residuals (residu.dat: time, L2, L2_t).
+
+    The curve carries about 12 markers; give two curves on one axes different lw and marker.
+    """
     dat_file = Path(dat_file)
     if not dat_file.exists():
         ax.text(0.5, 0.5, f'{dat_file.name}\nnot found',
@@ -433,7 +436,8 @@ def plot_residuals(ax, dat_file, label=None, color='k'):
     t = data[:, 0]
     r = data[:, 1]
 
-    ax.semilogy(t, r, color=color, lw=0.8, label=label)
+    ax.semilogy(t, r, color=color, lw=lw, marker=marker, ms=3.0,
+                markevery=max(1, len(t) // 12), label=label)
     ax.axhline(r.min(), color=color, lw=0.4, ls='--', alpha=0.5)
     ax.set_xlabel('t')
     ax.set_ylabel(r'$\|r\|$')

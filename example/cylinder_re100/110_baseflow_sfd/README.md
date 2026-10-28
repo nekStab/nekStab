@@ -11,28 +11,31 @@ time steps are taken.
 
 | variant | formulation | dynamic solver tolerance | time stepping | gate | converged at t | time steps | wall time on Jean Zay (s) | largest difference from Newton |
 |---|---|---|---|---|---|---|---|---|
-| `akervik` | Åkervik | no | BDF3, CFL 0.5 | 1e-10 | 667.9 | 66445 | 512 | 4e-05 |
-| `akervik_dyn` | Åkervik | yes | BDF3, CFL 0.5 | 1e-10 | 668.3 | 66477 | 480 | 4e-05 |
-| `akervik_dyn_oifs` | Åkervik | yes | OIFS, CFL 5 | 1e-6 | 367.5 | 3656 | 129 | 3e-03 |
-| `casacuberta` | Casacuberta | no | BDF3, CFL 0.5 | 1e-10 | 868.9 | 86440 | 673 | 4e-05 |
-| `casacuberta_dyn` | Casacuberta | yes | BDF3, CFL 0.5 | 1e-10 | 869.2 | 86462 | 551 | 4e-05 |
-| `casacuberta_dyn_oifs` | Casacuberta | yes | OIFS, CFL 5 | 1e-6 | 466.3 | 4639 | 163 | 3e-03 |
+| `akervik` | Åkervik | no | BDF3, CFL 0.5 | 1e-10 | 667.9 | 66445 | 562 | 4e-05 |
+| `akervik_dyn` | Åkervik | yes | BDF3, CFL 0.5 | 1e-10 | 668.1 | 66464 | 496 | 4e-05 |
+| `akervik_dyn_oifs` | Åkervik | yes | OIFS, CFL 5 | 1e-10 | 765.9 | 7619 | 326 | 3e-03 |
+| `casacuberta` | Casacuberta | no | BDF3, CFL 0.5 | 1e-10 | 868.9 | 86440 | 667 | 4e-05 |
+| `casacuberta_dyn` | Casacuberta | yes | BDF3, CFL 0.5 | 1e-10 | 869.2 | 86462 | 588 | 4e-05 |
+| `casacuberta_dyn_oifs` | Casacuberta | yes | OIFS, CFL 5 | 1e-10 | 995.3 | 9901 | 405 | 3e-03 |
 
-Measured on Jean Zay (`ifort`, 8 ranks) on 2026-10-09. The gate is the residual (root mean square over the domain of the change of
+Measured on Jean Zay (`ifort`, 8 ranks) on 2026-10-28. The gate is the residual (root mean square over the domain of the change of
 the velocity in one time step) below which the run stops and writes `BF_1cyl0.f00001`.
 
 ## What the variants show
 
 - The base flow does not depend on the variant. The four strict runs agree to 7 digits in every statistic of the field and differ by
   at most 4e-5 from the Newton solution (vx min -0.2001695 against -0.2001774, vx norm 264.3354 against 264.3375).
-- The dynamic solver tolerance moves the time of convergence by less than 0.1 %: `akervik_dyn` stops at t = 668.26
-  against 667.94, and `casacuberta_dyn` at 869.16 against 868.94. The wall time goes from
-  512 s to 480 s for Åkervik and from 673 s to 551 s for Casacuberta. Two runs of the
-  same variant differ by up to 10 % in wall time on Jean Zay (`akervik_dyn`: 441 s and 480 s), so these differences are of the size of the noise.
+- The dynamic solver tolerance moves the time of convergence by less than 0.1 %: `akervik_dyn` stops at t = 668.13
+  against 667.94, and `casacuberta_dyn` at 869.16 against 868.94. The wall time goes from 562 s to 496 s for Åkervik and
+  from 667 s to 588 s for Casacuberta, about 12 % less in both formulations at the same step count (66445 against 66464,
+  86440 against 86462). Wall times on Jean Zay vary between runs: in the batch of 2026-10-09 two runs of `akervik_dyn` took
+  441 s and 480 s, up to 10 % apart. Read the 12 % as a trend seen in both formulations, not as a precise figure.
 - With these parameters the Casacuberta filter converges more slowly than the Åkervik filter: the residual falls as
   exp(-0.0177 t) against exp(-0.0234 t) over the last fifth of the run.
-- OIFS takes steps ten times larger and needs 3656 steps against 66477. Its gate is 1e-6, not 1e-10, so the wall times
-  are not for the same accuracy: the OIFS fields are within 4e-3 of the Newton solution, the strict ones within 4e-5.
+- OIFS takes steps about ten times larger. At the same gate, 1e-10, it stops after 7619 steps (`akervik_dyn_oifs`, 326 s) and
+  9901 steps (`casacuberta_dyn_oifs`, 405 s), against 66464 and 86462 steps for the BDF3 dyn runs. The OIFS fields stay 3.4e-3 from
+  the Newton solution at any gate: at 1e-6, 1e-9 and 1e-10 the field is the same to 4e-6. The gap comes from the OIFS step at CFL 5,
+  not from the gate. The strict runs stay within 4e-5.
 
 ## Parameters
 
