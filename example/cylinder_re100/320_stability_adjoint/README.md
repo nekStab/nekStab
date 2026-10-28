@@ -52,7 +52,7 @@ python3 plot.py
 ```
 
 Produces a 2-panel figure:
-- (a) σ vs f adjoint spectrum from `Spectre_NSa.dat`
+- (a) σ vs f adjoint spectrum from `Spectre_NSa.dat`: all Ritz values, converged pair as a star, σ and f in the legend
 - (b) Leading adjoint eigenmode (real part) — note concentration upstream
   of the cylinder
 

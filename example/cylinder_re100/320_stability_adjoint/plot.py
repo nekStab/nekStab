@@ -99,7 +99,23 @@ def main():
             nk.setup_unit_circle_axes(ax, lim=1.5)
             nk.plot_spectrum_H_paper(ax, spec_path, label=r'$Re=100$')
         else:
-            nk.plot_spectrum_NS_paper(ax, spec_path, label=r'$Re=100$')
+            # All Ritz values as sigma against f = omega/(2 pi); the converged ones get a star.
+            data = np.loadtxt(spec_path, ndmin=2)
+            sig, freq = data[:, 0], data[:, 1] / (2 * np.pi)
+            conv = data[:, 2] < 1e-5
+            ax.plot(freq[~conv], sig[~conv], ls='none', marker='o', ms=3,
+                    color='lightgray', label='unconverged')
+            lbl = 'converged'
+            lead = np.flatnonzero(conv & (freq > 0))
+            if len(lead):
+                k = lead[np.argmax(sig[lead])]
+                lbl = rf'converged: $\sigma$ = {sig[k]:.4f}, $f$ = {freq[k]:.4f}'
+            ax.plot(freq[conv], sig[conv], ls='none', marker='*', ms=9,
+                    color='C3', mec='k', mew=0.4, label=lbl)
+            ax.axhline(0, color='k', lw=0.6, ls='--')
+            ax.set_xlabel(r'$f = \omega/2\pi$')
+            ax.set_ylabel(r'$\sigma$')
+            ax.legend(fontsize=7, loc='best')
             ylim = ax.get_ylim()
             ax.axhspan(min(ylim[0], -0.2), 0, facecolor='gray', alpha=0.3, zorder=-1)
             ax.set_title(r'$\sigma$ vs $f$ (adjoint)', fontsize=8)
