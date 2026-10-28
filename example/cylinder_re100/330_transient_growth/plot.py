@@ -24,7 +24,7 @@ def main() -> None:
         CASE_DIR / "growth_sweep.csv", delimiter=",", skiprows=3, unpack=True
     )
     fig, ax = plt.subplots(figsize=(3.5, 2.45))
-    ax.plot(tau, gain, "-s", c="k", lw=0.8, ms=4, mfc="none", label="nekStab, Re = 40")
+    ax.plot(tau, gain, "s", c="k", ls="none", ms=4, mfc="none", label="nekStab, Re = 40")
     ax.set_xlabel(r"horizon $\tau$ ($D/U_\infty$)")
     ax.set_ylabel(r"$G(\tau)$")
     ax.legend(loc="lower right")
