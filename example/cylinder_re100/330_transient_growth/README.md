@@ -38,6 +38,9 @@ Run: `sbatch run.local.slurm`. G is the first value in
 `Spectre_Hp_conv.dat`. The optimal perturbation is `pRe1cyl0.f00001`,
 its response at t = tau is `ore1cyl0.f00001`.
 
+`ref/optimal_perturbation.png` and `ref/optimal_response.png` show the tau = 40 run (G = 274.97): vx (a) and vy (b) of
+the optimal perturbation at t = 0 and of its response at t = 40.
+
 ## Result
 
 One run per horizon (`growth_sweep.csv`, `plot_envelope.png`):
