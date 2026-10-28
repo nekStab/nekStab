@@ -111,7 +111,7 @@ def read_field(fname):
     return x, y, fields, field.time
 
 
-def modal_lowpass(fname, keys=('vx',)):
+def modal_lowpass(fname, keys=('vx',), top=(0.25, 0.0), passes=1):
     """Low-pass filter fields of a 2-D field file in the Legendre basis of each element.
 
     Returns {key: filtered array}, in the point order of read_field. Nothing is
@@ -119,8 +119,8 @@ def modal_lowpass(fname, keys=('vx',)):
 
     Weights per element and per direction, for the polynomial order N = lx1 - 1:
         modes 0 .. N-2  weight 1    (the resolved content is untouched)
-        mode  N-1       weight 0.25
-        mode  N         weight 0
+        mode  N-1       weight 0.25   (defaults; `top` gives the weights of the highest modes,
+        mode  N         weight 0       lowest of them first, and `passes` repeats filter and average)
     Reason: the top two Legendre modes of a spectral-element field carry the
     grid-scale noise of an eigenvector from a Krylov method; they are the
     modes with the largest truncation error. A roll-off (0.25, 0)
@@ -138,7 +138,7 @@ def modal_lowpass(fname, keys=('vx',)):
     xi = np.sort(np.r_[-1., np.polynomial.legendre.Legendre.basis(n).deriv().roots().real, 1.])
     vand = np.polynomial.legendre.legvander(xi, n)
     w = np.ones(n + 1)
-    w[n - 1], w[n] = 0.25, 0.0
+    w[n - len(top) + 1:] = top  # weights of the highest len(top) modes, lowest of them first
     filt = vand @ np.diag(w) @ np.linalg.inv(vand)
     x = np.array([e.pos[0].ravel() for e in field.elem])
     y = np.array([e.pos[1].ravel() for e in field.elem])
@@ -150,8 +150,13 @@ def modal_lowpass(fname, keys=('vx',)):
     out = {}
     for key in keys:
         q = np.array([e.vel[comp[key]].reshape(ny, nx) for e in field.elem])
-        qf = np.einsum('ij,ejk,lk->eil', filt, q, filt).ravel()
-        out[key] = (np.bincount(inv, weights=qf) / count)[inv]
+        # Each pass filters every element, then averages the shared points; the averaging couples
+        # neighbouring elements, so repeated passes also damp streaks that span several elements.
+        for _ in range(passes):
+            qf = np.einsum('ij,ejk,lk->eil', filt, q, filt).ravel()
+            qa = (np.bincount(inv, weights=qf) / count)[inv]
+            q = qa.reshape(nel, ny, nx)
+        out[key] = qa
     return out
 
 

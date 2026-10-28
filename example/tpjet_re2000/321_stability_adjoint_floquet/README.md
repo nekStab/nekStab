@@ -37,7 +37,7 @@ The leading adjoint mode is concentrated at the lip of the nozzle, with its larg
 r = 0.48 (`ref/mode.png`, zoomed on z < 4: (a) the file as written, (b) after a post-filter in `plot.py`). The direct mode of `../311_stability_direct_floquet` has its largest
 values at z = 20.6. `ref/baseflow.png` is the orbit at t = 0. `ref/reference.json` holds the numbers that
 `scripts/check_against_ref.py` checks.
-The post-filter (`nekplot.modal_lowpass`) damps the top two Legendre modes of each element (weights 0.25 for mode N-1,
-0 for mode N, 1 for the others) and averages the shared points; it changes the mode field by 0.22 in relative L2
-norm (vx) and moves the largest |vx| from z = 0.64 to 0.51. Radial streaks near r = 0.35, z < 0.7 remain: they span
-several elements, so a filter inside each element does not remove them. The file on disk is not changed.
+The post-filter (`nekplot.modal_lowpass`) damps the top three Legendre modes of each element (weights 0.5 for mode N-2,
+0.2 for N-1, 0 for N, 1 for the others), averages the shared points, and repeats this three times, so the radial
+streaks near r = 0.35, z < 0.7 that span several elements also go. It changes the mode field by 0.27 in relative L2
+norm (vx) and moves the largest |vx| from z = 0.64 to 0.52. The file on disk is not changed.

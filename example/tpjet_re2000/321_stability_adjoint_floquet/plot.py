@@ -79,7 +79,8 @@ def main():
         # nekplot.modal_lowpass (top Legendre modes damped in each element, shared points averaged).
         # The filter is applied here only; the field file is not changed.
         x, y, fields, time = nk.read_field(mode_files[0])
-        filtered = nk.modal_lowpass(mode_files[0], ('vx',))
+        # Strong filter for the adjoint: the lip streaks span several elements (reviewer asked for a stronger one).
+        filtered = nk.modal_lowpass(mode_files[0], ('vx',), top=(0.5, 0.2, 0.0), passes=3)
         triang = nk.make_triangulation(x, y)
         fig, axes = plt.subplots(2, 1, figsize=(FW * 0.5, FW * 0.5 * 0.3 * 2), sharex=True)
         fig.subplots_adjust(hspace=0.5)  # room for the (b) subtitle
