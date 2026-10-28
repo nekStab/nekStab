@@ -13,5 +13,5 @@ of the direct −0.016793, and the pair is −0.04197 ± 0.77165 i against −0.
 
 Run of 2026-10-09 (Jean Zay, `ifort`, 4 ranks, base flow of the 210 run of that day): wall time 609 s.
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged eigenvalues,
-growth rate against frequency) and `plot_mode.png` (vy of the leading adjoint mode); `ref/` holds copies as
-`bf.png`, `spectrum.png` and `mode.png`.
+growth rate against frequency) and `plot_mode.png` (vx (a) and vy (b) of the leading adjoint mode, sign fixed so that vy is positive where |vy| is largest); `ref/` holds copies as
+`bf.png`, `spectrum.png` and `mode.png`. The adjoint and direct modes look alike but differ: after matching norm and sign, the relative L2 difference is 0.30 in vx and 0.44 in vy (correlation 0.95 and 0.91).
