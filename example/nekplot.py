@@ -119,12 +119,12 @@ def modal_lowpass(fname, keys=('vx',)):
 
     Weights per element and per direction, for the polynomial order N = lx1 - 1:
         modes 0 .. N-2  weight 1    (the resolved content is untouched)
-        mode  N-1       weight 0.5
-        mode  N         weight 0.1
+        mode  N-1       weight 0.25
+        mode  N         weight 0
     Reason: the top two Legendre modes of a spectral-element field carry the
     grid-scale noise of an eigenvector from a Krylov method; they are the
-    modes with the largest truncation error. A gentle roll-off (0.5, 0.1)
-    keeps the plotted shape and avoids the ringing of a sharp cut at N-1.
+    modes with the largest truncation error. A roll-off (0.25, 0)
+    removes the element-scale stripes of the tpjet adjoint mode (0.5, 0.1 left them visible), keeps the plotted shape and avoids the ringing of a sharp cut at N-1.
     Filtering breaks the C0 continuity across elements, so values at the
     shared GLL points are averaged afterwards (the dsavg of Nek5000).
     """
@@ -138,7 +138,7 @@ def modal_lowpass(fname, keys=('vx',)):
     xi = np.sort(np.r_[-1., np.polynomial.legendre.Legendre.basis(n).deriv().roots().real, 1.])
     vand = np.polynomial.legendre.legvander(xi, n)
     w = np.ones(n + 1)
-    w[n - 1], w[n] = 0.5, 0.1
+    w[n - 1], w[n] = 0.25, 0.0
     filt = vand @ np.diag(w) @ np.linalg.inv(vand)
     x = np.array([e.pos[0].ravel() for e in field.elem])
     y = np.array([e.pos[1].ravel() for e in field.elem])

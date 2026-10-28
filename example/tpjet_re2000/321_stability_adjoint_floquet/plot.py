@@ -82,6 +82,7 @@ def main():
         filtered = nk.modal_lowpass(mode_files[0], ('vx',))
         triang = nk.make_triangulation(x, y)
         fig, axes = plt.subplots(2, 1, figsize=(FW * 0.5, FW * 0.5 * 0.3 * 2), sharex=True)
+        fig.subplots_adjust(hspace=0.5)  # room for the (b) subtitle
         for ax_mode, q, tag, name in ((axes[0], fields.get('vx'), 'a', 'unfiltered'),
                                       (axes[1], filtered['vx'], 'b', 'filtered')):
             if q is None:
@@ -99,6 +100,7 @@ def main():
             ax_mode.set_aspect('auto')
             ax_mode.set_title(f'({tag}) leading adjoint mode, {name}', loc='left', fontsize=7)
             _setup_tpjet_axes(ax_mode)
+        axes[0].set_xlabel('')  # shared z axis: label only under (b)
         output = CASE_DIR / 'plot_mode.png'
         fig.savefig(output, dpi=400, bbox_inches='tight')
         print(f'Saved {output}')
