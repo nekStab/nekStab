@@ -462,16 +462,24 @@ def plot_newton_convergence(ax, directory='.'):
             ax.semilogy(k, res_arn, 'k-', lw=0.6, label='Arnoldi', zorder=3)
             ax.semilogy(k, tol_arn, 'b--', lw=0.5, label='tol', zorder=2)
 
-    # Newton residuals (markers at k_sum positions)
+    # Newton residuals: marker x = Arnoldi row where that Newton iteration's first GMRES cycle starts.
     newton_file = d / 'residu_newton.dat'
-    if newton_file.exists():
+    gmres_file = d / 'residu_gmres.dat'
+    if newton_file.exists() and gmres_file.exists() and arnoldi_file.exists():
         data = np.genfromtxt(str(newton_file))
         if data.ndim == 1:
             data = data.reshape(1, -1)
+        gm = np.genfromtxt(str(gmres_file))
+        if gm.ndim == 1:
+            gm = gm.reshape(1, -1)
+        ar_k = np.atleast_1d(np.genfromtxt(str(arnoldi_file), usecols=0))
         # Same empty/short guard as the Arnoldi block above.
-        if data.size and data.shape[1] > 7:
+        if data.size and data.shape[1] > 7 and gm.size and ar_k.size:
             # Columns: i, total_calls, iter_calls, k_sum, tottime, solver_tol, residual, dtol
-            k_sum = data[:, 3]
+            # Arnoldi k restarts at 1 in each GMRES cycle; residu_gmres.dat column 0 is the Newton iteration.
+            cycle_starts = np.append(np.flatnonzero(ar_k == 1), len(ar_k))
+            n_cycles_before = np.array([np.sum(gm[:, 0] < i) for i in data[:, 0]])
+            k_sum = cycle_starts[n_cycles_before]
             res_nwt = data[:, 6]
             dtol = data[0, 7]
             ax.semilogy(k_sum, res_nwt, 'bs', ms=4, mfc='none', lw=0.8,
