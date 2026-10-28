@@ -1,7 +1,7 @@
 {
   "case": "lid_driven_re3600/320_stability_adjoint",
   "summary": "Adjoint eigenvalues of the lid-driven cavity at Re = 3600. They match the direct eigenvalues.",
-  "description": "Adjoint eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12) compared with the DIRECT eigenvalues of 310_stability_direct: the adjoint operator has the spectrum of the direct one, so a match checks the adjoint. At lx1 = 12 the leading eigenvalues differ by 4e-6 (-0.016796 against -0.016793); the tolerance is 5e-5. The regularized lid has no corner singularity, so the adjoint problem is valid.",
+  "description": "Adjoint eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12) compared with the DIRECT eigenvalues of 310_stability_direct: the adjoint operator has the spectrum of the direct one, so a match checks the adjoint. At lx1 = 12 the leading eigenvalues differ by 4e-6 (-0.016796 against -0.016792), the pair by 1.3e-5; the tolerance is 5e-5. The regularized lid has no corner singularity, so the adjoint problem is valid.",
   "produced": {
     "nekstab": "v2.0.0",
     "date": "2026-10-09",
@@ -12,17 +12,17 @@
   "quantities": {
     "leading_sigma_vs_direct": {
       "source": "Spectre_NSa_conv.dat:col1:row1",
-      "value": -0.01679253,
+      "value": -0.01679191,
       "tol_abs": 5e-05
     },
     "pair_sigma_vs_direct": {
       "source": "Spectre_NSa_conv.dat:col1:row2",
-      "value": -0.04197811,
+      "value": -0.04191884,
       "tol_abs": 5e-05
     },
     "pair_omega_vs_direct": {
       "source": "Spectre_NSa_conv.dat:col2:row2",
-      "value": -0.771649,
+      "value": -0.7715632,
       "tol_abs": 5e-05
     }
   }

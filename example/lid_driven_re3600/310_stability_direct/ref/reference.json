@@ -1,7 +1,7 @@
 {
   "case": "lid_driven_re3600/310_stability_direct",
   "summary": "Leading eigenvalues of the lid-driven cavity at Re = 3600: a stable real eigenvalue and a stable complex pair.",
-  "description": "Leading eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12), direct problem. The flow is linearly stable: a real eigenvalue -0.01679 and a complex pair -0.04198 +- 0.77165 i. The values depend on the resolution (table in the family README); the tolerance of 1e-4 is below the change between lx1 = 10 and 12.",
+  "description": "Leading eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12), direct problem. The flow is linearly stable: a real eigenvalue -0.01679 and a complex pair -0.04192 +- 0.77156 i. The values depend on the resolution (table in the family README); the tolerance of 1e-4 is below the change between lx1 = 10 and 12. Base flow: the t = 100 Newton state of 210_baseflow_newton (tolerance 1e-12); the t = 600 base flow gave -0.04198 +- 0.77165 i.",
   "produced": {
     "nekstab": "v2.0.0",
     "date": "2026-10-09",
@@ -12,17 +12,17 @@
   "quantities": {
     "leading_sigma": {
       "source": "Spectre_NSd_conv.dat:col1:row1",
-      "value": -0.01679253,
+      "value": -0.01679191,
       "tol_abs": 0.0001
     },
     "pair_sigma": {
       "source": "Spectre_NSd_conv.dat:col1:row2",
-      "value": -0.04197811,
+      "value": -0.04191884,
       "tol_abs": 0.0001
     },
     "pair_omega": {
       "source": "Spectre_NSd_conv.dat:col2:row2",
-      "value": -0.771649,
+      "value": -0.7715632,
       "tol_abs": 0.0001,
       "note": "Imaginary part of the second row; the file lists one member of the conjugate pair."
     }

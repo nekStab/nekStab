@@ -55,7 +55,7 @@ DNS state and the eigenvalues of the stability stages (4 ranks, `ifx`) at each o
 |---|---|---|---|---|---|
 | 8 | 2.1e-6 | −0.016528 | −0.017258 | −0.04192 ± 0.78009 i | −0.04150 ± 0.78035 i |
 | 10 | 1.1e-7 | −0.016764 | −0.016830 | −0.04206 ± 0.77204 i | −0.04196 ± 0.77206 i |
-| 12 | 4.4e-9 | −0.016793 | −0.016796 | −0.04198 ± 0.77165 i | −0.04197 ± 0.77165 i |
+| 12 | 4.4e-9 | −0.016792 | −0.016796 | −0.04192 ± 0.77156 i | −0.04191 ± 0.77156 i |
 
 At `lx1 = 6` the first residual is 3.5e-5, Newton moved to a second, unstable steady state
 (growth rate +0.05, angular frequency 1.7) and the stability stages reported it; without the

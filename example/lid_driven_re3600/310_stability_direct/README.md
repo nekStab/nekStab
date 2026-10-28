@@ -7,7 +7,7 @@ result `BF_cav0.f00001` here). Stage rationale: repo-root `EXAMPLES.md`.
 Direct eigenvalue problem (Krylov-Schur, at most `k_dim = 120` vectors; the run stops when the 3 leading
 values have converged, at step 114) of the regularized lid-driven cavity at
 Re = 3600, `lx1 = 12`. The flow is linearly stable: the leading eigenvalue is real,
-σ = −0.01679, and the next two form a complex pair −0.0420 ± 0.7717 i. `../320_stability_adjoint/`
+σ = −0.01679, and the next two form a complex pair −0.0419 ± 0.7716 i (base flow of the t = 100 seed, 2026-10-28). `../320_stability_adjoint/`
 gives the same spectrum; the regularized lid has no corner singularity, so the adjoint problem
 is valid. `ref/reference.json` holds the values of this run. The spectrum depends on the
 resolution (`../README.md`).
