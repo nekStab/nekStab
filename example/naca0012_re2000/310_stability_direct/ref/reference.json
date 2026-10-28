@@ -1,9 +1,15 @@
 {
   "case": "naca0012_re2000/310_stability_direct",
-  "summary": "Leading eigenvalues of the NACA 0012 steady flow at Re = 2000. The flow is stable.",
-  "description": "Regression value of this repository (not a literature value): leading pair of the NACA 0012 steady flow at Re=2000",
+  "summary": "Leading eigenvalues of the NACA 0012 steady flow at Re = 2000. The flow is stable: the leading pair is sigma = -0.0665 +- 8.006 i and the next stable pair sigma = -0.557 +- 9.433 i lies further in the stable half-plane.",
+  "description": "Regression value of this repository (not a literature value): leading pair and the stable pair sigma = -0.557 +- 9.433 i of the NACA 0012 steady flow at Re=2000. The pair is read by row: row 9 of Spectre_NSd_conv.dat (row 8 is its conjugate), because check_against_ref.py cannot select a row by value. The rows come from schur_tgt 8, maxmodes 10, k_dim 240; a run with other settings may order the rows differently.",
   "produced": {
-    "nekstab_mode": "3.1 (direct)"
+    "date": "2026-10-28",
+    "ranks": "8",
+    "nekstab_mode": "3.1 (direct)",
+    "k_dim": "240",
+    "schur_tgt": "8",
+    "maxmodes": "10",
+    "machine": "Jean Zay, ifort"
   },
   "quantities": {
     "leading_sigma": {
@@ -14,6 +20,16 @@
     "leading_omega": {
       "source": "Spectre_NSd_conv.dat:col2:first",
       "value": 8.005787,
+      "tol_rel": 0.01
+    },
+    "pair_sigma": {
+      "source": "Spectre_NSd_conv.dat:col1:row9",
+      "value": -0.5567858,
+      "tol_abs": 0.005
+    },
+    "pair_omega": {
+      "source": "Spectre_NSd_conv.dat:col2:row9",
+      "value": 9.433248,
       "tol_rel": 0.01
     }
   }

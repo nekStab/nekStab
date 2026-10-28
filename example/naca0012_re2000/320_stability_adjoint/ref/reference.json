@@ -1,25 +1,37 @@
 {
   "case": "naca0012_re2000/320_stability_adjoint",
-  "summary": "Leading adjoint eigenvalues of the NACA 0012 steady flow at Re = 2000.",
-  "description": "NACA 0012 adjoint global stability at Re=2000 (leading eigenvalue)",
+  "summary": "Leading adjoint eigenvalues of the NACA 0012 steady flow at Re = 2000: the leading pair sigma = -0.0665 +- 8.006 i and the stable pair sigma = -0.557 +- 9.433 i, equal to the direct ones.",
+  "description": "NACA 0012 adjoint global stability at Re=2000: leading eigenvalue and the stable pair sigma = -0.557 +- 9.433 i. The pair is read by row: row 9 of Spectre_NSa.dat (row 8 is its conjugate), because check_against_ref.py cannot select a row by value. The rows come from schur_tgt 8, maxmodes 10, k_dim 240; a run with other settings may order the rows differently.",
   "produced": {
-    "date": "2026-06-11",
+    "date": "2026-10-28",
     "ranks": "8",
     "nekstab_mode": "3.2 (adjoint)",
-    "k_dim": "220",
+    "k_dim": "240",
+    "schur_tgt": "8",
+    "maxmodes": "10",
     "sponge_strength": "1.7",
-    "provenance": "Recomputed after the sponge-strength correction."
+    "machine": "Jean Zay, ifort"
   },
   "quantities": {
     "leading_sigma": {
       "source": "Spectre_NSa.dat:col1:first",
       "value": -0.0665164,
-      "tol_abs": 1.0e-3
+      "tol_abs": 0.001
     },
     "leading_omega": {
       "source": "Spectre_NSa.dat:col2:first",
       "value": 8.00577,
-      "tol_abs": 1.0e-2
+      "tol_abs": 0.01
+    },
+    "pair_sigma": {
+      "source": "Spectre_NSa.dat:col1:row9",
+      "value": -0.5568205,
+      "tol_abs": 0.005
+    },
+    "pair_omega": {
+      "source": "Spectre_NSa.dat:col2:row9",
+      "value": 9.433214,
+      "tol_rel": 0.01
     }
   }
 }

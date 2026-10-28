@@ -24,14 +24,25 @@ sbatch run.local.slurm     # 8 ranks
 ```
 
 ## Latest Result
-- 8 ranks, `k_dim = 220`: σ = -0.0665382, ω = 8.00579 (`Spectre_NSd.dat` row 1).
-- Matches the adjoint eigenvalue (σ = -0.0665164, ω = 8.00577) to the
-  convergence tolerance, as expected for a direct/adjoint pair.
+Run of 2026-10-28 (Jean Zay, `ifort`, 8 ranks), `k_dim = 240`, `schur_tgt = 8`, `maxmodes = 10`;
+wall time 2480 s (41 min 20 s, from the `logfile`).
+- Leading pair: σ = -0.0665382, ω = ±8.00579 (`Spectre_NSd_conv.dat` rows 1 and 2).
+- Stable pair: σ = -0.556786, ω = ±9.43325 (rows 8 and 9). An earlier run with a smaller
+  target list did not list this pair; the leading pair did not change.
+- Matches the adjoint eigenvalues (`../320_stability_adjoint`; σ = -0.556821, ω = ±9.43321)
+  to 4e-5.
 
-Outputs: leading direct eigenmodes `dRenaca00120.f0000{1..6}` (written by the run;
-field files are gitignored, not tracked).
+Outputs: the ten leading direct eigenmodes `dRenaca00120.f0000{1..10}` and
+`dImnaca00120.f0000{1..10}` (written by the run; field files are gitignored, not tracked). The mode
+file number is the row number in `Spectre_NSd_conv.dat`.
 
-Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks): σ = -0.0665382, ω = 8.00579, wall time 1793 s.
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged
-eigenvalues, growth rate against frequency) and `plot_mode.png` (vy of the leading mode); `ref/` holds
-copies as `bf.png`, `spectrum.png` and `mode.png`.
+eigenvalues, growth rate against frequency, with the leading pair and the pair σ = -0.557 ± 9.43 i
+marked) and `plot_mode.png` (vy of the leading mode in (a) and of the pair σ = -0.557 ± 9.43 i in (b)),
+and `ref/mode.gif` (vy of the leading mode over one period, 24 frames). `ref/` holds copies of the
+figures as `bf.png`, `spectrum.png` and `mode.png`.
+
+## Reference (ref/)
+`reference.json` holds the leading pair and the stable pair. The leading pair is read from row 1 and
+the stable pair from row 9 of `Spectre_NSd_conv.dat`, because the checker cannot select a row by value.
+Verify with `scripts/check_against_ref.py example/naca0012_re2000/310_stability_direct`.
