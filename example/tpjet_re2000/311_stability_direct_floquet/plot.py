@@ -6,7 +6,7 @@ base flow vx (Blues, 0→5) and leading mode vx (RdBu, ±2),
 axisymmetric domain [0,40]×[0,2] with z/r axis labels.
 Double-column width for elongated domain.
 
-OUTPUTS: plot_spectrum.png, plot_baseflow.png, plot_mode.png
+OUTPUTS: plot_spectrum.png, plot_baseflow.png, plot_mode.png (a: unfiltered, b: post-filtered)
 USAGE:   python plot.py
 """
 from pathlib import Path
@@ -72,22 +72,30 @@ def main():
     # --- Panel: Leading mode vx (RdBu, ±2) ---
     # The mode files hold the converged multipliers by decreasing modulus: the first is the leading mode.
     if mode_files:
-        fig, ax_mode = plt.subplots(1, 1, figsize=(FW, FW * 0.15))
+        # (a) the file as written by the solver, (b) the same field after the post-filter of
+        # nekplot.modal_lowpass (top Legendre modes damped in each element, shared points averaged).
+        # The filter is applied here only; the field file is not changed.
         x, y, fields, time = nk.read_field(mode_files[0])
+        filtered = nk.modal_lowpass(mode_files[0], ('vx',))
         triang = nk.make_triangulation(x, y)
-        q = fields.get('vx')
-        if q is not None:
+        fig, axes = plt.subplots(2, 1, figsize=(FW, FW * 0.15 * 2), sharex=True)
+        for ax_mode, q, tag, name in ((axes[0], fields.get('vx'), 'a', 'unfiltered'),
+                                      (axes[1], filtered['vx'], 'b', 'filtered')):
+            if q is None:
+                continue
             cf = nk.tricontourf(ax_mode, triang, q, levels=257,
                                 cmap='RdBu', vmin=-2., vmax=2.,
                                 extend='both')
-            nk.inset_colorbar(ax_mode, cf, orientation='horizontal',
-                              width="20%", height="14%", loc=1,
-                              ticks=[-2, 2],
-                              tick_labels=['-2', '2'])
-        ax_mode.set_xlim(XLIM)
-        ax_mode.set_ylim(YLIM)
-        ax_mode.set_aspect('auto')
-        _setup_tpjet_axes(ax_mode)
+            cbar = nk.inset_colorbar(ax_mode, cf, orientation='horizontal',
+                                     width="20%", height="14%", loc=1,
+                                     ticks=[-2, 2],
+                                     tick_labels=['-2', '2'])
+            cbar.set_label(r'$v_z$', fontsize=5, labelpad=1)
+            ax_mode.set_xlim(XLIM)
+            ax_mode.set_ylim(YLIM)
+            ax_mode.set_aspect('auto')
+            ax_mode.set_title(f'({tag}) leading direct mode, {name}', loc='left', fontsize=7)
+            _setup_tpjet_axes(ax_mode)
         output = CASE_DIR / 'plot_mode.png'
         fig.savefig(output, dpi=400, bbox_inches='tight')
         print(f'Saved {output}')

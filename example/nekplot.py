@@ -111,6 +111,50 @@ def read_field(fname):
     return x, y, fields, field.time
 
 
+def modal_lowpass(fname, keys=('vx',)):
+    """Low-pass filter fields of a 2-D field file in the Legendre basis of each element.
+
+    Returns {key: filtered array}, in the point order of read_field. Nothing is
+    written to disk. The file is only read.
+
+    Weights per element and per direction, for the polynomial order N = lx1 - 1:
+        modes 0 .. N-2  weight 1    (the resolved content is untouched)
+        mode  N-1       weight 0.5
+        mode  N         weight 0.1
+    Reason: the top two Legendre modes of a spectral-element field carry the
+    grid-scale noise of an eigenvector from a Krylov method; they are the
+    modes with the largest truncation error. A gentle roll-off (0.5, 0.1)
+    keeps the plotted shape and avoids the ringing of a sharp cut at N-1.
+    Filtering breaks the C0 continuity across elements, so values at the
+    shared GLL points are averaged afterwards (the dsavg of Nek5000).
+    """
+    from pymech.neksuite import readnek
+
+    field = readnek(str(fname))
+    nx, ny, nz = field.lr1
+    assert nz == 1, 'modal_lowpass handles 2-D files only'
+    nel, n = field.nel, nx - 1
+    # GLL points: -1, +1 and the roots of P_N'; Vandermonde matrix of Legendre modes.
+    xi = np.sort(np.r_[-1., np.polynomial.legendre.Legendre.basis(n).deriv().roots().real, 1.])
+    vand = np.polynomial.legendre.legvander(xi, n)
+    w = np.ones(n + 1)
+    w[n - 1], w[n] = 0.5, 0.1
+    filt = vand @ np.diag(w) @ np.linalg.inv(vand)
+    x = np.array([e.pos[0].ravel() for e in field.elem])
+    y = np.array([e.pos[1].ravel() for e in field.elem])
+    # Number of elements sharing each GLL point (rounded coordinates identify a point).
+    _, inv = np.unique(np.round(np.c_[x.ravel(), y.ravel()], 9), axis=0, return_inverse=True)
+    inv = inv.ravel()
+    count = np.bincount(inv)
+    comp = {'vx': 0, 'vy': 1, 'vz': 2}
+    out = {}
+    for key in keys:
+        q = np.array([e.vel[comp[key]].reshape(ny, nx) for e in field.elem])
+        qf = np.einsum('ij,ejk,lk->eil', filt, q, filt).ravel()
+        out[key] = (np.bincount(inv, weights=qf) / count)[inv]
+    return out
+
+
 def find_fields(pattern, directory='.'):
     """Find field files matching a glob pattern, sorted by name."""
     d = Path(directory)

@@ -29,7 +29,7 @@ list, slow multipliers at 0.9958 and 0.9682, have not converged (residuals 3e-2 
 them lie on an arc inside the unit circle, from -0.9241 +- 0.0458 i (modulus 0.925) to -0.7187 +- 0.4682 i
 (`ref/spectrum.png`). The arc moves with the step at which the run stops: a run to all 128 steps gives two arcs, with
 -0.8599 as the second converged value. Only the leading multiplier is the stage target. The leading mode is a wave
-packet of the axial velocity near the axis between z = 8 and z = 36 (`ref/mode.png`; `ref/baseflow.png` is the orbit
+packet of the axial velocity near the axis between z = 8 and z = 36 (`ref/mode.png`: (a) the file as written, (b) after the post-filter of `nekplot.modal_lowpass`, which changes it by 6e-4 in relative L2 norm; `ref/baseflow.png` is the orbit
 at t = 0).
 The 57 Ritz values, with the convergence flag, are in `Spectre_Hd.dat`. `ref/reference.json` holds the numbers that
 `scripts/check_against_ref.py` checks. The adjoint map of `../321_stability_adjoint_floquet` has the same leading
