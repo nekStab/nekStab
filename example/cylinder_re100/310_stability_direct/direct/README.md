@@ -57,7 +57,7 @@ python3 plot.py
 ```
 
 Produces a 2-panel figure:
-- (a) σ vs f spectrum from `Spectre_NSd.dat`
+- (a) σ vs f spectrum from `Spectre_NSd.dat`; the converged pair is a star, a vertical line marks its f, and the legend gives σ, ω and f
 - (b) Leading direct eigenmode (real part) overlaid on the cylinder geometry
 
 ## Reference

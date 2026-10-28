@@ -91,8 +91,16 @@ def main():
             converged = res < 1e-5
             ax.plot(freq[~converged], sig[~converged], ls='none', marker='o', ms=3,
                     color='lightgray', label='unconverged')
-            ax.plot(freq[converged], sig[converged], ls='none', marker='o', ms=5,
-                    color='C3', mec='k', mew=0.4, label='converged')
+            # Leading converged value: the one with the largest growth rate and f > 0.
+            lead = np.flatnonzero(converged & (freq > 0))
+            lead = lead[np.argmax(sig[lead])] if len(lead) else None
+            lbl = 'converged'
+            if lead is not None:
+                lbl = (rf'converged: $\sigma$ = {sig[lead]:.4f}, $\omega$ = {data[lead, 1]:.4f}, '
+                       rf'$f$ = {freq[lead]:.4f}')
+                ax.axvline(freq[lead], color='C3', lw=0.6, ls=':')
+            ax.plot(freq[converged], sig[converged], ls='none', marker='*', ms=9,
+                    color='C3', mec='k', mew=0.4, label=lbl)
             ax.axhline(0, color='k', lw=0.6, ls='--')
             ax.set_xlabel(r'$f = \omega/2\pi$')
             ax.set_ylabel(r'$\sigma$')
