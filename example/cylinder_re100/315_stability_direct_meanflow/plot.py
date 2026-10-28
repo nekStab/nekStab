@@ -6,7 +6,9 @@ stage. When the neighbouring stages are present, it adds the leading eigenvalue 
 base flow (../310_stability_direct/direct) and the shedding frequency of the DNS
 (../140_baseflow_meanflow/meanflow_window.dat) as references.
 
-It writes plot_meanflow_stability.png. Growth rates are in units of U/D, angular frequencies in
+It writes plot_meanflow_stability.png, plot_bf.png (velocity magnitude of the mean flow) and
+plot_spectrum.png (full Ritz spectrum of the mean flow, with the steady-flow spectrum of
+../310_stability_direct/direct in gray when present). Growth rates are in units of U/D, angular frequencies in
 units of U/D, lengths in units of the cylinder diameter.
 
 Usage: python plot.py
@@ -29,6 +31,9 @@ STEADY_SPECTRUM = (
     CASE_DIR.parent / "310_stability_direct" / "direct" / "Spectre_NSd.dat"
 )
 WINDOW_FILE = CASE_DIR.parent / "140_baseflow_meanflow" / "meanflow_window.dat"
+BF_FILE = CASE_DIR / "BF_1cyl0.f00001"
+MEAN_FLOW_FILE = CASE_DIR.parent / "140_baseflow_meanflow" / "BFA1cyl0.f00001"
+MEAN_SPECTRUM = CASE_DIR / "Spectre_NSd.dat"
 
 
 def load_nekplot():
@@ -64,6 +69,84 @@ def draw_mode(nk, ax, field_file: Path, component: str, title: str) -> QuadConto
     ax.set_ylabel(r"$y$ ($D$)")
     ax.set_title(title, loc="left", fontsize=8)
     return filled
+
+
+def draw_base_flow(nk, ax, field_file: Path) -> None:
+    """Draw the velocity magnitude of a base flow the way stage 310 draws its steady base flow."""
+    x, y, fields, _time = nk.read_field(str(field_file))
+    triang = nk.make_triangulation(x, y)
+    speed = np.sqrt(fields["vx"] ** 2 + fields["vy"] ** 2)
+    vmax = 1.5
+    cf = nk.tricontourf(
+        ax, triang, speed, levels=257, cmap="Blues", vmin=0, vmax=vmax, extend="max"
+    )
+    nk.inset_colorbar(
+        ax,
+        cf,
+        orientation="horizontal",
+        width="50%",
+        height="5%",
+        loc=9,
+        ticks=[0, vmax],
+        tick_labels=["0", f"{vmax}"],
+    )
+    ax.set_aspect("equal")
+    nk.add_cylinder_patches(ax)
+    ax.set_xlim(-2, 20)
+    ax.set_ylim(-4, 4)
+    ax.set_xlabel(r"$x$ ($D$)", labelpad=-1)
+    ax.set_ylabel(r"$y$ ($D$)", labelpad=1)
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+
+
+def draw_spectrum(ax, spectrum_file: Path, name: str, color: str, marker: str) -> None:
+    """Plot the Ritz values of one spectrum file as sigma against f; converged values are larger with a black edge."""
+    data = np.loadtxt(spectrum_file, ndmin=2)
+    sigma = data[:, 0]
+    freq = data[:, 1] / (2.0 * np.pi)
+    conv = data[:, 2] < 1e-5
+    print(f"{name}: {len(sigma)} values, {int(conv.sum())} converged")
+    ax.plot(freq[~conv], sigma[~conv], ls="none", marker=marker, ms=3, color=color, label=name)
+    ax.plot(
+        freq[conv],
+        sigma[conv],
+        ls="none",
+        marker=marker,
+        ms=6,
+        color=color,
+        mec="k",
+        mew=0.5,
+        label=f"{name}, converged",
+    )
+
+
+def plot_base_flow(nk) -> None:
+    """Draw the velocity magnitude of the mean flow as plot_bf.png."""
+    field_file = BF_FILE if BF_FILE.is_file() else MEAN_FLOW_FILE
+    fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.4))
+    draw_base_flow(nk, ax, field_file)
+    output = CASE_DIR / "plot_bf.png"
+    fig.savefig(output, dpi=400, bbox_inches="tight")
+    print(f"Saved {output}")
+    plt.close(fig)
+
+
+def plot_spectrum(nk) -> None:
+    """Draw the full Ritz spectrum of the mean flow, with the steady-flow spectrum when present, as plot_spectrum.png."""
+    fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 1.6, nk.COL_WIDTH * 1.0))
+    draw_spectrum(ax, MEAN_SPECTRUM, "mean flow", "C0", "o")
+    if STEADY_SPECTRUM.is_file():
+        draw_spectrum(ax, STEADY_SPECTRUM, "steady flow", "0.55", "s")
+    ax.axhline(0, color="k", lw=0.6, ls="--")
+    ax.set_xlabel(r"$f = \omega/2\pi$ ($U/D$)")
+    ax.set_ylabel(r"$\sigma$ ($U/D$)")
+    ax.set_title("(a) Ritz spectrum, mean flow and steady flow", loc="left", fontsize=8)
+    ax.legend(fontsize=6, loc="best")
+    output = CASE_DIR / "plot_spectrum.png"
+    fig.savefig(output, dpi=400, bbox_inches="tight")
+    print(f"Saved {output}")
+    plt.close(fig)
 
 
 def main() -> None:
@@ -137,6 +220,9 @@ def main() -> None:
     fig.savefig(output, dpi=400, bbox_inches="tight")
     print(f"Saved {output}")
     plt.close(fig)
+
+    plot_base_flow(nk)
+    plot_spectrum(nk)
 
 
 if __name__ == "__main__":
