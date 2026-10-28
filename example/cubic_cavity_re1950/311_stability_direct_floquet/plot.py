@@ -51,7 +51,7 @@ def plot_baseflow(path, out):
         ax.set_xlabel(rf'${names[0]}$ ($L$)')
         ax.set_ylabel(rf'${names[1]}$ ($L$)')
         ax.set_title(rf'({tag}) $|\mathbf{{u}}|$ at ${"zx"[tag == "b"]}=0$', loc='left', fontsize=7)
-        cb = fig.colorbar(cf, ax=ax, orientation='horizontal', shrink=0.9, pad=0.12,
+        cb = fig.colorbar(cf, ax=ax, orientation='horizontal', shrink=0.9, pad=0.2,
                           ticks=np.linspace(0.0, top, 3), format='%.2f')
         cb.set_label(r'$|\mathbf{u}|$ ($U$)')
     fig.savefig(out, dpi=400, bbox_inches='tight')
