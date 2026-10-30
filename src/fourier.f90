@@ -10,9 +10,9 @@
 !
 !     U(t) = c_0 + 2 Re sum_{k=1}^{K} c_k exp(2 pi i k t / T)
 !
-!   Only a closed orbit is held this way. A Newton guess does not close,
-!   its periodic extension has a jump and the coefficients fall as 1/k^2,
-!   so Newton keeps its snapshots and writes the modes once it converges.
+!   Only a closed orbit is held this way. A Newton guess does not close.
+!   Its periodic extension has a jump, so |c_k| falls as 1/k.
+!   Newton keeps its snapshots and writes the modes once it converges.
 !   Also re-exports the FFTW primitives used by POD and SPOD.
 !
 ! Public interface:
@@ -25,7 +25,8 @@
 !   fourier_orbit_load               — read them back
 !
 ! Dependencies:
-!   nekstab_nek_bridge, nekstab_vectors, nekstab_fourier_fftw
+!   nekstab_nek_bridge, nekstab_vectors, nekstab_fourier_fftw,
+!   nekstab_fourier_series
 !-----------------------------------------------------------------------
 module nekstab_fourier
    use nekstab_nek_bridge, only: lx1, ly1, lz1, lx2, ly2, lz2, lelv, lelt, &
@@ -38,6 +39,8 @@ module nekstab_fourier
    use nekstab_fourier_fftw, only: fourier_decomposition, fourier_reconstruction, &
                                    fft_init, fft_cleanup, fft_r2c, fft_c2r, &
                                    fft_frequencies
+   use nekstab_fourier_series, only: fourier_k_accum, fourier_dft_weight, &
+                                     fourier_eval_weight, fourier_select_k
    implicit none
    private
 
@@ -52,11 +55,6 @@ module nekstab_fourier
    integer, parameter :: lv = lx1*ly1*lz1*lelv
    integer, parameter :: lp = lx2*ly2*lz2*lelv
    integer, parameter :: lt = lx1*ly1*lz1*lelt
-   real, parameter :: TWOPI = 8.0d0*atan(1.0d0)
-   ! Most modes accumulated when fourier_kmax = 0. A closed orbit of the
-   ! examples needs 8 (flip_flop_re62) to 32 (cylinder_re180).
-   integer, parameter :: KCAP_DEFAULT = 128
-   real, parameter :: MISSING_TARGET = 1.0d-10
 
    logical, save :: loaded = .false., streaming = .false.
    real, save :: period = 0.0d0, sample_dt = 0.0d0, missing_energy = 0.0d0
@@ -123,8 +121,7 @@ contains
       nsamples = nsteps_in
       period = T_in
       sample_dt = T_in/real(nsteps_in)
-      K = min(KCAP_DEFAULT, (nsamples - 1)/2)
-      if (fourier_kmax > 0) K = min(fourier_kmax, (nsamples - 1)/2)
+      K = fourier_k_accum(nsamples, fourier_kmax)
       call allocate_modes(K)
       streaming = .true.
       if (nid == 0) write (6, "('Fourier orbit: accumulating',I5,' modes over',I7,' steps')") K, nsamples
@@ -135,20 +132,21 @@ contains
    !-----------------------------------------------------------------------
    subroutine fourier_orbit_stream_step(istep_in)
       integer, intent(in) :: istep_in
-      real :: theta
+      real :: w_re, w_im
       integer :: kk
 
       if (.not. streaming) return
+      call fourier_dft_weight(istep_in, nsamples, 0, w_re, w_im)
       call nopadd2s2(fou_u(:, 0), fou_v(:, 0), fou_w(:, 0), fou_p(:, 0), fou_t(:, :, 0), &
-                     vx, vy, vz, pr, t, 1.0d0/real(nsamples))
+                     vx, vy, vz, pr, t, w_re)
       do kk = 1, K
-         theta = TWOPI*real(kk)*real(istep_in)/real(nsamples)
+         call fourier_dft_weight(istep_in, nsamples, kk, w_re, w_im)
          call nopadd2s2(fou_u(:, 2*kk - 1), fou_v(:, 2*kk - 1), fou_w(:, 2*kk - 1), &
                         fou_p(:, 2*kk - 1), fou_t(:, :, 2*kk - 1), &
-                        vx, vy, vz, pr, t, cos(theta)/real(nsamples))
+                        vx, vy, vz, pr, t, w_re)
          call nopadd2s2(fou_u(:, 2*kk), fou_v(:, 2*kk), fou_w(:, 2*kk), &
                         fou_p(:, 2*kk), fou_t(:, :, 2*kk), &
-                        vx, vy, vz, pr, t, -sin(theta)/real(nsamples))
+                        vx, vy, vz, pr, t, w_im)
       end do
    end subroutine fourier_orbit_stream_step
 
@@ -160,37 +158,28 @@ contains
    !   fourier_kmax keeps every accumulated mode.
    !-----------------------------------------------------------------------
    subroutine fourier_orbit_finalize_streaming()
-      real, allocatable :: missing(:)
-      real :: Etot
-      integer :: kk, Kacc, Knext
+      integer :: kk, Kacc, ntrace, i
+      integer :: trace_k(32), trace_next(32)
+      real :: trace_miss(32)
 
       if (.not. streaming) return
       streaming = .false.
       Kacc = K
 
       if (allocated(Ek)) deallocate (Ek)
-      allocate (Ek(0:Kacc), missing(0:Kacc))
+      allocate (Ek(0:Kacc))
       Ek(0) = mode_energy(0)
       do kk = 1, Kacc
          Ek(kk) = mode_energy(2*kk - 1) + mode_energy(2*kk)
       end do
-      Etot = sum(Ek(1:Kacc))
-      do kk = 0, Kacc
-         missing(kk) = 0.0d0
-         if (Etot > 0.0d0) missing(kk) = max(0.0d0, 1.0d0 - sum(Ek(1:kk))/Etot)
-      end do
-
-      if (fourier_kmax <= 0) then
-         K = min(8, Kacc)
-         do while (K < Kacc .and. missing(K) >= MISSING_TARGET)
-            Knext = min(2*K, Kacc)
-            if (nid == 0) write (6, "('Fourier orbit doubling: K =',I4,' -> ',I4,' missing energy =',1PE12.4)") &
-               K, Knext, missing(Knext)
-            if (missing(Knext) > 0.1d0*missing(K) .and. missing(Knext) >= MISSING_TARGET) exit
-            K = Knext
+      call fourier_select_k(Ek, Kacc, fourier_kmax, K, missing_energy, &
+                            ntrace, trace_k, trace_next, trace_miss)
+      if (nid == 0) then
+         do i = 1, ntrace
+            write (6, "('Fourier orbit doubling: K =',I4,' -> ',I4,' missing energy =',1PE12.4)") &
+               trace_k(i), trace_next(i), trace_miss(i)
          end do
       end if
-      missing_energy = missing(K)
 
       ! Free the modes above K.
       if (K < Kacc) then
@@ -200,7 +189,6 @@ contains
          call shrink(fou_p, 2*K)
          call shrink_t(2*K)
       end if
-      deallocate (missing)
       loaded = .true.
       if (nid == 0) write (6, "('Fourier orbit selected K =',I4,' missing energy =',1PE12.4)") K, missing_energy
    end subroutine fourier_orbit_finalize_streaming
@@ -227,17 +215,17 @@ contains
    !-----------------------------------------------------------------------
    subroutine fourier_orbit_eval(t_in)
       real, intent(in) :: t_in
-      real :: theta
+      real :: w_re, w_im
       integer :: kk
 
       if (.not. loaded) return
       call nopcopy(vx, vy, vz, pr, t, fou_u(:, 0), fou_v(:, 0), fou_w(:, 0), fou_p(:, 0), fou_t(:, :, 0))
       do kk = 1, K
-         theta = TWOPI*real(kk)*modulo(t_in, period)/period
+         call fourier_eval_weight(kk, t_in, period, w_re, w_im)
          call nopadd2s2(vx, vy, vz, pr, t, fou_u(:, 2*kk - 1), fou_v(:, 2*kk - 1), fou_w(:, 2*kk - 1), &
-                        fou_p(:, 2*kk - 1), fou_t(:, :, 2*kk - 1), 2.0d0*cos(theta))
+                        fou_p(:, 2*kk - 1), fou_t(:, :, 2*kk - 1), w_re)
          call nopadd2s2(vx, vy, vz, pr, t, fou_u(:, 2*kk), fou_v(:, 2*kk), fou_w(:, 2*kk), &
-                        fou_p(:, 2*kk), fou_t(:, :, 2*kk), -2.0d0*sin(theta))
+                        fou_p(:, 2*kk), fou_t(:, :, 2*kk), w_im)
       end do
    end subroutine fourier_orbit_eval
 

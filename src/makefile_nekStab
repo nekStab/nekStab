@@ -35,6 +35,8 @@ $(O)/bm1s_mask.o:         $(NS)/bm1s_mask.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/zero_cross.o:        $(NS)/zero_cross.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
 # ortho: mean absolute inner product, and the last Arnoldi pass length.
 $(O)/ortho.o:             $(NS)/ortho.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
+# fourier_series: DFT weights, mode count and series evaluation. No Nek5000 dependency.
+$(O)/fourier_series.o:    $(NS)/fourier_series.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/vortex.o:            $(NS)/vortex.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 # mode_codes.f90 has no nekstab_nek_bridge dependency: it is a leaf
@@ -45,7 +47,7 @@ $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o 
 $(O)/mode_codes.o:        $(NS)/mode_codes.f90                                   ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/mode_config.o:       $(NS)/mode_config.f90       $(O)/nekstab_nek_bridge.o $(O)/mode_codes.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/fourier_fftw.o:      $(NS)/fourier_fftw.f90      $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/fourier.o:           $(NS)/fourier.f90           $(O)/nekstab_nek_bridge.o $(O)/nek_vectors.o $(O)/fourier_fftw.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/fourier.o:           $(NS)/fourier.f90           $(O)/nekstab_nek_bridge.o $(O)/nek_vectors.o $(O)/fourier_fftw.o $(O)/fourier_series.o ;$(FC) -c $(FL2_FREE) $< -o $@
 # base_mut: base eddy-viscosity snapshot for quasilaminar RANS stability.
 # Called only from the case .usr (receives rans_mut as a procedure arg), so
 # it carries no RANS dependency and is a pure leaf on the bridge.
