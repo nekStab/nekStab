@@ -42,11 +42,13 @@ def main():
 
     fsr_files = sorted(CASE_DIR.glob('fsr*0.f0*'))
 
-    if fsr_files:
-        x, y, fields, time = nk.read_field(fsr_files[0])
-        if 'vx' in fields and 'vy' in fields:
-            umag = np.sqrt(fields['vx']**2 + fields['vy']**2)
-            _plot_sensitivity(x, y, umag, CASE_DIR / 'plot_real.png')
+    if not fsr_files:
+        sys.exit('no fsr*0.f0* field in ' + str(CASE_DIR) + ': run the case first')
+    x, y, fields, time = nk.read_field(fsr_files[0])
+    if 'vx' not in fields or 'vy' not in fields:
+        sys.exit(f'{fsr_files[0].name} has no vx and vy: {sorted(fields)}')
+    umag = np.sqrt(fields['vx']**2 + fields['vy']**2)
+    _plot_sensitivity(x, y, umag, CASE_DIR / 'plot_real.png')
 
 
 if __name__ == '__main__':

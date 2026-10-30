@@ -11,11 +11,11 @@ modifies the von Kármán instability.
 - `userParam07 = 50` — Krylov subspace size
 
 ## Prerequisites
-- Base flow: `BF_1cyl0.f00001` (from `../../baseflow/newton/`)
-- Direct modes: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}` (from `../../stability/direct/`)
-- Adjoint modes: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}` (from `../../stability/adjoint/`)
+- Base flow: `BF_1cyl0.f00001` (from `../210_baseflow_newton/`)
+- Direct modes: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}` (from `../310_stability_direct/direct/`)
+- Adjoint modes: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}` (from `../320_stability_adjoint/`)
 - Wavemaker sensitivity inputs: `sr_1cyl0.f00001`, `si_1cyl0.f00001`
-  (from `../sensitivity_budget_wavemaker/`)
+  (written by the run of `../411_postproc_wavemaker/`; the stage ships a copy)
 
 ## Mesh
 2128 elements (`lelg=2128` in `SIZE`). Same mesh as the rest of the cylinder
