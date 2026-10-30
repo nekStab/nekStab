@@ -36,6 +36,8 @@ module nekstab_newton
    use nekstab_lapack, only: lstsq
    use nekstab_diagnostics, only: outpost_vort
    use nekstab_ortho, only: mean_abs_inner
+   use nekstab_newton_po_rules, only: newton_po_filter_warn, newton_po_kept_steps, &
+                                      newton_po_steps_after_stage
    implicit none
    private
    public :: newton_krylov, ts_gmres, &
@@ -250,7 +252,7 @@ contains
       !  with filterWeight = 0.01 converged to two orbits, T = 8.815177 and 8.815528, each with
       !  closure 8e-6 only under its own map. The Floquet stages run unfiltered. The relaxation
       !  filter (filtering = hpfrt) is a forcing term, independent of ifbase: no warning for it.
-      if ((isNewtonPO .or. isNewtonPO_T) .and. filterType == 1 .and. param(103) > 0.0d0 &
+      if (newton_po_filter_warn(isNewtonPO, isNewtonPO_T, filterType, param(103)) &
           .and. nid == 0) then
          write (6, *) '****************************************************************'
          write (6, *) 'nekStab: WARNING: filtering = explicit with Newton for a periodic'
@@ -283,7 +285,8 @@ contains
          end if
 
          call prepare_linearized_solver ! Compute nsteps and Nek parameters
-         if (i == 1 .and. (isNewtonPO .or. isNewtonPO_T)) nsteps_frozen = nsteps ! one count for all iterations
+         ! one count for all iterations
+         nsteps_frozen = newton_po_kept_steps(i, isNewtonPO, isNewtonPO_T, nsteps, nsteps_frozen)
 
          if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
             call allocate_orbit(nsteps)
@@ -479,7 +482,7 @@ contains
          end if
       end if
 
-      nsteps_frozen = 0 ! later stages of the same run choose their own count
+      nsteps_frozen = newton_po_steps_after_stage() ! later stages of the same run choose their own count
       call close_newton_log_units()
 
    end subroutine newton_krylov
