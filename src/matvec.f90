@@ -17,10 +17,9 @@
 !-----------------------------------------------------------------------
 
 module nekstab_matvec
-   use nekstab_krylov_subspace, only: krylov_vector, nt, nv, orbit_kept, orbit_modes
+   use nekstab_krylov_subspace, only: krylov_vector, nt, orbit_kept, orbit_modes
    use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_finalize_streaming
    use nekstab_vectors, only: nopcopy, nopadd2
-   use nekstab_bm1s_mask, only: weight_has_exact_zero, zero_where_weight_zero
    use nekstab_newton_po_rules, only: newton_po_cfl_warn, newton_po_set_step
    use nekstab_nek_bridge, only: nekStab_log, nid, nio, param, npert, time, dt, &
                                  nsteps, ctarg, vx, vy, vz, pr, t, lastep, fintim, &
@@ -37,7 +36,7 @@ module nekstab_matvec
                                  coefs, ifheat, dTdx, dTdy, dTdz, ifbuoyancy, &
                                  buoyancy_qvol_wired,&
                                  ifquasilaminar, ifKEnorm, ldimt, ifield, vmult, tmult, &
-                                 ifto, ifpsco, lx1, ly1, lz1, bm1s
+                                 ifto, ifpsco, lx1, ly1, lz1
    implicit none
    private
 
@@ -46,8 +45,6 @@ module nekstab_matvec
    logical, save :: bvec_cached = .false.
    ! Initialization flags for one-time setup in various subroutines
    logical, save :: matvec_init = .false.
-   logical, save :: bm1s_zero_known = .false.
-   logical, save :: bm1s_has_zero = .false.
    logical, save :: forward_linearized_map_init = .false.
    logical, save :: orbit_closure_done = .false.
    ! Step count per period that Newton for periodic orbits keeps fixed; 0 = none.
@@ -206,10 +203,6 @@ contains
       !     place, so that the Krylov basis holds the vector the solver sees.
       call average_copies(q)
 
-      !     Content where bm1s is zero is invisible to the norm.
-      !     The inner Helmholtz CG then fails at 24 or more ranks (naca 210).
-      call mask_bm1s_null(q)
-
       !     --> Pass the baseflow to vx, vy, vz
       call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)
 
@@ -287,9 +280,6 @@ contains
          end if
       end if
 
-      !     The time stepper and the Newton update write new content there.
-      call mask_bm1s_null(f)
-
    end subroutine matvec
 
 !-----------------------------------------------------------------------
@@ -333,38 +323,6 @@ contains
       ifield = ifield_saved
 
    end subroutine average_copies
-
-!-----------------------------------------------------------------------
-! mask_bm1s_null — Zero the perturbation where bm1s is zero
-!
-!     The scan of bm1s runs once.
-!     Later calls do no work when bm1s has no zero.
-!     The call passes the first element of bm1s, as glsc3 does.
-!-----------------------------------------------------------------------
-   subroutine mask_bm1s_null(x)
-
-      type(krylov_vector), intent(inout) :: x
-
-      integer :: m, nscan
-
-      if (.not. bm1s_zero_known) then
-         nscan = nv
-         if (nt > nscan) nscan = nt
-         bm1s_has_zero = weight_has_exact_zero(bm1s(1, 1, 1, 1), nscan)
-         bm1s_zero_known = .true.
-      end if
-      if (.not. bm1s_has_zero) return
-
-      call zero_where_weight_zero(x%vx(1), bm1s(1, 1, 1, 1), nv)
-      call zero_where_weight_zero(x%vy(1), bm1s(1, 1, 1, 1), nv)
-      call zero_where_weight_zero(x%vz(1), bm1s(1, 1, 1, 1), nv)
-      if (ifto) call zero_where_weight_zero(x%t(1, 1), bm1s(1, 1, 1, 1), nt)
-      do m = 2, ldimt
-         if (.not. ifpsco(m - 1)) cycle
-         call zero_where_weight_zero(x%t(1, m), bm1s(1, 1, 1, 1), nt)
-      end do
-
-   end subroutine mask_bm1s_null
 
 !-----------------------------------------------------------------------
 ! forward_linearized_map — Integrate linearized Navier-Stokes forward
@@ -765,9 +723,6 @@ contains
 
 !     --> Evaluate the forward map.
       call forward_linearized_map(wrk, q)
-
-!     The forward result enters the adjoint integration.
-      call mask_bm1s_null(wrk)
 
 !     --> Evaluate the adjoint map.
       call adjoint_linearized_map(f, wrk)
