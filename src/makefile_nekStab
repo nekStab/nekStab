@@ -31,6 +31,10 @@ $(O)/ks_select.o:         $(NS)/ks_select.f90         $(O)/argsort.o ;$(FC) -c $
 $(O)/dmt_filter.o:        $(NS)/dmt_filter.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
 # bm1s_mask: zero a field where the weight is exactly zero. No Nek5000 dependency.
 $(O)/bm1s_mask.o:         $(NS)/bm1s_mask.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
+# zero_cross: period from upward crossings of one probe. No Nek5000 dependency.
+$(O)/zero_cross.o:        $(NS)/zero_cross.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
+# ortho: mean absolute inner product, and the last Arnoldi pass length.
+$(O)/ortho.o:             $(NS)/ortho.f90 ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/vortex.o:            $(NS)/vortex.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/torque.o:            $(NS)/torque.f90            $(O)/nekstab_nek_bridge.o ;$(FC) -c $(FL2_FREE) $< -o $@
 # mode_codes.f90 has no nekstab_nek_bridge dependency: it is a leaf
@@ -64,7 +68,7 @@ $(O)/krylov_inner_products.o: $(NS)/krylov_inner_products.f90 $(O)/krylov_subspa
 $(O)/IO.o:                $(NS)/IO.f90                $(O)/krylov_subspace.o $(O)/nek_vectors.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/matvec.o:            $(NS)/matvec.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/fourier.o $(O)/bm1s_mask.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/noise.o:             $(NS)/noise.f90             $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/probes.o:            $(NS)/probes.f90            $(O)/krylov_subspace.o $(O)/zero_cross.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/statistics.o:        $(NS)/statistics.f90        $(O)/krylov_subspace.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/forcing.o:           $(NS)/forcing.f90           $(O)/krylov_subspace.o $(O)/otd.o $(O)/reynolds_force.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/diagnostics.o:       $(NS)/diagnostics.f90       $(O)/krylov_subspace.o $(O)/vortex.o ;$(FC) -c $(FL2_FREE) $< -o $@
@@ -79,7 +83,7 @@ $(O)/krylov_decomposition.o: $(NS)/krylov_decomposition.f90 $(O)/krylov_subspace
 # ─────────────────────────────────────────────────────────────────────
 # Level 4: eigensolvers (depends on krylov_decomposition + many Level 0)
 # ─────────────────────────────────────────────────────────────────────
-$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/ks_select.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o $(O)/noise.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/ks_select.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/IO.o $(O)/diagnostics.o $(O)/noise.o $(O)/ortho.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────
 # Level 5: Modules that depend on eigensolvers
@@ -87,7 +91,7 @@ $(O)/eigensolvers.o:      $(NS)/eigensolvers.f90      $(O)/krylov_subspace.o $(O
 $(O)/fixedp.o:            $(NS)/fixedp.f90            $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/diagnostics.o $(O)/newton_krylov.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/dmt.o:               $(NS)/dmt.f90               $(O)/nekstab_nek_bridge.o $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/dmt_filter.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/sensitivity.o:       $(NS)/sensitivity.f90       $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/eigensolvers.o $(O)/matvec.o $(O)/diagnostics.o $(O)/newton_krylov.o $(O)/energy_budget.o $(O)/torque.o ;$(FC) -c $(FL2_FREE) $< -o $@
-$(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o $(O)/fourier.o ;$(FC) -c $(FL2_FREE) $< -o $@
+$(O)/newton_krylov.o:     $(NS)/newton_krylov.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/matvec.o $(O)/krylov_decomposition.o $(O)/lapack_wrapper.o $(O)/diagnostics.o $(O)/fourier.o $(O)/ortho.o ;$(FC) -c $(FL2_FREE) $< -o $@
 $(O)/energy_budget.o:     $(NS)/energy_budget.f90     $(O)/krylov_subspace.o $(O)/nek_vectors.o $(O)/IO.o $(O)/matvec.o $(O)/eigensolvers.o $(O)/fourier.o ;$(FC) -c $(FL2_FREE) $< -o $@
 
 # ─────────────────────────────────────────────────────────────────────

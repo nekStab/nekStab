@@ -35,6 +35,7 @@ module nekstab_newton
    use nekstab_krylov_decomposition, only: arnoldi_factorization
    use nekstab_lapack, only: lstsq
    use nekstab_diagnostics, only: outpost_vort
+   use nekstab_ortho, only: mean_abs_inner
    implicit none
    private
    public :: newton_krylov, ts_gmres, &
@@ -703,7 +704,7 @@ contains
       real :: gmres_start_time, gmres_iter_time
       real :: prev_beta2 = 0.0d0
       real :: arnoldi_start_time, arnoldi_iter_time
-      real :: dot_val ! For weighted inner product calculation
+      real :: dot_row(ksize) ! <Q(k), Q(j)> for j < k (iforthocheck)
       real :: ortho_metric ! mean |<Q(k),Q(j)>| over j < k (iforthocheck)
       integer, save :: gmres_k_sum = 0 ! Accumulator for total k values in GMRES
       logical :: opened_local_logs ! true if WE opened the logs (standalone call)
@@ -790,10 +791,9 @@ contains
             ortho_metric = 0.0d0
             if (iforthocheck .and. k > 1) then
                do j = 1, k - 1
-                  call k_dot(dot_val, Q(k), Q(j))  ! Use weighted inner product
-                  ortho_metric = ortho_metric + abs(dot_val)
+                  call k_dot(dot_row(j), Q(k), Q(j))
                end do
-               ortho_metric = ortho_metric/(k - 1)  ! Average orthogonalization error
+               ortho_metric = mean_abs_inner(dot_row, k - 1)
                if (nid == 0) write (6, "('              Orthogonality: mean |<Q(k),Q(j)>| =',1PE15.6)") ortho_metric
             end if
 
