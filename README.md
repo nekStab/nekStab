@@ -29,7 +29,7 @@
 - **Wavemaker** — structural sensitivity to feedback
 - **Energy budget** — production, dissipation, transport decomposition (steady + Floquet)
 - **Base flow sensitivity** — response to mean flow modifications
-- **Steady force sensitivity** — optimal placement for passive control (not validated in 2.0.0)
+- **Steady force sensitivity** — optimal placement for passive control (imaginary part, 4.42, not validated in 2.0.0)
 - **Mode animation** — reconstruct eigenmode dynamics over one period
 
 ### Modal Decomposition
@@ -79,7 +79,7 @@
 | 4.11 | `'energy_budget_floquet'` | | Floquet energy budget |
 | 4.2 | `'wavemaker'` | | Structural sensitivity |
 | 4.3 | `'bf_sensitivity'` | | Base flow sensitivity |
-| 4.41 | `'force_sensitivity_real'` | | Steady force sensitivity (real), not validated in 2.0.0 |
+| 4.41 | `'force_sensitivity_real'` | | Steady force sensitivity (real) |
 | 4.42 | `'force_sensitivity_imag'` | | Steady force sensitivity (imag), not validated in 2.0.0 |
 | 4.43 | `'delta_forcing'` | | Delta forcing response |
 | 4.5 | `'animate_mode'` | `'animate'` | Mode animation |

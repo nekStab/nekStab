@@ -320,14 +320,14 @@ description for the 2.0 series; entries here are the per-tag deltas.
   `base_mut.o`). The "School A"/"School B" names are retired; no aliases or
   compatibility shims are kept.
 
-- `example/cylinder_re100/412_postproc_steady_force_sensitivity/` is removed.
-  Its GMRES solve ended at a squared relative residual of 1.35e-2 against a
-  target of 1e-6 (T = 1, `k_dim` = 50, 10 restarts), and the stage reported a
-  result without saying so. The residual stayed above 7e-3 for T = 1 to 3 and
-  for `k_dim` up to 400, and the adjoint map grows to a squared norm of 3.9e25
-  at T = 10. The cause is not found. The modes 4.41 and 4.42 stay in the code
-  and are documented as not validated in 2.0.0 (`DOC.md`, "Steady force
-  sensitivity").
+- `example/cylinder_re100/412_postproc_steady_force_sensitivity/` (mode 4.41)
+  converges. Its GMRES solve had stalled at a squared relative residual of
+  1e-2 against a target of 1e-6. The cause was in the case file: `usrdat2`
+  turned the inflow `v` into `O` as well as the outflow `O` into `v`, which
+  opened the upstream boundary of the adjoint problem. With only the outflow
+  changed, as in stage 320, the solve ends at 9.2e-7 after 2 restarts. The
+  reference holds the residual as a gate and the norms of the field. Mode 4.42
+  has no example and is not validated in 2.0.0.
 
 - `example/cylinder_re180/000_dns_seed/` is one DNS at Re = 180 from rest.
   It replaces the Re = 150, 170 and 175 seed folders. The DNS lands on the

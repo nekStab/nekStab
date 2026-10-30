@@ -123,6 +123,7 @@ not in it.
 | `example/cylinder_re100/330_transient_growth/` | Re 40 | transient growth (3.3) | Optimal energy gain of the steady cylinder wake at Re = 40 for a sweep of time horizons. |
 | `example/cylinder_re100/410_postproc_animate_modes/` | Re 100 | mode animation (4.5) | Animation of the leading direct mode of the Re = 100 cylinder wake over one period, T = 8.564. |
 | `example/cylinder_re100/411_postproc_wavemaker/` | Re 100 | all post-processing (4) | Wavemaker (structural sensitivity) of the Re = 100 cylinder wake from the direct and adjoint modes. |
+| `example/cylinder_re100/412_postproc_steady_force_sensitivity/` | Re 100 | force sensitivity, real part (4.41) | Sensitivity of the leading eigenvalue of the Re = 100 cylinder wake to a steady force, solved by GMRES on the adjoint time stepper. |
 | `example/cylinder_re100/500_otd/` | Re 100 | OTD, frozen base flow (5) | OTD basis of two modes on the frozen steady wake at Re = 100. The growth rates are compared with the leading eigenvalue of the direct stage. |
 | `example/cylinder_re100/600_modal_pod/` | Re 100 |  | POD, DMD and streaming SPOD of 100 DNS snapshots of the Re = 100 limit cycle (t = 150 to 200). |
 | `example/cylinder_re100/610_modal_dmd/` | Re 100 | DMD (6.2) | DMD of rank 20 of 100 DNS snapshots of the Re = 100 limit cycle (t = 150 to 200). |

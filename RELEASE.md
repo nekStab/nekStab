@@ -379,7 +379,7 @@ post-process it.
 | `210_baseflow_newton` | base flow / UPO by Newton-GMRES |
 | `3x0/3x1_stability_*` | 310 direct, 311 direct Floquet, 315 direct about the mean flow, 320 adjoint, 321 adjoint Floquet, 330 transient growth |
 | `350_dns_unstable_orbit` | DNS that leaves an unstable orbit along its Floquet mode |
-| `4xx_postproc_*` | 410 mode animation, 411 wavemaker or energy budget |
+| `4xx_postproc_*` | 410 mode animation, 411 wavemaker or energy budget, 412 steady-force sensitivity |
 | `500_otd` | OTD modes |
 | `6x0_modal_*` | 600 POD, 610 DMD, 620 SPOD, 630 DMT filter bank |
 
@@ -463,7 +463,7 @@ is open in the TODO list below.
 - **4.11**: PKE budget — Floquet
 - **4.2**: Wavemaker
 - **4.3**: Sensitivity to base flow modifications
-- **4.41**: Sensitivity to steady force (real part); not validated in 2.0.0, see `DOC.md`
+- **4.41**: Sensitivity to steady force (real part)
 - **4.42**: Sensitivity to steady force (imaginary part); not validated in 2.0.0, see `DOC.md`
 - **4.43**: Delta forcing
 - **4.50**: Animate eigenmode
