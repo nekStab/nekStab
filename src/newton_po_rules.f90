@@ -29,7 +29,7 @@ contains
 !-----------------------------------------------------------------------
 ! newton_po_set_step — Set dt and the step count for one period
 !
-!   n_kept > 0 gives the provisional step dt = period/n_kept; the value of
+!   n_kept > 0 gives nsteps = n_kept and dt = period/n_kept; the value of
 !   dt on entry is not used in that case.
 !   n_kept = 0 keeps the provisional step dt on entry.
 !   The count is ceiling(period/dt). The final step is period/count.
@@ -40,8 +40,13 @@ contains
       real, intent(inout) :: dt
       integer, intent(out) :: nsteps
 
-      if (n_kept > 0) dt = period/n_kept
-      nsteps = ceiling(period/dt)
+      if (n_kept > 0) then
+         ! Not ceiling(period/(period/n_kept)): rounding can give n_kept + 1,
+         ! and Newton keeps n_kept (period 1.0 and count 49 give 50).
+         nsteps = n_kept
+      else
+         nsteps = ceiling(period/dt)
+      end if
       dt = period/nsteps
 
    end subroutine newton_po_set_step

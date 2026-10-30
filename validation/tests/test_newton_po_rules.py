@@ -9,6 +9,7 @@ periodic-orbit Newton mode. Needs gfortran. The tests skip when it is missing.
 
 from __future__ import annotations
 
+import math
 import subprocess
 from pathlib import Path
 
@@ -111,3 +112,13 @@ def test_kept_count_is_set_at_iteration_1_for_an_orbit(
 def test_kept_count_is_cleared_after_the_stage(driver):
     (out,) = ask(driver, "clear\n")
     assert int(out) == 0
+
+
+@pytest.mark.parametrize("period,n", [(1.0, 49), (2.0, 49), (3.7, 13), (8.815177, 35)])
+def test_kept_count_is_not_recomputed_from_the_rounded_step(driver, period, n):
+    # period/(period/n) rounds up to n + 1 for these pairs, so ceiling would
+    # march one step more than the count Newton keeps.
+    assert math.ceil(period / (period / n)) == n + 1
+    dt, nsteps = ask(driver, f"step\n{period!r} {n} 0.3\n")
+    assert int(nsteps) == n
+    assert abs(float(dt) - period / n) <= 1e-15 * period / n
