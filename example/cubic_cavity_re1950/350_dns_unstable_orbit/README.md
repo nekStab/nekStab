@@ -9,8 +9,10 @@ The DNS starts from the orbit snapshot at t = 1700 of `../000_dns_period/`
 plus 1e-3 times the real part of the leading Floquet eigenvector (`make_ic.py`,
 relative perturbation 1e-3 of the velocity rms). It runs 2000 time units with
 the same filter and solver tolerances as the Floquet run. One probe at
-(0.25, 0.25, 0.25) records `u`, `v`, `w` in `cav.his`. A probe list with two
-points gives zeros in this build, so one point is used.
+(0.25, 0.25, 0.25) records `u`, `v`, `w` in `cav.his`. This `SIZE` has `lhis = 2`, and
+`hpts` writes zeros for the last block of probes when the number of probes is a
+multiple of `lhis` (two probes with `lhis = 2` do; with `lhis = 3` both probes
+give values), so one probe is used.
 
 `plot.py` samples the probe once per orbit period `T = 10.78909` and fits the
 deviation from the orbit with `d_n = a + b n + Re(c mu^n)`. The term `b n` is the
