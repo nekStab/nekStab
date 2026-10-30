@@ -96,3 +96,17 @@ def test_mean_over_the_first_period_removes_the_offset(driver):
     assert abs(estimated - period) <= bound
     assert v_used == 0.0
     assert abs(v_new - offset) <= mean_bound(period, dt)
+
+
+def test_new_level_above_the_signal_gives_no_short_period(driver):
+    # The first period uses the level 0 and stores the mean +0.25. At that
+    # step the signal is still on its rising edge below 0.25, so it would
+    # cross the new level a few steps later and close a period of a few
+    # steps. Every logged period must stay near T.
+    period, dt, n = 1.0, 0.017, 400
+    rows, _ = run_sine(driver, n, dt, period, 0.25, 0.0)
+    assert len(rows) >= 3
+    omega = 2.0 * math.pi / period
+    bound = omega * dt**2 / 2.0  # generic bound for a level off the zero
+    for estimated, _, _ in rows:
+        assert abs(estimated - period) <= bound

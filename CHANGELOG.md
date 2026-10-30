@@ -21,7 +21,10 @@ description for the 2.0 series; entries here are the per-tag deltas.
   the previous period rather than accumulating the initial transient or keeping
   the initial guess as an offset; a shared grid point on a rank boundary is owned
   by the lowest rank to avoid double-counting in `glsum`; and the reported defect
-  is normalized by the mass-weighted velocity norm `||u(t)-u(t-T)||/||u(t)||`.
+  is normalized by the mass-weighted velocity norm `||u(t)-u(t-T)||/||u(t)||`. When a period
+  closes with a new level above the signal, the next crossing of that level
+  a few steps later starts the next period and closes none (before, it logged a
+  period of a few steps).
 - `exports.sh` works from any directory and shell, keeps an existing
   `NEK_SOURCE_ROOT`, refuses `bash exports.sh` (it must be sourced) and sets
   `ulimit -s`. The README explains each line.

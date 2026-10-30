@@ -169,6 +169,9 @@ contains
             flush (6)
             flush (NEKSTAB_UNIT_ZC1)
          end if
+      else if (phase == 3) then
+         ! The period restarts at a later crossing of the new level: keep the field of that point.
+         call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
       end if
 !     https://en.wikipedia.org/wiki/Finite_difference_coefficient
       if (istep > 3) then
