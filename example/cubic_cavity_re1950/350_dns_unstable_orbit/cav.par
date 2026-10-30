@@ -2,8 +2,8 @@
 # DNS of the unstable limit cycle at Re = 1950: orbit snapshot (t = 1700 of
 # ../000_dns_period) plus 1e-3 times the real part of the leading Floquet
 # eigenvector of ../311_stability_direct_floquet (make_ic.py). One probe at (0.25, 0.25, 0.25), off every symmetry plane
-# (cav.his), records the growth of the secondary mode. With lhis = 2 in SIZE, a file with two
-# points gives zeros (hpts drops the last block when the count is a multiple of lhis), so one point is used. Same tolerances and filter
+# (cav.his), records the growth of the secondary mode. A file with two points gives zeros
+# in this build, so one point is used. Same tolerances and filter
 # as the Floquet run, so the DNS and the linear analysis share one discretization.
 startFrom = ic_floq.f00001 time=0
 
