@@ -1,0 +1,35 @@
+{
+  "case": "cylinder_re100/412_postproc_steady_force_sensitivity",
+  "summary": "Sensitivity of the leading eigenvalue of the Re = 100 cylinder wake to a steady force, solved by GMRES on the adjoint time stepper.",
+  "description": "Regression values of this repository (not literature values): the sensitivity field of the Re = 100 cylinder to a steady force (mode 4.41). The magnitude is concentrated in the recirculation bubble and in the shear layers next to the cylinder, and is close to zero upstream and beyond x = 7. The GMRES solve must end below its target of 1e-6 in the squared residual; before the correction of the boundary conditions in the case file it stalled at 1e-2. The velocity norms of the converged field agree to 3e-4 between T = 1 and T = 2.",
+  "produced": {
+    "ranks": "4",
+    "nekstab": "dev 89770900",
+    "compiler": "gfortran",
+    "date": "2026-10-30"
+  },
+  "quantities": {
+    "gmres_squared_residual": {
+      "source": "residu_gmres.dat:col6:last",
+      "value": 5e-07,
+      "tol_abs": 5e-07,
+      "note": "Convergence gate: passes for any final squared residual from 0 to 1e-6, the GMRES target."
+    },
+    "sensitivity_vx_norm": {
+      "source": "fsr1cyl0.f00001:field:vx.norm",
+      "value": 31.10343,
+      "tol_rel": 0.01
+    },
+    "sensitivity_vy_norm": {
+      "source": "fsr1cyl0.f00001:field:vy.norm",
+      "value": 8.478705,
+      "tol_rel": 0.01
+    },
+    "sensitivity_vx_xpeak": {
+      "source": "fsr1cyl0.f00001:field:vx.xpeak",
+      "value": 1.165,
+      "tol_abs": 0.3,
+      "note": "Streamwise position of the largest |vx|, in cylinder diameters from the cylinder centre."
+    }
+  }
+}

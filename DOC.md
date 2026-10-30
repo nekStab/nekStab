@@ -544,7 +544,7 @@ U(t) = c_0 + 2 Re sum_{k=1}^{K} c_k exp(2 pi i k t / T)
 | `4.11` | Floquet kinetic energy budget |
 | `4.2` | Wavemaker (structural sensitivity) |
 | `4.3` | Base flow sensitivity |
-| `4.41` | Real part forcing sensitivity (not validated in 2.0.0) |
+| `4.41` | Real part forcing sensitivity |
 | `4.42` | Imaginary part forcing sensitivity (not validated in 2.0.0) |
 | `4.43` | Delta forcing response |
 | `4.50` | Animate direct mode |
@@ -553,24 +553,17 @@ U(t) = c_0 + 2 Re sum_{k=1}^{K} c_k exp(2 pi i k t / T)
 
 #### Steady force sensitivity (4.41, 4.42)
 
-Not validated in 2.0.0, and no example ships for it. The modes solve `(I - exp(T L†)) x = c` for the
-sensitivity to a steady force, by restarted GMRES on the time-stepper form of the adjoint problem. The right-hand side
-`c` comes from the files `sr_<session>0.f00001` or `si_<session>0.f00001`, which the base flow sensitivity (mode 4.3, also
-run by 4.0) writes. On the cylinder at Re = 100 (the stage `412_postproc_steady_force_sensitivity` of
-2.0.0-rc3 and rc4, now removed) the solve did not reach its target:
+The modes solve `(I - exp(T L†)) x = c` for the sensitivity to a steady force, by restarted GMRES on the time-stepper form
+of the adjoint problem. The right-hand side `c` comes from the files `sr_<session>0.f00001` or `si_<session>0.f00001`, which
+the base flow sensitivity (mode 4.3, also run by 4.0) writes. The example `412_postproc_steady_force_sensitivity` runs 4.41
+on the cylinder at Re = 100 (T = 1, `k_dim` = 50) and ends at a squared relative residual of 9.2e-7 against the target of
+1e-6. 4.42 has no example and is not validated in 2.0.0.
 
-| T (`endTime`) | `k_dim` | GMRES restarts | squared relative residual at the end (target 1e-6) |
-|---|---|---|---|
-| 1 | 50 | 10 | 1.35e-2 |
-| 2 | 50 | 10 | 1.46e-2 |
-| 3 | 50 | 6 (run stopped) | 1.64e-2 |
-| 1 | 400 | 2 (run stopped) | 7.4e-3 |
-
-The adjoint map also grows quickly with T. For an input of unit norm, the squared norm of the output was 0.10 at T = 1,
-0.20 at T = 2, 19 at T = 4 and 3.9e25 at T = 10. At T = 10 two applications to the same input gave the same output, and the
-map was linear to 6e-20 in the squared relative error, so the growth belongs to the operator and is not noise. The cause of
-the residual plateau and of this growth is not established. The mode prints a warning when GMRES ends above its target, and
-it still writes the field. Treat that field as unverified.
+The boundary conditions of the case matter. The adjoint map needs the same conditions as the adjoint eigenproblem (mode 3.2):
+the outflow `O` becomes a Dirichlet condition `v` in `usrdat2`, and the inflow stays `v`. A case that also turns the inflow
+into `O` opens the upstream boundary; the adjoint map then grows like `exp(3 T)` and GMRES stalls near a squared residual of
+1e-2. The mode prints a warning when GMRES ends above its target, and it still writes the field. Treat that field as
+unverified.
 
 ### Mode 5: OTD
 
