@@ -32,7 +32,7 @@ module nekstab_diagnostics
                                  initc, spng_st, isize, &
                                  isDirect, isAdjoint, isTransientGrowth, &
                                  isFloquetDirect, isFloquetAdjoint, &
-                                 isFloquetTransientGrowth, ifprojfld, &
+                                 isFloquetTransientGrowth, &
                                  isNewtonFP, isNewtonPO, isNewtonPO_T, &
                                  session, lhis
    use nekstab_vortex, only: vortex_core
@@ -415,19 +415,6 @@ contains
                    isFloquetTransientGrowth
       orbit_mode = isFloquetDirect .or. isFloquetAdjoint .or. &
                    isFloquetTransientGrowth
-
-      !  Velocity residual projection. Every matvec of a Newton or Krylov mode
-      !  starts from an unrelated vector, so the projection space carries no
-      !  useful history across matvecs. On naca0012 (Newton) the velocity
-      !  Helmholtz solve with projection stopped with a non-finite norm at 24
-      !  or more ranks. With residualProj = no in [VELOCITY] it converged at 8, 16,
-      !  24, 32 and 40 ranks, with identical residuals at 8 to 32.
-      if (nid == 0 .and. ifprojfld(1) .and. &
-          (needs_base .or. isNewtonFP .or. isNewtonPO .or. isNewtonPO_T)) then
-         write (6, *) 'nekStab: NOTE: [VELOCITY] residualProj = yes in a Newton or'
-         write (6, *) '  Krylov mode. If the run stops with "non-finite norm", set'
-         write (6, *) '  residualProj = no in [VELOCITY]; naca0012 needed it at 24+ ranks.'
-      end if
 
       !  History points. hpts sends the probes to ranks in blocks of lhis. When the
       !  number of probes is a multiple of lhis, the last block stays on a rank

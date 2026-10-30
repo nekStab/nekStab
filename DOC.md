@@ -1810,12 +1810,14 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - A seed from a filtered DNS can start at a residual 40 times that of the DNS (see the explicit velocity filter under Base Flow), and the residual can stay flat or rise for three iterations in a row before it falls (`lid_driven_re3600`: 14 iterations in all). The loop ends only after six iterations without progress.
 
 **Run stops with `k_normalize non-finite norm` in a Newton or Krylov mode**
-- Set `residualProj = no` in `[VELOCITY]`. Each matvec starts from an unrelated
-  vector, so the velocity residual projection has no history to use, and on
-  `naca0012_re2000` its Helmholtz solve produced a non-finite norm at 24 or more
-  ranks on Jean Zay (ifort). With `residualProj = no` the Newton run gave identical
-  residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
-  the projection is on in these modes.
+- Versions before 2.0.0 could stop this way on a case with a sponge. The norm
+  of the Krylov vectors is weighted by `bm1s`, which is zero in the sponge, so
+  the vectors could carry content there that the norm does not see (on
+  `naca0012_re2000` 100 times the visible content). The velocity Helmholtz
+  solve could not reach its absolute tolerance on that right-hand side and
+  diverged at 24 or more ranks. Each matvec now sets the perturbation to zero
+  where `bm1s` is zero. The `naca0012_re2000` Newton run now gives the same
+  residuals at 8, 24 and 40 ranks, with the velocity residual projection on or off.
 
 **A converged eigenvalue at mu = 1.0000000 whose mode is a set of spikes**
 - Seen in versions up to v2.0.0-rc4 (v1.0.1 included), most often below the
