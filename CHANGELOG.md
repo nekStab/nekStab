@@ -54,17 +54,6 @@ description for the 2.0 series; entries here are the per-tag deltas.
   blocks of code that were commented out.
 
 ### Fixed
-- A Newton or Krylov run on a case with a sponge could stop with
-  `k_normalize non-finite norm` at high rank counts. The norm weight `bm1s` is
-  zero in the sponge, so the Krylov vectors could carry content there that the
-  norm does not see (on `naca0012_re2000` 100 times the visible content), and
-  the velocity Helmholtz solve diverged on that right-hand side at 24 or more
-  ranks. Each matvec now sets the perturbation velocity, temperature and passive
-  scalars to zero where `bm1s` is zero, on entry and on exit. A case without a
-  sponge is not changed. The `naca0012_re2000` 210 Newton run converges in 5
-  iterations at 8, 24 and 40 ranks with the velocity residual projection on or
-  off, with the same residuals as the reference (first 6.083e-7, last 9.0e-10).
-  The start-up note about `residualProj = yes` is removed.
 - `test_baseline_gallery` no longer rewrites `EXAMPLES.md`: `build_gallery.py`
   updates it only when it writes the default page `validation/index.html`.
   Before, the check of the `EXAMPLES.md` table could not fail in a full run.
