@@ -20,6 +20,7 @@ module nekstab_probes
                                  xm1, ym1, zm1, istep, time, dt, vx, vy, vz, &
                                  NEKSTAB_UNIT_ZC1, NEKSTAB_UNIT_ZC2, &
                                  zc_component
+   use nekstab_zero_cross, only: crossing_reset, crossing_state, crossing_update
    implicit none
    private
    public :: pointcheck, zero_crossing
@@ -94,18 +95,17 @@ contains
    subroutine zero_crossing(v_mean_init)
       use nekstab_krylov_subspace, only: lv
       real, intent(in), optional :: v_mean_init
-      real, save :: T_delayed(lv, 3), do1(lv), do2(lv), do3(lv), v_mean
+      real, save :: T_delayed(lv, 3), do1(lv), do2(lv), do3(lv)
       integer, parameter :: plor = 4
       real :: h1, l2, semi, linf, l2_u, rel_norm
       save l2
-      real :: glsum, vdot, vddot, theta, t_cross_interp
-      real, save :: velp(plor), v_sum
-      real, save :: t_cross, t_cross_old
-      real, save :: v_cross, v_cross_old
-      real, save :: p_now, p_old
-      integer, save :: probe_nel, probe_nid, t_cross_count
-      integer :: i
-      real :: vel_now, v_mean_start, v_level
+      real :: glsum, vdot, vddot
+      real, save :: velp(plor)
+      type(crossing_state), save :: zc
+      integer, save :: probe_nel, probe_nid
+      integer :: i, phase
+      real :: vel_now, v_mean_start
+      real :: theta, t_hit, period, v_logged, period_change
 
       if (present(v_mean_init)) then
          v_mean_start = v_mean_init
@@ -116,9 +116,8 @@ contains
       if (istep == 0) then
          call nekStab_log('Initializing zero-crossing routine...')
          probe_nel = 0; probe_nid = 0; vdot = 0.0d0; vddot = 0.0d0
-         v_sum = 0.0d0; v_mean = v_mean_start
-         p_now = 0.0d0; p_old = 0.0d0; l2 = 0.0d0
-         t_cross = 0.0d0; t_cross_old = 0.0d0; t_cross_count = 0
+         l2 = 0.0d0
+         call crossing_reset(zc, v_mean_start)
          call pointcheck(probe_nel, probe_nid) !alter xck, yck, zck in usrchk
          if (nid == 0) open (unit=NEKSTAB_UNIT_ZC1, file='zc_period.dat')
          if (nid == 0) open (unit=NEKSTAB_UNIT_ZC2, file='zc_poincare.dat')
@@ -144,79 +143,35 @@ contains
          velp(plor) = vel_now
       end if
 
-      if (istep > 0 .and. velp(plor - 1) < v_mean .and. velp(plor) >= v_mean .and. velp(plor) > velp(plor - 1)) then
-         ! Fix defect 2: crossing time was snapped to discrete time step without interpolation,
-         ! giving O(dt) period error; now linear interpolation between steps gives O(dt^2) accuracy.
-         theta = (v_mean - velp(plor - 1))/(velp(plor) - velp(plor - 1))
-         theta = max(0.0d0, min(1.0d0, theta))
-         t_cross_interp = (time - dt) + theta*dt
+      ! Period, crossing time and the mean over the last period.
+      call crossing_update(zc, velp(plor - 1), velp(plor), time, dt, istep > 0, &
+                           phase, theta, t_hit, period, v_logged, period_change)
 
-         t_cross_count = t_cross_count + 1
-
-         if (t_cross_count == 1) then
-            ! First crossing: records the start of the first period.
-            t_cross = t_cross_interp
-            t_cross_old = t_cross
-            call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
-            ! Initialize period integral for segment after the crossing
-            v_sum = 0.5d0*(v_mean + velp(plor))*(1.0d0 - theta)*dt
-            if (nid == 0) write (6, '(A,ES15.7)') ' Zero-crossing: first crossing at time = ', t_cross
+      if (phase == 1) then
+         call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
+         if (nid == 0) write (6, '(A,ES15.7)') ' Zero-crossing: first crossing at time = ', t_hit
+      else if (phase == 2) then
+         ! Relative mass-weighted norm ||u(t)-u(t-T)|| / ||u(t)||
+         call opsub3(do1, do2, do3, vx, vy, vz, T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3))
+         call normvc(h1, semi, l2, linf, do1, do2, do3)
+         call normvc(h1, semi, l2_u, linf, vx, vy, vz)
+         if (l2_u > 0.0d0) then
+            rel_norm = l2/l2_u
          else
-            ! Segment before crossing completes the period integral
-            v_sum = v_sum + 0.5d0*(velp(plor - 1) + v_mean)*theta*dt
-
-            t_cross_old = t_cross
-            t_cross = t_cross_interp
-            p_now = t_cross - t_cross_old ! compute period T
-
-            if (t_cross_count == 2) then
-               p_old = p_now
-            end if
-
-            ! Defect 5 / relative norm: relative mass-weighted norm ||u(t)-u(t-T)|| / ||u(t)||
-            call opsub3(do1, do2, do3, vx, vy, vz, T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3))
-            call normvc(h1, semi, l2, linf, do1, do2, do3)
-            call normvc(h1, semi, l2_u, linf, vx, vy, vz)
-            if (l2_u > 0.0d0) then
-               rel_norm = l2/l2_u
-            else
-               rel_norm = 0.0d0
-            end if
-
-            ! Save current field as reference for next period
-            call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
-
-            ! Log line at each crossing: time, T, |T - T_old|, relative norm
-            if (nid == 0) then
-               write (6, '(A,ES14.7,A,ES14.7,A,ES14.7,A,ES14.7)') &
-                  ' Zero-crossing time = ', t_cross, '  T = ', p_now, &
-                  '  |T-T_old| = ', abs(p_now - p_old), '  rel_norm = ', rel_norm
-               write (NEKSTAB_UNIT_ZC1, "(5E15.7)") t_cross, p_now, abs(p_now - p_old), v_mean, rel_norm
-               flush (6)
-               flush (NEKSTAB_UNIT_ZC1)
-            end if
-
-            ! Fix defect 1 & 4: running mean over all past time kept the initial guess as an
-            ! offset and included the start-up transient; now update v_mean as the mean over
-            ! the previous period (between the last two crossings).
-            ! The signal equals the level used for this crossing (the old mean) at
-            ! t_cross, so the first part of the next period integral starts from it,
-            ! not from the updated mean.
-            v_level = v_mean
-            if (p_now > 0.0d0) then
-               v_mean = v_sum/p_now
-            end if
-
-            p_old = p_now ! save old period value for next crossing
-
-            ! Initialize period integral for segment after crossing
-            v_sum = 0.5d0*(v_level + velp(plor))*(1.0d0 - theta)*dt
+            rel_norm = 0.0d0
          end if
-      else
-         ! Between crossings, accumulate the period integral (trapezoidal rule)
-         if (t_cross_count >= 1) then
-            v_sum = v_sum + 0.5d0*(velp(plor - 1) + velp(plor))*dt
+         call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
+         if (nid == 0) then
+            write (6, '(A,ES14.7,A,ES14.7,A,ES14.7,A,ES14.7)') &
+               ' Zero-crossing time = ', t_hit, '  T = ', period, &
+               '  |T-T_old| = ', period_change, '  rel_norm = ', rel_norm
+            write (NEKSTAB_UNIT_ZC1, "(5E15.7)") t_hit, period, period_change, v_logged, rel_norm
+            flush (6)
+            flush (NEKSTAB_UNIT_ZC1)
          end if
+      else if (phase == 3) then
+         ! The period restarts at a later crossing of the new level: keep the field of that point.
+         call opcopy(T_delayed(:, 1), T_delayed(:, 2), T_delayed(:, 3), vx, vy, vz)
       end if
 !     https://en.wikipedia.org/wiki/Finite_difference_coefficient
       if (istep > 3) then
