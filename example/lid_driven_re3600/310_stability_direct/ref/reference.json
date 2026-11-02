@@ -6,7 +6,7 @@
     "nekstab": "v2.0.0",
     "date": "2026-10-09",
     "ranks": "4",
-    "compiler": "ifort on Jean Zay",
+    "compiler": "ifort",
     "mode": "userParam01=3.1 (direct)"
   },
   "quantities": {

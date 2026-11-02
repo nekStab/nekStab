@@ -16,7 +16,7 @@ Compare with ../akervik (fixed tolerance) and ../akervik_dyn_oifs (OIFS); the fa
   precision. `endTime = 1000` is a limit that the run does not reach.
 - The residual in `residu.dat` (column 2) is the root mean square over the domain of the change of the velocity during one time step.
 
-## Result (Jean Zay, 8 ranks, `ifort`)
+## Result (8 ranks, `ifort`)
 
 - The residual meets the gate 1e-10 at t = 668.13 after 66464 time steps; it ends at 9.999e-11
   and started at 2.09e-04. Wall time 496 s.

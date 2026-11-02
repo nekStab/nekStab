@@ -32,7 +32,7 @@ before the exponent has converged (the explanation is in
 
 ## Result (run of 2026-10-28, two phases)
 
-Run on 8 ranks of Jean Zay (`ifort`).
+Run on 8 ranks of a cluster (`ifort`).
 
 Phase 1: white-noise start, 40 periods of the orbit (endTime = 207.585). The outputs are
 `p1_otd_*.dat`.
@@ -106,7 +106,7 @@ are these figures from the run above, without the `plot_` prefix.
 
 ```bash
 mks 1cyl
-sbatch run.local.slurm      # 8 ranks on Jean Zay
+sbatch run.local.slurm      # 8 ranks on a cluster
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

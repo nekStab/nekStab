@@ -40,7 +40,7 @@ The Slurm script writes stdout and stderr to `logfile`.
 
 ## Latest Result
 
-Jean Zay, 8 ranks, `ifort`, 2026-10-09: wall time 5882 s (98 min). The final checkpoint is `naca00120.f00007` at `t=70.0`.
+A cluster, 8 ranks, `ifort`, 2026-10-09: wall time 5882 s (98 min). The final checkpoint is `naca00120.f00007` at `t=70.0`.
 
 The finite-amplitude wake rings down monotonically. The late analysis uses the
 `v_y(1,0,0)` residual over `30 <= t <= 70`, after the startup transient has passed:

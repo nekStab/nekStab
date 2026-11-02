@@ -74,7 +74,7 @@ Five Newton iterations from the DNS seed (`residu_newton.dat`):
 | 5 | 7.8e-10 |
 
 Period **T = 5.189628136**, St = 0.192692034. The DNS period (5.19012 by FFT)
-differs by 1e-4 relative. Wall time 61 min on 8 ranks (Jean Zay, `ifort`, 2026-10-09).
+differs by 1e-4 relative. Wall time 61 min on 8 ranks (`ifort`, 2026-10-09).
 
 `BF_1cyl0.f00001` (written by the run) is the converged orbit. Copy it into
 the downstream stages. Its time stamp is the period (nekStab reads the

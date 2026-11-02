@@ -12,7 +12,7 @@ gives the same spectrum; the regularized lid has no corner singularity, so the a
 is valid. `ref/reference.json` holds the values of this run. The spectrum depends on the
 resolution (`../README.md`).
 
-Run of 2026-10-09 (Jean Zay, `ifort`, 4 ranks, base flow of the 210 run of that day): wall time 619 s.
+Run of 2026-10-09 (`ifort`, 4 ranks, base flow of the 210 run of that day): wall time 619 s.
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged eigenvalues,
 growth rate against frequency) and `plot_mode.png` (vx (a) and vy (b) of the leading direct mode, sign fixed so that vy is positive where |vy| is largest); `ref/` holds copies as
 `bf.png`, `spectrum.png` and `mode.png`. The direct and adjoint modes look alike but differ: after matching norm and sign, the relative L2 difference is 0.30 in vx and 0.44 in vy (correlation 0.95 and 0.91).

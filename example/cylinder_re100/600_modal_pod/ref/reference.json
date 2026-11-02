@@ -2,7 +2,7 @@
   "case": "cylinder_re100/600_modal_pod",
   "summary": "POD, DMD and streaming SPOD of 100 DNS snapshots of the Re = 100 limit cycle (t = 150 to 200).",
   "description": "Regression values of this repository for POD, DMD and streaming SPOD of 100 snapshots (t = 150 to 200, one per 0.5 time units) of the Re=100 limit cycle. The leading POD pair holds 97.6 % of the energy; the DMD and SPOD peaks sit at the shedding frequency St = 0.166 (literature value for the 2D cylinder at Re = 100: about 0.165).",
-  "produced": {"nekstab": "v2.0.0", "nproc": "8", "compiler": "ifort 2021.9 (Jean Zay)", "date": "2026-10-09"},
+  "produced": {"nekstab": "v2.0.0", "nproc": "8", "compiler": "ifort 2021.9", "date": "2026-10-09"},
   "quantities": {
     "pod_energy_mode1_percent": {"source": "pod_spectrum.dat:col3:row1", "value": 49.869353, "tol_rel": 0.005},
     "pod_energy_mode2_percent": {"source": "pod_spectrum.dat:col3:row2", "value": 47.722309, "tol_rel": 0.005},

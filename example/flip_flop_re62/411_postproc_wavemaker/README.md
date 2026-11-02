@@ -46,7 +46,7 @@ cp ../311_stability_direct_floquet/Spectre_NSd_conv.dat .     # only after a new
 
 The budget reads the direct modes and rows 1 and 2 of `Spectre_NSd_conv.dat` (σ, ω of each mode). The adjoint modes are only used by `plot.py`.
 
-## Result (2026-10-23, Jean Zay, `ifort`, 40 ranks)
+## Result (2026-10-23, `ifort`, 40 ranks)
 
 Wall time 34.6 s. The Floquet exponent of stage 311 is σ = 7.900166e-3 (ω = 0.1407729).
 
@@ -61,7 +61,7 @@ Wall time 34.6 s. The Floquet exponent of stage 311 is σ = 7.900166e-3 (ω = 0.
 
 The terms are in the normalisation of the code, where σ = (P̄ − D̄ − S̄)/Ē. Modes 1 and 2 are the two members of one conjugate pair.
 
-On the earlier orbit (1212 steps per period) a workstation (`ifx`) and Jean Zay (`ifort`) agreed to 5e-5 in relative terms.
+On the earlier orbit (1212 steps per period) a workstation (`ifx`) and a cluster (`ifort`) agreed to 5e-5 in relative terms.
 
 - The code uses the weak form of the dissipation, ν∫|∇q|² dV, with the gradients taken in each element: the term by which the time
   stepper changes the energy. The strong form ν∫q·∇²q dV is 0.11 % smaller, and with it the budget closed to 1.22 % instead of 0.40 %

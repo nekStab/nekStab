@@ -10,7 +10,7 @@ here as `BF_cav0.f00001`. `startFrom = ... time=0` resets the time. Newton
 writes the converged flow over the same file name.
 
 **Result**: 12 iterations from a squared residual of 9.0e-6 to 8.4e-11 (`residu_newton.dat`),
-59 min on 16 ranks (Jean Zay, run of 2026-10-09). The converged `BF_cav0.f00001` is the base flow of
+59 min on 16 ranks (run of 2026-10-09). The converged `BF_cav0.f00001` is the base flow of
 `../../310_stability_direct/` and `../../320_stability_adjoint/`.
 
 **Reference**: `ref/reference.json` checks the first residual (9.0e-6, 5 %), the iteration count (12,

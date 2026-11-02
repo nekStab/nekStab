@@ -24,7 +24,7 @@ mks 2cyl
 sbatch --ntasks=16 --mem-per-cpu=2000 run.local.slurm
 ```
 
-## Result (2026-10-23, Jean Zay, `ifort`, 40 ranks)
+## Result (2026-10-23, `ifort`, 40 ranks)
 - `Spectre_NSd_conv.dat` has ten rows, the ten leading converged multipliers (`maxmodes = 10`).
 - Leading multiplier: sigma = 0.007900166, omega = +/-0.1407729 (just above zero - consistent with
   Re = 62 barely above the secondary bifurcation).

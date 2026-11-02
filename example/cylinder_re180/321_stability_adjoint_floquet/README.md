@@ -34,7 +34,7 @@ the periodic orbit for receptivity — 2D proxy (see caveat above).
 makeneks 1cyl                     # compile (links this case's .usr)
 mpiexec -np 8 ./nek5000 > logfile
 ```
-Wall time: 68 min on 8 ranks (Jean Zay, `ifort`, 2026-10-09).
+Wall time: 68 min on 8 ranks (`ifort`, 2026-10-09).
 
 ## Results (this 2D run)
 `Spectre_NSa.dat`, `Spectre_Ha_conv.dat` — multipliers `mu = exp((sigma + i omega) T)`:

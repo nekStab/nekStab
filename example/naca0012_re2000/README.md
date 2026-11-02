@@ -43,7 +43,7 @@ python3 plot.py
 ```
 
 ## Latest Result
-Run of 2026-10-10 of `210_baseflow_newton/fp`, 8 ranks (Jean Zay, ifort 2021.9):
+Run of 2026-10-10 of `210_baseflow_newton/fp`, 8 ranks (ifort 2021.9):
 
 - Newton from the DNS snapshot: 5 iterations, squared residual 6.08e-7 to 9.49e-10
 - 956 s on 8 ranks (220 s on 40 ranks, the same residuals and a base flow that agrees to 9e-12)

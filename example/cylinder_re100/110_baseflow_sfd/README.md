@@ -9,7 +9,7 @@ The stage has six variants in subfolders. All start from the same seed (`BF_seed
 `userParam04 = +-0.166`, `userParam05 = 0.26`. The sign of `userParam04` selects the formulation; the other two columns change how the
 time steps are taken.
 
-| variant | formulation | dynamic solver tolerance | time stepping | gate | converged at t | time steps | wall time on Jean Zay (s) | largest difference from Newton |
+| variant | formulation | dynamic solver tolerance | time stepping | gate | converged at t | time steps | wall time (s) | largest difference from Newton |
 |---|---|---|---|---|---|---|---|---|
 | `akervik` | Åkervik | no | BDF3, CFL 0.5 | 1e-10 | 667.9 | 66445 | 562 | 4e-05 |
 | `akervik_dyn` | Åkervik | yes | BDF3, CFL 0.5 | 1e-10 | 668.1 | 66464 | 496 | 4e-05 |
@@ -18,7 +18,7 @@ time steps are taken.
 | `casacuberta_dyn` | Casacuberta | yes | BDF3, CFL 0.5 | 1e-10 | 869.2 | 86462 | 588 | 4e-05 |
 | `casacuberta_dyn_oifs` | Casacuberta | yes | OIFS, CFL 5 | 1e-10 | 995.3 | 9901 | 405 | 3e-03 |
 
-Measured on Jean Zay (`ifort`, 8 ranks) on 2026-10-28. The gate is the residual (root mean square over the domain of the change of
+Measured on a cluster (`ifort`, 8 ranks) on 2026-10-28. The gate is the residual (root mean square over the domain of the change of
 the velocity in one time step) below which the run stops and writes `BF_1cyl0.f00001`.
 
 ## What the variants show
@@ -28,7 +28,7 @@ the velocity in one time step) below which the run stops and writes `BF_1cyl0.f0
 - The dynamic solver tolerance moves the time of convergence by less than 0.1 %: `akervik_dyn` stops at t = 668.13
   against 667.94, and `casacuberta_dyn` at 869.16 against 868.94. The wall time goes from 562 s to 496 s for Åkervik and
   from 667 s to 588 s for Casacuberta, about 12 % less in both formulations at the same step count (66445 against 66464,
-  86440 against 86462). Wall times on Jean Zay vary between runs: in the batch of 2026-10-09 two runs of `akervik_dyn` took
+  86440 against 86462). Wall times vary between runs: in the batch of 2026-10-09 two runs of `akervik_dyn` took
   441 s and 480 s, up to 10 % apart. Read the 12 % as a trend seen in both formulations, not as a precise figure.
 - With these parameters the Casacuberta filter converges more slowly than the Åkervik filter: the residual falls as
   exp(-0.0177 t) against exp(-0.0234 t) over the last fifth of the run.

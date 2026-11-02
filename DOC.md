@@ -946,7 +946,7 @@ A Newton-converged orbit closes to 1e-5 or below. Above 1e-3 the run prints a wa
 | `spng_st` | 0.0 | Sponge strength (0 = disabled) |
 | `acc_spg` | 0.333 | Acceleration ramp fraction |
 
-**Sponge reference field.** The sponge of a nonlinear run (DNS, SFD, Newton) forces the velocity toward `spng_vr`, the field that the run holds when the sponge starts: the restart file, or the initial condition of a cold start. A perturbation run forces toward zero. A steady Newton run with the sponge on therefore solves the Navier-Stokes equations plus a forcing toward its start field, so the base flow depends on that field inside the sponge zone, and the forcing vanishes only if the start field is the solution. For `naca0012_re2000` (8 ranks, Jean Zay), Newton from the DNS snapshot differs by 1.1e-2 (relative l2 norm of the velocity) from the base flow that the stability stages ship: by 7e-4 to 8e-4 for x < 1 and by 3e-2 for 5 < x < 6, inside the sponge. A second Newton run seeded with the output of the first moves the field by 3.5e-3 and moves the leading growth rate of the direct problem from -0.0643 to -0.0661; the shipped base flow gives -0.0665. Periodic-orbit and Floquet runs use no sponge, because the sponge would force the orbit toward one snapshot.
+**Sponge reference field.** The sponge of a nonlinear run (DNS, SFD, Newton) forces the velocity toward `spng_vr`, the field that the run holds when the sponge starts: the restart file, or the initial condition of a cold start. A perturbation run forces toward zero. A steady Newton run with the sponge on therefore solves the Navier-Stokes equations plus a forcing toward its start field, so the base flow depends on that field inside the sponge zone, and the forcing vanishes only if the start field is the solution. For `naca0012_re2000` (8 ranks of a cluster), Newton from the DNS snapshot differs by 1.1e-2 (relative l2 norm of the velocity) from the base flow that the stability stages ship: by 7e-4 to 8e-4 for x < 1 and by 3e-2 for 5 < x < 6, inside the sponge. A second Newton run seeded with the output of the first moves the field by 3.5e-3 and moves the leading growth rate of the direct problem from -0.0643 to -0.0661; the shipped base flow gives -0.0665. Periodic-orbit and Floquet runs use no sponge, because the sponge would force the orbit toward one snapshot.
 
 #### OTD
 
@@ -1806,7 +1806,7 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - Set `residualProj = no` in `[VELOCITY]`. Each matvec starts from an unrelated
   vector, so the velocity residual projection has no history to use, and on
   `naca0012_re2000` its Helmholtz solve produced a non-finite norm at 24 or more
-  ranks on Jean Zay (ifort). With `residualProj = no` the Newton run gave identical
+  ranks on a cluster (ifort). With `residualProj = no` the Newton run gave identical
   residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
   the projection is on in these modes.
 

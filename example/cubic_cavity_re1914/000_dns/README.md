@@ -2,7 +2,7 @@
 
 **uparam01**: 0 (DNS), cold start, Re = 1914, 16 ranks
 
-DNS of the cubic cavity from rest to t = 100 (25 min, 69 571 steps on 16 ranks, Jean Zay).
+DNS of the cubic cavity from rest to t = 100 (25 min, 69 571 steps on 16 ranks of a cluster).
 The flow is close to the steady state but not on it. Between t = 95 and t = 100 the probe signal
 still changes by up to 5e-4 per time unit (panel (a) of `plot_dns.png`). The least damped modes of
 the steady flow have sigma = -1.8e-4 (the T1 pair) and -0.026, so the start-up oscillation decays

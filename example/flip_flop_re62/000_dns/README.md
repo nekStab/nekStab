@@ -4,7 +4,7 @@
 **Re**: 62
 **Ranks**: 16
 
-Nonlinear reference trajectory / seed for downstream stages. Run with `sbatch run.local.slurm` (2 min on Jean Zay with `ifort`, 2026-10-09).
+Nonlinear reference trajectory / seed for downstream stages. Run with `sbatch run.local.slurm` (2 min on a cluster with `ifort`, 2026-10-09).
 `plot.py` writes `plot_snapshot.png` (`vx` of the last snapshot); `ref/` holds a copy as `snapshot.png`.
 
 ## Reference

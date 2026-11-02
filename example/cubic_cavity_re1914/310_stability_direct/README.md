@@ -9,7 +9,7 @@ Copy the Newton `BF_cav0.f00001` of `../210_baseflow_newton/fp/` here, then
 units of U/L). The leading pair has sigma = -0.000183 and omega = 0.587 (St = 0.0934).
 Result and comparison with the other stage: see `../README.md`.
 
-**Run** (Jean Zay, 2026-10-10, 40 ranks): 2437 s. The six converged eigenvalues agree with those of a
+**Run** (2026-10-10, 40 ranks): 2437 s. The six converged eigenvalues agree with those of a
 16-rank run to 1e-8 in sigma and 1e-7 in omega.
 
 **Reference**: `ref/reference.json` checks sigma and omega of the leading pair (tolerances 2e-6 and 1e-4)

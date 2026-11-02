@@ -56,7 +56,7 @@ Each tolerance is tight enough to fail a defect that this stage met while it was
 ```bash
 printf "cav\n%s/\n" "$(pwd)" > SESSION.NAME
 mks cav
-sbatch run.local.slurm      # 16 ranks; 12 min on 40 ranks of Jean Zay
+sbatch run.local.slurm      # 16 ranks; 12 min on 40 ranks of a cluster
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

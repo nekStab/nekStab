@@ -51,6 +51,6 @@ through the links `cav0.f00001..100 -> ../000_dns/cav0.f00080..179`) →
 ## Run
 ```bash
 mks cav
-sbatch run.local.slurm      # 36 min on 16 ranks of Jean Zay, 54 min on a 40-core node
+sbatch run.local.slurm      # 36 min on 16 ranks of a cluster, 54 min on a 40-core node
 uv run --with numpy --with scipy --with matplotlib python plot.py
 ```

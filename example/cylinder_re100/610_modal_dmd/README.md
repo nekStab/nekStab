@@ -26,7 +26,7 @@ copies them when they are missing. The DNS takes about 100 s on 8 ranks.
 - `logfile` — Slurm job log
 
 ## Result
-Jean Zay, 8 ranks, 2026-10-09: `dmd_spectrum.dat` lists the 20 eigenvalues of rank 20, ordered by |mu|. The first ten
+A cluster, 8 ranks, 2026-10-09: `dmd_spectrum.dat` lists the 20 eigenvalues of rank 20, ordered by |mu|. The first ten
 are five conjugate pairs with |mu| from 0.99982 to 0.99917 and growth rates sigma between -3.7e-4 and -1.7e-3 per time
 unit. Their Strouhal numbers are 0.49736, 0.16566, 0.33158, 0.66301 and 0.83965. The first four are 3.002, 1, 2.002 and
 4.002 times the shedding frequency 0.16566; the values 0.16566, 0.33158 and 0.66301 are those of `../600_modal_pod`.

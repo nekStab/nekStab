@@ -572,7 +572,7 @@ description for the 2.0 series; entries here are the per-tag deltas.
   starts with `ERROR:`.
 - `naca0012_re2000/210_baseflow_newton` runs at any rank count up to 40. With
   the velocity residual projection on, the Newton run stopped with
-  `k_normalize non-finite norm` at 24, 32 and 40 ranks on Jean Zay (ifort
+  `k_normalize non-finite norm` at 24, 32 and 40 ranks on a cluster (ifort
   2021.9) and converged at 8 and 16. The projection is now off in that `.par`
   (`[VELOCITY] residualProj = no`, as in the other Newton and Krylov stages); the
   residuals are identical to seven digits at 8, 16, 24 and 32 ranks, and

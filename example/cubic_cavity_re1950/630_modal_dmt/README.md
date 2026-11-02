@@ -36,7 +36,7 @@ of a filter into the neighbouring frequencies and the files.
   averaged over the last 4 periods, from t = 11 T (`avg_from`), which also removes the ripple from the leakage of the other harmonics.
 - `hist_step = 1000`: `dmt_bank.dat` has one row per 1000 steps.
 
-## Result (40 ranks of Jean Zay, `ifort`)
+## Result (40 ranks of a cluster, `ifort`)
 
 Wall time 1292 s. The last field `cav0.f00001` is the flow at t = 15 T. `plot.py` rebuilds it from the filters, one harmonic at a time,
 
@@ -77,7 +77,7 @@ the last field. A wrong frequency, filter width or period moves these numbers. `
 
 ```bash
 mks cav
-sbatch run.local.slurm        # 16 ranks or more; 1292 s on 40 ranks of Jean Zay
+sbatch run.local.slurm        # 16 ranks or more; 1292 s on 40 ranks of a cluster
 uv run --with numpy --with matplotlib --with pymech python plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

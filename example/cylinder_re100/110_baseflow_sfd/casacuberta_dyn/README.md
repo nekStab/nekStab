@@ -16,7 +16,7 @@ Compare with ../casacuberta (fixed tolerance) and ../casacuberta_dyn_oifs (OIFS)
   precision. `endTime = 1500` is a limit that the run does not reach.
 - The residual in `residu.dat` (column 2) is the root mean square over the domain of the change of the velocity during one time step.
 
-## Result (Jean Zay, 8 ranks, `ifort`)
+## Result (8 ranks, `ifort`)
 
 - The residual meets the gate 1e-10 at t = 869.16 after 86462 time steps; it ends at 9.996e-11
   and started at 2.09e-04. Wall time 588 s.

@@ -3,7 +3,7 @@
 **uparam01**: 0 (DNS), cold start, Re = 1900, 16 ranks
 
 DNS of the cubic cavity at Re = 1900 from rest to t = 100 (21 min, 69 571 steps on 16 ranks,
-Jean Zay). Re = 1900 lies below the critical Reynolds number Re_c = 1916.63 of the thesis
+a cluster). Re = 1900 lies below the critical Reynolds number Re_c = 1916.63 of the thesis
 (Table 4.1), so the steady flow is stable and the DNS can approach it. At Re = 1920 the steady
 flow is unstable and a DNS cannot hold it; the next stage finds it with Newton-GMRES, and it
 starts from the last field of this run, `cav0.f00010`.

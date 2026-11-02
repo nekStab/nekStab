@@ -28,7 +28,7 @@ sbatch --ntasks=16 --mem-per-cpu=2000 run.local.slurm
 `run.local.slurm` refreshes `SESSION.NAME` for the current directory and writes
 stdout/stderr to `logfile`.
 
-## Result (2026-10-23, Jean Zay, `ifort`, 40 ranks)
+## Result (2026-10-23, `ifort`, 40 ranks)
 - Leading adjoint pair: sigma = 0.007893515, omega = +/-0.1407687.
 - Direct 311 leading pair: sigma = 0.007900166, omega = +/-0.1407729. The adjoint sigma is 6.7e-6 (0.08 %) lower.
 - Wall time = 708 s.

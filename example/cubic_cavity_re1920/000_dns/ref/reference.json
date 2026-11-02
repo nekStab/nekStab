@@ -5,7 +5,7 @@
   "produced": {
     "ranks": "16",
     "nekstab": "v2.0.0",
-    "compiler": "ifort 2021.9 (Jean Zay)",
+    "compiler": "ifort 2021.9",
     "date": "2026-10-10"
   },
   "quantities": {

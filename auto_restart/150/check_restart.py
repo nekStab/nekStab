@@ -10,7 +10,7 @@ from nekStab_tools import *
 target_end_time = 200.0  # Set your desired end time here
 single_job_time = 50.0  # Maximum job duration (will be adjusted near target end time)
 
-pbs_script = "jz.pbs"
+pbs_script = "job.pbs"
 local_sh_script = "run_nohup.sh"
 
 # ---- CASE-SPECIFIC SETTINGS ----

@@ -24,7 +24,7 @@ sbatch run.local.slurm     # 8 ranks
 ```
 
 ## Latest Result
-Run of 2026-10-28 (Jean Zay, `ifort`, 8 ranks), `k_dim = 240`, `schur_tgt = 8`, `maxmodes = 10`;
+Run of 2026-10-28 (`ifort`, 8 ranks), `k_dim = 240`, `schur_tgt = 8`, `maxmodes = 10`;
 wall time 2480 s (41 min 20 s, from the `logfile`).
 - Leading pair: σ = -0.0665382, ω = ±8.00579 (`Spectre_NSd_conv.dat` rows 1 and 2).
 - Stable pair: σ = -0.556786, ω = ±9.43325 (rows 8 and 9). An earlier run with a smaller
