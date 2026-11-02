@@ -100,6 +100,9 @@ Each row below is a stage whose run `scripts/check_against_ref.py` compares with
 `python validation/build_gallery.py` from the summary of each reference; a stage without a complete reference is
 not in it.
 
+All rows hold for release 2.0.0. `RELEASE.md` (section on validation) says which stages ran on its final
+source and which keep an earlier result.
+
 ### Verified
 
 <!-- verified:start (written by validation/build_gallery.py from the summary of each ref/reference.json) -->
