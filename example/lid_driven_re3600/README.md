@@ -49,7 +49,7 @@ python3 plot.py
 The Newton and stability stages use the unfiltered time-stepper, and the DNS runs with
 `filtering = explicit`, so the steady state of the DNS is a fixed point of the unfiltered map only
 to the truncation error of the mesh. The table lists the first Newton residual from the t = 600
-DNS state and the eigenvalues of the stability stages (4 ranks, `ifx`) at each order. The chain on Jean Zay (`ifort`) gives the same numbers to 7 digits at `lx1 = 12`:
+DNS state and the eigenvalues of the stability stages (4 ranks, `ifx`) at each order. The chain on a cluster (`ifort`) gives the same numbers to 7 digits at `lx1 = 12`:
 
 | `lx1` | first Newton residual | direct σ₁ | adjoint σ₁ | direct pair σ ± iω | adjoint pair σ ± iω |
 |---|---|---|---|---|---|

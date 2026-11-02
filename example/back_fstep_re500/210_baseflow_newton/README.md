@@ -32,13 +32,13 @@ sbatch run.local.slurm                   # 8 ranks, both phases in one job
 phase-1 file when it ends:
 
 1. Phase 1 (DNS settle): `bfs_dns.par` — uniform IC to steady recirculation on
-   this mesh, endTime 400, 483 s on 8 ranks (Jean Zay), writes `bfs0.f00001..4`.
+   this mesh, endTime 400, 483 s on 8 ranks, writes `bfs0.f00001..4`.
 2. Phase 2 (Newton polish): `bfs_newton.par` (`startFrom = bfs0.f00004`) —
-   converges in 4 iterations (639 s on 8 ranks, Jean Zay) and writes `BF_bfs0.f00001`.
+   converges in 4 iterations (639 s on 8 ranks of a cluster) and writes `BF_bfs0.f00001`.
 
 The converged steady base flow is written to `BF_bfs0.f00001`.
 
-## Convergence record (run of 2026-10-09, Jean Zay, ifort 2021.9, 8 ranks)
+## Convergence record (run of 2026-10-09, ifort 2021.9, 8 ranks)
 DNS Phase 1 relaxes monotonically; the t=300 and t=400 fields differ by 2.5e-2
 (relative l2 norm of the velocity; slow recirculation-bubble tail — exactly the
 mode Newton kills fast). Newton Phase 2 moves the t=400 field by a further

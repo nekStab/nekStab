@@ -16,7 +16,7 @@ Re=180 is below the 3D mode A threshold (Re = 188.5). In 2D the wake has
 no secondary instability, so the DNS settles on the same limit cycle that
 Newton computes.
 
-Run: `sbatch run.local.slurm` (8 ranks; 34 763 steps, 6 min on Jean Zay with `ifort`, 2026-10-09; 17 min on x2, a 6-core machine).
+Run: `sbatch run.local.slurm` (8 ranks; 34 763 steps, 6 min on a cluster with `ifort`, 2026-10-09; 17 min on x2, a 6-core machine).
 `plot.py` writes `plot_snapshot.png` (velocity magnitude of the last snapshot) and `plot_signal.png` (`vy` at the probe against time);
 `ref/` holds copies as `snapshot.png` and `signal.png`.
 

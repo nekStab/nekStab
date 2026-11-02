@@ -16,7 +16,7 @@ Compare with ../akervik_dyn (the same case with BDF3); the family README (`../RE
   precision. `endTime = 1500` is a limit that the run does not reach.
 - The residual in `residu.dat` (column 2) is the root mean square over the domain of the change of the velocity during one time step.
 
-## Result (Jean Zay, 8 ranks, `ifort`)
+## Result (8 ranks, `ifort`)
 
 - The residual meets the gate 1e-10 at t = 765.90 after 7619 time steps; it ends at 9.972e-11
   and started at 2.08e-03. Wall time 326 s.

@@ -42,7 +42,7 @@ of a filter into the neighbouring frequencies and the files.
   the leakage of the other harmonics.
 - `hist_step = 500`: `dmt_bank.dat` has one row per 500 steps.
 
-## Result (40 ranks of Jean Zay, `ifort`)
+## Result (40 ranks of a cluster, `ifort`)
 
 Wall time 643 s. The amplitude files are referenced to t = 0, which is phase 0 of the forcing, so at phase 0 the flow is
 
@@ -89,7 +89,7 @@ period moves these numbers. `python3 ../../../scripts/check_against_ref.py .` ru
 
 ```bash
 mks 1cyl
-sbatch run.local.slurm        # 8 ranks or more; 643 s on 40 ranks of Jean Zay
+sbatch run.local.slurm        # 8 ranks or more; 643 s on 40 ranks of a cluster
 uv run --with numpy --with matplotlib --with pymech python plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

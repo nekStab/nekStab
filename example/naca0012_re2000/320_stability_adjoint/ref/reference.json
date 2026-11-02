@@ -10,7 +10,7 @@
     "schur_tgt": "8",
     "maxmodes": "10",
     "sponge_strength": "1.7",
-    "machine": "Jean Zay, ifort"
+    "machine": "ifort"
   },
   "quantities": {
     "leading_sigma": {

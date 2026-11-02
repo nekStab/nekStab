@@ -400,7 +400,7 @@ reference data and the gallery does not list it.
 Validated stages carry `ref/` reference data checked by
 `scripts/check_against_ref.py` (see Reproducibility framework above).
 78 of the 79 stages outside `cylinder_re1m` ran again for 2.0.0 from a
-tree that holds tracked files only: 40 stages on Jean Zay (4 to 40
+tree that holds tracked files only: 40 stages on a cluster (4 to 40
 ranks), 19 on c8 (4 to 16 ranks) and 19 on the Intel servers x1 and x3
 (4 to 8 ranks).  The record of a run holds the digest of the source files
 that built it.  Commits `0ca2a0e1`, `d65823c3` and `01f69c2e` changed the
@@ -503,14 +503,14 @@ is open in the TODO list below.
       `thermosyphon_ra500/310_stability_direct/direct`,
       `cylinder_re100/411_postproc_wavemaker` and
       `naca0012_re2000/411_postproc_wavemaker` (1 s to 20 min each, on
-      Jean Zay; all six pass)
+      a cluster; all six pass)
 - [x] Results of the source of commit `6c122882` for
       `back_fstep_re500/330_transient_growth` (6.3 h on 8 ranks of c8) and
       `cylinder_re100/210_baseflow_newton/fp` (55 min on 8 ranks of c8)
 - [x] Rerun of the 23 stages that run the Krylov-Schur eigensolver (every
       stage numbered 310, 311, 315, 320, 321 or 330) and the 9 stages that
       read their modes, on the source of `01f69c2e`: all 32 pass (about
-      630 core-hours on Jean Zay, c8, x1 and x3, both passes included)
+      630 core-hours on a cluster, c8, x1 and x3, both passes included)
 - [x] Check of the averaging of `fd684c48` against the results:
       `bin/c0check` on every exported mode, and a rerun of
       `flip_flop_re62` 311, 321 and 411 (the only stages with jumps)
@@ -520,7 +520,7 @@ is open in the TODO list below.
 - [x] Update `DOC.md` with string-mode documentation
 - [x] Update copyright year (2020-2026) in `main.f90`
 - [x] Review SPOD streaming module: it ran on `cylinder_re100/620_modal_spod`
-      (8 ranks, Jean Zay), after a fix of the implicit real `spod_s_nfreq` in
+      (8 ranks of a cluster), after a fix of the implicit real `spod_s_nfreq` in
       its external routines (they now import it and declare `implicit none`). Its eigenvalues equal those of the batch
       routine `spod_compute` to six digits in all 33 frequency bins, and the
       three eigenvalues of each bin sum to the total power of the POD-FFT

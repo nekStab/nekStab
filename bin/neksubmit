@@ -23,7 +23,6 @@ JOB_NAME=$(date +%Y%m%d_%H%M%S)
 # Create job script and update 'SBATCH -J' with JOB_NAME variable
 read -r -d '' JOB_SCRIPT << EOM
 #!/bin/bash 
-#SBATCH --qos qos_cpu-dev
 #SBATCH -J s220
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
@@ -47,13 +46,13 @@ srun -n $SLURM_NTASKS ./nek5000
 EOM
 
 # Write job script to file
-echo "${JOB_SCRIPT}" > jz.pbs
+echo "${JOB_SCRIPT}" > job.pbs
 
 # Copy job script to supercomputer
-scp jz.pbs ${REMOTE_HOST}:${REMOTE_DIR}/
+scp job.pbs ${REMOTE_HOST}:${REMOTE_DIR}/
 
 # Submit job
-ssh ${REMOTE_HOST} "cd ${REMOTE_DIR} && sbatch jz.pbs"
+ssh ${REMOTE_HOST} "cd ${REMOTE_DIR} && sbatch job.pbs"
 
 # Create a local file to easy acces the remote log file
 

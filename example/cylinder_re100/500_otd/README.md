@@ -36,7 +36,7 @@ the operator of the 310 stage, which has no sponge, and the exponents do not mat
 ## Result (seeded start)
 
 Growth rate of the leading pair in `310_stability_direct`: sigma = 0.1247875 (`Spectre_NSd.dat`).
-Observed on Jean Zay (8 ranks, 22 s, `ifort`):
+Observed on a cluster (8 ranks, 22 s, `ifort`):
 
 | quantity | value | difference to sigma |
 |---|---|---|

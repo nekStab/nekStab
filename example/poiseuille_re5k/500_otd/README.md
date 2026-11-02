@@ -42,7 +42,7 @@ default stopped at t = 1640, where Re λ1 was −7.4e-4 against −4.9e-4 at the
 `endTime = 5000`. The first eigenvalue approaches its exact value as exp(−2 gap t), with the
 gap 1.26e-3 between mode 1 and the pair: the error falls by a factor 12 per 1000 time units.
 
-## Result (Jean Zay, 4 ranks, `ifort`, 654 s)
+## Result (4 ranks, `ifort`, 654 s)
 
 | t | Re λ1 | Re λ1 + ν (π/2)² | Re λ2 | Re λ3 | running exponent of mode 1 |
 |---|---|---|---|---|---|
@@ -54,7 +54,7 @@ gap 1.26e-3 between mode 1 and the pair: the error falls by a factor 12 per 1000
 | 5000 | -4.9354e-04 | -6.45e-08 | -1.7499e-03 | -1.7499e-03 | -1.1499e-03 |
 
 At t = 5000 the first eigenvalue is within 1.3e-4 (relative) of −ν (π/2)², and both entries of
-the pair are 2.7e-4 from the Orr-Sommerfeld real part. A run to t = 10000 (Jean Zay, 4 ranks,
+the pair are 2.7e-4 from the Orr-Sommerfeld real part. A run to t = 10000 (4 ranks,
 21 min) brings the first eigenvalue to within 2e-10 of the exact value from t = 7219. From
 t = 5000 to 10000 the entries of the pair, and their mean, stay within 2.8e-4 of the
 Orr-Sommerfeld value. The offset of 2.7e-4 does not change in that interval; it was not traced to
@@ -67,7 +67,7 @@ the mesh by a run at another resolution.
 The running exponents of `otd_ftle.dat` average from t = 0 and still carry the start: they are
 −5.4e-3 at t = 500 and −1.1e-3 at t = 5000 for mode 1. Read `otd_eigenvalues.dat` for this
 stage. An earlier reference compared the running exponents at t = 500 with −1.511e-3 and −1.772e-3.
-It did not reproduce: Jean Zay gives −5.41e-3 and −5.48e-3 there.
+It did not reproduce: a cluster gives −5.41e-3 and −5.48e-3 there.
 
 ## Reference
 

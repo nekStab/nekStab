@@ -6,7 +6,7 @@
     "date": "2026-10-10",
     "ranks": 4,
     "mode": "userParam01=5 (OTD, frozen base flow), lpert = 3, white-noise start, endTime = 5000",
-    "compiler": "ifort 2021.9 (Jean Zay)"
+    "compiler": "ifort 2021.9"
   },
   "quantities": {
     "otd_eigenvalue_1_final": {

@@ -9,7 +9,7 @@
     "k_dim": "240",
     "schur_tgt": "8",
     "maxmodes": "10",
-    "machine": "Jean Zay, ifort"
+    "machine": "ifort"
   },
   "quantities": {
     "leading_sigma": {

@@ -25,7 +25,7 @@ The list of modes is sorted by `|μ|`, that is by damping, not by frequency. The
 the same fundamental (St = 0.09269).
 
 ## Result
-The run takes 11 s on 16 ranks of Jean Zay. `plot.py` takes, for each n = 1 to 6, the mode with the positive
+The run takes 11 s on 16 ranks of a cluster. `plot.py` takes, for each n = 1 to 6, the mode with the positive
 frequency nearest to n 2π/T (T = 10.78909) and writes `dmd_harmonics.dat` and `plot_dmd.png`:
 
 | n | mode in the list | ω / (2π/T) | σ (U/L) | norm |

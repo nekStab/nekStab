@@ -32,8 +32,8 @@ read back from an OTD run. `plot.py` reads the run and writes `otd_summary.dat`.
 | sine of the largest principal angle between the basis (written at t = 5, 10, ..., 30) and the plane | 0 | 4.7e-7 at t = 30, at most 8.5e-7 | 1e-5 |
 
 The mean stays within 1e-6 of sigma at every time (2.4e-7 below it at t = 0 and at t = 30), and the
-basis stays on the plane to 1e-6 for the 2.8 periods of the run. The observed values are from Jean
-Zay (40 ranks, 25 or 26 elements per rank against `lelt = 65`, 733 s, `ifort`).
+basis stays on the plane to 1e-6 for the 2.8 periods of the run. The observed values are from a
+cluster (40 ranks, 25 or 26 elements per rank against `lelt = 65`, 733 s, `ifort`).
 
 ![entries of the reduced operator, their mean against sigma, and the distance of the basis to the plane](ref/otd.png)
 
@@ -56,7 +56,7 @@ Each tolerance is tight enough to fail a defect that this stage met while it was
 ```bash
 printf "cav\n%s/\n" "$(pwd)" > SESSION.NAME
 mks cav
-sbatch run.local.slurm      # 16 ranks; 12 min on 40 ranks of Jean Zay
+sbatch run.local.slurm      # 16 ranks; 12 min on 40 ranks of a cluster
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

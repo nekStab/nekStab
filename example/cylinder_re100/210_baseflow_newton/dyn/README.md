@@ -28,7 +28,7 @@ python3 plot.py
 ```
 
 ## Latest Result
-Run on 2026-10-09 on 8 ranks of Jean Zay (`ifort`), 672 s:
+Run on 2026-10-09 on 8 ranks of a cluster (`ifort`), 672 s:
 
 - 14 Newton outer iterations to |F| = 9.3e-10 (tolerance 1e-9)
 - 37413 time steps in all, 307 cumulative GMRES inner iterations

@@ -9,7 +9,7 @@ uniform field (`startFrom` is commented out in its `1cyl.par`), because the
 earlier seed was written on a different mesh. This stage therefore does not
 feed the chain; it shows how to produce a thermal seed.
 
-Run: `mks 1cyl`, then `sbatch run.local.slurm` (8 ranks; 8 min on Jean Zay with `ifort`, 2026-10-09).
+Run: `mks 1cyl`, then `sbatch run.local.slurm` (8 ranks; 8 min on a cluster with `ifort`, 2026-10-09).
 `plot.py` writes `plot_snapshot.png` (temperature of the last snapshot); `ref/` holds a copy as `snapshot.png`.
 
 ## Reference

@@ -6,7 +6,7 @@
     "nekstab": "v2.0.0",
     "date": "2026-10-28",
     "ranks": "4",
-    "compiler": "ifort on Jean Zay",
+    "compiler": "ifort",
     "mode": "userParam01=2 (Newton-GMRES fixed point)"
   },
   "quantities": {

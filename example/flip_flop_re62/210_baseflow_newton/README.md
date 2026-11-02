@@ -23,7 +23,7 @@ mks 2cyl
 sbatch run.local.slurm     # 16 ranks
 ```
 
-## Result (2026-10-23, Jean Zay, `ifort`, 40 ranks)
+## Result (2026-10-23, `ifort`, 40 ranks)
 - Eleven Newton iterations. The residual (column 7 of `residu_newton.dat`) falls from 5.81e-2 to 4.44e-9; the tolerance is 1e-8.
 - The period changes from 8.73356 to 8.815129.
 - Newton keeps the step count of its first iteration, 1199 steps per period (column 2, first row of `residu_newton.dat`). The time-discrete

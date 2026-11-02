@@ -22,7 +22,7 @@ adjoint. Each Krylov step is one forward and one adjoint integration over tau.
 - Isothermal, no sponge, uniform lid as in the thesis. `dt` follows from `targetCFL = 0.5` and is
   then adjusted so that the forward and the adjoint integration cover exactly tau (6958 steps of
   1.437e-3 for tau = 10).
-- 16 MPI ranks (`lpmin = 16`). One Arnoldi iteration takes 3.7 min on 40 ranks of Jean Zay, so
+- 16 MPI ranks (`lpmin = 16`). One Arnoldi iteration takes 3.7 min on 40 ranks of a cluster, so
   the run takes 1 h 50 min there. `run.local.slurm` asks for 8 h.
 
 Run: `sbatch run.local.slurm`. G is the first value in `Spectre_Hp_conv.dat`. The optimal

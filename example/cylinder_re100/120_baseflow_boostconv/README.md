@@ -25,7 +25,7 @@ for such a case.
   every `bst_skp` steps. The run stops when it falls below the larger of the two `residualTol` of the `.par` (1e-6) and writes `BF_1cyl0.f00001` in double
   precision. `endTime = 500` is a limit.
 
-## Result (Jean Zay, 8 ranks, `ifort`, 2026-10-09)
+## Result (8 ranks, `ifort`, 2026-10-09)
 
 The residual meets the gate 1e-6 at t = 159.43, after 15 860 time steps (1586 samples). It started at 2.1e-4. Wall time 146 s (150 s and 153 s in two repeats; the
 repeats gave the same `residu.dat` to every digit). The converged field against the Newton solution at Re = 50 (`../210_baseflow_newton/fp` with
@@ -43,7 +43,7 @@ norm differs by 8.0e-7 (table below).
 
 ## Parameters
 
-Same case and seed, Re = 50, Jean Zay, 8 ranks. The gate is 1e-6 except in the last two rows. "Difference" is the relative difference of `vx.norm`
+Same case and seed, Re = 50, 8 ranks. The gate is 1e-6 except in the last two rows. "Difference" is the relative difference of `vx.norm`
 from the Newton value.
 
 | `bst_snp` | `bst_skp` | gate | converged at t | time steps | wall time (s) | difference |
@@ -62,7 +62,7 @@ from the Newton value.
   (10 and 10, 10 and 5, 30 and 5) gave the same time of convergence to every digit.
 - The gate sets the accuracy of the field. Going from 1e-6 to 1e-8 costs 46 % more time for the default and 73 % more for 30 and 5. The norm then
   agrees with Newton to 8.0e-7 and 3.4e-6.
-- Wall times of single runs vary by tens of percent on Jean Zay (the default needed 9 ms per time step in the run with the gate 1e-6 and 13 ms in the run with the
+- Wall times of single runs vary by tens of percent on a cluster (the default needed 9 ms per time step in the run with the gate 1e-6 and 13 ms in the run with the
   gate 1e-8). Compare the number of time steps, not the wall time.
 
 ## Why Re = 50

@@ -49,7 +49,7 @@ tolerance):
 | 11 | 92 | 9.700e-10 | |
 
 The run stops when the squared residual is below the Newton tolerance 1e-9. One period is 4133 time steps (`dt = 1.4726e-3`,
-from the Courant number 0.35 of the seed), 467039 time steps in all. The run took 3972 s on 40 ranks of Jean Zay (`ifort`). A first run on 12 ranks of a workstation (`ifx`, 6687 s)
+from the Courant number 0.35 of the seed), 467039 time steps in all. The run took 3972 s on 40 ranks of a cluster (`ifort`). A first run on 12 ranks of a workstation (`ifx`, 6687 s)
 gave the same orbit: the norms of the velocity and the pressure agree to 7e-8 and the iteration count is the same.
 
 `BF_1cyl0.f00001` is the orbit at phase 0. Its time stamp is the period, 6.086427267194, which the Floquet stage reads as
@@ -74,7 +74,7 @@ and fails the second.
 ```bash
 printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME
 mks 1cyl
-sbatch --ntasks=12 run.local.slurm      # 1 h 51 min on 12 ranks of a workstation (ifx), 66 min on 40 ranks of Jean Zay
+sbatch --ntasks=12 run.local.slurm      # 1 h 51 min on 12 ranks of a workstation (ifx), 66 min on 40 ranks of a cluster
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

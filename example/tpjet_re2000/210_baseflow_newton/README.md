@@ -21,7 +21,7 @@ sbatch run.local.slurm     # 16 ranks
 ```
 
 ## Result
-Five Newton iterates, the seed and four updates, bring the squared residual below 1e-8. The run takes 2663 s on 16 ranks of Jean Zay (`ifort`),
+Five Newton iterates, the seed and four updates, bring the squared residual below 1e-8. The run takes 2663 s on 16 ranks of a cluster (`ifort`),
 22504 time steps (75 periods) in 66 Arnoldi vectors:
 
 | Newton iterate | squared residual | Arnoldi vectors to reach it |

@@ -13,7 +13,7 @@ The restart file carries its coordinates, so the cavity height of the seed (`use
 must be the one of this stage.
 
 The t = 100 state is a fixed point to 4.3e-7, so Newton has work to do: 10 iterations and 117
-Krylov vectors to the tolerance 1e-12 (2026-10-28, Jean Zay, 4 ranks, 136 s). The t = 600 state
+Krylov vectors to the tolerance 1e-12 (2026-10-28, 4 ranks, 136 s). The t = 600 state
 is a fixed point to 4.4e-9 and needs 6 iterations to the same tolerance. Both seeds end on the
 same field to 8e-5: the 3e-3 gap of the earlier runs came from the tolerance, not from a
 second steady state.

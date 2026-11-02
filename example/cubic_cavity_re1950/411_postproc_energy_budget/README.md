@@ -39,7 +39,7 @@ The run script writes `BF_cav0.f00001` from `../000_dns_period/cav0.f00017` and 
 
 ## Result (16 ranks, c8, `ifx`)
 
-Wall time about 25 min on a shared 40-core node (711 s on Jean Zay with `ifort` before the change of the dissipation term).
+Wall time about 25 min on a shared 40-core node (711 s on a cluster with `ifort` before the change of the dissipation term).
 The Floquet exponent of stage 311 is σ = 2.907855e-3.
 
 | quantity | value |
@@ -74,7 +74,7 @@ The first two compare the run with the physics; the other four fail when a term 
 
 ```bash
 mks cav
-sbatch run.local.slurm        # 16 ranks, 4 GB per rank: 711 s on Jean Zay, 1293 s on a 40-core node of c8
+sbatch run.local.slurm        # 16 ranks, 4 GB per rank: 711 s on a cluster, 1293 s on a 40-core node of c8
 uv run --with numpy --with pymech --with matplotlib python plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```

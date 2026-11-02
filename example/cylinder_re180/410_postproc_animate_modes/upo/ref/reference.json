@@ -6,7 +6,7 @@
     "nekstab": "v2.0.0",
     "date": "2026-10-09",
     "ranks": "8",
-    "compiler": "ifort 2021.9 (Jean Zay)",
+    "compiler": "ifort 2021.9",
     "mode": "userParam01=4.52 (animate_mode_Floquet), base flow from 210_baseflow_newton"
   },
   "quantities": {

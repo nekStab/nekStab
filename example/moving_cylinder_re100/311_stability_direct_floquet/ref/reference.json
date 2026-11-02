@@ -7,7 +7,7 @@
     "nekstab_mode": "3.11 (direct Floquet, forced orbit)",
     "ranks": "40",
     "k_dim": "100",
-    "compiler": "ifort 2021.9 on Jean Zay",
+    "compiler": "ifort 2021.9",
     "date": "2026-10-10",
     "wall_s": 1978
   },

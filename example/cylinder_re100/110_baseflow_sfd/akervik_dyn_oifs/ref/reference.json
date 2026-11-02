@@ -6,7 +6,7 @@
     "nekstab": "v2.0.0",
     "date": "2026-10-28",
     "ranks": "8",
-    "compiler": "ifort on Jean Zay",
+    "compiler": "ifort",
     "mode": "Akervik formulation, dynamic solver tolerance, OIFS time stepping at CFL 5"
   },
   "quantities": {
@@ -20,7 +20,7 @@
       "source": "residu.dat:col1:last",
       "value": 765.90,
       "tol_rel": 0.05,
-      "note": "Time at which the gate is met, in convective time units. Measured on Jean Zay; the dynamic solver tolerance and the compiler move it by about 0.1 %."
+      "note": "Time at which the gate is met, in convective time units. Measured on a cluster; the dynamic solver tolerance and the compiler move it by about 0.1 %."
     },
     "bf_vx_min": {
       "source": "BF_1cyl0.f00001:field:vx.min",
