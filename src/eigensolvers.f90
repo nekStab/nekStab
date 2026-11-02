@@ -36,13 +36,13 @@ module nekstab_eigensolvers
                                  NEKSTAB_UNIT_FICH4, NEKSTAB_UNIT_HESS, NEKSTAB_UNIT_ORTHO, nelfld, nelgv, &
                                  nelv, nid, nof, np, npscal, nsteps, nx1, nx2, ny1, ny2, nz1, &
                                  nz2, param, pbase, pr, restol, schur_cnt, schur_del, schur_stop, schur_tgt, &
-                                 strict_tol, volvm1, &
+                                 volvm1, &
                                  SESSION, t, tbase, time, ubase, uparam, vbase, vx, vy, vz, &
                                  wbase, wdsize
    use nekstab_krylov_decomposition, only: arnoldi_factorization, log_transform, ritz_pairs
    use nekstab_lapack, only: ordschur, schur
    use nekstab_ks_select, only: is_conjugate_pair, ks_converged, ks_converged_indices, &
-                                ks_leading_converged, ks_select_eigenvalues, strict_solver_tol
+                                ks_leading_converged, ks_select_eigenvalues, bound_solver_tol
    use nekstab_vectors, only: nopcmult, nopcopy
    use nekstab_matvec, only: matvec
    use nekstab_io, only: load_files, whereyouwant
@@ -51,6 +51,10 @@ module nekstab_eigensolvers
    use nekstab_ortho, only: last_pass_count
    implicit none
    private
+
+   !  Target errors of a matvec, as parts of eigen_tol: the Arnoldi steps, and the vector check.
+   real, parameter :: MATVEC_NOISE_RATIO = 10.0d0
+   real, parameter :: CHECK_NOISE_RATIO = 100.0d0
    public :: inner_product, norm, krylov_schur, &
              outpost_ks, schur_condensation, &
              select_eigenvalues
@@ -185,24 +189,14 @@ contains
       call bcast(param(10), wdsize)
 
       !     ----- Accuracy of the solves on a unit-norm vector -----
-      !  Nek5000 stops a solve on a residual averaged over the volume, and a
-      !  Krylov vector has norm 1 over the domain. So the error of a matvec is
-      !  of the order residualTol*sqrt(volume), times 0.9 to 2.5 as measured
-      !  (cylinder_re100, volume 6249; ellipse, volume 60000). It limits the
-      !  Ritz values and adds to the residual of the exported mode vector.
-      if (strict_tol) then
-         param(21:22) = strict_solver_tol(param(21:22), volvm1)
-         restol = strict_solver_tol(restol, volvm1)
-      end if
-      if (nid == 0) then
-         write (6, '(A,E10.3,A,E10.3,A)') ' nekStab: matvec accuracy residualTol*sqrt(volume) =', &
-            max(abs(param(21)), abs(param(22)))*sqrt(volvm1), ' (volume', volvm1, ')'
-         if (max(abs(param(21)), abs(param(22)))*sqrt(volvm1) > 0.1d0*eigen_tol) then
-            write (6, *) 'nekStab: NOTE: this is above eigen_tol/10. The residual of a mode vector'
-            write (6, *) '  can exceed its Ritz residual because of it. Set strict_tol = .true. in'
-            write (6, *) '  nekStab_usrchk, or lower residualTol. See DOC.md, Troubleshooting.'
-         end if
-      end if
+      !  residualTol alone is no fixed accuracy for a Krylov vector: the error of
+      !  a matvec grows with sqrt(volume) (see bound_solver_tol). It limits the Ritz
+      !  values and it adds to the residual of the exported mode vector. So
+      !  eigen_tol sets the tolerance: the error of a matvec stays below
+      !  eigen_tol/MATVEC_NOISE_RATIO. residualTol of the .par is kept when it is tighter.
+      call bound_solver_tols(eigen_tol/MATVEC_NOISE_RATIO)
+      if (nid == 0) write (6, '(A,E10.3,A,E10.3,A,E10.3)') ' nekStab: solver tolerance', &
+         max(abs(param(21)), abs(param(22))), ' for eigen_tol', eigen_tol, ' and volume', volvm1
 
       !     ----- First vector (new from noise or restart) -----
 
@@ -801,7 +795,6 @@ contains
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur_target=    ', schur_tgt
          write (NEKSTAB_UNIT_EXPORT, fmt3) 'schur_del=       ', schur_del
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur_stop=      ', schur_stop
-         write (NEKSTAB_UNIT_EXPORT, '(A,L1)') 'strict_tol=      ', strict_tol
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur iterations=', schur_cnt
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'total matvecs=   ', total_matvecs
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'check matvecs=   ', n_check_mv
@@ -844,6 +837,16 @@ contains
       ! allocatable: four full fields on the heap, freed on return
       type(krylov_vector), allocatable :: xr, xi, fr, fi
       real :: nfr, nfi, nxr, nxi
+      real :: saved_par(2), saved_res(size(restol))
+
+      !  The check is one more matvec, so it carries the error of a matvec, and
+      !  the two add in quadrature to the residual of the mode. Run it tight
+      !  enough to measure the mode: below eigen_tol/CHECK_NOISE_RATIO. A mode of
+      !  an ellipse with a domain of volume 60000 and a residual of 4.5e-7 read
+      !  4.8e-7 to 8.2e-7 at residualTol = 1e-9, and 4.50e-7 at 1e-11.
+      saved_par = param(21:22)
+      saved_res = restol
+      call bound_solver_tols(eigen_tol/CHECK_NOISE_RATIO)
 
       allocate (xr, xi, fr, fi)
       call nopcopy(xr%vx, xr%vy, xr%vz, xr%pr, xr%t, &
@@ -871,7 +874,26 @@ contains
       call k_norm(nfi, fi)
       res = sqrt(nfr**2 + nfi**2)/sqrt(nxr**2 + nxi**2)
 
+      param(21:22) = saved_par
+      restol = saved_res
+
    end subroutine eigenvector_residual
+
+   !-----------------------------------------------------------------------
+   ! bound_solver_tols — Tighten the Nek5000 tolerances to a target matvec error
+   !
+   !   Velocity solves read restol, not only param(22). Rank 0 decides and
+   !   broadcasts: all ranks must stop a solve at the same iteration.
+   !-----------------------------------------------------------------------
+   subroutine bound_solver_tols(target_err)
+      real, intent(in) :: target_err
+
+      param(21:22) = bound_solver_tol(param(21:22), target_err, volvm1)
+      restol = bound_solver_tol(restol, target_err, volvm1)
+      call bcast(param(21:22), 2*wdsize)
+      call bcast(restol, size(restol)*wdsize)
+
+   end subroutine bound_solver_tols
 
    !-----------------------------------------------------------------------
 

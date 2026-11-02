@@ -93,13 +93,12 @@
       logical :: use_cgs ! CGS2 orthogonalization (vs MGS)
       logical :: ifquasilaminar ! quasilaminar RANS stability
       logical :: ifKEnorm ! velocity-only KE norm
-      logical :: strict_tol ! eigensolver: divide the Nek5000 tolerances by sqrt(domain volume)
 
       common/nStab_mode_flags/ifDNS, ifLinDNS, ifSFD, ifBoostConv, ifTDF, ifDMT, ifFloquet, ifEnergyBudget, ifWavemaker
       common/nStab_mode_flags/ifBFSensitivity, ifForceSensReal, ifForceSensImag, ifDeltaForcing, ifAnimateMode
       common/nStab_mode_flags/ifAnimateBFDeform, ifAnimateFloquet, ifpod, ifdmd, ifspod, ifwinamp, use_cgs
       common/nStab_mode_flags/ifnewton_backtrack, ifquasilaminar
-      common/nStab_mode_flags/ifKEnorm, strict_tol
+      common/nStab_mode_flags/ifKEnorm
       common/nStab_mode_flags/ifdmtbank
 
       ! Fourier orbit representation options

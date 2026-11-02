@@ -94,7 +94,7 @@
 
 See [DOC.md](DOC.md) for full parameter reference.
 
-> **Large domains:** `residualTol` is not a fixed accuracy for stability runs. Nek5000 stops its solves on a residual averaged over the volume `V`, so on a unit-norm mode the error of a solver call is of the order `residualTol*sqrt(V)`: about 5e-7 at `residualTol = 1e-9` on a domain of 300 by 200. The eigensolver prints this number at start-up. Set `strict_tol = .true.` in `nekStab_usrchk`, or lower `residualTol`, when it is near `eigen_tol`. See [DOC.md](DOC.md), Troubleshooting.
+> **Large domains:** `residualTol` is not a fixed accuracy for stability runs. Nek5000 stops its solves on a residual averaged over the volume `V`, so on a unit-norm mode the error of a solver call grows with `sqrt(V)`: about 5e-7 at `residualTol = 1e-9` on a domain of 300 by 200. The eigensolver therefore tightens `residualTol` to `eigen_tol/(25*sqrt(V))` when that is smaller, and it prints the value at start-up. See [DOC.md](DOC.md), Troubleshooting.
 
 ## Examples
 

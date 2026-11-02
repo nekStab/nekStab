@@ -5,6 +5,23 @@ All notable changes to nekStab are listed here, newest first. The format follows
 [Semantic Versioning](https://semver.org/). `RELEASE.md` describes the 2.0 series
 in more detail and `DOC.md` is the user documentation.
 
+## [Unreleased]
+
+### Fixed
+
+- Eigensolver: `eigen_tol` now binds the tolerance of the solves. Nek5000 stops its
+  solves on a volume-averaged residual and a Krylov vector has norm 1 over the
+  domain, so the error of a matvec grows with `sqrt(volume)`: 3.6e-7 to 6.0e-7 at
+  `residualTol = 1e-9` on a domain of volume 60000, close to `eigen_tol = 1e-6`.
+  The eigensolver uses the smaller of `residualTol` and
+  `eigen_tol/(25*sqrt(volume))`, with a volume below 1 counted as 1, and prints it
+  at start-up. Domains of volume above 1600 at `residualTol = 1e-9` change. The
+  bound also applies to the mesh, temperature and passive-scalar tolerances
+  (`restol`). The vector check of the exported modes runs at the tolerance of
+  `eigen_tol/100`, so a good mode no longer fails it because of the solver. On that
+  domain the leading sigma moves from -0.0144116 to -0.0144271. See DOC.md,
+  Troubleshooting.
+
 ## [2.0.0] - 2026-11-03
 
 ### Highlights
@@ -344,15 +361,6 @@ Code structure and modes
   against Barkley, Blackburn & Sherwin (2008) at six time horizons; moving
   cylinder DNS; NACA0012 DNS ringdown and wavemaker stages; thermosyphon and
   flip-flop wavemaker stages.
-
-### Added
-- `strict_tol` (default `.false.`, results unchanged): the eigensolver divides the
-  pressure and velocity `residualTol` by `sqrt(volume)`. The error of a matvec on a
-  unit-norm vector is of the order `residualTol*sqrt(volume)`, because Nek5000 stops
-  its solves on a volume-averaged residual. At `residualTol = 1e-9` it is 3.6e-7 to
-  6.0e-7 on a domain of volume 60000. There it is close to `eigen_tol` and can
-  push a good mode over the vector check. The eigensolver now prints this number at
-  start-up, with a note when it is above `eigen_tol/10`. See DOC.md, Troubleshooting.
 
 ### Changed
 

@@ -65,19 +65,29 @@ def settled_driver(build_driver) -> Path:
     )
 
 
-def test_strict_solver_tol(build_driver) -> None:
-    """strict_tol divides the tolerance by sqrt(volume) and never loosens it."""
+def test_bound_solver_tol(build_driver) -> None:
+    """eigen_tol binds the solver tolerance through sqrt(volume); it never loosens it."""
     exe = build_driver(
-        "strict_tol",
+        "bound_tol",
         [
             ROOT / "src" / "argsort.f90",
             ROOT / "src" / "ks_select.f90",
-            FORTRAN / "ks_strict_tol_driver.f90",
+            FORTRAN / "ks_bound_tol_driver.f90",
         ],
     )
     out = subprocess.run([exe], capture_output=True, text=True, check=True).stdout
     got = [float(v) for v in out.split()]
-    assert got == pytest.approx([1.0e-9 / 6.0e4**0.5, 1.0e-9 / 1.2**0.5, 1.0e-9, 0.0], rel=1.0e-14)
+    assert got == pytest.approx(
+        [
+            1.0e-7 / (2.5 * 6.0e4**0.5),  # large domain: the bound acts
+            1.0e-8 / (2.5 * 6.0e4**0.5),  # target of the vector check
+            1.0e-9,  # small domain: residualTol is tighter and stays
+            1.0e-7 / 2.5,  # volume below 1 counts as 1
+            0.0,  # unset
+            -1.0e-6,  # relative tolerance of Nek5000
+        ],
+        rel=1.0e-14,
+    )
 
 
 def settled(exe: Path, steps, nev: int = 1, nstill: int = 3, tol: float = 1.0e-6):

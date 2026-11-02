@@ -25,7 +25,7 @@ module nekstab_ks_select
    private
    public :: ks_select_eigenvalues, ks_ensure_conjugate_pairs, ks_converged_indices, &
              ks_converged, ks_leading_converged, ks_stationary, ks_leading_settled, &
-             is_conjugate_pair, strict_solver_tol
+             is_conjugate_pair, bound_solver_tol
 
    integer, parameter :: dp = kind(0.0d0)
    real, parameter :: PAIR_REL_TOL = 1.0d-10
@@ -369,19 +369,24 @@ contains
    end function ks_leading_settled
 
 !-----------------------------------------------------------------------
-! strict_solver_tol — Nek5000 tolerance that holds on a unit-norm Krylov vector
+! bound_solver_tol — Nek5000 tolerance that keeps the matvec error below a target
 !
 !   Nek5000 stops a solve on a residual averaged over the volume V. A Krylov
 !   vector has norm 1 over the domain, so a tolerance tol allows an error of
-!   the order tol*sqrt(V) on it. Dividing by sqrt(V) makes the error of the
-!   order tol. A domain with V < 1 keeps tol: the tolerance is never loosened.
+!   about MATVEC_ERR_FACTOR*tol*sqrt(V) on it. The factor is the largest
+!   measured: 0.9 on cylinder_re100 (V = 6249), up to 2.5 on an ellipse
+!   (V = 60000). The result is the smaller of tol and the tolerance that gives
+!   target_err. A domain with V < 1 counts as V = 1. A tolerance of zero (unset)
+!   or below (relative tolerance in Nek5000) is not an absolute one and stays.
 !-----------------------------------------------------------------------
-   elemental function strict_solver_tol(tol, volume) result(strict)
-      real, intent(in) :: tol, volume
-      real :: strict
+   elemental function bound_solver_tol(tol, target_err, volume) result(bound)
+      real, intent(in) :: tol, target_err, volume
+      real :: bound
+      real, parameter :: MATVEC_ERR_FACTOR = 2.5d0
 
-      strict = tol/sqrt(max(volume, 1.0d0))
+      bound = tol
+      if (tol > 0.0d0) bound = min(tol, target_err/(MATVEC_ERR_FACTOR*sqrt(max(volume, 1.0d0))))
 
-   end function strict_solver_tol
+   end function bound_solver_tol
 
 end module nekstab_ks_select
