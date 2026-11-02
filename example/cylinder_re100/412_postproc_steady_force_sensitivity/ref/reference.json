@@ -4,9 +4,9 @@
   "description": "Regression values of this repository (not literature values): the sensitivity field of the Re = 100 cylinder to a steady force (mode 4.41). The magnitude is concentrated in the recirculation bubble and in the shear layers next to the cylinder, and is close to zero upstream and beyond x = 7. The GMRES solve must end below its target of 1e-6 in the squared residual; before the correction of the boundary conditions in the case file it stalled at 1e-2. The velocity norms of the converged field agree to 3e-4 between T = 1 and T = 2.",
   "produced": {
     "ranks": "4",
-    "nekstab": "dev 89770900",
+    "nekstab": "v2.0.0",
     "compiler": "gfortran",
-    "date": "2026-10-30"
+    "date": "2026-11-02"
   },
   "quantities": {
     "gmres_squared_residual": {
