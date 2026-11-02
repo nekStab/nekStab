@@ -45,7 +45,6 @@ density = 1.0
 viscosity = -30.0  # Re = 30
 
 [TEMPERATURE]
-solver = helm
 residualtol = 1.0E-8
 residualproj = yes
 writetofieldfile = yes
