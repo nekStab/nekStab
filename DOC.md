@@ -809,6 +809,7 @@ Set in `nekStab_usrchk` subroutine in your `.usr` file:
 | `eigen_tol` | 1e-6 | Convergence tolerance: a Ritz value has converged when its residual is below `eigen_tol*max(abs(mu), 1)`. The same test applies to the residual of each exported mode vector. A leading value also has to stand still: it must move by less than the same bound in each of the last 5 steps before the run stops on it |
 | `schur_tgt` | 2 | Number of wanted eigenvalues, counted from the top of the list sorted by `abs(mu)` (a conjugate pair counts as two). The run stops when the first `schur_tgt` entries have converged, not when any `schur_tgt` values have. `schur_tgt <= 0` runs one full pass of `k_dim` steps. A restart keeps at least `schur_tgt + 2` and at most `k_dim - schur_tgt` Ritz values, so the next Arnoldi run adds at least `schur_tgt` steps |
 | `schur_stop` | 0 | Stop rule. `0`: the run stops when the first `schur_tgt` entries of the sorted list have converged. `1`: it stops when any `schur_tgt` values have converged. Use `1` below the critical Reynolds number, where slow non-oscillating modes can lead the list and converge much later than the modes of interest. Set it in `nekStab_usrchk` with `call bcast(schur_stop, isize)` |
+| `strict_tol` | .false. | `.true.` divides the pressure and velocity `residualTol` by `sqrt(volume)` (never loosens them) for the whole eigensolver run, so that the error of a matvec is of the order `residualTol` on a unit-norm vector. Use it on large domains; see "Residual of a mode vector above its Ritz residual" in Troubleshooting. Set it in `nekStab_usrchk` with `call bcast(strict_tol, lsize)` |
 | `schur_del` | 0.10 | Selection radius of the restart: it keeps the Ritz values with `abs(mu) >= 1 - schur_del`, and those with a Schur residual below `sqrt(eigen_tol)` |
 | `maxmodes` | 20 | Maximum eigenmodes to save to disk |
 
@@ -1863,6 +1864,13 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - Compare results with a tolerance, as `scripts/check_against_ref.py` does. A byte
   comparison of two eigensolver runs says something only when both logs show the
   same methods.
+
+**Residual of a mode vector above its Ritz residual, or a mode not exported, on a large domain**
+- The accuracy of the solves depends on the volume V of the domain. Nek5000 stops its pressure and velocity solves on a residual averaged over the volume, and it was set up for fields of order 1 over the whole domain. A Krylov vector has norm 1 over the domain, so its mean level is about `1/sqrt(V)`, and the error of a matvec is of the order `residualTol*sqrt(V)`. The eigensolver prints this number at start-up.
+- Measured by applying the solver to an exported mode, against a solve at `residualTol = 1e-13`. At `residualTol = 1e-9` the error is 7.2e-8 on `cylinder_re100` (V = 6249) and 3.6e-7 to 6.0e-7 on an ellipse with a domain of 300 by 200 (V = 60000), and it falls in proportion to `residualTol`. The compiler does not matter: ifx, ifort 2021.3 and gfortran 9.4 give the same result on the ellipse.
+- The vector check is one more matvec, so it carries this error. The two parts add about in quadrature: `vector^2 = Ritz^2 + noise^2`. On the ellipse one mode with a true residual of 4.5e-7 read between 4.8e-7 and 7.4e-7 at `residualTol = 1e-9`, and two calls on the same vector can differ. A mode can then get the warning, or be refused, although nothing is wrong with it.
+- The error also limits the eigenvalue, to the order of the condition number kappa times the error of the matvec (see Ritz extraction), and `eigen_tol` cannot be reached once the error is near it. Lowering `eigen_tol` does not help; it makes a refusal more likely.
+- What to do: set `strict_tol = .true.` in `nekStab_usrchk`, or lower both `residualTol` to about `1e-9/sqrt(V)`. To check a result, repeat the vector check at two tolerances: if the number changes, it measures the solver. Newton modes use the same solves and are not covered by `strict_tol`.
 
 **A converged eigenvalue at mu = 1.0000000 whose mode is a set of spikes**
 - Seen in versions up to v2.0.0-rc4 (v1.0.1 included), most often below the

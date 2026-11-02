@@ -35,13 +35,14 @@ module nekstab_eigensolvers
                                  NEKSTAB_UNIT_FICH2, NEKSTAB_UNIT_FICH3, &
                                  NEKSTAB_UNIT_FICH4, NEKSTAB_UNIT_HESS, NEKSTAB_UNIT_ORTHO, nelfld, nelgv, &
                                  nelv, nid, nof, np, npscal, nsteps, nx1, nx2, ny1, ny2, nz1, &
-                                 nz2, param, pbase, pr, schur_cnt, schur_del, schur_stop, schur_tgt, &
+                                 nz2, param, pbase, pr, restol, schur_cnt, schur_del, schur_stop, schur_tgt, &
+                                 strict_tol, volvm1, &
                                  SESSION, t, tbase, time, ubase, uparam, vbase, vx, vy, vz, &
                                  wbase, wdsize
    use nekstab_krylov_decomposition, only: arnoldi_factorization, log_transform, ritz_pairs
    use nekstab_lapack, only: ordschur, schur
    use nekstab_ks_select, only: is_conjugate_pair, ks_converged, ks_converged_indices, &
-                                ks_leading_converged, ks_select_eigenvalues
+                                ks_leading_converged, ks_select_eigenvalues, strict_solver_tol
    use nekstab_vectors, only: nopcmult, nopcopy
    use nekstab_matvec, only: matvec
    use nekstab_io, only: load_files, whereyouwant
@@ -182,6 +183,26 @@ contains
          if (nid == 0) write (6, *) ' getting endTime from file: endTime=', param(10)
       end if
       call bcast(param(10), wdsize)
+
+      !     ----- Accuracy of the solves on a unit-norm vector -----
+      !  Nek5000 stops a solve on a residual averaged over the volume, and a
+      !  Krylov vector has norm 1 over the domain. So the error of a matvec is
+      !  of the order residualTol*sqrt(volume), times 0.9 to 2.5 as measured
+      !  (cylinder_re100, volume 6249; ellipse, volume 60000). It limits the
+      !  Ritz values and adds to the residual of the exported mode vector.
+      if (strict_tol) then
+         param(21:22) = strict_solver_tol(param(21:22), volvm1)
+         restol = strict_solver_tol(restol, volvm1)
+      end if
+      if (nid == 0) then
+         write (6, '(A,E10.3,A,E10.3,A)') ' nekStab: matvec accuracy residualTol*sqrt(volume) =', &
+            max(abs(param(21)), abs(param(22)))*sqrt(volvm1), ' (volume', volvm1, ')'
+         if (max(abs(param(21)), abs(param(22)))*sqrt(volvm1) > 0.1d0*eigen_tol) then
+            write (6, *) 'nekStab: NOTE: this is above eigen_tol/10. The residual of a mode vector'
+            write (6, *) '  can exceed its Ritz residual because of it. Set strict_tol = .true. in'
+            write (6, *) '  nekStab_usrchk, or lower residualTol. See DOC.md, Troubleshooting.'
+         end if
+      end if
 
       !     ----- First vector (new from noise or restart) -----
 
@@ -780,6 +801,7 @@ contains
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur_target=    ', schur_tgt
          write (NEKSTAB_UNIT_EXPORT, fmt3) 'schur_del=       ', schur_del
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur_stop=      ', schur_stop
+         write (NEKSTAB_UNIT_EXPORT, '(A,L1)') 'strict_tol=      ', strict_tol
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'schur iterations=', schur_cnt
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'total matvecs=   ', total_matvecs
          write (NEKSTAB_UNIT_EXPORT, fmt2) 'check matvecs=   ', n_check_mv

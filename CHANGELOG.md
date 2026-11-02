@@ -345,6 +345,15 @@ Code structure and modes
   cylinder DNS; NACA0012 DNS ringdown and wavemaker stages; thermosyphon and
   flip-flop wavemaker stages.
 
+### Added
+- `strict_tol` (default `.false.`, results unchanged): the eigensolver divides the
+  pressure and velocity `residualTol` by `sqrt(volume)`. The error of a matvec on a
+  unit-norm vector is of the order `residualTol*sqrt(volume)`, because Nek5000 stops
+  its solves on a volume-averaged residual. At `residualTol = 1e-9` it is 3.6e-7 to
+  6.0e-7 on a domain of volume 60000. There it is close to `eigen_tol` and can
+  push a good mode over the vector check. The eigensolver now prints this number at
+  start-up, with a note when it is above `eigen_tol/10`. See DOC.md, Troubleshooting.
+
 ### Changed
 
 - Krylov-Schur and Arnoldi (against 1.0.1): heap allocation, `dgemv`, eigenvalue

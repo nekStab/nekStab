@@ -40,6 +40,7 @@
          eigen_tol = 1.0e-6 ! tolerance for eigenmodes convergence
          schur_del = 0.10d0 !
          schur_stop = 0 ! 0: stop on the leading schur_tgt values; 1: on any schur_tgt converged values
+         strict_tol = .false. ! .true.: divide the Nek5000 tolerances by sqrt(domain volume) in the eigensolver
          maxmodes = 20 ! max number of converged modes to disk
          glob_skip = 10 ! global energy computation skip frequency
          findiff_order = 2 ! finite difference order for the Frechet derivative
@@ -292,6 +293,7 @@
          call bcast(use_cgs, lsize)
          call bcast(ifquasilaminar, lsize)
          call bcast(ifKEnorm, lsize)
+         call bcast(strict_tol, lsize)
 
 !        nStab_mode_int / nStab_mode_real / nStab_mode_char
          call bcast(animate_mode_num, isize)
