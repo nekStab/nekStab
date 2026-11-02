@@ -25,4 +25,16 @@ sbatch run.local.slurm     # 4 ranks
   `scripts/check_against_ref.py example/thermosyphon_ra500/310_stability_direct/direct`.
 - `ref/baseflow.png`, `ref/mode.png`, `ref/spectrum.png`.
 
+## How many modes converge
+Two values converge, both real: sigma = 0.10222 and sigma = 0 to round-off
+(1e-13; -2e-8 in another run). A run with `k_dim = 300` and `schur_tgt = 6` did 130
+restarts of the 300-vector basis (4.3 h on 4 ranks) and still had these two only. This
+run was stopped and is not a stage of this folder. In the run of this folder (`k_dim = 120`)
+the next value is near sigma = -0.276, at a residual near 2e-3.
+
+The value at 0 is not explained. Its mode is a continuous field (`bin/c0check` finds no
+jump between elements), so it is not the element-jump mode of `DOC.md`. It is mostly
+velocity (rms 0.20 for each component against a temperature rms of 1.5e-4). It is not a
+rigid rotation of the annulus. The reference checks the leading value only.
+
 Outputs: leading direct eigenmodes `dRetsyphon0.f0000{1,2}` (shipped).

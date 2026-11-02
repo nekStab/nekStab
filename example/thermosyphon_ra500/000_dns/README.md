@@ -2,7 +2,7 @@
 
 **Stage**: thermal DNS (userParam01=0), cold start. Buoyancy-driven loop; settings mirror the 310 stage (ifheat, conductivity).
 
-Run: `sbatch run.local.slurm` (4 ranks; 2 min on Jean Zay with `ifort`, 2026-10-09).
+Run: `sbatch run.local.slurm` (4 ranks; 2 min on a cluster with `ifort`, 2026-10-09).
 `plot.py` writes `plot_snapshot.png` (temperature of the last snapshot); `ref/` holds a copy as `snapshot.png`.
 
 ## Reference
