@@ -11,8 +11,9 @@ the changes against 1.0.1.
 ### Added
 
 Code structure and modes
-- All sources are free-form Fortran modules. `nekstab_nek_bridge` isolates the
-  Nek5000 common-block imports.
+- The sources are free-form Fortran modules, except the entry points that Nek5000
+  calls (`src/main.f90`, `src/usr_wrappers.f90`). `nekstab_nek_bridge` isolates
+  the Nek5000 common-block imports.
 - Mode selection has three routes with this priority: the string `nekstab_mode`
   (for example `'direct'`), then the mode flags, then `userParam01`. A
   `userParam01` that is not a mode code stops the run with an error that names
