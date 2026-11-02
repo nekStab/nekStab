@@ -428,8 +428,26 @@ digits and no mode has a jump.  No other mode has a jump at the
 precision of its file;
 the base flows of `flip_flop_re62` and `cubic_cavity_re1920` 210 have
 jumps of 1e-8 or less, which Nek5000 averages when it reads the file.
-78 of the 79 results are valid for the source of `fd684c48`; one stage
-is open in the TODO list below.
+78 of the 79 results were valid for the source of `fd684c48`.
+
+The source changed once more after that: the step count of Newton for
+periodic orbits (`893a1140`, `bed493ba`, `557c991c`), the weak-form dissipation of
+the energy budget (`98c78542`) and some options that are off by default.  So
+27 of the now 80 stages ran again on the final `src/` (commit `9cbe7538`): the Newton,
+Floquet and budget stages of the periodic orbits, the stages that a change
+reverted in that commit had reached, and the restored stage
+`cylinder_re100/412_postproc_steady_force_sensitivity`.  Two of the 27, Newton on
+`moving_cylinder_re100` and on `tpjet_re2000`, ran with that reverted change; it
+does not reach them.  All 27 pass.  52 stages keep their results of the earlier
+sources; each later change was read against the code path of these stages.
+
+`cubic_cavity_re1950/350_dns_unstable_orbit` keeps the reference of its run of
+commit `f93b2120` (13.7 h on 16 ranks).  It did not run again.  The final source and the
+source of that run give a byte-identical probe file over the first 3 of the 2000
+time units (2087 time steps, 16 ranks, `gfortran`).
+
+For every one of the 365 quantities of the references with a stored result (78 of the 80 stages), a
+shift of the expected value by five tolerances makes the check fail.
 
 
 ## Full mode reference (uparam encoding)
@@ -514,9 +532,9 @@ is open in the TODO list below.
 - [x] Check of the averaging of `fd684c48` against the results:
       `bin/c0check` on every exported mode, and a rerun of
       `flip_flop_re62` 311, 321 and 411 (the only stages with jumps)
-- [ ] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks of c8,
-      220 core-hours) keeps the reference of an earlier c8 run and runs
-      again after the tag
+- [x] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks,
+      220 core-hours) keeps the reference of its earlier run: the probe file is
+      byte-identical on the final source over the first 3 time units
 - [x] Update `DOC.md` with string-mode documentation
 - [x] Update copyright year (2020-2026) in `main.f90`
 - [x] Review SPOD streaming module: it ran on `cylinder_re100/620_modal_spod`
