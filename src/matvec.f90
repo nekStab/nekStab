@@ -202,6 +202,8 @@ contains
       !     --> Every copy of a shared grid point gets the same value. In
       !     place, so that the Krylov basis holds the vector the solver sees.
       call average_copies(q)
+      !     --> A constant pressure is not part of the flow in a closed domain.
+      call remove_mean_pressure(q)
 
       !     --> Pass the baseflow to vx, vy, vz
       call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)
@@ -280,6 +282,8 @@ contains
          end if
       end if
 
+      call remove_mean_pressure(f)
+
    end subroutine matvec
 
 !-----------------------------------------------------------------------
@@ -323,6 +327,35 @@ contains
       ifield = ifield_saved
 
    end subroutine average_copies
+
+!-----------------------------------------------------------------------
+! remove_mean_pressure — Remove the mean of the pressure of a vector in a
+!                        closed domain
+!
+!     Nek5000 ortho acts when all velocity boundaries are Dirichlet
+!     (ifvcor) and does nothing otherwise, so open domains are not changed.
+!
+!     Why: in a closed domain the pressure is known up to a constant. A
+!     constant has no gradient, so the solver returns it unchanged, with
+!     multiplier exactly 1. The Krylov vectors hold the pressure, but the
+!     norm leaves it out (inner_product). The Arnoldi method then returns the
+!     constant as a converged eigenvalue at sigma = 0, and normalization by
+!     the velocity makes it huge: thermosyphon_ra500/310 exported a "mode"
+!     with mean pressure 8.3e7 and pressure variation 87. Its velocity is
+!     round-off of that constant, not a flow.
+!-----------------------------------------------------------------------
+   subroutine remove_mean_pressure(x)
+
+      type(krylov_vector), intent(inout) :: x
+
+      integer :: ifield_saved
+
+      ifield_saved = ifield
+      ifield = 1 ! ortho reads the velocity boundary flag only for field 1
+      call ortho(x%pr)
+      ifield = ifield_saved
+
+   end subroutine remove_mean_pressure
 
 !-----------------------------------------------------------------------
 ! forward_linearized_map — Integrate linearized Navier-Stokes forward
