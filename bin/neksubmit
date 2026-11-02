@@ -23,7 +23,6 @@ JOB_NAME=$(date +%Y%m%d_%H%M%S)
 # Create job script and update 'SBATCH -J' with JOB_NAME variable
 read -r -d '' JOB_SCRIPT << EOM
 #!/bin/bash 
-#SBATCH --qos qos_cpu-dev
 #SBATCH -J s220
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
