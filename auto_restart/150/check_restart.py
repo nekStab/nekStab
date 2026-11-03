@@ -1,4 +1,4 @@
-import os, sys, glob, subprocess, shutil
+import os, sys, glob, subprocess, shutil, re
 
 try:
     sys.path.insert(0, os.path.join(os.environ["NEKSTAB_SOURCE_ROOT"], "bin"))
@@ -36,6 +36,16 @@ consolidate_file_patterns = [
     (f"{case_name}.his_*_*", f"{case_name}.all"),
 ]
 default_job_name = lambda cinit, re, t: f"{cinit}{re}_{t}"[:8]
+
+def reynolds_update(folder_name):
+    """The folder name is the Reynolds number (50, 150, ...): the viscosity of the
+    .par file is -Re. A folder with another name leaves the viscosity of the .par
+    file as it is, instead of stopping the chain with a ValueError."""
+    try:
+        return {("VELOCITY", "viscosity"): f"-{float(folder_name)}"}
+    except ValueError:
+        return {}
+
 
 # ---- MAIN WORKFLOW ----
 if __name__ == "__main__":
@@ -191,18 +201,34 @@ if __name__ == "__main__":
         except Exception:
             pass
     
-    # Check for local nek5000 processes (simpler check for local case)
+    # Check for local nek5000 processes of THIS folder. A plain `pgrep -f nek5000`
+    # also matches the solver of another case, or any command line that contains
+    # the word, and then the chain never submits its next job.
     if not job_running:
         try:
-            result = subprocess.run(['pgrep', '-f', 'nek5000'], capture_output=True, text=True)
+            result = subprocess.run(['pgrep', '-u', os.environ.get('USER', ''), '-x', 'nek5000'], capture_output=True, text=True)
             if result.returncode == 0:
-                pids = result.stdout.strip().split('\n')
-                pid_count = len(pids)
-                print(f"[INFO] Found {pid_count} local nek5000 job{'s' if pid_count > 1 else ''} running. Skipping all checks.. only consolidating.")
-                job_running = True
+                pids = [p for p in result.stdout.split() if os.path.realpath(f"/proc/{p}/cwd") == os.path.realpath(working_directory)]
+                if pids:
+                    print(f"[INFO] Found {len(pids)} local nek5000 job{'s' if len(pids) > 1 else ''} running. Skipping all checks.. only consolidating.")
+                    job_running = True
         except Exception:
             pass
     
+    # A job that failed (crash, MPI error, out of memory, time limit) leaves the restart
+    # file of the previous job in place, so its time is below the endTime of the .par
+    # file. Without this check the chain backs up nothing new, submits the same job
+    # again and loops for ever. Stop instead and keep logfile and logerror for reading.
+    # Not checked at a first run (the file is the initial condition, time 0) or while a
+    # job still runs (the file is not final yet).
+    if not job_running and not is_first_run:
+        with open(parameter_file) as f:
+            m = re.search(r"^\s*endTime\s*=\s*([0-9.eEdD+-]+)", f.read(), re.MULTILINE)
+        if m and velocity_file_time < float(m.group(1).replace("d", "e").replace("D", "e")) * (1.0 - 1e-6):
+            print(f"[ERROR] Time in {latest_restart_file} is {velocity_file_time}, below the endTime {m.group(1)} of {parameter_file}.")
+            print("[ERROR] The last job did not reach its end time. The chain stops here: read logfile and logerror, fix the cause, then repeat the job with ./run_nohup.sh (or sbatch job.pbs): the .par file is already set for it.")
+            sys.exit(1)
+
     if velocity_file_time < target_end_time:
         # Calculate remaining time to target (same logic as above)
         remaining_time = target_end_time - velocity_file_time
@@ -221,7 +247,7 @@ if __name__ == "__main__":
                 {
                     ("GENERAL", "startFrom"): str(latest_restart_file),
                     ("GENERAL", "endTime"): str(next_time),
-                    ("VELOCITY", "viscosity"): f"-{float(case_reynolds)}",
+                    **reynolds_update(case_reynolds),
                 },
             )
             job_name = default_job_name(case_initial, case_reynolds, next_time)
@@ -295,7 +321,7 @@ if __name__ == "__main__":
 # NOTE: For test runs only. Not used for production cases.
 def prepare_par_for_restart(parameter_glob, single_job_time, case_preserving_adjust_par_file):
     """
-    Update the .par file to set startFrom = rst_1cyl0.f00001 and endTime = single_job_time.
+    Update the .par file to set startFrom = rst_<case>0.f00001 and endTime = single_job_time.
     This is intended for starting from scratch in test runs only.
     """
     import glob
@@ -304,4 +330,4 @@ def prepare_par_for_restart(parameter_glob, single_job_time, case_preserving_adj
     if not par_files:
         raise FileNotFoundError(f"No .par file matching {parameter_glob} found.")
     par_file = par_files[0]
-    case_preserving_adjust_par_file(par_file, {("GENERAL", "startFrom"): "rst_1cyl0.f00001", ("GENERAL", "endTime"): str(single_job_time)})
+    case_preserving_adjust_par_file(par_file, {("GENERAL", "startFrom"): f"rst_{case_name}0.f00001", ("GENERAL", "endTime"): str(single_job_time), **reynolds_update(os.path.basename(os.getcwd()))})

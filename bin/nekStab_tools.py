@@ -497,7 +497,7 @@ def extract_time_from_binary(filename):
         # try:
         time = float(words[7])  # adjust this index based on where the value is located
     except:
-        time = np.NaN
+        time = np.nan
     return time
 
 
