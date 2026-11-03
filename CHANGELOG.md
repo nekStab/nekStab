@@ -5,17 +5,6 @@ All notable changes to nekStab are listed here, newest first. The format follows
 [Semantic Versioning](https://semver.org/). `RELEASE.md` describes the 2.0 series
 in more detail and `DOC.md` is the user documentation.
 
-## [Unreleased]
-
-### Fixed
-
-- A run built with `mks` and started with `nekbmpi` or a bare `mpiexec` stopped with
-  `Cannot open history file in subroutine hpts()` in the examples that use history points.
-  Only `run.local.slurm` wrote the probe list `<case>.his`, and `.gitignore` excludes `*.his`.
-  Every such example folder now tracks the list as `<case>.probes`, and `mks` copies it to
-  `<case>.his` when that file does not exist. `mks` never overwrites an existing `.his`, and
-  it warns when the `.usr` calls `hpts` and neither file exists.
-
 ## [2.0.0] - 2026-11-03
 
 ### Highlights
@@ -475,6 +464,12 @@ Code structure and modes
 
 ### Fixed
 
+- A run built with `mks` and started with `nekbmpi` or a bare `mpiexec` stopped with
+  `Cannot open history file in subroutine hpts()` in the examples that use history points.
+  Only `run.local.slurm` wrote the probe list `<case>.his`, and `.gitignore` excludes `*.his`.
+  Every such example folder now tracks the list as `<case>.probes`, and `mks` copies it to
+  `<case>.his` when that file does not exist. `mks` never overwrites an existing `.his`, and
+  it warns when the `.usr` calls `hpts` and neither file exists.
 - Eigenvalue runs with Intel MKL could freeze: the log stops and all ranks spin in
   `mpi_allreduce` after a Krylov-Schur restart. Each rank solved the small Hessenberg
   problem by itself and took its own decisions, and MKL does not promise the same
