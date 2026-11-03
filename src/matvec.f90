@@ -20,6 +20,7 @@ module nekstab_matvec
    use nekstab_krylov_subspace, only: krylov_vector, nt, orbit_kept, orbit_modes
    use nekstab_fourier, only: fourier_orbit_available, fourier_orbit_finalize_streaming
    use nekstab_vectors, only: nopcopy, nopadd2
+   use nekstab_newton_po_rules, only: newton_po_cfl_warn, newton_po_set_step
    use nekstab_nek_bridge, only: nekStab_log, nid, nio, param, npert, time, dt, &
                                  nsteps, ctarg, vx, vy, vz, pr, t, lastep, fintim, &
                                  wdsize, ifbf2d, if3d, nx1, ny1, nz1, nelv, &
@@ -101,13 +102,14 @@ contains
 !     1212, 1216 and 1221 steps in three runs, the period moved by 4e-5 and the
 !     leading Floquet exponent by 3.3e-6 (tolerance of the 311 stage 1e-6).
          if (nsteps_frozen > 0) then
-            dt = param(10)/nsteps_frozen
+            call newton_po_set_step(param(10), nsteps_frozen, dt, nsteps)
             if (nid == 0) write (6, *) 'Using the step count kept by Newton:', nsteps_frozen
 !     Use par-file dt if set; otherwise compute from CFL
 !     param(12) < 0 means constant dt was set in the par file
          else if (abs(param(12)) > 0) then
             dt = abs(param(12))
             if (nid == 0) write (6, *) 'Using dt from par file:', dt
+            call newton_po_set_step(param(10), 0, dt, nsteps)
          else
 !        Compute maximum allowable time step based on CFL condition
             call compute_cfl(ctarg, vx, vy, vz, 1.0d0)
@@ -128,13 +130,8 @@ contains
                   'to silence this.'
                dt = 1.0d-3
             end if
+            call newton_po_set_step(param(10), 0, dt, nsteps)
          end if
-
-!     Calculate number of steps needed to reach end time
-         nsteps = ceiling(param(10)/dt)
-
-!     Adjust time step to exactly reach end time
-         dt = param(10)/nsteps
 
          if (nid == 0) then
             write (6, *) 'Adjusted time step dt =', dt
@@ -151,8 +148,7 @@ contains
          call compute_cfl(ctarg, vx, vy, vz, dt)
          if (nid == 0) write (6, *) 'Actual CFL:', ctarg
 !     The kept count fixes dt = T/N, so the CFL number follows the period.
-         if (nsteps_frozen > 0 .and. param(26) > 0.0d0 .and. ctarg > 1.5d0*param(26) &
-             .and. nid == 0) then
+         if (newton_po_cfl_warn(nsteps_frozen, param(26), ctarg) .and. nid == 0) then
             write (6, *) 'nekStab: WARNING: CFL number above 1.5 x targetCFL:', ctarg
             write (6, *) '  Newton keeps the step count of its first iteration and the period grew.'
             write (6, *) '  Restart Newton from the last nwt file to choose a new step count.'
@@ -206,6 +202,8 @@ contains
       !     --> Every copy of a shared grid point gets the same value. In
       !     place, so that the Krylov basis holds the vector the solver sees.
       call average_copies(q)
+      !     --> A constant pressure is not part of the flow in a closed domain.
+      call remove_mean_pressure(q)
 
       !     --> Pass the baseflow to vx, vy, vz
       call nopcopy(vx, vy, vz, pr, t, ubase, vbase, wbase, pbase, tbase)
@@ -284,6 +282,8 @@ contains
          end if
       end if
 
+      call remove_mean_pressure(f)
+
    end subroutine matvec
 
 !-----------------------------------------------------------------------
@@ -327,6 +327,35 @@ contains
       ifield = ifield_saved
 
    end subroutine average_copies
+
+!-----------------------------------------------------------------------
+! remove_mean_pressure — Remove the mean of the pressure of a vector in a
+!                        closed domain
+!
+!     Nek5000 ortho acts when all velocity boundaries are Dirichlet
+!     (ifvcor) and does nothing otherwise, so open domains are not changed.
+!
+!     Why: in a closed domain the pressure is known up to a constant. A
+!     constant has no gradient, so the solver returns it unchanged, with
+!     multiplier exactly 1. The Krylov vectors hold the pressure, but the
+!     norm leaves it out (inner_product). The Arnoldi method then returns the
+!     constant as a converged eigenvalue at sigma = 0, and normalization by
+!     the velocity makes it huge: thermosyphon_ra500/310 exported a "mode"
+!     with mean pressure 8.3e7 and pressure variation 87. Its velocity is
+!     round-off of that constant, not a flow.
+!-----------------------------------------------------------------------
+   subroutine remove_mean_pressure(x)
+
+      type(krylov_vector), intent(inout) :: x
+
+      integer :: ifield_saved
+
+      ifield_saved = ifield
+      ifield = 1 ! ortho reads the velocity boundary flag only for field 1
+      call ortho(x%pr)
+      ifield = ifield_saved
+
+   end subroutine remove_mean_pressure
 
 !-----------------------------------------------------------------------
 ! forward_linearized_map — Integrate linearized Navier-Stokes forward

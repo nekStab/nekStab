@@ -35,9 +35,10 @@ vortex-shedding limit cycle — 2D proxy (see caveat above).
 ## Run
 ```bash
 makeneks 1cyl                     # compile (links this case's .usr)
+printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpiexec -np 8 ./nek5000 > logfile
 ```
-Wall time: 63 min on 8 ranks (Jean Zay, `ifort`, 2026-10-09).
+Wall time: 63 min on 8 ranks (`ifort`, 2026-10-09).
 
 ## Results (this 2D run)
 `Spectre_NSd.dat`, `Spectre_Hd_conv.dat` — multipliers `mu = exp((sigma + i omega) T)`:

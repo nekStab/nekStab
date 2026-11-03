@@ -18,6 +18,7 @@ unstable von Kármán shedding instability).
 ## Run
 ```bash
 mks 1cyl
+printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
 python3 plot.py
 ```
@@ -38,7 +39,7 @@ mode (Barkley & Henderson 1996).
 isothermal suite.
 
 ## Latest Result
-Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../../210_baseflow_newton/fp`:
+Run of 2026-10-09 (`ifort`, 8 ranks), 2128 mesh, base flow of `../../210_baseflow_newton/fp`:
 
 - 2 eigenvalues converged with residual ≤ 3.1e-7
 - Leading mode: σ = 0.1247875, ω = 0.7336851  (St = 0.1168)
@@ -57,7 +58,7 @@ python3 plot.py
 ```
 
 Produces a 2-panel figure:
-- (a) σ vs f spectrum from `Spectre_NSd.dat`
+- (a) σ vs f spectrum from `Spectre_NSd.dat`; the converged pair is a star, a vertical line marks its f, and the legend gives σ, ω and f
 - (b) Leading direct eigenmode (real part) overlaid on the cylinder geometry
 
 ## Reference

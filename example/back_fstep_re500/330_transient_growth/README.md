@@ -28,7 +28,7 @@ adjoint integration over tau.
   ranks of c9. The run at tau = 57.905 took 8 h 40 min to 23 h on 6-core
   nodes. `run.local.slurm` asks for 24 h.
 
-Run: `sbatch run.local.slurm` (or `mpiexec -np 8 ./nek5000`).
+Run: `sbatch run.local.slurm`. Without Slurm, write `SESSION.NAME` (line 1: `bfs`, line 2: the current directory with a trailing `/`) with `printf "bfs\n%s/\n" "$(pwd)" > SESSION.NAME`, then `mpiexec -np 8 ./nek5000`.
 G is the first value in `Spectre_Hp_conv.dat`. Plot: `python plot.py`.
 
 ## Result

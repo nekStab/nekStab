@@ -544,7 +544,7 @@ U(t) = c_0 + 2 Re sum_{k=1}^{K} c_k exp(2 pi i k t / T)
 | `4.11` | Floquet kinetic energy budget |
 | `4.2` | Wavemaker (structural sensitivity) |
 | `4.3` | Base flow sensitivity |
-| `4.41` | Real part forcing sensitivity (not validated in 2.0.0) |
+| `4.41` | Real part forcing sensitivity |
 | `4.42` | Imaginary part forcing sensitivity (not validated in 2.0.0) |
 | `4.43` | Delta forcing response |
 | `4.50` | Animate direct mode |
@@ -553,24 +553,17 @@ U(t) = c_0 + 2 Re sum_{k=1}^{K} c_k exp(2 pi i k t / T)
 
 #### Steady force sensitivity (4.41, 4.42)
 
-Not validated in 2.0.0, and no example ships for it. The modes solve `(I - exp(T L†)) x = c` for the
-sensitivity to a steady force, by restarted GMRES on the time-stepper form of the adjoint problem. The right-hand side
-`c` comes from the files `sr_<session>0.f00001` or `si_<session>0.f00001`, which the base flow sensitivity (mode 4.3, also
-run by 4.0) writes. On the cylinder at Re = 100 (the stage `412_postproc_steady_force_sensitivity` of
-2.0.0-rc3 and rc4, now removed) the solve did not reach its target:
+The modes solve `(I - exp(T L†)) x = c` for the sensitivity to a steady force, by restarted GMRES on the time-stepper form
+of the adjoint problem. The right-hand side `c` comes from the files `sr_<session>0.f00001` or `si_<session>0.f00001`, which
+the base flow sensitivity (mode 4.3, also run by 4.0) writes. The example `412_postproc_steady_force_sensitivity` runs 4.41
+on the cylinder at Re = 100 (T = 1, `k_dim` = 50) and ends at a squared relative residual of 9.2e-7 against the target of
+1e-6. 4.42 has no example and is not validated in 2.0.0.
 
-| T (`endTime`) | `k_dim` | GMRES restarts | squared relative residual at the end (target 1e-6) |
-|---|---|---|---|
-| 1 | 50 | 10 | 1.35e-2 |
-| 2 | 50 | 10 | 1.46e-2 |
-| 3 | 50 | 6 (run stopped) | 1.64e-2 |
-| 1 | 400 | 2 (run stopped) | 7.4e-3 |
-
-The adjoint map also grows quickly with T. For an input of unit norm, the squared norm of the output was 0.10 at T = 1,
-0.20 at T = 2, 19 at T = 4 and 3.9e25 at T = 10. At T = 10 two applications to the same input gave the same output, and the
-map was linear to 6e-20 in the squared relative error, so the growth belongs to the operator and is not noise. The cause of
-the residual plateau and of this growth is not established. The mode prints a warning when GMRES ends above its target, and
-it still writes the field. Treat that field as unverified.
+The boundary conditions of the case matter. The adjoint map needs the same conditions as the adjoint eigenproblem (mode 3.2):
+the outflow `O` becomes a Dirichlet condition `v` in `usrdat2`, and the inflow stays `v`. A case that also turns the inflow
+into `O` opens the upstream boundary; the adjoint map then grows like `exp(3 T)` and GMRES stalls near a squared residual of
+1e-2. The mode prints a warning when GMRES ends above its target, and it still writes the field. Treat that field as
+unverified.
 
 ### Mode 5: OTD
 
@@ -953,7 +946,7 @@ A Newton-converged orbit closes to 1e-5 or below. Above 1e-3 the run prints a wa
 | `spng_st` | 0.0 | Sponge strength (0 = disabled) |
 | `acc_spg` | 0.333 | Acceleration ramp fraction |
 
-**Sponge reference field.** The sponge of a nonlinear run (DNS, SFD, Newton) forces the velocity toward `spng_vr`, the field that the run holds when the sponge starts: the restart file, or the initial condition of a cold start. A perturbation run forces toward zero. A steady Newton run with the sponge on therefore solves the Navier-Stokes equations plus a forcing toward its start field, so the base flow depends on that field inside the sponge zone, and the forcing vanishes only if the start field is the solution. For `naca0012_re2000` (8 ranks, Jean Zay), Newton from the DNS snapshot differs by 1.1e-2 (relative l2 norm of the velocity) from the base flow that the stability stages ship: by 7e-4 to 8e-4 for x < 1 and by 3e-2 for 5 < x < 6, inside the sponge. A second Newton run seeded with the output of the first moves the field by 3.5e-3 and moves the leading growth rate of the direct problem from -0.0643 to -0.0661; the shipped base flow gives -0.0665. Periodic-orbit and Floquet runs use no sponge, because the sponge would force the orbit toward one snapshot.
+**Sponge reference field.** The sponge of a nonlinear run (DNS, SFD, Newton) forces the velocity toward `spng_vr`, the field that the run holds when the sponge starts: the restart file, or the initial condition of a cold start. A perturbation run forces toward zero. A steady Newton run with the sponge on therefore solves the Navier-Stokes equations plus a forcing toward its start field, so the base flow depends on that field inside the sponge zone, and the forcing vanishes only if the start field is the solution. For `naca0012_re2000` (8 ranks of a cluster), Newton from the DNS snapshot differs by 1.1e-2 (relative l2 norm of the velocity) from the base flow that the stability stages ship: by 7e-4 to 8e-4 for x < 1 and by 3e-2 for 5 < x < 6, inside the sponge. A second Newton run seeded with the output of the first moves the field by 3.5e-3 and moves the leading growth rate of the direct problem from -0.0643 to -0.0661; the shipped base flow gives -0.0665. Periodic-orbit and Floquet runs use no sponge, because the sponge would force the orbit toward one snapshot.
 
 #### OTD
 
@@ -1813,9 +1806,62 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - Set `residualProj = no` in `[VELOCITY]`. Each matvec starts from an unrelated
   vector, so the velocity residual projection has no history to use, and on
   `naca0012_re2000` its Helmholtz solve produced a non-finite norm at 24 or more
-  ranks on Jean Zay (ifort). With `residualProj = no` the Newton run gave identical
+  ranks on a cluster (ifort). With `residualProj = no` the Newton run gave identical
   residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
   the projection is on in these modes.
+
+**An eigenvalue run stops writing to the log while all ranks use 100 % CPU**
+- Seen in versions before 2.0.0 with Intel MKL (`ifx` or `ifort`). The stack of each
+  rank ends in `mpi_allreduce`, reached from `k_project`, right after a Krylov-Schur
+  restart. To get the stack, send `SIGTERM` to the ranks; the Intel runtime prints it.
+- Cause: each rank solved the small Hessenberg problem with LAPACK and decided by
+  itself how many Ritz values to keep and whether the run had converged. MKL does not
+  promise the same bits on each rank, because its result can depend on where the data
+  sits in memory. On `thermosyphon_ra500/310` (4 ranks) the Schur vectors differed by
+  2.0 between ranks and the kept counts by 2. A global sum of different sizes then
+  never ends. 7 of 8 runs froze. `cylinder_re100/310` (8 ranks, `ifx`) froze after its
+  third restart and, with the fix, finished in 217 s at the reference value.
+- Fixed in 2.0.0: `src/lapack_wrapper.f90` gives all ranks the result of rank 0. For
+  an older version, `export MKL_CBWR=AUTO,STRICT` before the run removes the
+  differences. A gfortran build links the LAPACK of the system (`bin/makeneks`); the one
+  tested, with the reference LAPACK of Ubuntu, did not show them.
+
+**A converged eigenvalue at sigma = 0 whose mode has a huge mean pressure**
+- Seen in versions before 2.0.0 in a closed domain (all velocity boundaries are
+  walls). `thermosyphon_ra500/310` exported a mode with mean pressure 8.3e7, pressure
+  variation 87 and velocity 0.27.
+- Cause: in a closed domain the pressure is known up to a constant. A constant has no
+  gradient, so the solver returns it unchanged, with multiplier exactly 1. The Krylov
+  vectors hold the pressure but the norm leaves it out, so the Arnoldi method returns
+  the constant as a converged value, and normalising by the velocity makes it huge.
+- Fixed in 2.0.0: `matvec` removes the mean pressure of its input and output through
+  Nek5000 `ortho`. `ortho` acts only when all velocity boundaries are Dirichlet, so
+  open domains run unchanged (`cylinder_re100/310` is byte-identical with the gslib
+  method forced; see the entry below on run-to-run differences).
+
+**`residualTol` of the temperature or a scalar has no effect**
+- In Nek5000 `core/reader_par.f` reads `<scalar>:residualTol` only when the section
+  has no `solver` key. With `solver = helm` the tolerance stays at the default 1e-7
+  whatever the `.par` says. helm is the default solver, so remove the line.
+- `Spectre_d.info` prints the value of the `.par`. The true value is in the solver
+  log, as in `Hmholtz TEM1 ... 1.0000E-07`.
+- On `thermosyphon_ra500/310` at 1e-11, removing the line took the vector residual of
+  mode 1 from 1.391e-7 to 4.296e-9. The eigenvalue moved from 0.1022194 to 0.1022193.
+
+**Two identical runs give output files that differ in the last digits**
+- Same binary, same input, same rank count, and the spectrum and mode files are
+  not byte-identical. This is expected, not a fault in the case.
+- Cause: at start-up gslib times its exchange methods (pairwise, crystal router,
+  allreduce) and keeps the fastest. The log shows the choice in the lines
+  `used all_to_all method`. Each method adds the copies of a shared grid point in
+  another order, so the round-off differs, and the eigenvalue iteration carries
+  that difference on.
+- Size, measured on `cylinder_re100/310` at 8 ranks: the leading growth rate moved
+  by at most 5e-9, unconverged rows by at most 1e-6, and the vector residual of
+  mode 1 lay between 0.3120e-6 and 0.3166e-6.
+- Compare results with a tolerance, as `scripts/check_against_ref.py` does. A byte
+  comparison of two eigensolver runs says something only when both logs show the
+  same methods.
 
 **A converged eigenvalue at mu = 1.0000000 whose mode is a set of spikes**
 - Seen in versions up to v2.0.0-rc4 (v1.0.1 included), most often below the

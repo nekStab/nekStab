@@ -16,10 +16,10 @@ Compare with ../akervik (the other formulation) and ../casacuberta_dyn (dynamic 
   precision. `endTime = 1500` is a limit that the run does not reach.
 - The residual in `residu.dat` (column 2) is the root mean square over the domain of the change of the velocity during one time step.
 
-## Result (Jean Zay, 8 ranks, `ifort`)
+## Result (8 ranks, `ifort`)
 
 - The residual meets the gate 1e-10 at t = 868.94 after 86440 time steps; it ends at 9.997e-11
-  and started at 2.09e-04. Wall time 673 s.
+  and started at 2.09e-04. Wall time 667 s.
 - Over the last fifth of the run the residual falls as exp(-0.0177 t).
 - The converged field against the Newton solution of `../../210_baseflow_newton` (a different method for the same steady flow):
 

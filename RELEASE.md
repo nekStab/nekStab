@@ -5,11 +5,40 @@ backward compatible with 1.x; internal code is restructured for
 maintainability, numerical robustness, and HPC performance.
 
 
+## Known issues
+
+1. **The solver error grows with the size of the domain.** The error of one
+   matvec grows with the domain. On a large domain a good mode can get the
+   vector warning or be refused. The eigenvalue can also differ between runs
+   with different `residualTol`: on an ellipse with V = 60000 the leading
+   sigma is -0.0144116 at `residualTol = 1e-9` and -0.0144268 at `4e-12`, and
+   the residuals of both runs are below 1e-6. The two values differ between
+   these runs. Workaround: lower `residualTol` by hand. Version 2.0.0 ships no
+   change of the tolerance; a fix is planned for a later version.
+2. **The norm has zero weight in the sponge zone.** The inner product of the
+   Krylov vectors uses the mass matrix without the sponge (`bm1s`), which is
+   zero where the sponge function is not zero. A perturbation inside the
+   sponge zone does not enter this norm.
+3. **`cubic_cavity_re1950/350_dns_unstable_orbit` keeps an older run.** It keeps
+   the reference of its run of commit `f93b2120` (13.7 h on 16 ranks) and did
+   not run again. The final source and the source of that run give a
+   byte-identical probe file over the first 3 of the 2000 time units (2087
+   time steps, 16 ranks, `gfortran`).
+4. **RANS stability is experimental.** `example/cylinder_re1m` has no
+   reference data and no gallery card. Mode 4.42 (steady force sensitivity,
+   imaginary part) is not validated.
+5. **Two identical runs can differ in the last digits.** gslib times its
+   exchange methods at start-up and keeps the fastest, and each method adds
+   the copies of a shared point in another order. In `cylinder_re100/310`
+   (8 ranks) the leading growth rate moved by at most 5e-9. With the method
+   forced, repeat runs are byte-identical (`DOC.md`, Troubleshooting).
+
+
 ## What changed
 
 ### Architecture
 
-- All source wrapped in Fortran modules (39 `.f90` files, was loose `.f`)
+- All source wrapped in Fortran modules (43 `.f90` files, was loose `.f`)
 - `nekstab_nek_bridge` module isolates all Nek5000 common-block imports
 - `mode_config` module: 3-priority mode resolution (string > flags > uparam)
 - `NEKSTAB.inc`: single include for all nekStab common-block variables
@@ -111,7 +140,7 @@ without forcing a full extra decade of accuracy at every iteration.
 
 Other improvements:
 
-- **Stagnation guard** — detects when 3 consecutive Newton steps
+- **Stagnation guard** — detects when 6 consecutive Newton steps
   fail to reduce the residual and triggers early termination
 - **Open-once log files** — residu_newton.dat, residu_gmres.dat,
   residu_arnoldi.dat are opened at the start and closed at the end
@@ -379,7 +408,7 @@ post-process it.
 | `210_baseflow_newton` | base flow / UPO by Newton-GMRES |
 | `3x0/3x1_stability_*` | 310 direct, 311 direct Floquet, 315 direct about the mean flow, 320 adjoint, 321 adjoint Floquet, 330 transient growth |
 | `350_dns_unstable_orbit` | DNS that leaves an unstable orbit along its Floquet mode |
-| `4xx_postproc_*` | 410 mode animation, 411 wavemaker or energy budget |
+| `4xx_postproc_*` | 410 mode animation, 411 wavemaker or energy budget, 412 steady-force sensitivity |
 | `500_otd` | OTD modes |
 | `6x0_modal_*` | 600 POD, 610 DMD, 620 SPOD, 630 DMT filter bank |
 
@@ -400,7 +429,7 @@ reference data and the gallery does not list it.
 Validated stages carry `ref/` reference data checked by
 `scripts/check_against_ref.py` (see Reproducibility framework above).
 78 of the 79 stages outside `cylinder_re1m` ran again for 2.0.0 from a
-tree that holds tracked files only: 40 stages on Jean Zay (4 to 40
+tree that holds tracked files only: 40 stages on a cluster (4 to 40
 ranks), 19 on c8 (4 to 16 ranks) and 19 on the Intel servers x1 and x3
 (4 to 8 ranks).  The record of a run holds the digest of the source files
 that built it.  Commits `0ca2a0e1`, `d65823c3` and `01f69c2e` changed the
@@ -428,8 +457,45 @@ digits and no mode has a jump.  No other mode has a jump at the
 precision of its file;
 the base flows of `flip_flop_re62` and `cubic_cavity_re1920` 210 have
 jumps of 1e-8 or less, which Nek5000 averages when it reads the file.
-78 of the 79 results are valid for the source of `fd684c48`; one stage
-is open in the TODO list below.
+78 of the 79 results were valid for the source of `fd684c48`.
+
+The source changed once more after that: the step count of Newton for
+periodic orbits (`893a1140`, `bed493ba`, `557c991c`), the weak-form dissipation of
+the energy budget (`98c78542`) and some options that are off by default.  So
+27 of the now 80 stages ran again on the final `src/` (commit `9cbe7538`): the Newton,
+Floquet and budget stages of the periodic orbits, the stages that a change
+reverted in that commit had reached, and the restored stage
+`cylinder_re100/412_postproc_steady_force_sensitivity`.  Two of the 27, Newton on
+`moving_cylinder_re100` and on `tpjet_re2000`, ran with that reverted change; it
+does not reach them.  All 27 pass.  52 stages keep their results of the earlier
+sources; each later change was read against the code path of these stages.
+
+The last source changes came after that (`fbddc0fd`, `88611748`, `be5fceca`), together
+with the removal of `solver = helm` from four stages: `matvec` removes the mean pressure
+in a closed domain, all ranks use the LAPACK result of rank 0, and the Fourier orbit load
+keeps the flow fields. The Troubleshooting section of `DOC.md` explains each. Eleven
+stages ran again on these sources with `ifx` and pass their references:
+`thermosyphon_ra500` 000, 210 and 310, `lid_driven_re3600` 000, 210, 310 and 320,
+`back_fstep_re500/330_transient_growth`, `cylinder_re30_thermal/210_baseflow_newton`,
+`cubic_cavity_re1920/310_stability_direct` and `cubic_cavity_re1914/320_stability_adjoint`.
+The last two match their references at every printed digit.
+
+The other closed-domain stages keep their earlier runs: `cubic_cavity_re1914` 210, 310,
+330 and 411, `cubic_cavity_re1920/210_baseflow_newton` and `cubic_cavity_re1950` 311, 321
+and 411. Repeating them would take about 19 h on 16 ranks. The reasons: a constant
+pressure has no gradient, so its removal does not change the velocity; the rank-0 change
+does nothing when the ranks agree, and `cylinder_re100/310` with gfortran is byte-identical
+across it with the gslib method forced; and 174 of 174 stored modes show no jump between
+ranks (largest 4.4e-11). The open-domain stages keep their runs for the same reasons, and
+`cylinder_re100/310` is byte-identical across the pressure change as well.
+
+`cubic_cavity_re1950/350_dns_unstable_orbit` keeps the reference of its run of
+commit `f93b2120` (13.7 h on 16 ranks).  It did not run again.  The final source and the
+source of that run give a byte-identical probe file over the first 3 of the 2000
+time units (2087 time steps, 16 ranks, `gfortran`).
+
+For every one of the 365 quantities of the references with a stored result (78 of the 80 stages), a
+shift of the expected value by five tolerances makes the check fail.
 
 
 ## Full mode reference (uparam encoding)
@@ -463,7 +529,7 @@ is open in the TODO list below.
 - **4.11**: PKE budget — Floquet
 - **4.2**: Wavemaker
 - **4.3**: Sensitivity to base flow modifications
-- **4.41**: Sensitivity to steady force (real part); not validated in 2.0.0, see `DOC.md`
+- **4.41**: Sensitivity to steady force (real part)
 - **4.42**: Sensitivity to steady force (imaginary part); not validated in 2.0.0, see `DOC.md`
 - **4.43**: Delta forcing
 - **4.50**: Animate eigenmode
@@ -503,24 +569,24 @@ is open in the TODO list below.
       `thermosyphon_ra500/310_stability_direct/direct`,
       `cylinder_re100/411_postproc_wavemaker` and
       `naca0012_re2000/411_postproc_wavemaker` (1 s to 20 min each, on
-      Jean Zay; all six pass)
+      a cluster; all six pass)
 - [x] Results of the source of commit `6c122882` for
       `back_fstep_re500/330_transient_growth` (6.3 h on 8 ranks of c8) and
       `cylinder_re100/210_baseflow_newton/fp` (55 min on 8 ranks of c8)
 - [x] Rerun of the 23 stages that run the Krylov-Schur eigensolver (every
       stage numbered 310, 311, 315, 320, 321 or 330) and the 9 stages that
       read their modes, on the source of `01f69c2e`: all 32 pass (about
-      630 core-hours on Jean Zay, c8, x1 and x3, both passes included)
+      630 core-hours on a cluster, c8, x1 and x3, both passes included)
 - [x] Check of the averaging of `fd684c48` against the results:
       `bin/c0check` on every exported mode, and a rerun of
       `flip_flop_re62` 311, 321 and 411 (the only stages with jumps)
-- [ ] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks of c8,
-      220 core-hours) keeps the reference of an earlier c8 run and runs
-      again after the tag
+- [x] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks,
+      220 core-hours) keeps the reference of its earlier run: the probe file is
+      byte-identical on the final source over the first 3 time units
 - [x] Update `DOC.md` with string-mode documentation
 - [x] Update copyright year (2020-2026) in `main.f90`
 - [x] Review SPOD streaming module: it ran on `cylinder_re100/620_modal_spod`
-      (8 ranks, Jean Zay), after a fix of the implicit real `spod_s_nfreq` in
+      (8 ranks of a cluster), after a fix of the implicit real `spod_s_nfreq` in
       its external routines (they now import it and declare `implicit none`). Its eigenvalues equal those of the batch
       routine `spod_compute` to six digits in all 33 frequency bins, and the
       three eigenvalues of each bin sum to the total power of the POD-FFT

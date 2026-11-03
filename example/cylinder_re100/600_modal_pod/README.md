@@ -23,7 +23,7 @@ sbatch run.local.slurm    # both phases, 8 ranks
 ```
 
 ## Result
-Jean Zay, 8 and 16 ranks, 2026-10-09 (identical to six digits at both rank counts):
+A cluster, 8 and 16 ranks, 2026-10-09 (identical to six digits at both rank counts):
 - POD: the leading pair holds 49.87 % and 47.72 % of the fluctuation energy
   (97.59 % cumulative); `pod_spectrum.dat`.
 - DMD (rank 20): the shedding pair has St = 0.16566, its harmonics 0.33158 and

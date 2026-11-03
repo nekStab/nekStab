@@ -74,7 +74,7 @@ def _plot_envelope(output):
     fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
     ax.plot(ref[:, 0], ref[:, 1], '-o', c='0.6', lw=2.5, ms=2, markevery=3,
             label='Blackburn et al. (2008)')
-    ax.plot(tau, gain, '-s', c='k', lw=0.8, ms=4, mfc='none', label='nekStab')
+    ax.plot(tau, gain, 's', c='k', ls='none', ms=4, mfc='none', label='nekStab')
     ax.set_yscale('log')
     ax.set_xlabel(r'horizon $\tau$')
     ax.set_ylabel(r'$G(\tau)$')

@@ -23,7 +23,7 @@ In this stage that field is the seed. The Newton solution therefore solves the
 Navier-Stokes equations plus a forcing toward the seed, and the field inside the
 sponge zone depends on the seed. The right sponge starts at x = 3.4, reaches full
 strength at x = 5.1 and ends at the outflow, x = 6.75. Three Newton runs in a row, each seeded
-with the output of the one before (8 ranks, Jean Zay), and the direct stability
+with the output of the one before (8 ranks of a cluster), and the direct stability
 stage run on each base flow:
 
 | pass | seed | first residual | Newton iterations | time (s) | field change | sigma | omega |
@@ -50,7 +50,7 @@ sbatch run.local.slurm     # 8 ranks
 ```
 The run works at 8 to 40 ranks. `[VELOCITY] residualProj = no` is needed: with the
 velocity residual projection on, the Newton run stopped with
-`k_normalize non-finite norm` at 24, 32 and 40 ranks on Jean Zay (ifort 2021.9) and
+`k_normalize non-finite norm` at 24, 32 and 40 ranks on a cluster (ifort 2021.9) and
 converged at 8 and 16. With it off, the Newton residuals at 8, 16 and 40 ranks are
 equal to the seven printed digits at every iteration, and the base flow at 16 and 40
 ranks differs from the one at 8 ranks by 1e-11 (relative l2 norm of the velocity).

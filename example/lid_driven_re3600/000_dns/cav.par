@@ -14,7 +14,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 100.0    # six snapshots; the last one seeds the Newton stage
+writeInterval = 100.0    # six snapshots; the first one (t = 100) seeds the Newton stage
 writeDoublePrecision = no
 
 dealiasing = yes

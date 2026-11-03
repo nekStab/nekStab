@@ -46,7 +46,7 @@ not an eigenvalue. `Spectre_Hd.dat` lists every Ritz value with a flag (column 4
 
 The run prints `nekStab: WARNING: no converged multiplier within 1e-3 of 1`. An autonomous orbit has the multiplier 1 of
 its phase mode; an orbit locked to a forcing has none, so the message does not apply. The run took 33 min on 40 ranks
-of Jean Zay (`ifort`) and 56 min on 12 ranks of nexus-dev (`ifx`); both give `mu_1 = 0.9298793`.
+of a cluster (`ifort`) and 56 min on 12 ranks of nexus-dev (`ifx`); both give `mu_1 = 0.9298793`.
 
 ![Floquet multipliers, relaxation of the DNS and leading mode](ref/floquet.png)
 

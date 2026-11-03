@@ -75,8 +75,8 @@ mks cav        # compile
 sbatch run.local.slurm   # per stage
 ```
 Wall times on 16 ranks: Floquet direct 12.9 h, adjoint 8.4 h, DNS of the unstable
-orbit 13.7 h, energy budget 12 min (Jean Zay) to 22 min (c8). The POD and the DMD take
-under 15 s, the filter bank 22 min on 40 ranks of Jean Zay.
+orbit 13.7 h, energy budget 12 min to 22 min (c8). The POD and the DMD take
+under 15 s, the filter bank 22 min on 40 ranks of a cluster.
 
 ## Reference
 Standard 3D lid-driven cubic cavity benchmark; first Hopf near Re ≈ 1916.

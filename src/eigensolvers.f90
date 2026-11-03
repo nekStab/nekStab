@@ -47,6 +47,7 @@ module nekstab_eigensolvers
    use nekstab_io, only: load_files, whereyouwant
    use nekstab_diagnostics, only: outpost_vort
    use nekstab_noise, only: add_noise_scal, add_symmetric_seed, op_add_noise
+   use nekstab_ortho, only: last_pass_count
    implicit none
    private
    public :: inner_product, norm, krylov_schur, &
@@ -131,7 +132,7 @@ contains
       integer :: kk ! size of the basis after the last Arnoldi pass (k_dim, or less after an early stop)
       real :: alpha
       logical :: converged
-      integer :: i, j
+      integer :: i, j, n_check
       character(len=132) :: filename
       real(nekStab_dp) :: orbit_gap ! smallest distance of a converged multiplier to 1
 
@@ -379,10 +380,11 @@ contains
          if (nid == 0) open (unit=NEKSTAB_UNIT_ORTHO, file="orthonormality.dat")
          ! kk = length of the basis the last factorization built; an early stop
          ! leaves columns kk+1..k_dim unset.
-         do i = 1, kk
+         n_check = last_pass_count(kk)
+         do i = 1, n_check
             call k_norm(alpha, Q(i))
             if (nid == 0) write (NEKSTAB_UNIT_ORTHO, '("Norm of the ", I4, "th mode = ", F20.14)') i, alpha
-            do j = i + 1, kk
+            do j = i + 1, n_check
                call k_dot(alpha, Q(i), Q(j))
                if (nid == 0) write (NEKSTAB_UNIT_ORTHO, &
                                     '("Orthogonality between mode ", I4, " and mode ", I4, " = ", E15.7)') i, j, alpha

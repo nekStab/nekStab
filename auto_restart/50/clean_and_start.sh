@@ -1,32 +1,68 @@
 #!/bin/bash
+# Start a restart chain from scratch in this folder: stop what runs here, delete
+# the outputs of the previous chain, point the .par file at rst_<case>0.f00001
+# and the first end time, rebuild the case and start job 1.
+#
+# Needs NEKSTAB_SOURCE_ROOT, NEK_SOURCE_ROOT and mks in the environment.
 
-ps aux | egrep 'nek5000|python|mpiexec|mpirun' | grep -v grep
+# The case name is the name of the .usr file.
+CASE=$(basename "$(ls ./*.usr | head -1)" .usr)
+HERE=$(pwd -P)
 
-# Double-strategy: pgrep+kill, then pkill -f as backup
-for proc in nek5000 python python3 mpiexec mpirun; do
-    # First, kill all matching PIDs for this user
-    pids=$(pgrep -u "$USER" $proc)
-    if [ -n "$pids" ]; then
-        echo "[INFO] Killing $proc PIDs: $pids"
-        kill -9 $pids
-    else
-        echo "[INFO] No $proc processes found for user $USER via pgrep"
-    fi
-    # Second, fallback to pkill -9 -f for any stragglers
-    pkill -9 -f $proc && echo "[INFO] pkill -9 -f $proc: DONE (backup)" || echo "[INFO] pkill -9 -f $proc: NONE FOUND (backup)"
-done
+# Stop only the processes of this chain: those whose working directory is this
+# folder. Killing by name would also kill the user's other solvers and Python
+# jobs. The shell running this script and its parent are kept.
+chain_pids() {
+    # The patterns are anchored so that an editor open on run.sh is not matched.
+    for pid in $( { pgrep -u "$USER" -x 'nek5000|mpiexec|mpiexec\.hydra|mpirun|hydra_pmi_proxy'
+                    pgrep -u "$USER" -f '^(/usr/bin/|/bin/)?bash (\./)?(run|run_nohup)\.sh'
+                    pgrep -u "$USER" -f '^(/usr/bin/)?python3? (\./)?check_restart\.py'
+                  } ); do
+        [ "$pid" = "$$" ] && continue
+        [ "$pid" = "$PPID" ] && continue
+        [ "$(readlink "/proc/$pid/cwd" 2>/dev/null)" = "$HERE" ] && echo "$pid"
+    done
+}
+
+# Cancel the Slurm jobs of this folder: pending, running, suspended or completing. A
+# queued job has no process yet, so chain_pids does not see it; it would start after
+# the cleanup below and write into the same files as the job started at the end of
+# this script. If the queue cannot be read or a job cannot be cancelled, stop here,
+# before anything is deleted.
+if command -v squeue > /dev/null; then
+    command -v scancel > /dev/null || { echo "[ERROR] squeue is on the path but scancel is not; nothing was changed." >&2; exit 1; }
+    queue=$(squeue -h -u "$USER" -t PENDING,RUNNING,SUSPENDED,COMPLETING -o '%i|%Z') || { echo "[ERROR] squeue failed; the Slurm jobs of this folder are unknown. Nothing was changed." >&2; exit 1; }
+    while IFS='|' read -r jobid jobdir; do
+        if [ -n "$jobid" ] && [ "$(realpath "$jobdir" 2>/dev/null)" = "$HERE" ]; then
+            echo "[INFO] Cancelling Slurm job $jobid of this folder"
+            scancel "$jobid" || { echo "[ERROR] scancel $jobid failed. Nothing was deleted." >&2; exit 1; }
+        fi
+    done <<< "$queue"
+fi
+
+pids=$(chain_pids)
+if [ -n "$pids" ]; then
+    echo "[INFO] Killing PIDs of this chain: $pids"
+    kill -9 $pids
+else
+    echo "[INFO] No process of this chain found"
+fi
 
 # Wait a moment for processes to terminate
 sleep 2
-ps aux | egrep 'nek5000|python|mpiexec|mpirun' | grep -v grep
 
-# Clean previous outputs
-rm 1cyl0.f00* 1cyl.his_* lift_drag.* log*
+# Clean previous outputs (-f: not all of them exist at the first start)
+rm -f "${CASE}"0.f00* "${CASE}".his_* lift_drag.* total_energy.* total_enstrophy.* log*
 
 # Update .par file for restart
 python3 -c "from check_restart import prepare_par_for_restart, parameter_glob, single_job_time, case_preserving_adjust_par_file; prepare_par_for_restart(parameter_glob, single_job_time, case_preserving_adjust_par_file)"
 
-mks 1cyl
+mks "$CASE"
 
-# Start the simulation
-./run_nohup.sh
+# Start the simulation: on a Slurm machine through job.pbs, as every later job of the
+# chain is started by check_restart.py; otherwise in the background of this shell.
+if command -v sbatch > /dev/null; then
+    sbatch job.pbs
+else
+    ./run_nohup.sh
+fi

@@ -18,6 +18,7 @@ receptivity region where the flow is most sensitive to perturbations.
 ## Run
 ```bash
 mks 1cyl
+printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
 python3 plot.py
 ```
@@ -37,7 +38,7 @@ downstream in the wake.
 isothermal suite.
 
 ## Latest Result
-Run of 2026-10-09 (Jean Zay, `ifort`, 8 ranks), 2128 mesh, base flow of `../210_baseflow_newton/fp`:
+Run of 2026-10-09 (`ifort`, 8 ranks), 2128 mesh, base flow of `../210_baseflow_newton/fp`:
 
 - 2 eigenvalues converged with residual <= 6.1e-7
 - Leading mode: sigma = 0.1247881, omega = 0.7336846 (matches the direct sigma to 6e-7)
@@ -52,7 +53,7 @@ python3 plot.py
 ```
 
 Produces a 2-panel figure:
-- (a) σ vs f adjoint spectrum from `Spectre_NSa.dat`
+- (a) σ vs f adjoint spectrum from `Spectre_NSa.dat`: all Ritz values, converged pair as a star, σ and f in the legend
 - (b) Leading adjoint eigenmode (real part) — note concentration upstream
   of the cylinder
 

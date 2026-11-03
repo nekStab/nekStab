@@ -12,7 +12,7 @@ unstable, so a DNS cannot hold it and Newton-GMRES has to find it.
 same file name. The seed is not steady (squared residual 8.5e-6, 85 000 times the tolerance of 1e-10).
 
 **Result**: 12 iterations from a squared residual of 8.5e-6 to 9.7e-11 (`residu_newton.dat`), 122
-Arnoldi vectors in total, 30 min on 40 ranks (Jean Zay, 2026-10-10). The residual is not monotone: it
+Arnoldi vectors in total, 30 min on 40 ranks (2026-10-10). The residual is not monotone: it
 rises once, from 3.5e-7 at iteration 5 to 8.5e-7 at iteration 6, and then falls by a factor of 2 to 7
 per iteration. The converged `BF_cav0.f00001` is the base flow of `../../310_stability_direct/`.
 

@@ -111,6 +111,55 @@ def read_field(fname):
     return x, y, fields, field.time
 
 
+def modal_lowpass(fname, keys=('vx',), top=(0.25, 0.0), passes=1):
+    """Low-pass filter fields of a 2-D field file in the Legendre basis of each element.
+
+    Returns {key: filtered array}, in the point order of read_field. Nothing is
+    written to disk. The file is only read.
+
+    Weights per element and per direction, for the polynomial order N = lx1 - 1:
+        modes 0 .. N-2  weight 1    (the resolved content is untouched)
+        mode  N-1       weight 0.25   (defaults; `top` gives the weights of the highest modes,
+        mode  N         weight 0       lowest of them first, and `passes` repeats filter and average)
+    Reason: the top two Legendre modes of a spectral-element field carry the
+    grid-scale noise of an eigenvector from a Krylov method; they are the
+    modes with the largest truncation error. A roll-off (0.25, 0)
+    removes the element-scale stripes of the tpjet adjoint mode (0.5, 0.1 left them visible), keeps the plotted shape and avoids the ringing of a sharp cut at N-1.
+    Filtering breaks the C0 continuity across elements, so values at the
+    shared GLL points are averaged afterwards (the dsavg of Nek5000).
+    """
+    from pymech.neksuite import readnek
+
+    field = readnek(str(fname))
+    nx, ny, nz = field.lr1
+    assert nz == 1, 'modal_lowpass handles 2-D files only'
+    nel, n = field.nel, nx - 1
+    # GLL points: -1, +1 and the roots of P_N'; Vandermonde matrix of Legendre modes.
+    xi = np.sort(np.r_[-1., np.polynomial.legendre.Legendre.basis(n).deriv().roots().real, 1.])
+    vand = np.polynomial.legendre.legvander(xi, n)
+    w = np.ones(n + 1)
+    w[n - len(top) + 1:] = top  # weights of the highest len(top) modes, lowest of them first
+    filt = vand @ np.diag(w) @ np.linalg.inv(vand)
+    x = np.array([e.pos[0].ravel() for e in field.elem])
+    y = np.array([e.pos[1].ravel() for e in field.elem])
+    # Number of elements sharing each GLL point (rounded coordinates identify a point).
+    _, inv = np.unique(np.round(np.c_[x.ravel(), y.ravel()], 9), axis=0, return_inverse=True)
+    inv = inv.ravel()
+    count = np.bincount(inv)
+    comp = {'vx': 0, 'vy': 1, 'vz': 2}
+    out = {}
+    for key in keys:
+        q = np.array([e.vel[comp[key]].reshape(ny, nx) for e in field.elem])
+        # Each pass filters every element, then averages the shared points; the averaging couples
+        # neighbouring elements, so repeated passes also damp streaks that span several elements.
+        for _ in range(passes):
+            qf = np.einsum('ij,ejk,lk->eil', filt, q, filt).ravel()
+            qa = (np.bincount(inv, weights=qf) / count)[inv]
+            q = qa.reshape(nel, ny, nx)
+        out[key] = qa
+    return out
+
+
 def find_fields(pattern, directory='.'):
     """Find field files matching a glob pattern, sorted by name."""
     d = Path(directory)
@@ -419,8 +468,11 @@ def plot_spectrum_NS(ax, dat_file, tolerance=1e-6, freq=True):
 
 # ── Convergence plotting ──────────────────────────────────────────────
 
-def plot_residuals(ax, dat_file, label=None, color='k'):
-    """Plot SFD/BoostConv residuals (residu.dat: time, L2, L2_t)."""
+def plot_residuals(ax, dat_file, label=None, color='k', lw=0.8, marker='o'):
+    """Plot SFD/BoostConv residuals (residu.dat: time, L2, L2_t).
+
+    The curve carries about 12 markers; give two curves on one axes different lw and marker.
+    """
     dat_file = Path(dat_file)
     if not dat_file.exists():
         ax.text(0.5, 0.5, f'{dat_file.name}\nnot found',
@@ -433,7 +485,8 @@ def plot_residuals(ax, dat_file, label=None, color='k'):
     t = data[:, 0]
     r = data[:, 1]
 
-    ax.semilogy(t, r, color=color, lw=0.8, label=label)
+    ax.semilogy(t, r, color=color, lw=lw, marker=marker, ms=3.0,
+                markevery=max(1, len(t) // 12), label=label)
     ax.axhline(r.min(), color=color, lw=0.4, ls='--', alpha=0.5)
     ax.set_xlabel('t')
     ax.set_ylabel(r'$\|r\|$')
@@ -462,16 +515,24 @@ def plot_newton_convergence(ax, directory='.'):
             ax.semilogy(k, res_arn, 'k-', lw=0.6, label='Arnoldi', zorder=3)
             ax.semilogy(k, tol_arn, 'b--', lw=0.5, label='tol', zorder=2)
 
-    # Newton residuals (markers at k_sum positions)
+    # Newton residuals: marker x = Arnoldi row where that Newton iteration's first GMRES cycle starts.
     newton_file = d / 'residu_newton.dat'
-    if newton_file.exists():
+    gmres_file = d / 'residu_gmres.dat'
+    if newton_file.exists() and gmres_file.exists() and arnoldi_file.exists():
         data = np.genfromtxt(str(newton_file))
         if data.ndim == 1:
             data = data.reshape(1, -1)
+        gm = np.genfromtxt(str(gmres_file))
+        if gm.ndim == 1:
+            gm = gm.reshape(1, -1)
+        ar_k = np.atleast_1d(np.genfromtxt(str(arnoldi_file), usecols=0))
         # Same empty/short guard as the Arnoldi block above.
-        if data.size and data.shape[1] > 7:
+        if data.size and data.shape[1] > 7 and gm.size and ar_k.size:
             # Columns: i, total_calls, iter_calls, k_sum, tottime, solver_tol, residual, dtol
-            k_sum = data[:, 3]
+            # Arnoldi k restarts at 1 in each GMRES cycle; residu_gmres.dat column 0 is the Newton iteration.
+            cycle_starts = np.append(np.flatnonzero(ar_k == 1), len(ar_k))
+            n_cycles_before = np.array([np.sum(gm[:, 0] < i) for i in data[:, 0]])
+            k_sum = cycle_starts[n_cycles_before]
             res_nwt = data[:, 6]
             dtol = data[0, 7]
             ax.semilogy(k_sum, res_nwt, 'bs', ms=4, mfc='none', lw=0.8,

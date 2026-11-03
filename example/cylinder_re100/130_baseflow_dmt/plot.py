@@ -71,6 +71,9 @@ def save_field(nk, path, output):
 
 def save_residual(nk, path, gate, output):
     """Plot the residual history of the run with the gate as a horizontal line."""
+    missing = [k for k in ("userParam11", "userParam12", "userParam13") if par_value(k) is None]
+    if missing:
+        sys.exit(f"plot.py: {', '.join(missing)} not found in the .par file; the legend needs the DMT settings")
     data = np.genfromtxt(path)
     time, residual = data[:, 0], data[:, 1]
     fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
@@ -82,7 +85,9 @@ def save_residual(nk, path, gate, output):
         marker="o",
         ms=2,
         markevery=max(1, len(time) // 40),
-        label=f"DMT ({time[-1]:.1f} t.u.)",
+        # The legend names the DMT settings, read from the .par, not the run length.
+        label=rf"DMT $\omega_c$ = {par_value('userParam11')}, "
+        rf"$\beta$ = {par_value('userParam12')}, $\chi$ = {par_value('userParam13')}",
     )
     ax.axhline(gate, color="k", ls=":", lw=0.5, label=f"gate {gate:.0e}")
     ax.set_xlabel(r"$t$")

@@ -3,9 +3,9 @@
 
 This figure must compare against both non-OIFS baselines.  OIFS reduces
 the number of timesteps substantially, but it is a case-specific acceleration;
-the residual and measured-cost panels make the speed/accuracy tradeoff explicit.
+the residual panel makes the speed/accuracy tradeoff explicit.
 
-OUTPUTS: plot_ic.png, plot_residual.png, plot_residual_vs_walltime.png, plot_bf.png
+OUTPUTS: plot_ic.png, plot_residual.png, plot_residual_walltime.png, plot_bf.png
 """
 from pathlib import Path
 import sys, re
@@ -18,17 +18,15 @@ import nekplot as nk
 
 CASE_DIR = Path(__file__).resolve().parent
 BASEFLOW_DIR = CASE_DIR.parent
-N_RANKS = 8
 
-# Elapsed times are parsed dynamically from each case's logfile.
-# The OIFS run takes many fewer timesteps, but each OIFS step is more expensive
-# than a standard BDF step, so a timestep count alone exaggerates the practical gain.
 CASES = [
     {
         'rel_path': Path('akervik') / 'residu.dat',
         'label': 'Akervik fixed',
         'color': '0.35',
         'linestyle': '--',
+        'marker': 'x',
+        'lw': 2.2,
         'zorder': 1,
     },
     {
@@ -36,6 +34,8 @@ CASES = [
         'label': 'Akervik dyn',
         'color': 'C1',
         'linestyle': '-',
+        'marker': 'o',
+        'lw': 1.4,
         'zorder': 2,
     },
     {
@@ -43,28 +43,11 @@ CASES = [
         'label': 'Akervik dyn OIFS',
         'color': 'C3',
         'linestyle': '-',
+        'marker': '^',
+        'lw': 0.9,
         'zorder': 3,
     },
 ]
-
-
-def parse_elapsed(logfile_path):
-    """Parse 'total elapsed time : X sec' from a Nek5000 logfile."""
-    try:
-        with open(logfile_path) as f:
-            for line in f:
-                if 'total elapsed time' in line.lower():
-                    parts = line.split(':')
-                    return float(parts[-1].split()[0])
-    except Exception:
-        pass
-    return None
-
-
-# Populate elapsed from logfiles at import time so load_available_cases can use it
-for _case in CASES:
-    _logfile = BASEFLOW_DIR / _case['rel_path'].parent / 'logfile'
-    _case['elapsed'] = parse_elapsed(_logfile)
 
 
 def load_residual(path):
@@ -82,18 +65,15 @@ def load_case(case):
     return t, r
 
 
-def wall_cost_axis(n_samples, elapsed_seconds):
-    # One residual sample is written per timestep.  We distribute the measured
-    # total wall time over the samples so the plot reports actual run cost
-    # instead of only physical time or timestep count.
-    return np.linspace(elapsed_seconds / n_samples, elapsed_seconds, n_samples)
-
-
 def plot_residual(ax, case, x, label_suffix=''):
     style = {
         'color': case['color'],
         'linestyle': case['linestyle'],
-        'lw': 0.65 if case['label'] == 'SFD fixed' else 0.85,
+        'lw': case['lw'],
+        'marker': case['marker'],
+        'ms': 3.0,
+        # about 12 markers per curve; the thickest curve (fixed) lies at the back
+        'markevery': max(1, len(x) // 12),
         'zorder': case['zorder'],
     }
     label = f"{case['label']}{label_suffix}"
@@ -101,6 +81,21 @@ def plot_residual(ax, case, x, label_suffix=''):
     imin = int(np.argmin(case['residual']))
     ax.plot(x[imin], case['residual'][imin], marker='o', ms=2.4,
             color=case['color'], zorder=case['zorder'])
+
+
+STEP = re.compile(r"^Step\s+\d+, t=\s*\S+, DT=\s*\S+, C=\s*\S+\s+(\S+)\s+\S+")
+
+
+def load_walltime(case):
+    """Wall time (s) of each time step, from the Step lines of the logfile next to residu.dat; None without a logfile."""
+    log = (BASEFLOW_DIR / case['rel_path']).parent / 'logfile'
+    if not log.exists():
+        return None
+    wall = [float(m.group(1)) for m in map(STEP.match, log.read_text(errors='replace').splitlines()) if m]
+    if len(wall) < case['steps']:
+        print(f"no wall-time curve for {case['label']}: {len(wall)} Step lines in {log} for {case['steps']} residual rows")
+        return None
+    return np.array(wall)
 
 
 def load_available_cases():
@@ -114,21 +109,9 @@ def load_available_cases():
         entry['time'] = t
         entry['residual'] = r
         entry['steps'] = len(t)
-        if case['elapsed'] is not None:
-            entry['cost'] = wall_cost_axis(len(t), case['elapsed'])
-        else:
-            entry['cost'] = None
+        entry['wall'] = load_walltime(entry)
         cases.append(entry)
     return cases
-
-
-def add_core_min_axis(ax):
-    sec_to_core_min = lambda seconds: seconds * N_RANKS / 60.0
-    core_min_to_sec = lambda core_min: core_min * 60.0 / N_RANKS
-    top = ax.secondary_xaxis('top', functions=(sec_to_core_min,
-                                               core_min_to_sec))
-    top.set_xlabel('core-min')
-    top.tick_params(labelsize=5.5, pad=1)
 
 
 def find_result_field():
@@ -214,23 +197,25 @@ def main():
         print(f'Saved {output}')
         plt.close(fig)
 
-    # PANEL: RESIDUAL_VS_WALLTIME — only if elapsed times are available
-    cases_with_cost = [c for c in cases if c.get('cost') is not None]
-    if cases_with_cost:
-        fig, ax_cost = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 0.85,
+    # PANEL: RESIDUAL AGAINST WALL TIME — the cost of each variant; runs without a logfile are left out
+    timed = [case for case in cases if case['wall'] is not None]
+    if timed:
+        fig, ax_wall = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 0.8,
                                                     nk.COL_WIDTH * 0.55))
-        for case in cases_with_cost:
-            plot_residual(ax_cost, case, case['cost'],
-                          label_suffix=f" ({case['elapsed']:.0f} s)")
+        for case in timed:
+            wall = case['wall'][:case['steps']]
+            plot_residual(ax_wall, case, wall,
+                          label_suffix=f" ({wall[-1]:.0f} s)")
         gate = residual_gate(CASE_DIR)
         if gate:
-            ax_cost.axhline(gate, lw=0.5, c='k', ls=':', label=f'gate {gate:.0e}')
-        ax_cost.grid(True, which='both', lw=0.25, alpha=0.35)
-        ax_cost.set_xlabel('wall time on 8 ranks (s)')
-        ax_cost.set_ylabel(r'$\|r\|$')
-        add_core_min_axis(ax_cost)
-        output = CASE_DIR / 'plot_residual_vs_walltime.png'
-        fig.savefig(output, dpi=600, bbox_inches='tight')
+            ax_wall.axhline(gate, lw=0.5, c='k', ls=':', label=f'gate {gate:.0e}')
+        ax_wall.grid(True, which='both', lw=0.25, alpha=0.35)
+        ax_wall.set_xlabel('wall time (s)')
+        ax_wall.set_ylabel(r'$\|r\|$')
+        ax_wall.legend(fontsize=4.8, loc='upper right',
+                       handlelength=1.2, borderpad=0.25)
+        output = CASE_DIR / 'plot_residual_walltime.png'
+        fig.savefig(output, dpi=400, bbox_inches='tight')
         print(f'Saved {output}')
         plt.close(fig)
 

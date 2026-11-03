@@ -6,7 +6,7 @@
     "nekstab": "v2.0.0",
     "date": "2026-10-23",
     "ranks": "40",
-    "compiler": "ifort on Jean Zay",
+    "compiler": "ifort",
     "mode": "Floquet PKE budget (userParam01 = 4.11)"
   },
   "quantities": {

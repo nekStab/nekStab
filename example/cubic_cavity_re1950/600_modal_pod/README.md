@@ -19,7 +19,7 @@ concentrates in the **leading real+imag pair**: mode 1 = 57.6 %, mode 2 = 36.7 %
 (94.3 % cumulative by two modes) — the oscillation captured as one POD pair.
 
 ## Result
-The run takes 8 s on 16 ranks of Jean Zay. `plot.py` reads `pod_spectrum.dat`, `pod_coefficients.dat` and the two leading modes,
+The run takes 8 s on 16 ranks of a cluster. `plot.py` reads `pod_spectrum.dat`, `pod_coefficients.dat` and the two leading modes,
 and writes `pod_summary.dat` and `plot_pod.png`. The energy of the first ten modes comes in pairs:
 
 | modes | energy (%) | cumulative (%) | turning rate of the pair, ω / (2π/T) |

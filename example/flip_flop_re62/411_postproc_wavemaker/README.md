@@ -46,7 +46,7 @@ cp ../311_stability_direct_floquet/Spectre_NSd_conv.dat .     # only after a new
 
 The budget reads the direct modes and rows 1 and 2 of `Spectre_NSd_conv.dat` (σ, ω of each mode). The adjoint modes are only used by `plot.py`.
 
-## Result (2026-10-23, Jean Zay, `ifort`, 40 ranks)
+## Result (2026-10-23, `ifort`, 40 ranks)
 
 Wall time 34.6 s. The Floquet exponent of stage 311 is σ = 7.900166e-3 (ω = 0.1407729).
 
@@ -61,7 +61,7 @@ Wall time 34.6 s. The Floquet exponent of stage 311 is σ = 7.900166e-3 (ω = 0.
 
 The terms are in the normalisation of the code, where σ = (P̄ − D̄ − S̄)/Ē. Modes 1 and 2 are the two members of one conjugate pair.
 
-On the earlier orbit (1212 steps per period) a workstation (`ifx`) and Jean Zay (`ifort`) agreed to 5e-5 in relative terms.
+On the earlier orbit (1212 steps per period) a workstation (`ifx`) and a cluster (`ifort`) agreed to 5e-5 in relative terms.
 
 - The code uses the weak form of the dissipation, ν∫|∇q|² dV, with the gradients taken in each element: the term by which the time
   stepper changes the energy. The strong form ν∫q·∇²q dV is 0.11 % smaller, and with it the budget closed to 1.22 % instead of 0.40 %
@@ -72,13 +72,13 @@ On the earlier orbit (1212 steps per period) a workstation (`ifx`) and Jean Zay 
 - With the weak form the closure error is first order in the time step (earlier orbit): 0.40 %, 0.18 % and 0.07 % at dt, dt/2 and dt/4, which extrapolates
   to −0.05 %. With the base flow taken one step later, U(t + dt), the error changes sign (−0.16 % at dt), so it comes from the time
   pairing of base flow and perturbation in the time stepper.
-- Without the sponge term the budget gave 8.478e-3 (earlier orbit), 7.4 % above the Floquet exponent: the sponge damping shifts σ by 4.9e-4.
+- Without the sponge term the budget gave 8.478e-3 (earlier orbit), 7.4 % above the Floquet exponent; with the terms of the table above it gives (P̄ − D̄)/Ē = 8.417e-3, 6.5 % above. The sponge damping shifts σ by 4.9e-4.
 
 ## Reference
 
 `ref/reference.json` checks seven quantities of a fresh run: σ from the budget for both modes (within 2 % of the Floquet exponent), σ from the energy of
 the marched mode (within 0.5 %), the sponge damping of mode 1 (2 %), and three extrema of the stored production fields (1 %; regression values).
-The first two quantities fail when a term of the balance is missing: without the sponge term σ comes out 7.4 % too high. The third compares the energy
+The first two quantities fail when a term of the balance is missing: without the sponge term σ comes out 8.417e-3 from the terms of the table, 6.5 % too high (7.4 % on the earlier orbit). The third compares the energy
 of the marched mode after one period with its energy at the start, so it tests the mode and the period with no space derivative. `python3 ../../../scripts/check_against_ref.py .` runs the check.
 
 ## Run

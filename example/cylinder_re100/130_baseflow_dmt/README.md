@@ -22,7 +22,7 @@ DMT therefore finds steady flows. It does not hold a periodic orbit: the orbit h
   The run stops when the residual falls below `userParam15 = 1e-7` and writes `BF_1cyl0.f00001` in double precision. `endTime = 800` is a limit that the run does
   not reach.
 
-## Result (Jean Zay, 8 ranks, `ifort`)
+## Result (8 ranks, `ifort`)
 
 - The residual meets the gate 1e-7 at t = 766.28 after 76228 time steps. It started at 2.1e-2. Wall time = 580 s.
 - The converged field against the Newton solution of `../210_baseflow_newton/fp` (a different method for the same steady flow):

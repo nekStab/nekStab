@@ -19,6 +19,7 @@ isothermal suite.
 ## Run
 ```bash
 mks 1cyl
+printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
 python3 plot.py
 ```
@@ -28,7 +29,7 @@ python3 plot.py
 - `dQ_1cyl.nek5000` — collection file for ParaView
 
 ## Latest Result
-Verified 2026-10-09 on 8 ranks (Jean Zay):
+Verified 2026-10-09 on 8 ranks:
 
 - Run completes in about 4 s (pure field reconstruction)
 - 92 mode snapshots generated covering one full period (last time stamp 8.5639)

@@ -25,7 +25,7 @@ The lid is not regularized.
    lies below Re_c, so the flow settles towards its steady state. The last field is close to the
    steady state but not on it.
 2. `210_baseflow_newton/fp/`: copy the last field of the DNS to `BF_cav0.f00001` and run Newton at
-   Re = 1920. It converges in 12 iterations to 9.7e-11 (30 min on 40 ranks, Jean Zay).
+   Re = 1920. It converges in 12 iterations to 9.7e-11 (30 min on 40 ranks of a cluster).
    `time=0` in `startFrom` resets the time.
 3. `310_stability_direct/`: copy the Newton `BF_cav0.f00001` here and run. The Arnoldi window is
    `endTime` = 2.0 and `k_dim` = 120.

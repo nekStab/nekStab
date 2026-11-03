@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-GB
+tone_instructions: "Plain technical English for a mechanical engineer. State the defect, the input that triggers it and the fix. No praise, no filler."
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  in_progress_fortune: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  suggested_labels: false
+  suggested_reviewers: false
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_pause_after_reviewed_commits: 0
+    base_branches:
+      - "^main$"
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+  path_filters:
+    - "!**/*.f0*"
+    - "!**/*.re2"
+    - "!**/*.ma2"
+    - "!**/*.rea"
+    - "!**/*.box"
+    - "!**/*.his"
+    - "!**/*.dat"
+    - "!**/*.tar"
+    - "!**/*.xz"
+    - "!**/*.png"
+    - "!**/*.gif"
+    - "!**/*.jpg"
+    - "!**/*.mp4"
+    - "!validation/index.html"
+    - "!validation/node_modules/**"
+    - "!validation/package-lock.json"
+  path_instructions:
+    - path: "src/**/*.f90"
+      instructions: |
+        Free-form Fortran solver modules built on Nek5000 (nekStab).
+        Check: correctness of the numerics (Krylov-Schur, GMRES, Newton, Floquet, SFD, OTD);
+        global reductions (glsum, glsc2/glsc3) on every rank and in the same order;
+        inner products weighted by the mass matrix (bm1, or bm1s when a sponge is active);
+        array sizes against lv, lt, nv from SIZE; no large automatic arrays on the stack;
+        output only from nid == 0 (nio is -1 inside quiet time stepping);
+        new module names that can collide with Nek5000 symbols;
+        each fix carries a comment that says why.
+        Flag a change of a default, a tolerance or a stopping rule that the CHANGELOG does not state.
+    - path: "example/**/*.usr"
+      instructions: |
+        Nek5000 user files (fixed-form Fortran 77). uparam slots are per case; check
+        that each uparam(i) use matches the .par userParam comment of the same folder.
+        Boundary conditions and initial conditions must match the case README.
+    - path: "example/**/*.par"
+      instructions: |
+        Nek5000 parameter files. Check that the values agree with the README and with
+        ref/reference.json of the same stage (Re, dt, k_dim, tolerances, endTime).
+    - path: "example/**/ref/reference.json"
+      instructions: |
+        Reference values used by the validation check. A changed expected value or
+        tolerance needs a reason in the PR: a physics change or a measured error, never
+        "to make the check pass". Flag an empty quantities list.
+    - path: "validation/tests/**/*.py"
+      instructions: |
+        Tests may only get stronger. Flag a loosened tolerance, a new skip or xfail,
+        or a physics check replaced by a smoke test.
+    - path: "**/*.py"
+      instructions: |
+        Figures: matplotlib Agg, axes labelled with units, a marker on every curve.
+        Plot real data only.
+    - path: "CHANGELOG.md"
+      instructions: |
+        Each entry states one change in plain technical English and must be true for
+        the diff of this PR. Flag an entry with no matching code change.
+
+  tools:
+    fortitudeLint:
+      enabled: true
+    ruff:
+      enabled: true
+    shellcheck:
+      enabled: true
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
+    github-checks:
+      enabled: true
+
+chat:
+  art: false
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: local
+  web_search:
+    enabled: true

@@ -25,7 +25,7 @@ sbatch run.local.slurm     # 16 ranks
 The solver writes a snapshot every 100 time units (`tpjet0.f0000N`) and `residu.dat`.
 
 ## Result
-The run takes 4880 s on 16 ranks of Jean Zay (`ifort`). The residual is 8.2e-5 at t = 3.3, the first period, rises to
+The run takes 4880 s on 16 ranks of a cluster (`ifort`). The residual is 8.2e-5 at t = 3.3, the first period, rises to
 its largest value, 3.2e-4, at t = 21.5, and then falls as a power law of the time:
 
 | t | residual |

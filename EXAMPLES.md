@@ -100,6 +100,9 @@ Each row below is a stage whose run `scripts/check_against_ref.py` compares with
 `python validation/build_gallery.py` from the summary of each reference; a stage without a complete reference is
 not in it.
 
+All rows hold for release 2.0.0. `RELEASE.md` (section on validation) says which stages ran on its final
+source and which keep an earlier result.
+
 ### Verified
 
 <!-- verified:start (written by validation/build_gallery.py from the summary of each ref/reference.json) -->
@@ -123,6 +126,7 @@ not in it.
 | `example/cylinder_re100/330_transient_growth/` | Re 40 | transient growth (3.3) | Optimal energy gain of the steady cylinder wake at Re = 40 for a sweep of time horizons. |
 | `example/cylinder_re100/410_postproc_animate_modes/` | Re 100 | mode animation (4.5) | Animation of the leading direct mode of the Re = 100 cylinder wake over one period, T = 8.564. |
 | `example/cylinder_re100/411_postproc_wavemaker/` | Re 100 | all post-processing (4) | Wavemaker (structural sensitivity) of the Re = 100 cylinder wake from the direct and adjoint modes. |
+| `example/cylinder_re100/412_postproc_steady_force_sensitivity/` | Re 100 | force sensitivity, real part (4.41) | Sensitivity of the leading eigenvalue of the Re = 100 cylinder wake to a steady force, solved by GMRES on the adjoint time stepper. |
 | `example/cylinder_re100/500_otd/` | Re 100 | OTD, frozen base flow (5) | OTD basis of two modes on the frozen steady wake at Re = 100. The growth rates are compared with the leading eigenvalue of the direct stage. |
 | `example/cylinder_re100/600_modal_pod/` | Re 100 |  | POD, DMD and streaming SPOD of 100 DNS snapshots of the Re = 100 limit cycle (t = 150 to 200). |
 | `example/cylinder_re100/610_modal_dmd/` | Re 100 | DMD (6.2) | DMD of rank 20 of 100 DNS snapshots of the Re = 100 limit cycle (t = 150 to 200). |
@@ -155,7 +159,7 @@ not in it.
 | `example/back_fstep_re500/210_baseflow_newton/` | Re 500 |  | Steady base flow of the backward-facing step at Re = 500: DNS to settle, then Newton-GMRES. |
 | `example/back_fstep_re500/330_transient_growth/` | Re 500 | transient growth (3.3) | Optimal transient growth of the backward-facing step at Re = 500 at the horizon tau = 29.913 of Blackburn, Barkley and Sherwin (2008). |
 | `example/lid_driven_re3600/000_dns/` | Re 3600 | DNS (0) | DNS of the lid-driven cavity at Re = 3600 (aspect ratio 1.5, regularized lid) to t = 600. The flow relaxes to its steady state. |
-| `example/lid_driven_re3600/210_baseflow_newton/fp/` | Re 3600 | Newton, fixed point (2) | Steady base flow of the lid-driven cavity at Re = 3600 by Newton-GMRES from the DNS state. |
+| `example/lid_driven_re3600/210_baseflow_newton/fp/` | Re 3600 | Newton, fixed point (2) | Steady base flow of the lid-driven cavity at Re = 3600 by Newton-GMRES from the t = 100 DNS state. |
 | `example/lid_driven_re3600/310_stability_direct/` | Re 3600 | direct eigenmodes (3.1) | Leading eigenvalues of the lid-driven cavity at Re = 3600: a stable real eigenvalue and a stable complex pair. |
 | `example/lid_driven_re3600/320_stability_adjoint/` | Re 3600 | adjoint eigenmodes (3.2) | Adjoint eigenvalues of the lid-driven cavity at Re = 3600. They match the direct eigenvalues. |
 | `example/cubic_cavity_re1914/000_dns/` | Re 1914 | DNS (0) | DNS of the cubic cavity at Re = 1914 from rest to t = 100. It gives the start field of the Newton stage. |
@@ -179,8 +183,8 @@ not in it.
 | `example/cubic_cavity_re1950/630_modal_dmt/` | Re 1950 | DMT filter bank (6.4) | DMT filter bank on the limit cycle of the cubic cavity at Re = 1950: the filters return the spatial structure of the flow at the frequency of the cycle and its two harmonics, and the three harmonics rebuild the flow to 1.9 % of its fluctuation. |
 | `example/naca0012_re2000/000_dns/` | Re 2000 | DNS (0) | DNS of the NACA 0012 wake at Re = 2000. The wake rings down at the frequency and rate of the leading eigenvalue. |
 | `example/naca0012_re2000/210_baseflow_newton/fp/` | Re 2000 | Newton, fixed point (2) | Steady base flow of the NACA 0012 airfoil at Re = 2000 by Newton-GMRES from a DNS snapshot. |
-| `example/naca0012_re2000/310_stability_direct/` | Re 2000 | direct eigenmodes (3.1) | Leading eigenvalues of the NACA 0012 steady flow at Re = 2000. The flow is stable. |
-| `example/naca0012_re2000/320_stability_adjoint/` | Re 2000 | adjoint eigenmodes (3.2) | Leading adjoint eigenvalues of the NACA 0012 steady flow at Re = 2000. |
+| `example/naca0012_re2000/310_stability_direct/` | Re 2000 | direct eigenmodes (3.1) | Leading eigenvalues of the NACA 0012 steady flow at Re = 2000. The flow is stable: the leading pair is sigma = -0.0665 +- 8.006 i and the next stable pair sigma = -0.557 +- 9.433 i lies further in the stable half-plane. |
+| `example/naca0012_re2000/320_stability_adjoint/` | Re 2000 | adjoint eigenmodes (3.2) | Leading adjoint eigenvalues of the NACA 0012 steady flow at Re = 2000: the leading pair sigma = -0.0665 +- 8.006 i and the stable pair sigma = -0.557 +- 9.433 i, equal to the direct ones. |
 | `example/naca0012_re2000/411_postproc_wavemaker/` | Re 2000 | all post-processing (4) | Wavemaker, base-flow sensitivity and energy budget of the NACA 0012 modes at Re = 2000. |
 | `example/poiseuille_re5k/500_otd/` | Re 5000 |  | Three OTD modes on the laminar channel flow at Re = 5000. The growth rates are compared with theory: viscous decay and the Orr-Sommerfeld eigenvalue. |
 | `example/slot_fst_re495/000_dns/` | Re 495 | DNS (0) | DNS of a slot jet at Re = 495 with a synthetic free-stream turbulence inflow, to t = 100. |

@@ -5,7 +5,7 @@
   "produced": {
     "nekstab": "v2.0.0",
     "date": "2026-10-09",
-    "compiler": "ifort 2021.9 (Jean Zay)"
+    "compiler": "ifort 2021.9"
   },
   "quantities": {
     "last_snapshot_time": {

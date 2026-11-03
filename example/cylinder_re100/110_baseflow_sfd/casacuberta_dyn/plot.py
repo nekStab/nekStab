@@ -4,7 +4,7 @@
 Panel sequence (baseflow lane + extra dyn_tol panel):
   plot_ic.png                - initial condition (seed from startFrom)
   plot_residual.png          - SFD dyn vs fixed-tol residual, with auto-cap ylim
-  plot_dynamic_tolerance.png - tolerance schedule (current/requested/used/cap)
+  plot_dynamic_tolerance.png - velocity solver tolerance used at each update, with the gate
   plot_bf.png                - converged base flow
 
 OUTPUTS: plot_ic.png, plot_residual.png, plot_dynamic_tolerance.png, plot_bf.png
@@ -91,8 +91,8 @@ def main():
     if residu.exists():
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
         if baseline_residu.exists():
-            nk.plot_residuals(ax, baseline_residu, label='Casacuberta fixed', color='0.45')
-        nk.plot_residuals(ax, residu, label='Casacuberta dyn', color='C1')
+            nk.plot_residuals(ax, baseline_residu, label='Casacuberta fixed', color='0.45', lw=2.0, marker='x')
+        nk.plot_residuals(ax, residu, label='Casacuberta dyn', color='C1', lw=1.0, marker='o')
         gate = residual_gate(CASE_DIR)
         if gate:
             ax.axhline(gate, color='k', ls=':', lw=0.5, label=f'gate {gate:.0e}')
@@ -107,27 +107,27 @@ def main():
 
     # PANEL 3 — DYNAMIC TOLERANCE schedule (extra panel for this lane)
     dyn_tol = CASE_DIR / 'dyn_tol.dat'
-    if residu.exists() and dyn_tol.exists():
-        residu_data = np.genfromtxt(str(residu))
-        dyn_data = np.genfromtxt(str(dyn_tol), comments='#')
-        if residu_data.ndim == 1: residu_data = residu_data.reshape(1, -1)
+    dyn_data = np.genfromtxt(str(dyn_tol), comments='#') if residu.exists() and dyn_tol.exists() else None
+    if dyn_data is not None:
         if dyn_data.ndim == 1: dyn_data = dyn_data.reshape(1, -1)
-
+        if dyn_data.shape[1] < 5:
+            # Without the used-tolerance column only the gate line would be drawn.
+            print(f'skipped plot_dynamic_tolerance.png: {dyn_tol} has {dyn_data.shape[1]} columns, need 5')
+            dyn_data = None
+    if dyn_data is not None:
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
-        if residu_data.shape[1] >= 4:
-            ax.semilogy(residu_data[:, 0], residu_data[:, 3], color='0.35',
-                        lw=0.7, label='current tol')
-        if dyn_data.shape[1] >= 4:
-            ax.semilogy(dyn_data[:, 0], dyn_data[:, 3], 'o-', ms=2.0,
-                        lw=0.6, color='C1', label='requested')
-        if dyn_data.shape[1] >= 5:
-            ax.semilogy(dyn_data[:, 0], dyn_data[:, 4], 'o-', ms=2.0,
-                        lw=0.6, color='C2', label='used')
-        if dyn_data.shape[1] >= 6 and np.any(dyn_data[:, 5] > 0.0):
-            ax.semilogy(dyn_data[:, 0], dyn_data[:, 5], '--',
-                        lw=0.6, color='C3', label='cap')
+        # The requested tolerance equals the used one except where the gate floors it, and the cap column is
+        # zero, so the figure shows the used tolerance and the gate only. The tolerance is userParam08 times the
+        # residual of the previous sample, so it follows the residual curve (a factor userParam08 below it);
+        # the residual is not drawn again here.
+        ax.semilogy(dyn_data[:, 0], dyn_data[:, 4], 's-', ms=2.0, lw=0.7, color='C2',
+                    markevery=max(1, len(dyn_data) // 40), label='velocity solver tolerance')
+        # The floor of the solver tolerance is residualTol of the .par file, the same gate as the residual figure.
+        gate = residual_gate(CASE_DIR)
+        if gate:
+            ax.axhline(gate, color='k', ls=':', lw=0.6, label='gate')
         ax.set_xlabel(r'$t$')
-        ax.set_ylabel('solver tol')
+        ax.set_ylabel('solver tolerance')
         ax.legend(fontsize=6, loc='best')
         ax.grid(True, which='both', ls=':', lw=0.3, alpha=0.5)
         ax.spines['right'].set_visible(False); ax.spines['top'].set_visible(False)

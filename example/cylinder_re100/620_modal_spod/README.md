@@ -27,7 +27,7 @@ copies them when they are missing. The DNS takes about 100 s on 8 ranks.
 - `logfile` — Slurm job log
 
 ## Result
-Jean Zay, 8 ranks, 2026-10-09: the leading eigenvalue peaks in the bin St = 0.15625
+A cluster, 8 ranks, 2026-10-09: the leading eigenvalue peaks in the bin St = 0.15625
 (15.77); the bin St = 0.1875 holds 8.41. The shedding frequency (0.166) lies between the
 bins, which are 0.03125 wide. These are the values of `../600_modal_pod`. `ref/reference.json`
 holds them.

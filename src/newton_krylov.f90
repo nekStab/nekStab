@@ -35,6 +35,9 @@ module nekstab_newton
    use nekstab_krylov_decomposition, only: arnoldi_factorization
    use nekstab_lapack, only: lstsq
    use nekstab_diagnostics, only: outpost_vort
+   use nekstab_ortho, only: mean_abs_inner
+   use nekstab_newton_po_rules, only: newton_po_filter_warn, newton_po_kept_steps, &
+                                      newton_po_steps_after_stage
    implicit none
    private
    public :: newton_krylov, ts_gmres, &
@@ -249,7 +252,7 @@ contains
       !  with filterWeight = 0.01 converged to two orbits, T = 8.815177 and 8.815528, each with
       !  closure 8e-6 only under its own map. The Floquet stages run unfiltered. The relaxation
       !  filter (filtering = hpfrt) is a forcing term, independent of ifbase: no warning for it.
-      if ((isNewtonPO .or. isNewtonPO_T) .and. filterType == 1 .and. param(103) > 0.0d0 &
+      if (newton_po_filter_warn(isNewtonPO, isNewtonPO_T, filterType, param(103)) &
           .and. nid == 0) then
          write (6, *) '****************************************************************'
          write (6, *) 'nekStab: WARNING: filtering = explicit with Newton for a periodic'
@@ -282,7 +285,8 @@ contains
          end if
 
          call prepare_linearized_solver ! Compute nsteps and Nek parameters
-         if (i == 1 .and. (isNewtonPO .or. isNewtonPO_T)) nsteps_frozen = nsteps ! one count for all iterations
+         ! one count for all iterations
+         nsteps_frozen = newton_po_kept_steps(i, isNewtonPO, isNewtonPO_T, nsteps, nsteps_frozen)
 
          if (ifstorebase .and. (isNewtonPO .or. isNewtonPO_T)) then
             call allocate_orbit(nsteps)
@@ -478,7 +482,7 @@ contains
          end if
       end if
 
-      nsteps_frozen = 0 ! later stages of the same run choose their own count
+      nsteps_frozen = newton_po_steps_after_stage() ! later stages of the same run choose their own count
       call close_newton_log_units()
 
    end subroutine newton_krylov
@@ -703,7 +707,7 @@ contains
       real :: gmres_start_time, gmres_iter_time
       real :: prev_beta2 = 0.0d0
       real :: arnoldi_start_time, arnoldi_iter_time
-      real :: dot_val ! For weighted inner product calculation
+      real :: dot_row(ksize) ! <Q(k), Q(j)> for j < k (iforthocheck)
       real :: ortho_metric ! mean |<Q(k),Q(j)>| over j < k (iforthocheck)
       integer, save :: gmres_k_sum = 0 ! Accumulator for total k values in GMRES
       logical :: opened_local_logs ! true if WE opened the logs (standalone call)
@@ -790,10 +794,9 @@ contains
             ortho_metric = 0.0d0
             if (iforthocheck .and. k > 1) then
                do j = 1, k - 1
-                  call k_dot(dot_val, Q(k), Q(j))  ! Use weighted inner product
-                  ortho_metric = ortho_metric + abs(dot_val)
+                  call k_dot(dot_row(j), Q(k), Q(j))
                end do
-               ortho_metric = ortho_metric/(k - 1)  ! Average orthogonalization error
+               ortho_metric = mean_abs_inner(dot_row, k - 1)
                if (nid == 0) write (6, "('              Orthogonality: mean |<Q(k),Q(j)>| =',1PE15.6)") ortho_metric
             end if
 

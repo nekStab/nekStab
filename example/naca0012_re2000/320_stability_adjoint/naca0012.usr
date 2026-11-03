@@ -18,8 +18,8 @@
         spng_st = uparam(10);  call bcast(spng_st, wdsize)
 
         k_dim = int(uparam(7)) ; call bcast(k_dim,isize)
-        schur_tgt = 2 ; call bcast(schur_tgt,isize)
-        maxmodes = 6 ; call bcast(maxmodes,isize)
+        schur_tgt = 8 ; call bcast(schur_tgt,isize)
+        maxmodes = 10 ; call bcast(maxmodes,isize)
         ifres = .false. ; call bcast(ifres,lsize)
         ifvor = .false. ; call bcast(ifvor,lsize)
         ifvox = .false. ; call bcast(ifvox,lsize)
