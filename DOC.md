@@ -1810,6 +1810,21 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
   residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
   the projection is on in these modes.
 
+**Two identical runs give output files that differ in the last digits**
+- Same binary, same input, same rank count, and the spectrum and mode files are
+  not byte-identical. This is expected, not a fault in the case.
+- Cause: at start-up gslib times its exchange methods (pairwise, crystal router,
+  allreduce) and keeps the fastest. The log shows the choice in the lines
+  `used all_to_all method`. Each method adds the copies of a shared grid point in
+  another order, so the round-off differs, and the eigenvalue iteration carries
+  that difference on.
+- Size, measured on `cylinder_re100/310` at 8 ranks: the leading growth rate moved
+  by at most 5e-9, unconverged rows by at most 1e-6, and the vector residual of
+  mode 1 lay between 0.3120e-6 and 0.3166e-6.
+- Compare results with a tolerance, as `scripts/check_against_ref.py` does. A byte
+  comparison of two eigensolver runs says something only when both logs show the
+  same methods.
+
 **A converged eigenvalue at mu = 1.0000000 whose mode is a set of spikes**
 - Seen in versions up to v2.0.0-rc4 (v1.0.1 included), most often below the
   critical Reynolds number and on many MPI ranks with few elements per rank.
