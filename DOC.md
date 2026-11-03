@@ -1902,9 +1902,10 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 **Run stops with `Cannot open history file in subroutine hpts()`**
 - `hpts` reads the probe list from `<session>.his` and writes the probe values
   after it, in the same file. The file name ends in `.his`, which `.gitignore`
-  excludes, so a fresh clone does not have it. Every example folder tracks the
-  probe list as `<case>.probes`, and `mks <case>` copies it to `<case>.his` when
-  the build starts, if `<case>.his` does not exist. It never overwrites an
+  excludes, so a fresh clone does not have it. Every example stage that uses
+  history points tracks the probe list as `<case>.probes` (a few stages track a
+  ready `<case>.his` instead), and `mks <case>` copies the `.probes` file to
+  `<case>.his` when the build starts, if `<case>.his` does not exist. It never overwrites an
   existing `.his`, which can hold the history of a run. Change the probes in
   `<case>.probes`, delete `<case>.his` and run `mks` again. In your own case,
   create `<case>.probes`: the first line holds the number of points, then one

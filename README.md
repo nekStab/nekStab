@@ -207,7 +207,7 @@ cd ~/nekStab/example/cylinder_re100/210_baseflow_newton/fp
 mks 1cyl
 ```
 
-**History points.** A case that calls `hpts` needs the history file `<case>.his`, which holds the probe list: the first line is the number of probes, then one line of coordinates (`x y z`) per probe. The file is gitignored because a run fills it with data. Each example folder tracks the list as `<case>.probes` (`1cyl.probes` for the case `1cyl`), and `mks` copies it to `<case>.his` when that file does not exist. `mks` never overwrites an existing `.his`. To change the probes, edit `<case>.probes`, delete `<case>.his` and run `mks` again. If the `.usr` calls `hpts` and neither file exists, `mks` prints a warning that says what to write.
+**History points.** A case that calls `hpts` needs the history file `<case>.his`, which holds the probe list: the first line is the number of probes, then one line of coordinates (`x y z`) per probe. The file is gitignored because a run fills it with data. Each example stage that uses history points tracks the list as `<case>.probes` (`1cyl.probes` for the case `1cyl`; a few stages track a ready `<case>.his` instead), and `mks` copies a `.probes` file to `<case>.his` when that file does not exist. `mks` never overwrites an existing `.his`. To change the probes, edit `<case>.probes`, delete `<case>.his` and run `mks` again. If the `.usr` calls `hpts` and neither file exists, `mks` prints a warning that says what to write.
 
 ### Compiler Selection
 

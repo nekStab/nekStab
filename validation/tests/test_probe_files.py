@@ -100,6 +100,9 @@ def probe_files(folder: str) -> list[str]:
     return [f for f in folder_files(folder) if f.endswith(".probes")]
 
 
+PROBE_STAGES = [s for s in STAGES if probe_files(s)]
+
+
 def test_stages_were_found() -> None:
     assert len(STAGES) >= 40, f"only {len(STAGES)} stages found; the search is broken"
 
@@ -128,11 +131,9 @@ def test_probe_file_format(stage: str) -> None:
             [float(v) for v in values]
 
 
-@pytest.mark.parametrize("stage", STAGES)
+@pytest.mark.parametrize("stage", PROBE_STAGES)
 def test_probe_file_equals_the_script(stage: str) -> None:
     files = probe_files(stage)
-    if not files:
-        pytest.skip("stage tracks a .his")
     text = script_probe_text(stage)
     if text is None:
         text = script_probe_text(SIBLING[stage])
@@ -181,6 +182,18 @@ def test_mks_copies_the_probe_list(tmp_path: Path) -> None:
     assert (tmp_path / "c.his").read_text() == "2\n1 0 0\n2 0 0\n"
     assert "c.his written from c.probes" in r.stdout
     assert r.stderr == ""
+
+
+def test_mks_stops_when_the_copy_fails(tmp_path: Path) -> None:
+    (tmp_path / "c.usr").write_text("      call hpts\n")
+    (tmp_path / "c.probes").write_text("1\n5 0 0\n")
+    # c.his is a link to a missing folder: [ -f ] is false and cp fails, also for root
+    (tmp_path / "c.his").symlink_to(tmp_path / "missing" / "c.his")
+    r = run_mks_step(tmp_path)
+    assert r.returncode != 0
+    assert "c.his written" not in r.stdout
+    assert "cannot copy c.probes" in r.stderr
+    assert not (tmp_path / "c.his").exists()
 
 
 def test_mks_does_not_overwrite_a_history(tmp_path: Path) -> None:

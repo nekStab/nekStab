@@ -140,7 +140,10 @@ ensure_probe_file () {
     [ -f "$c.his" ] && return 0
 
     if [ -f "$c.probes" ]; then
-        cp "$c.probes" "$c.his"
+        if ! cp "$c.probes" "$c.his"; then
+            echo "Error: cannot copy $c.probes to $c.his; hpts would stop without the history file." >&2
+            return 1
+        fi
         echo "$c.his written from $c.probes (hpts reads its probe list from it)"
     elif [ "$calls_hpts" = true ]; then
         echo "Warning: $c.usr calls hpts, but neither $c.his nor $c.probes exists, and hpts stops without it." >&2
@@ -545,7 +548,7 @@ echo 'include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab' >> "$FILE"
 : ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
 
 # The probe list file of the case, before the build
-ensure_probe_file "$target"
+ensure_probe_file "$target" || exit 1
 
 # Check gslib compatibility before building dependencies
 check_gslib_compat
