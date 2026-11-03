@@ -136,15 +136,16 @@ Code structure and modes
   stalled at 1.9e-5 after seven. A check with 30 Arnoldi steps on the field of
   the forced DNS gives the same leading Floquet multipliers for the linearized
   map and for finite differences of the nonlinear map: 0.931905 and 0.931920.
-  The adjoint, transient growth and
-  OTD modes have no mesh-velocity term and stop at start-up when the mesh moves.
+  The adjoint, transient growth and OTD modes have no mesh-velocity term and
+  stop at start-up when the mesh moves.
 - Start-up checks. A Floquet run (direct, adjoint or transient growth) stops
   when the restart file (the orbit) was written at another polynomial order than
   `lx1` in `SIZE`; Nek5000 interpolates such a file, and the multiplier 1 of the
   phase mode is lost. The steady stability modes print a warning for the same
   mismatch. Newton runs are not checked: they may start from a seed of another
   order. A stability mode with an active sponge prints a note that the sponge
-  also forces the base flow. A Floquet run prints the orbit closure
+  also forces the base flow. A Newton or Krylov mode with
+  `residualProj = yes` in `[VELOCITY]` prints a note on the non-finite norm that it can cause. A Floquet run prints the orbit closure
   `||U(T)-U(0)|| / ||U(0)||` of the base flow integrated over the period of the
   base-flow time stamp, and warns above 1e-3. A Floquet run also warns when no converged
   multiplier lies within 1e-3 of 1; this test is weaker than the closure.
