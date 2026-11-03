@@ -6,7 +6,7 @@
   "quantities": {
     "leading_sigma": {
       "source": "Spectre_NSd.dat:col1:first",
-      "value": 0.1022191,
+      "value": 0.1022193,
       "tol_abs": 1.0e-3
     },
     "leading_omega": {

@@ -18,10 +18,25 @@
 !
 ! Dependencies:
 !   LAPACK (dgees, dtrsen, dgeev, dgels, dsyev, zheev)
+!
+! Every wrapper returns the result of rank 0 on all ranks. All callers run on
+! all MPI ranks.
+!
+!     Why: each rank solves the same small matrix, and Intel MKL does not promise
+!     the same bits on each rank, because its result can depend on where the data
+!     sits in memory. Schur vectors of close eigenvalues can then differ by order
+!     1 between ranks. Each rank rotates its part of the Krylov basis with its own
+!     vectors and takes its own decisions from its own values. Measured on
+!     thermosyphon_ra500/310 (4 ranks, ifx): Schur vectors apart by 2.0, Hessenberg
+!     matrices by 4.7e-3 and kept Ritz counts by 2. Global sums of different sizes
+!     then hang the run: the ranks spin in mpi_allreduce and the log stops, here
+!     in 7 of 8 runs. In another freeze two ranks wrote the converged output while
+!     two went on to the next matvec. With MKL_CBWR=AUTO,STRICT all differences
+!     were zero.
 !-----------------------------------------------------------------------
 
 module nekstab_lapack
-   use nekstab_nek_bridge, only: nekStab_dp, nekStab_error
+   use nekstab_nek_bridge, only: nekStab_dp, nekStab_error, wdsize
    implicit none
    private
    public :: schur, ordschur, eig, sort_eigendecomp, &
@@ -78,6 +93,11 @@ contains
       ! --> Eigenvalues.
       vals = wr*(1.0d0, 0.0d0) + wi*(0.0d0, 1.0d0)
 
+      ! --> One answer on all ranks (see the header).
+      call bcast(A, n*n*wdsize)
+      call bcast(vecs, n*n*wdsize)
+      call bcast(vals, 2*n*wdsize)
+
    end subroutine schur
 
 !-----------------------------------------------------------------------
@@ -132,6 +152,10 @@ contains
       liwork = 1
 
       call dtrsen(job, compq, selected, n, T, ldt, Q, ldq, wr, wi, m, s, sep, work, lwork, iwork, liwork, info)
+
+      ! --> One answer on all ranks (see the header).
+      call bcast(T, n*n*wdsize)
+      call bcast(Q, n*n*wdsize)
 
    end subroutine ordschur
 
@@ -194,6 +218,10 @@ contains
 
       ! --> Sort the eigenvalues and eigenvectors by decreasing magnitudes.
       call sort_eigendecomp(vals, vecs, n)
+
+      ! --> One answer on all ranks (see the header).
+      call bcast(vals, 2*n*wdsize)
+      call bcast(vecs, 2*n*n*wdsize)
 
    end subroutine eig
 
@@ -316,6 +344,9 @@ contains
       ! --> Return solution.
       x = b_tilde(1:n)
 
+      ! --> One answer on all ranks (see the header).
+      call bcast(x, n*wdsize)
+
    end subroutine lstsq
 
 !-----------------------------------------------------------------------
@@ -366,6 +397,10 @@ contains
       end do
 
       deallocate (work, Acopy, tmp_vec)
+
+      ! --> One answer on all ranks (see the header).
+      call bcast(eigvals, n*wdsize)
+      call bcast(eigvecs, n*n*wdsize)
 
    end subroutine eig_symmetric
 
@@ -421,6 +456,10 @@ contains
       end do
 
       deallocate (work, rwork, Acopy, tmp_vec)
+
+      ! --> One answer on all ranks (see the header).
+      call bcast(eigvals, n*wdsize)
+      call bcast(eigvecs, 2*n*n*wdsize)
 
    end subroutine eig_hermitian
 
