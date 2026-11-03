@@ -49,6 +49,32 @@ Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
 
 ### Added
 
+Files and folders new in the repository root
+- `src/`: the Fortran sources, in place of `core/`.
+- `bin/`: the commands. `mks` builds a case, `c0check` finds jumps between element
+  copies in a field file, `neksubmit` submits a job, `pwtore2` converts a mesh file
+  through Gmsh to `.re2`, `zero` sets the time of a field file to 0 or empties a `.his`
+  file, `fprettify_src` formats the sources.
+- `example/`: the numbered stages, in place of `examples/`. `_templates/` holds a
+  start for a new stage of each mode.
+- `auto_restart/`: long DNS through a chain of restart jobs.
+- `tools/`: `newton_loop/autorun.py` and `arnoldi_loop/autorun.py` copy a base case
+  and run it over a grid of Krylov dimension and integration time, to choose these
+  two numbers for a new case.
+- `tutorials/cylinder/`: a worked cylinder case with its PDF guide and LaTeX source.
+- `scripts/`: stage helpers. `check_against_ref.py` checks a run against its
+  reference, `make_case_ref.py` writes a reference, `mkstage.sh` starts a stage,
+  `plot_runner.py` runs the plots, `compiler_battery.py` tests compilers.
+- `validation/`: the source of the gallery website and the tests.
+- `python/`: the Python package `nekstab`, which generates free-stream turbulence
+  inflow.
+- `assets/`: the README banners.
+- `Nek5000setup.sh` clones and builds Nek5000; `exports.sh` sets the environment.
+- `DOC.md` is the user documentation, `EXAMPLES.md` the catalog of stages, `RELEASE.md`
+  the full description of 2.0, `FORTRAN_STYLE.md` the coding rules, and `CITATIONS.md`
+  and `CITATION.cff` say what to cite. `AUTHORS` and `LICENSE` are the usual files.
+- `.coderabbit.yaml` configures the automatic review of pull requests.
+
 Tools
 - `auto_restart/`: a DNS to a target time through a chain of restart jobs, on Slurm
   or on a local machine, with two ready cylinder cases (Re = 50 and 150). On a test of
