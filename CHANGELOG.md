@@ -482,6 +482,23 @@ Code structure and modes
 
 ### Fixed
 
+- Eigenvalue runs with Intel MKL could freeze: the log stops and all ranks spin in
+  `mpi_allreduce` after a Krylov-Schur restart. Each rank solved the small Hessenberg
+  problem by itself and took its own decisions, and MKL does not promise the same
+  bits on each rank. On `thermosyphon_ra500/310` (4 ranks, `ifx`) the Schur vectors
+  differed by 2.0 between ranks and the count of kept Ritz values by 2; 7 of 8 runs
+  froze, and in one, two ranks wrote the converged output while two went on. All
+  LAPACK wrappers now return the result of rank 0. No freeze in 87 restarts of the
+  three test runs, and 174 of 174 stored modes show no jump between ranks (largest
+  4.4e-11). gfortran results are byte-identical.
+- In a closed domain the Arnoldi method returned a constant pressure as a converged
+  eigenvalue at sigma = 0: the solver leaves a constant unchanged and the norm does
+  not see the pressure. `matvec` now removes the mean pressure through Nek5000
+  `ortho`, which acts only when all velocity boundaries are Dirichlet. See
+  Troubleshooting in `DOC.md`.
+- `solver = helm` removed from the thermosyphon stages and
+  `cylinder_re30_thermal/210`: with this line Nek5000 ignores the temperature
+  `residualTol` and keeps 1e-7.
 - Eigenvalue runs could converge to mu = 1.0000000 with a mode that is not a flow
   field: the copies that neighbouring elements hold for one grid point differ by
   O(1). This holds for every earlier version, 1.0.1 included. Copies on different

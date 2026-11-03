@@ -1810,6 +1810,42 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
   residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
   the projection is on in these modes.
 
+**An eigenvalue run stops writing to the log while all ranks use 100 % CPU**
+- Seen in versions before 2.0.0 with Intel MKL (`ifx` or `ifort`). The stack of each
+  rank ends in `mpi_allreduce`, reached from `k_project`, right after a Krylov-Schur
+  restart. To get the stack, send `SIGTERM` to the ranks; the Intel runtime prints it.
+- Cause: each rank solved the small Hessenberg problem with LAPACK and decided by
+  itself how many Ritz values to keep and whether the run had converged. MKL does not
+  promise the same bits on each rank, because its result can depend on where the data
+  sits in memory. On `thermosyphon_ra500/310` (4 ranks) the Schur vectors differed by
+  2.0 between ranks and the kept counts by 2. A global sum of different sizes then
+  never ends. 7 of 8 runs froze.
+- Fixed in 2.0.0: `src/lapack_wrapper.f90` gives all ranks the result of rank 0. For
+  an older version, `export MKL_CBWR=AUTO,STRICT` before the run removes the
+  differences. The gfortran build uses the bundled LAPACK and did not show them.
+
+**A converged eigenvalue at sigma = 0 whose mode has a huge mean pressure**
+- Seen in versions before 2.0.0 in a closed domain (all velocity boundaries are
+  walls). `thermosyphon_ra500/310` exported a mode with mean pressure 8.3e7, pressure
+  variation 87 and velocity 0.27.
+- Cause: in a closed domain the pressure is known up to a constant. A constant has no
+  gradient, so the solver returns it unchanged, with multiplier exactly 1. The Krylov
+  vectors hold the pressure but the norm leaves it out, so the Arnoldi method returns
+  the constant as a converged value, and normalising by the velocity makes it huge.
+- Fixed in 2.0.0: `matvec` removes the mean pressure of its input and output through
+  Nek5000 `ortho`. `ortho` acts only when all velocity boundaries are Dirichlet, so
+  open domains run unchanged (`cylinder_re100/310` is byte-identical with the gslib
+  method forced; see the entry below on run-to-run differences).
+
+**`residualTol` of the temperature or a scalar has no effect**
+- In Nek5000 `core/reader_par.f` reads `<scalar>:residualTol` only when the section
+  has no `solver` key. With `solver = helm` the tolerance stays at the default 1e-7
+  whatever the `.par` says. helm is the default solver, so remove the line.
+- `Spectre_d.info` prints the value of the `.par`. The true value is in the solver
+  log, as in `Hmholtz TEM1 ... 1.0000E-07`.
+- On `thermosyphon_ra500/310` at 1e-11, removing the line took the vector residual of
+  mode 1 from 1.391e-7 to 4.296e-9. The eigenvalue moved from 0.1022194 to 0.1022193.
+
 **Two identical runs give output files that differ in the last digits**
 - Same binary, same input, same rank count, and the spectrum and mode files are
   not byte-identical. This is expected, not a fault in the case.
