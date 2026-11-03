@@ -37,7 +37,7 @@ The Python functions are in `bin/nekStab_tools.py` of the nekStab tree.
 1. Reads the time `T` from the header of the newest `<case>0.f0*` file (the original names are preferred to the backups) and the first and last time of `<case>.his`.
 2. If `T = 0` and `logstatus` does not exist (a first start by hand from a field file at time 0, before any solver has run), it moves old `*.dat*`, `*.his_*`, `log*` and `*.all` into `old_dat/` and resets the history file.
 3. Looks for a running job: the Slurm or PBS queue for the job name of the next job, and a `nek5000` process of this user whose working directory is this folder. If one runs, it only joins the histories.
-4. Stops with an error if the job that just ended did not reach its `endTime` (see "Failure").
+4. Stops with an error if `logstatus` holds a non-zero exit status of the solver, even when the field file of the end time was written, and if the job that just ended did not reach its `endTime` (see "Failure").
 5. If `T < target_end_time`: sets `startFrom` to the newest field file, `endTime` to `T + min(single_job_time, target_end_time - T)` and the viscosity to `-Re`; backs up the field file, history, `lift_drag.dat`, `total_energy.dat`, `total_enstrophy.dat` and the three log files with the suffix `_<t0>_<t1>` (history and logs are reset or moved, so the next job starts with an empty history); joins all `*_<t0>_<t1>` histories into `<case>.all` (the header of the first, the data of all) and the `lift_drag`, `total_energy`, `total_enstrophy` files into `.all` files; submits the next job (`sbatch job.pbs` if `squeue` exists, else `bash run_nohup.sh`; `qstat` is used only to look for a running job).
 6. If `T >= target_end_time`: backs up and joins the last job, and does nothing else.
 

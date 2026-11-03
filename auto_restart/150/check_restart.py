@@ -235,6 +235,17 @@ if __name__ == "__main__":
     # Not checked at a first start by hand (the file is the initial condition, time 0, and
     # no solver has run) or while a job still runs (the file is not final yet).
     if not job_running and not is_first_run:
+        # A non-zero exit status of the solver stops the chain even when the end-time field
+        # file was written (a crash after the last write, a failed MPI finalize). logstatus
+        # is rewritten by every run.sh, so it describes the job that just ended. An
+        # unreadable status counts as a failure.
+        if solver_ran:
+            with open(solver_status_file) as f:
+                status_text = f.read().strip()
+            if status_text != "0":
+                print(f"[ERROR] Exit status of the solver (from {solver_status_file}): {status_text or 'empty'}, not 0.")
+                print("[ERROR] The last job failed. The chain stops here before any backup or submission: read logfile and logerror, fix the cause, then repeat the job with ./run_nohup.sh (or sbatch job.pbs).")
+                sys.exit(1)
         with open(parameter_file) as f:
             # Nek5000 reads the key without regard to case (endtime, ENDTIME).
             m = re.search(r"^\s*endTime\s*=\s*([0-9.eEdD+-]+)", f.read(), re.MULTILINE | re.IGNORECASE)
