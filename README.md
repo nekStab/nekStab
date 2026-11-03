@@ -254,6 +254,8 @@ killall nek5000      # Stop the simulation
 
 > **Tip:** Use `nekbmpi 1cyl 4 &` to run in background, then `tail -f logfile` in the same terminal.
 
+A DNS that needs more time than one job may run is advanced to a target time through a chain of restarts: see [`auto_restart/README.md`](auto_restart/README.md).
+
 For more information, see the [Documentation](DOC.md).
 
 ## Mode Selection
