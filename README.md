@@ -207,6 +207,8 @@ cd ~/nekStab/example/cylinder_re100/210_baseflow_newton/fp
 mks 1cyl
 ```
 
+**History points.** A case that calls `hpts` needs the history file `<case>.his`, which holds the probe list: the first line is the number of probes, then one line of coordinates (`x y z`) per probe. The file is gitignored because a run fills it with data. Each example folder tracks the list as `<case>.probes` (`1cyl.probes` for the case `1cyl`), and `mks` copies it to `<case>.his` when that file does not exist. `mks` never overwrites an existing `.his`. To change the probes, edit `<case>.probes`, delete `<case>.his` and run `mks` again. If the `.usr` calls `hpts` and neither file exists, `mks` prints a warning that says what to write.
+
 ### Compiler Selection
 
 nekStab supports multiple Fortran compilers. The build script auto-detects available compilers in this order: `ifx` → `ifort` → `gfortran`. The Intel compilers are on the path only after `source /opt/intel/oneapi/setvars.sh` (the default install folder of oneAPI). When they are on the path, `mks` picks `ifx` over `gfortran` unless `NEKSTAB_FC` is set. To force a specific compiler:
@@ -272,6 +274,8 @@ killall nek5000      # Stop the simulation
 printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME    # line 1: case name, line 2: this folder
 mpiexec -np 8 ./nek5000
 ```
+
+The history file `1cyl.his` needs no extra step: `mks` wrote it from `1cyl.probes` when it built the case.
 
 **Slurm memory.** `run.local.slurm` of the examples asks `--mem-per-cpu=2000`, which is 16 GB for 8 tasks. On a machine with less memory the job stays `PENDING` with reason `MaxMemPerLimit`, and `--mem` on the `sbatch` line is refused together with `--mem-per-cpu`. Lower the request on the `sbatch` line: `sbatch --mem-per-cpu=500 run.local.slurm` (500 worked for `cylinder_re100/310_stability_direct`). Check the queue with `squeue`.
 
