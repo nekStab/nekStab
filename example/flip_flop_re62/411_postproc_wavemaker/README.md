@@ -72,13 +72,13 @@ On the earlier orbit (1212 steps per period) a workstation (`ifx`) and a cluster
 - With the weak form the closure error is first order in the time step (earlier orbit): 0.40 %, 0.18 % and 0.07 % at dt, dt/2 and dt/4, which extrapolates
   to −0.05 %. With the base flow taken one step later, U(t + dt), the error changes sign (−0.16 % at dt), so it comes from the time
   pairing of base flow and perturbation in the time stepper.
-- Without the sponge term the budget gave 8.478e-3 (earlier orbit), 7.4 % above the Floquet exponent: the sponge damping shifts σ by 4.9e-4.
+- Without the sponge term the budget gave 8.478e-3 (earlier orbit), 7.4 % above the Floquet exponent; with the terms of the table above it gives (P̄ − D̄)/Ē = 8.417e-3, 6.5 % above. The sponge damping shifts σ by 4.9e-4.
 
 ## Reference
 
 `ref/reference.json` checks seven quantities of a fresh run: σ from the budget for both modes (within 2 % of the Floquet exponent), σ from the energy of
 the marched mode (within 0.5 %), the sponge damping of mode 1 (2 %), and three extrema of the stored production fields (1 %; regression values).
-The first two quantities fail when a term of the balance is missing: without the sponge term σ comes out 7.4 % too high. The third compares the energy
+The first two quantities fail when a term of the balance is missing: without the sponge term σ comes out 8.417e-3 from the terms of the table, 6.5 % too high (7.4 % on the earlier orbit). The third compares the energy
 of the marched mode after one period with its energy at the start, so it tests the mode and the period with no space derivative. `python3 ../../../scripts/check_against_ref.py .` runs the check.
 
 ## Run
