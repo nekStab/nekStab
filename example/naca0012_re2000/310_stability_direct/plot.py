@@ -145,12 +145,13 @@ def save_spectrum(nk, path, conv, output):
 def save_modes(nk, conv, output):
     """(a) leading mode, (b) mode of the pair sigma = -0.557 +- 9.43 i; vy of the real part."""
     k, cdata = pair_row(conv)
+    rows = ((0, "leading mode"),)
     if k is None:
-        print("stable pair sigma = -0.557 +- 9.43 i not in the converged file; plot_mode.png skipped")
-        return
-    rows = ((0, "leading mode"), (k, "stable pair"))
-    fig, axes = plt.subplots(2, 1, figsize=(nk.COL_WIDTH * 1.8, nk.COL_WIDTH * 1.5))
-    for ax, (row, name), letter in zip(axes, rows, "ab"):
+        print("stable pair sigma = -0.557 +- 9.43 i not in the converged file; plot_mode.png shows the leading mode only")
+    else:
+        rows += ((k, "stable pair"),)
+    fig, axes = plt.subplots(len(rows), 1, figsize=(nk.COL_WIDTH * 1.8, nk.COL_WIDTH * 0.75 * len(rows)), squeeze=False)
+    for ax, (row, name), letter in zip(axes[:, 0], rows, "ab"):
         path = CASE_DIR / f"dRenaca00120.f{row + 1:05d}"
         render_field(nk, ax, path, "vy", "RdBu_r", True)
         ax.set_title(
