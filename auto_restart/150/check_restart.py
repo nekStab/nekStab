@@ -179,14 +179,18 @@ if __name__ == "__main__":
     # Check if any job is running (PBS/SLURM or local)
     job_running = False
     
-    # Check for PBS/SLURM jobs first (check for exact job name)
+    # Check for PBS/SLURM jobs first (check for exact job name). The job that runs this
+    # script is left out: after a failure the name of the next job equals the name of
+    # the current one, and counting it as "another job running" would skip the failure
+    # check below, so the chain would end without an error message.
+    own_ids = {os.environ[k].split(".")[0] for k in ("SLURM_JOB_ID", "PBS_JOBID") if os.environ.get(k)}
     if expected_job_name:
         try:
             if shutil.which("qstat") is not None:  # PBS
                 result = subprocess.run(['qstat', '-u', os.environ.get('USER', 'unknown')], capture_output=True, text=True)
                 if result.returncode == 0:
                     for line in result.stdout.strip().split('\n')[2:]:  # Skip header lines
-                        if line.strip() and expected_job_name in line:
+                        if line.strip() and line.split()[0].split(".")[0] not in own_ids and expected_job_name in line:
                             print(f"[INFO] Found specific PBS job '{expected_job_name}' running. Skipping all checks.. only consolidating.")
                             job_running = True
                             break
@@ -194,7 +198,7 @@ if __name__ == "__main__":
                 result = subprocess.run(['squeue', '-u', os.environ.get('USER', 'unknown')], capture_output=True, text=True)
                 if result.returncode == 0:
                     for line in result.stdout.strip().split('\n')[1:]:  # Skip header line
-                        if line.strip() and expected_job_name in line:
+                        if line.strip() and line.split()[0].split(".")[0] not in own_ids and expected_job_name in line:
                             print(f"[INFO] Found specific SLURM job '{expected_job_name}' running. Skipping all checks.. only consolidating.")
                             job_running = True
                             break
@@ -223,8 +227,12 @@ if __name__ == "__main__":
     # job still runs (the file is not final yet).
     if not job_running and not is_first_run:
         with open(parameter_file) as f:
-            m = re.search(r"^\s*endTime\s*=\s*([0-9.eEdD+-]+)", f.read(), re.MULTILINE)
-        if m and velocity_file_time < float(m.group(1).replace("d", "e").replace("D", "e")) * (1.0 - 1e-6):
+            # Nek5000 reads the key without regard to case (endtime, ENDTIME).
+            m = re.search(r"^\s*endTime\s*=\s*([0-9.eEdD+-]+)", f.read(), re.MULTILINE | re.IGNORECASE)
+        if not m:
+            print(f"[ERROR] Cannot read endTime from {parameter_file}: the check that the last job reached its end time cannot run. The chain stops here.")
+            sys.exit(1)
+        if velocity_file_time < float(m.group(1).replace("d", "e").replace("D", "e")) * (1.0 - 1e-6):
             print(f"[ERROR] Time in {latest_restart_file} is {velocity_file_time}, below the endTime {m.group(1)} of {parameter_file}.")
             print("[ERROR] The last job did not reach its end time. The chain stops here: read logfile and logerror, fix the cause, then repeat the job with ./run_nohup.sh (or sbatch job.pbs): the .par file is already set for it.")
             sys.exit(1)
