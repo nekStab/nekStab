@@ -5,11 +5,40 @@ backward compatible with 1.x; internal code is restructured for
 maintainability, numerical robustness, and HPC performance.
 
 
+## Known issues
+
+1. **The solver error grows with the size of the domain.** The error of one
+   matvec grows with the domain. On a large domain a good mode can get the
+   vector warning or be refused. The eigenvalue can also differ between runs
+   with different `residualTol`: on an ellipse with V = 60000 the leading
+   sigma is -0.0144116 at `residualTol = 1e-9` and -0.0144268 at `4e-12`, and
+   the residuals of both runs are below 1e-6. The two values differ between
+   these runs. Workaround: lower `residualTol` by hand. Version 2.0.0 ships no
+   change of the tolerance; a fix is planned for a later version.
+2. **The norm has zero weight in the sponge zone.** The inner product of the
+   Krylov vectors uses the mass matrix without the sponge (`bm1s`), which is
+   zero where the sponge function is not zero. A perturbation inside the
+   sponge zone does not enter this norm.
+3. **`cubic_cavity_re1950/350_dns_unstable_orbit` keeps an older run.** It keeps
+   the reference of its run of commit `f93b2120` (13.7 h on 16 ranks) and did
+   not run again. The final source and the source of that run give a
+   byte-identical probe file over the first 3 of the 2000 time units (2087
+   time steps, 16 ranks, `gfortran`).
+4. **RANS stability is experimental.** `example/cylinder_re1m` has no
+   reference data and no gallery card. Mode 4.42 (steady force sensitivity,
+   imaginary part) is not validated.
+5. **Two identical runs can differ in the last digits.** gslib times its
+   exchange methods at start-up and keeps the fastest, and each method adds
+   the copies of a shared point in another order. In `cylinder_re100/310`
+   (8 ranks) the leading growth rate moved by at most 5e-9. With the method
+   forced, repeat runs are byte-identical (`DOC.md`, Troubleshooting).
+
+
 ## What changed
 
 ### Architecture
 
-- All source wrapped in Fortran modules (39 `.f90` files, was loose `.f`)
+- All source wrapped in Fortran modules (43 `.f90` files, was loose `.f`)
 - `nekstab_nek_bridge` module isolates all Nek5000 common-block imports
 - `mode_config` module: 3-priority mode resolution (string > flags > uparam)
 - `NEKSTAB.inc`: single include for all nekStab common-block variables
@@ -111,7 +140,7 @@ without forcing a full extra decade of accuracy at every iteration.
 
 Other improvements:
 
-- **Stagnation guard** — detects when 3 consecutive Newton steps
+- **Stagnation guard** — detects when 6 consecutive Newton steps
   fail to reduce the residual and triggers early termination
 - **Open-once log files** — residu_newton.dat, residu_gmres.dat,
   residu_arnoldi.dat are opened at the start and closed at the end
