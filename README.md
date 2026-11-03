@@ -127,6 +127,8 @@ The branch `main` holds the releases. The branch `dev` is the development branch
 
 The release was validated with Nek5000 commit `d083ef3`. `Nek5000setup.sh` clones the current Nek5000 `master`. The axisymmetric adjoint correction in `src/forcing.f90` is zero on a Nek5000 that already has the radius in its integration weights, so a newer `master` does not change the result of the adjoint runs.
 
+To use the validated commit, run `git -C Nek5000 checkout d083ef3` in the `nekStab` folder (the setup script makes a full clone, so the commit is there), then rebuild the tools with `./maketools genmap genbox` in `Nek5000/tools` and the cases with `mks <case> --fresh`. To return to the default, `git -C Nek5000 checkout master`.
+
 Use git for the install. A source archive from GitHub has no `.git` folder, and a build from it reports the version `unknown`.
 
 | Command | What it does |
@@ -135,7 +137,7 @@ Use git for the install. A source archive from GitHub has no `.git` folder, and 
 | `cd nekStab` | Enter the nekStab directory |
 | `./Nek5000setup.sh` | Downloads and configures Nek5000 inside `nekStab/Nek5000/` |
 
-`./Nek5000setup.sh` asks four questions on a fresh clone (a fifth, about removing the folder, appears when `Nek5000/` already exists): install packages (default `n`), clone Nek5000 (default `y`), build `genmap` and `genbox` (default `y`), add the environment variables to your shell file (default `n`). The defaults work: press Enter four times, then load the environment with `source ~/nekStab/exports.sh` (see below).
+`./Nek5000setup.sh` asks four questions on a fresh clone (a fifth, about removing the folder, appears when `Nek5000/` already exists): install packages (default `n`), clone Nek5000 (default `y`), build `genmap` and `genbox` (default `y`), add the environment variables to your shell file (default `n`). The defaults work: press Enter four times, then load the environment with `source exports.sh` from the `nekStab` folder (`source ~/nekStab/exports.sh` if you cloned into your home directory; see below).
 
 Its package list differs from the prerequisites above: it installs `libopenmpi-dev` (Linux) or `open-mpi` (macOS) and the X11 headers, and not MPICH, OpenBLAS, FFTW or `m4`. Use the prerequisites above (MPICH) and keep the default `n` for the package question. Do not install both MPI libraries: the script's choice is OpenMPI and this README's is MPICH, and two installs can leave `mpiexec` and the compiler wrapper `mpif90` from different MPI libraries.
 
@@ -146,6 +148,8 @@ Its package list differs from the prerequisites above: it installs `libopenmpi-d
 ```bash
 source ~/nekStab/exports.sh
 ```
+
+The path assumes that the clone is in your home directory; otherwise use the path of your clone.
 
 It sets `NEKSTAB_SOURCE_ROOT` to the folder that holds `exports.sh`, keeps a
 `NEK_SOURCE_ROOT` that you set before (an existing Nek5000), puts both `bin/` folders
