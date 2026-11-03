@@ -23,6 +23,16 @@ chain_pids() {
         [ "$(readlink "/proc/$pid/cwd" 2>/dev/null)" = "$HERE" ] && echo "$pid"
     done
 }
+
+# Cancel the Slurm jobs of this folder, queued or running. A queued job has no
+# process yet, so chain_pids does not see it; it would start after the cleanup below
+# and write into the same files as the job started at the end of this script.
+if command -v squeue > /dev/null; then
+    while IFS='|' read -r jobid jobdir; do
+        [ -n "$jobid" ] && [ "$(realpath "$jobdir" 2>/dev/null)" = "$HERE" ] && { echo "[INFO] Cancelling Slurm job $jobid of this folder"; scancel "$jobid"; }
+    done < <(squeue -h -u "$USER" -o '%i|%Z')
+fi
+
 pids=$(chain_pids)
 if [ -n "$pids" ]; then
     echo "[INFO] Killing PIDs of this chain: $pids"
@@ -35,7 +45,7 @@ fi
 sleep 2
 
 # Clean previous outputs (-f: not all of them exist at the first start)
-rm -f ${CASE}0.f00* ${CASE}.his_* lift_drag.* total_energy.* total_enstrophy.* log*
+rm -f "${CASE}"0.f00* "${CASE}".his_* lift_drag.* total_energy.* total_enstrophy.* log*
 
 # Update .par file for restart
 python3 -c "from check_restart import prepare_par_for_restart, parameter_glob, single_job_time, case_preserving_adjust_par_file; prepare_par_for_restart(parameter_glob, single_job_time, case_preserving_adjust_par_file)"
