@@ -24,13 +24,20 @@ chain_pids() {
     done
 }
 
-# Cancel the Slurm jobs of this folder, queued or running. A queued job has no
-# process yet, so chain_pids does not see it; it would start after the cleanup below
-# and write into the same files as the job started at the end of this script.
+# Cancel the Slurm jobs of this folder: pending, running, suspended or completing. A
+# queued job has no process yet, so chain_pids does not see it; it would start after
+# the cleanup below and write into the same files as the job started at the end of
+# this script. If the queue cannot be read or a job cannot be cancelled, stop here,
+# before anything is deleted.
 if command -v squeue > /dev/null; then
+    command -v scancel > /dev/null || { echo "[ERROR] squeue is on the path but scancel is not; nothing was changed." >&2; exit 1; }
+    queue=$(squeue -h -u "$USER" -t PENDING,RUNNING,SUSPENDED,COMPLETING -o '%i|%Z') || { echo "[ERROR] squeue failed; the Slurm jobs of this folder are unknown. Nothing was changed." >&2; exit 1; }
     while IFS='|' read -r jobid jobdir; do
-        [ -n "$jobid" ] && [ "$(realpath "$jobdir" 2>/dev/null)" = "$HERE" ] && { echo "[INFO] Cancelling Slurm job $jobid of this folder"; scancel "$jobid"; }
-    done < <(squeue -h -u "$USER" -o '%i|%Z')
+        if [ -n "$jobid" ] && [ "$(realpath "$jobdir" 2>/dev/null)" = "$HERE" ]; then
+            echo "[INFO] Cancelling Slurm job $jobid of this folder"
+            scancel "$jobid" || { echo "[ERROR] scancel $jobid failed. Nothing was deleted." >&2; exit 1; }
+        fi
+    done <<< "$queue"
 fi
 
 pids=$(chain_pids)

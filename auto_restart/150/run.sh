@@ -23,6 +23,9 @@ echo $PWD'/' >> SESSION.NAME
 
 # Run the simulation
 mpiexec -n "$NP" ./nek5000 > logfile 2> logerror
+# Tell check_restart.py that the solver has ended, and how: a crashed first job
+# leaves a field file of time 0, which looks like a first start without this file.
+echo $? > logstatus
 
 # Post-processing: adjust/restart logic
 python3 check_restart.py > logrestart 2>&1

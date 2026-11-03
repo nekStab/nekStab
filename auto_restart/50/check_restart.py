@@ -83,8 +83,17 @@ if __name__ == "__main__":
     print(f"[INFO] Final time in {history_file}: {final_time_in_his}")
     print(f"[INFO] Time in velocity file: {velocity_file_time}")
     
-    # Check for first run scenario: binary file exists with time=0
-    is_first_run = (velocity_file_time == 0.0)
+    # run.sh writes the exit status of the solver to this file when the solver has ended.
+    # A field file at time 0 together with this file means a job that ran and wrote
+    # nothing (it crashed), not a first start: only a check_restart.py started by hand
+    # on a fresh folder finds no such file. Without this test a crashed first job was
+    # taken for a first start, its logs were moved away, the failure check below was
+    # skipped and the same job was submitted again, for ever.
+    solver_status_file = "logstatus"
+    solver_ran = os.path.exists(solver_status_file)
+
+    # Check for first run scenario: binary file exists with time=0 and no solver has run
+    is_first_run = (velocity_file_time == 0.0) and not solver_ran
     
     if is_first_run:
         print(f"[INFO] FIRST RUN detected: binary file time=0, history file empty/minimal")
@@ -223,8 +232,8 @@ if __name__ == "__main__":
     # file of the previous job in place, so its time is below the endTime of the .par
     # file. Without this check the chain backs up nothing new, submits the same job
     # again and loops for ever. Stop instead and keep logfile and logerror for reading.
-    # Not checked at a first run (the file is the initial condition, time 0) or while a
-    # job still runs (the file is not final yet).
+    # Not checked at a first start by hand (the file is the initial condition, time 0, and
+    # no solver has run) or while a job still runs (the file is not final yet).
     if not job_running and not is_first_run:
         with open(parameter_file) as f:
             # Nek5000 reads the key without regard to case (endtime, ENDTIME).
@@ -234,6 +243,8 @@ if __name__ == "__main__":
             sys.exit(1)
         if velocity_file_time < float(m.group(1).replace("d", "e").replace("D", "e")) * (1.0 - 1e-6):
             print(f"[ERROR] Time in {latest_restart_file} is {velocity_file_time}, below the endTime {m.group(1)} of {parameter_file}.")
+            if solver_ran:
+                print(f"[ERROR] Exit status of the solver (from {solver_status_file}): {open(solver_status_file).read().strip()}")
             print("[ERROR] The last job did not reach its end time. The chain stops here: read logfile and logerror, fix the cause, then repeat the job with ./run_nohup.sh (or sbatch job.pbs): the .par file is already set for it.")
             sys.exit(1)
 
