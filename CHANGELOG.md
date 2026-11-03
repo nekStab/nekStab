@@ -5,7 +5,7 @@ All notable changes to nekStab are listed here, newest first. The format follows
 [Semantic Versioning](https://semver.org/). `RELEASE.md` describes the 2.0 series
 in more detail and `DOC.md` is the user documentation.
 
-## [2.0.0] - 2026-11-02
+## [2.0.0] - 2026-11-03
 
 Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
 
@@ -18,8 +18,17 @@ Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
   advanced by the DNS, POD, DMD, SPOD and the Floquet energy budget.
 - Several passive scalars, conjugate heat transfer, a moving mesh in the direct
   solver and a finite-difference RANS operator (experimental).
-- The examples are numbered stages with reference data, a check script and a
-  published validation gallery.
+- 80 validated example stages in 15 flow families (1.0.1 had 8 example cases),
+  from the cylinder and the lid-driven cavity to the cubic cavity, the flip-flop
+  wake, the forced jet, the NACA 0012 and a thermosyphon. Each stage has reference
+  data and a check script, and each family has a numbered workflow from DNS to
+  stability and modal analysis.
+- A website shows every case: the validation gallery at
+  https://nekstab.github.io/nekStab/validation/ has the figures, reference values
+  and description of each stage, built from the example folders.
+- `auto_restart/` runs a long DNS to a target time through a chain of jobs. Each
+  job restarts from the last one, the histories are joined, and a job that fails
+  stops the chain. Its README teaches the use on your own case.
 
 ### Upgrading from 1.x
 
@@ -39,6 +48,40 @@ Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
   `bin/c0check` finds them in field files.
 
 ### Added
+
+Files and folders new in the repository root
+- `src/`: the Fortran sources, in place of `core/`.
+- `bin/`: the commands. `mks` builds a case, `c0check` finds jumps between element
+  copies in a field file, `neksubmit` submits a job, `pwtore2` converts a mesh file
+  through Gmsh to `.re2`, `zero` sets the time of a field file to 0 or empties a `.his`
+  file, `fprettify_src` formats the sources.
+- `example/`: the numbered stages, in place of `examples/`. `_templates/` holds a
+  start for a new stage of each mode.
+- `auto_restart/`: long DNS through a chain of restart jobs.
+- `tools/`: `newton_loop/autorun.py` and `arnoldi_loop/autorun.py` copy a base case
+  and run it over a grid of Krylov dimension and integration time, to choose these
+  two numbers for a new case.
+- `tutorials/cylinder/`: a worked cylinder case with its PDF guide and LaTeX source.
+- `scripts/`: stage helpers. `check_against_ref.py` checks a run against its
+  reference, `make_case_ref.py` writes a reference, `mkstage.sh` starts a stage,
+  `plot_runner.py` runs the plots, `compiler_battery.py` tests compilers.
+- `validation/`: the source of the gallery website and the tests.
+- `python/`: the Python package `nekstab`, which generates free-stream turbulence
+  inflow.
+- `assets/`: the README banners.
+- `Nek5000setup.sh` clones and builds Nek5000; `exports.sh` sets the environment.
+- `DOC.md` is the user documentation, `EXAMPLES.md` the catalog of stages, `RELEASE.md`
+  the full description of 2.0, `FORTRAN_STYLE.md` the coding rules, and `CITATIONS.md`
+  and `CITATION.cff` say what to cite. `AUTHORS` and `LICENSE` are the usual files.
+- `.coderabbit.yaml` configures the automatic review of pull requests.
+
+Tools
+- `auto_restart/`: a DNS to a target time through a chain of restart jobs, on Slurm
+  or on a local machine, with two ready cylinder cases (Re = 50 and 150). On a test of
+  4 jobs up to t = 20 the probe stays within 4e-4 of its peak-to-peak value of an
+  unbroken run.
+- Validation gallery at https://nekstab.github.io/nekStab/validation/, one card per
+  stage, built by `python validation/build_gallery.py`.
 
 Code structure and modes
 - The sources are free-form Fortran modules. The entry points that Nek5000 calls

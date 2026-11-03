@@ -16,7 +16,7 @@ repository-code: "https://github.com/nekStab/nekStab"
 url: "https://nekstab.github.io/"
 license: BSD-3-Clause
 version: "2.0.0"
-date-released: "2026-11-02"
+date-released: "2026-11-03"
 keywords:
   - computational fluid dynamics
   - stability analysis
