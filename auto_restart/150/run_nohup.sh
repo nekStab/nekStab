@@ -1,4 +1,5 @@
 #!/bin/bash
-# Script to run run.pbs in background with nohup, sending all output to logfile
+# Run run.sh in the background with nohup. The output of run.sh goes to
+# logfile, logerror and logrestart, so nohup.out would stay empty: discard it.
 
-nohup ./run.sh & # > logfile 2> logerror &
+nohup ./run.sh > /dev/null 2>&1 &

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Batch script of the restart chain on a Slurm machine. check_restart.py submits
+# it with `sbatch job.pbs` at the end of each job, after it has written the next
+# startFrom and endTime into the .par file. Edit the #SBATCH lines and the
+# environment lines for your machine; leave the job name line in this form, because
+# check_restart.py rewrites it at each submission (<letter><Re>_<end time>).
+#SBATCH -J job
+#SBATCH -p LocalQ
+#SBATCH --ntasks=5
+#SBATCH --mem=8G
+#SBATCH -t 24:00:00
+#SBATCH -o logslurm
+#SBATCH -e logslurm
+
+# Environment of the machine: compiler, MPI, NEKSTAB_SOURCE_ROOT (check_restart.py
+# imports $NEKSTAB_SOURCE_ROOT/bin/nekStab_tools.py) and a python3 with numpy.
+# source /opt/intel/oneapi/setvars.sh
+# export NEKSTAB_SOURCE_ROOT=$HOME/nekStab
+
+# run.sh runs nek5000 with NP ranks, then check_restart.py, which submits the next job.
+cd "$SLURM_SUBMIT_DIR"
+NP=$SLURM_NTASKS ./run.sh

@@ -29,7 +29,6 @@ from matplotlib.contour import QuadContourSet
 CASE_DIR = Path(__file__).resolve().parent
 STEADY_DIR = CASE_DIR.parent / "310_stability_direct" / "direct"
 STEADY_SPECTRUM = STEADY_DIR / "Spectre_NSd.dat"
-WINDOW_FILE = CASE_DIR.parent / "140_baseflow_meanflow" / "meanflow_window.dat"
 BF_FILE = CASE_DIR / "BF_1cyl0.f00001"
 MEAN_FLOW_FILE = CASE_DIR.parent / "140_baseflow_meanflow" / "BFA1cyl0.f00001"
 MEAN_SPECTRUM = CASE_DIR / "Spectre_NSd.dat"
@@ -53,7 +52,7 @@ def draw_mode(nk, ax, field_file: Path, component: str, title: str) -> QuadConto
     """Draw one velocity component of a mode, scaled to a maximum |q| of 1 with a positive sign there, on [-1, 1]."""
     x, y, fields, _time = nk.read_field(str(field_file))
     values = fields[component]
-    values = values / values[np.argmax(np.abs(values))]
+    values = values / values[np.nanargmax(np.abs(values))]
     filled = ax.tricontourf(
         nk.make_triangulation(x, y),
         values,
@@ -106,28 +105,33 @@ def draw_spectrum(ax, spectrum_file: Path, name: str, color: str, marker: str) -
     freq = data[:, 1] / (2.0 * np.pi)
     conv = data[:, 2] < 1e-5
     print(f"{name}: {len(sigma)} values, {int(conv.sum())} converged")
-    ax.plot(freq[~conv], sigma[~conv], ls="none", marker=marker, ms=3, color=color, label=name)
+    if (~conv).any():
+        ax.plot(freq[~conv], sigma[~conv], ls="none", marker=marker, ms=3, color=color, label=name)
     label = f"{name}, converged"
     lead = np.flatnonzero(conv & (freq > 0))
     if len(lead):
         k = lead[np.argmax(sigma[lead])]
         label = rf"{name}, converged: $\sigma$ = {sigma[k]:.4f}, $f$ = {freq[k]:.4f}"
-    ax.plot(
-        freq[conv],
-        sigma[conv],
-        ls="none",
-        marker="*",
-        ms=10,
-        color=color,
-        mec="k",
-        mew=0.5,
-        label=label,
-    )
+    if conv.any():
+        ax.plot(
+            freq[conv],
+            sigma[conv],
+            ls="none",
+            marker="*",
+            ms=10,
+            color=color,
+            mec="k",
+            mew=0.5,
+            label=label,
+        )
 
 
 def plot_base_flow(nk) -> None:
     """Draw the velocity magnitude of the mean flow as plot_bf.png."""
     field_file = BF_FILE if BF_FILE.is_file() else MEAN_FLOW_FILE
+    if not field_file.is_file():
+        print(f"no mean flow field ({BF_FILE.name} here or {MEAN_FLOW_FILE} of stage 140); plot_bf.png skipped")
+        return
     fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH * 2, nk.COL_WIDTH * 0.4))
     draw_base_flow(nk, ax, field_file)
     output = CASE_DIR / "plot_bf.png"
@@ -145,7 +149,8 @@ def plot_spectrum(nk) -> None:
     ax.axhline(0, color="k", lw=0.6, ls="--")
     ax.set_xlabel(r"$f = \omega/2\pi$ ($U/D$)")
     ax.set_ylabel(r"$\sigma$ ($U/D$)")
-    ax.set_title("(a) Ritz spectrum, mean flow and steady flow", loc="left", fontsize=8)
+    title = "(a) Ritz spectrum, mean flow and steady flow" if STEADY_SPECTRUM.is_file() else "(a) Ritz spectrum, mean flow"
+    ax.set_title(title, loc="left", fontsize=8)
     ax.legend(fontsize=6, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=2)  # below the axes: inside it hides Ritz values
     output = CASE_DIR / "plot_spectrum.png"
     fig.savefig(output, dpi=400, bbox_inches="tight")
@@ -154,7 +159,7 @@ def plot_spectrum(nk) -> None:
 
 
 def main() -> None:
-    """Draw the mean-flow eigenvalue with the references and the leading mode."""
+    """Draw the leading mode about the mean flow and about the steady flow, then plot_bf.png and plot_spectrum.png."""
     nk = load_nekplot()
     nk.configure_style()
 
@@ -185,6 +190,8 @@ def main() -> None:
             "vy",
             rf"(b) Steady flow: $\sigma$ = {growth_steady:.4f}, $f$ = {frequency_steady / (2.0 * np.pi):.4f}",
         )
+    else:
+        print("steady-flow panel (b) left empty: dRe1cyl0.f00001 or Spectre_NSd.dat of ../310_stability_direct/direct is missing")
     ax_mean.set_xlabel("")
     ax_steady.set_xlabel(r"$x$ ($D$)")
     fig.colorbar(

@@ -62,9 +62,13 @@ def plot_baseflow(path, out):
 def main():
     nk.configure_style()
 
+    drawn = False
     bf = CASE_DIR / 'BF_cav0.f00001'
     if bf.exists():
         plot_baseflow(bf, CASE_DIR / 'plot_bf.png')
+        drawn = True
+    else:
+        print('BF_cav0.f00001 not found; no base-flow figure')
 
     spec_h = CASE_DIR / 'Spectre_Hd.dat'
     if spec_h.exists():
@@ -76,8 +80,11 @@ def main():
         fig.savefig(out, dpi=600, bbox_inches='tight')
         print(f'Saved {out}')
         plt.close(fig)
+        drawn = True
     else:
-        print('Spectre_Hd.dat not found; nothing to plot')
+        print('Spectre_Hd.dat not found; no spectrum figure')
+    if not drawn:
+        print('nothing to plot')
 
 
 if __name__ == '__main__':

@@ -38,6 +38,7 @@ nekbmpi naca0012 N  # Run on N MPI ranks
 ## Run
 ```bash
 mks naca0012
+printf "naca0012\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
 python3 plot.py
 ```

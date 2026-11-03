@@ -3,7 +3,7 @@
 !
 ! Purpose:
 !   Provides energy/enstrophy monitoring, vorticity output,
-!   gradient norms, field smoothing, verbose timestep commentary,
+!   field smoothing, verbose timestep commentary,
 !   and parameter printing for nekStab simulations.
 !
 ! Public interface:

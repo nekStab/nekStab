@@ -61,7 +61,7 @@ start field.
 ![instantaneous growth rate over the 40 periods, and the absolute exponent per period](ref/otd_history.png)
 
 The growth rate of panel (a) is the largest eigenvalue of the symmetric part of the reduced
-operator (`otd_growth_rates.dat`, one value per time step). It oscillates within each period;
+operator (`p1_otd_growth_rates.dat` for the 40 periods, one value per time step). It oscillates within each period;
 in the last periods it stays within +-6.5e-3 and its mean over a period is the exponent of
 panel (b). The running exponent of `otd_ftle.dat` averages from t = 0, so it still carries the
 transient. Read `otd_ftle_period.dat` for this stage.

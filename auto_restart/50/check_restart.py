@@ -1,4 +1,4 @@
-import os, sys, glob, subprocess, shutil
+import os, sys, glob, subprocess, shutil, re
 
 try:
     sys.path.insert(0, os.path.join(os.environ["NEKSTAB_SOURCE_ROOT"], "bin"))
@@ -37,6 +37,16 @@ consolidate_file_patterns = [
 ]
 default_job_name = lambda cinit, re, t: f"{cinit}{re}_{t}"[:8]
 
+def reynolds_update(folder_name):
+    """The folder name is the Reynolds number (50, 150, ...): the viscosity of the
+    .par file is -Re. A folder with another name leaves the viscosity of the .par
+    file as it is, instead of stopping the chain with a ValueError."""
+    try:
+        return {("VELOCITY", "viscosity"): f"-{float(folder_name)}"}
+    except ValueError:
+        return {}
+
+
 # ---- MAIN WORKFLOW ----
 if __name__ == "__main__":
     parameter_files = glob.glob(parameter_glob)
@@ -73,8 +83,17 @@ if __name__ == "__main__":
     print(f"[INFO] Final time in {history_file}: {final_time_in_his}")
     print(f"[INFO] Time in velocity file: {velocity_file_time}")
     
-    # Check for first run scenario: binary file exists with time=0
-    is_first_run = (velocity_file_time == 0.0)
+    # run.sh writes the exit status of the solver to this file when the solver has ended.
+    # A field file at time 0 together with this file means a job that ran and wrote
+    # nothing (it crashed), not a first start: only a check_restart.py started by hand
+    # on a fresh folder finds no such file. Without this test a crashed first job was
+    # taken for a first start, its logs were moved away, the failure check below was
+    # skipped and the same job was submitted again, for ever.
+    solver_status_file = "logstatus"
+    solver_ran = os.path.exists(solver_status_file)
+
+    # Check for first run scenario: binary file exists with time=0 and no solver has run
+    is_first_run = (velocity_file_time == 0.0) and not solver_ran
     
     if is_first_run:
         print(f"[INFO] FIRST RUN detected: binary file time=0, history file empty/minimal")
@@ -169,14 +188,18 @@ if __name__ == "__main__":
     # Check if any job is running (PBS/SLURM or local)
     job_running = False
     
-    # Check for PBS/SLURM jobs first (check for exact job name)
+    # Check for PBS/SLURM jobs first (check for exact job name). The job that runs this
+    # script is left out: after a failure the name of the next job equals the name of
+    # the current one, and counting it as "another job running" would skip the failure
+    # check below, so the chain would end without an error message.
+    own_ids = {os.environ[k].split(".")[0] for k in ("SLURM_JOB_ID", "PBS_JOBID") if os.environ.get(k)}
     if expected_job_name:
         try:
             if shutil.which("qstat") is not None:  # PBS
                 result = subprocess.run(['qstat', '-u', os.environ.get('USER', 'unknown')], capture_output=True, text=True)
                 if result.returncode == 0:
                     for line in result.stdout.strip().split('\n')[2:]:  # Skip header lines
-                        if line.strip() and expected_job_name in line:
+                        if line.strip() and line.split()[0].split(".")[0] not in own_ids and expected_job_name in line:
                             print(f"[INFO] Found specific PBS job '{expected_job_name}' running. Skipping all checks.. only consolidating.")
                             job_running = True
                             break
@@ -184,25 +207,58 @@ if __name__ == "__main__":
                 result = subprocess.run(['squeue', '-u', os.environ.get('USER', 'unknown')], capture_output=True, text=True)
                 if result.returncode == 0:
                     for line in result.stdout.strip().split('\n')[1:]:  # Skip header line
-                        if line.strip() and expected_job_name in line:
+                        if line.strip() and line.split()[0].split(".")[0] not in own_ids and expected_job_name in line:
                             print(f"[INFO] Found specific SLURM job '{expected_job_name}' running. Skipping all checks.. only consolidating.")
                             job_running = True
                             break
         except Exception:
             pass
     
-    # Check for local nek5000 processes (simpler check for local case)
+    # Check for local nek5000 processes of THIS folder. A plain `pgrep -f nek5000`
+    # also matches the solver of another case, or any command line that contains
+    # the word, and then the chain never submits its next job.
     if not job_running:
         try:
-            result = subprocess.run(['pgrep', '-f', 'nek5000'], capture_output=True, text=True)
+            result = subprocess.run(['pgrep', '-u', os.environ.get('USER', ''), '-x', 'nek5000'], capture_output=True, text=True)
             if result.returncode == 0:
-                pids = result.stdout.strip().split('\n')
-                pid_count = len(pids)
-                print(f"[INFO] Found {pid_count} local nek5000 job{'s' if pid_count > 1 else ''} running. Skipping all checks.. only consolidating.")
-                job_running = True
+                pids = [p for p in result.stdout.split() if os.path.realpath(f"/proc/{p}/cwd") == os.path.realpath(working_directory)]
+                if pids:
+                    print(f"[INFO] Found {len(pids)} local nek5000 job{'s' if len(pids) > 1 else ''} running. Skipping all checks.. only consolidating.")
+                    job_running = True
         except Exception:
             pass
     
+    # A job that failed (crash, MPI error, out of memory, time limit) leaves the restart
+    # file of the previous job in place, so its time is below the endTime of the .par
+    # file. Without this check the chain backs up nothing new, submits the same job
+    # again and loops for ever. Stop instead and keep logfile and logerror for reading.
+    # Not checked at a first start by hand (the file is the initial condition, time 0, and
+    # no solver has run) or while a job still runs (the file is not final yet).
+    if not job_running and not is_first_run:
+        # A non-zero exit status of the solver stops the chain even when the end-time field
+        # file was written (a crash after the last write, a failed MPI finalize). logstatus
+        # is rewritten by every run.sh, so it describes the job that just ended. An
+        # unreadable status counts as a failure.
+        if solver_ran:
+            with open(solver_status_file) as f:
+                status_text = f.read().strip()
+            if status_text != "0":
+                print(f"[ERROR] Exit status of the solver (from {solver_status_file}): {status_text or 'empty'}, not 0.")
+                print("[ERROR] The last job failed. The chain stops here before any backup or submission: read logfile and logerror, fix the cause, then repeat the job with ./run_nohup.sh (or sbatch job.pbs).")
+                sys.exit(1)
+        with open(parameter_file) as f:
+            # Nek5000 reads the key without regard to case (endtime, ENDTIME).
+            m = re.search(r"^\s*endTime\s*=\s*([0-9.eEdD+-]+)", f.read(), re.MULTILINE | re.IGNORECASE)
+        if not m:
+            print(f"[ERROR] Cannot read endTime from {parameter_file}: the check that the last job reached its end time cannot run. The chain stops here.")
+            sys.exit(1)
+        if velocity_file_time < float(m.group(1).replace("d", "e").replace("D", "e")) * (1.0 - 1e-6):
+            print(f"[ERROR] Time in {latest_restart_file} is {velocity_file_time}, below the endTime {m.group(1)} of {parameter_file}.")
+            if solver_ran:
+                print(f"[ERROR] Exit status of the solver (from {solver_status_file}): {open(solver_status_file).read().strip()}")
+            print("[ERROR] The last job did not reach its end time. The chain stops here: read logfile and logerror, fix the cause, then repeat the job with ./run_nohup.sh (or sbatch job.pbs): the .par file is already set for it.")
+            sys.exit(1)
+
     if velocity_file_time < target_end_time:
         # Calculate remaining time to target (same logic as above)
         remaining_time = target_end_time - velocity_file_time
@@ -221,7 +277,7 @@ if __name__ == "__main__":
                 {
                     ("GENERAL", "startFrom"): str(latest_restart_file),
                     ("GENERAL", "endTime"): str(next_time),
-                    ("VELOCITY", "viscosity"): f"-{float(case_reynolds)}",
+                    **reynolds_update(case_reynolds),
                 },
             )
             job_name = default_job_name(case_initial, case_reynolds, next_time)
@@ -295,7 +351,7 @@ if __name__ == "__main__":
 # NOTE: For test runs only. Not used for production cases.
 def prepare_par_for_restart(parameter_glob, single_job_time, case_preserving_adjust_par_file):
     """
-    Update the .par file to set startFrom = rst_1cyl0.f00001 and endTime = single_job_time.
+    Update the .par file to set startFrom = rst_<case>0.f00001 and endTime = single_job_time.
     This is intended for starting from scratch in test runs only.
     """
     import glob
@@ -304,4 +360,4 @@ def prepare_par_for_restart(parameter_glob, single_job_time, case_preserving_adj
     if not par_files:
         raise FileNotFoundError(f"No .par file matching {parameter_glob} found.")
     par_file = par_files[0]
-    case_preserving_adjust_par_file(par_file, {("GENERAL", "startFrom"): "rst_1cyl0.f00001", ("GENERAL", "endTime"): str(single_job_time)})
+    case_preserving_adjust_par_file(par_file, {("GENERAL", "startFrom"): f"rst_{case_name}0.f00001", ("GENERAL", "endTime"): str(single_job_time), **reynolds_update(os.path.basename(os.getcwd()))})

@@ -21,7 +21,7 @@ shared across the isothermal cylinder suite.
 ```bash
 mks 1cyl
 sbatch run.local.slurm         # 8 MPI ranks via Slurm
-qs
+squeue
 tail -f logfile
 ```
 

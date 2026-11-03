@@ -77,8 +77,9 @@ def load(folder, residual_file, tcol, rcol):
                 elapsed = float(m.group(1))
     if len(steps) >= len(t) and residual_file != "residu_newton.dat":
         wall = np.array(steps[: len(t)])
-    else:
+    elif elapsed is not None and t[-1] > 0:
         # No wall time per row: the cost of a run grows with the time integrated.
+        # Without the elapsed time (or a positive final time) wall stays zero and the caller skips the run.
         wall = elapsed * t / t[-1]
     return t, res, wall, elapsed
 
@@ -100,6 +101,9 @@ def formulation_figure(name, pattern):
             print(f"skipped {run}: no residu.dat or logfile in {folder}")
             continue
         t, res, wall, elapsed = load(folder, "residu.dat", 0, 1)
+        if elapsed is None:
+            print(f"skipped {run}: no 'total elapsed time' line in {folder / 'logfile'}")
+            continue
         steps = np.arange(1, len(res) + 1)
         for ax, x in zip(axes, (steps, wall)):
             ax.plot(
@@ -145,6 +149,9 @@ def main():
             print(f"skipped {name}: no {residual_file} in {folder}")
             continue
         t, res, wall, elapsed = load(folder, residual_file, tcol, rcol)
+        if elapsed is None or t[-1] <= 0:
+            print(f"skipped {name}: no 'total elapsed time' line in {folder / 'logfile'} or no positive final time")
+            continue
         for ax, x in zip(axes, (t, wall)):
             ax.plot(
                 x,

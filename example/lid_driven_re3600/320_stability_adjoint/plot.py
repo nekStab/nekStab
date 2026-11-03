@@ -57,7 +57,8 @@ def render_field(nk, ax, path, what, cmap, symmetric, fix_sign=False, label=None
         values = fields[what]
     if fix_sign:
         vy = fields["vy"]
-        values = values * np.sign(vy[np.argmax(np.abs(vy))])
+        peak = vy[np.nanargmax(np.abs(vy))]
+        values = values * (np.sign(peak) if np.isfinite(peak) and peak != 0 else 1.0)  # +1 for a zero or NaN peak
     bound = round(float(np.nanpercentile(np.abs(values), 99)), 3) or 1.0
     if symmetric:
         vmin, vmax, extend = -bound, bound, "both"

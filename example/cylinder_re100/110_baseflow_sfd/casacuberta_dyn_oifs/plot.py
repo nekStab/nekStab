@@ -92,7 +92,10 @@ def load_walltime(case):
     if not log.exists():
         return None
     wall = [float(m.group(1)) for m in map(STEP.match, log.read_text(errors='replace').splitlines()) if m]
-    return np.array(wall) if len(wall) >= case['steps'] else None
+    if len(wall) < case['steps']:
+        print(f"no wall-time curve for {case['label']}: {len(wall)} Step lines in {log} for {case['steps']} residual rows")
+        return None
+    return np.array(wall)
 
 
 def load_available_cases():

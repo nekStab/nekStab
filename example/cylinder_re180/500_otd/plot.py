@@ -40,8 +40,16 @@ def p1(name):
     return f if f.is_file() else CASE_DIR / name
 
 
+def load(name):
+    """Table of a phase-1 or plain file as a 2-D array (a one-line file stays 2-D), None when absent."""
+    f = p1(name)
+    return np.atleast_2d(np.loadtxt(f)) if f.is_file() else None
+
+
 def exponent_plot() -> None:
-    data = np.loadtxt(p1("otd_ftle_period.dat"))
+    data = load("otd_ftle_period.dat")
+    if data is None:
+        return
     t, sigma = data[:, 0], data[:, 1]
     label = f"OTD mode, {len(t)} periods"
 
@@ -76,8 +84,10 @@ def exponent_plot() -> None:
 
 
 def history_plot() -> None:
-    g = np.loadtxt(p1("otd_growth_rates.dat"))
-    f = np.loadtxt(p1("otd_ftle_period.dat"))
+    g = load("otd_growth_rates.dat")
+    f = load("otd_ftle_period.dat")
+    if g is None or f is None:
+        return
     fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.2), constrained_layout=True)
 
     ax = axes[0]

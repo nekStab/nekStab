@@ -5,11 +5,40 @@ backward compatible with 1.x; internal code is restructured for
 maintainability, numerical robustness, and HPC performance.
 
 
+## Known issues
+
+1. **The solver error grows with the size of the domain.** The error of one
+   matvec grows with the domain. On a large domain a good mode can get the
+   vector warning or be refused. The eigenvalue can also differ between runs
+   with different `residualTol`: on an ellipse with V = 60000 the leading
+   sigma is -0.0144116 at `residualTol = 1e-9` and -0.0144268 at `4e-12`, and
+   the residuals of both runs are below 1e-6. The two values differ between
+   these runs. Workaround: lower `residualTol` by hand. Version 2.0.0 ships no
+   change of the tolerance; a fix is planned for a later version.
+2. **The norm has zero weight in the sponge zone.** The inner product of the
+   Krylov vectors uses the mass matrix without the sponge (`bm1s`), which is
+   zero where the sponge function is not zero. A perturbation inside the
+   sponge zone does not enter this norm.
+3. **`cubic_cavity_re1950/350_dns_unstable_orbit` keeps an older run.** It keeps
+   the reference of its run of commit `f93b2120` (13.7 h on 16 ranks) and did
+   not run again. The final source and the source of that run give a
+   byte-identical probe file over the first 3 of the 2000 time units (2087
+   time steps, 16 ranks, `gfortran`).
+4. **RANS stability is experimental.** `example/cylinder_re1m` has no
+   reference data and no gallery card. Mode 4.42 (steady force sensitivity,
+   imaginary part) is not validated.
+5. **Two identical runs can differ in the last digits.** gslib times its
+   exchange methods at start-up and keeps the fastest, and each method adds
+   the copies of a shared point in another order. In `cylinder_re100/310`
+   (8 ranks) the leading growth rate moved by at most 5e-9. With the method
+   forced, repeat runs are byte-identical (`DOC.md`, Troubleshooting).
+
+
 ## What changed
 
 ### Architecture
 
-- All source wrapped in Fortran modules (39 `.f90` files, was loose `.f`)
+- All source wrapped in Fortran modules (43 `.f90` files, was loose `.f`)
 - `nekstab_nek_bridge` module isolates all Nek5000 common-block imports
 - `mode_config` module: 3-priority mode resolution (string > flags > uparam)
 - `NEKSTAB.inc`: single include for all nekStab common-block variables
@@ -111,7 +140,7 @@ without forcing a full extra decade of accuracy at every iteration.
 
 Other improvements:
 
-- **Stagnation guard** — detects when 3 consecutive Newton steps
+- **Stagnation guard** — detects when 6 consecutive Newton steps
   fail to reduce the residual and triggers early termination
 - **Open-once log files** — residu_newton.dat, residu_gmres.dat,
   residu_arnoldi.dat are opened at the start and closed at the end
@@ -440,6 +469,25 @@ reverted in that commit had reached, and the restored stage
 `moving_cylinder_re100` and on `tpjet_re2000`, ran with that reverted change; it
 does not reach them.  All 27 pass.  52 stages keep their results of the earlier
 sources; each later change was read against the code path of these stages.
+
+The last source changes came after that (`fbddc0fd`, `88611748`, `be5fceca`), together
+with the removal of `solver = helm` from four stages: `matvec` removes the mean pressure
+in a closed domain, all ranks use the LAPACK result of rank 0, and the Fourier orbit load
+keeps the flow fields. The Troubleshooting section of `DOC.md` explains each. Eleven
+stages ran again on these sources with `ifx` and pass their references:
+`thermosyphon_ra500` 000, 210 and 310, `lid_driven_re3600` 000, 210, 310 and 320,
+`back_fstep_re500/330_transient_growth`, `cylinder_re30_thermal/210_baseflow_newton`,
+`cubic_cavity_re1920/310_stability_direct` and `cubic_cavity_re1914/320_stability_adjoint`.
+The last two match their references at every printed digit.
+
+The other closed-domain stages keep their earlier runs: `cubic_cavity_re1914` 210, 310,
+330 and 411, `cubic_cavity_re1920/210_baseflow_newton` and `cubic_cavity_re1950` 311, 321
+and 411. Repeating them would take about 19 h on 16 ranks. The reasons: a constant
+pressure has no gradient, so its removal does not change the velocity; the rank-0 change
+does nothing when the ranks agree, and `cylinder_re100/310` with gfortran is byte-identical
+across it with the gslib method forced; and 174 of 174 stored modes show no jump between
+ranks (largest 4.4e-11). The open-domain stages keep their runs for the same reasons, and
+`cylinder_re100/310` is byte-identical across the pressure change as well.
 
 `cubic_cavity_re1950/350_dns_unstable_orbit` keeps the reference of its run of
 commit `f93b2120` (13.7 h on 16 ranks).  It did not run again.  The final source and the

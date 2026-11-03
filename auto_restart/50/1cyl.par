@@ -25,7 +25,7 @@ filterCutoffRatio = 0.84
 preconditioner = semg_xxt
 residualTol = 1.0E-07
 residualProj = yes
-writeToFieldFile = no
+writeToFieldFile = yes # the restart files of the chain must hold the pressure: without it a restart starts from p = 0 and the forces show a transient of 0.5 % for 0.4 time units (measured, Re = 50)
 
 [VELOCITY]
 residualTol = 1.0E-08
