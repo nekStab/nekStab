@@ -470,6 +470,25 @@ reverted in that commit had reached, and the restored stage
 does not reach them.  All 27 pass.  52 stages keep their results of the earlier
 sources; each later change was read against the code path of these stages.
 
+The last source changes came after that (`fbddc0fd`, `88611748`, `be5fceca`), together
+with the removal of `solver = helm` from four stages: `matvec` removes the mean pressure
+in a closed domain, all ranks use the LAPACK result of rank 0, and the Fourier orbit load
+keeps the flow fields. The Troubleshooting section of `DOC.md` explains each. Eleven
+stages ran again on these sources with `ifx` and pass their references:
+`thermosyphon_ra500` 000, 210 and 310, `lid_driven_re3600` 000, 210, 310 and 320,
+`back_fstep_re500/330_transient_growth`, `cylinder_re30_thermal/210_baseflow_newton`,
+`cubic_cavity_re1920/310_stability_direct` and `cubic_cavity_re1914/320_stability_adjoint`.
+The last two match their references at every printed digit.
+
+The other closed-domain stages keep their earlier runs: `cubic_cavity_re1914` 210, 310,
+330 and 411, `cubic_cavity_re1920/210_baseflow_newton` and `cubic_cavity_re1950` 311, 321
+and 411. Repeating them would take about 19 h on 16 ranks. The reasons: a constant
+pressure has no gradient, so its removal does not change the velocity; the rank-0 change
+does nothing when the ranks agree, and `cylinder_re100/310` with gfortran is byte-identical
+across it with the gslib method forced; and 174 of 174 stored modes show no jump between
+ranks (largest 4.4e-11). The open-domain stages keep their runs for the same reasons, and
+`cylinder_re100/310` is byte-identical across the pressure change as well.
+
 `cubic_cavity_re1950/350_dns_unstable_orbit` keeps the reference of its run of
 commit `f93b2120` (13.7 h on 16 ranks).  It did not run again.  The final source and the
 source of that run give a byte-identical probe file over the first 3 of the 2000
