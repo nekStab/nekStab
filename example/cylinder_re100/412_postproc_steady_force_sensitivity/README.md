@@ -38,7 +38,8 @@ Run 2026-10-30 on 4 ranks (gfortran, source `dev` at 89770900), T = 1, `k_dim` =
   bubble and the shear layers next to the cylinder.
 - The velocity norms of the field agree to 3e-4 between T = 1 and T = 2. The
   equation solved is `(I - exp(T L†)) x = c`, with the adjoint operator `L†` and
-  `c` read from the files `sr_*` and `si_*` (`DOC.md`).
+  `c` read from the file `sr_<case>0.f00001` for mode 4.41 (`si_<case>0.f00001`
+  for mode 4.42; this stage runs 4.41) (`DOC.md`).
 - The `.usr` turns only the outflow `O` into a Dirichlet condition `v`, as in
   stage 320. Turning the inflow `v` into `O` as well made GMRES stall at 1e-2.
 - The reference values are regression values of this repository, not literature
