@@ -108,19 +108,21 @@ def main():
     # PANEL 3 — DYNAMIC TOLERANCE schedule (extra panel for this lane)
     dyn_tol = CASE_DIR / 'dyn_tol.dat'
     if residu.exists() and dyn_tol.exists():
-        residu_data = np.genfromtxt(str(residu))
         dyn_data = np.genfromtxt(str(dyn_tol), comments='#')
-        if residu_data.ndim == 1: residu_data = residu_data.reshape(1, -1)
         if dyn_data.ndim == 1: dyn_data = dyn_data.reshape(1, -1)
 
         fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
         # The requested tolerance equals the used one except where the gate floors it, and the cap column is
         # zero, so the figure shows the used tolerance and the gate only. The tolerance is userParam08 times the
-        # residual, so a residual curve would lie on top of it.
-        ax.semilogy(dyn_data[:, 0], dyn_data[:, 4], 's-', ms=2.0, lw=0.7, color='C2',
-                    markevery=max(1, len(dyn_data) // 40), label='velocity solver tolerance')
-        if residu_data.shape[1] >= 4:
-            ax.axhline(residu_data[-1, 3], color='k', ls=':', lw=0.6, label='gate')
+        # residual of the previous sample, so it follows the residual curve (a factor userParam08 below it);
+        # the residual is not drawn again here.
+        if dyn_data.shape[1] >= 5:
+            ax.semilogy(dyn_data[:, 0], dyn_data[:, 4], 's-', ms=2.0, lw=0.7, color='C2',
+                        markevery=max(1, len(dyn_data) // 40), label='velocity solver tolerance')
+        # The floor of the solver tolerance is residualTol of the .par file, the same gate as the residual figure.
+        gate = residual_gate(CASE_DIR)
+        if gate:
+            ax.axhline(gate, color='k', ls=':', lw=0.6, label='gate')
         ax.set_xlabel(r'$t$')
         ax.set_ylabel('solver tolerance')
         ax.legend(fontsize=6, loc='best')

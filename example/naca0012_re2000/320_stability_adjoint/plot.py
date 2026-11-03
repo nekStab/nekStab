@@ -100,9 +100,13 @@ def save_field(nk, path, what, cmap, symmetric, output):
 
 
 def pair_row(conv):
-    """Index of the conv row with omega > 0 closest to the pair sigma = -0.557 +- 9.43 i."""
+    """Index of the conv row with omega > 0 closest to the pair sigma = -0.557 +- 9.43 i, None when no row is within 0.01 of both."""
     data = np.genfromtxt(conv)
-    return int(np.argmin(np.abs(data[:, 1] - 9.433) + (data[:, 1] < 0) * 1e3)), data
+    dist = np.abs(data[:, 1] - 9.433) + (data[:, 1] < 0) * 1e3
+    k = int(np.argmin(dist))
+    if abs(data[k, 1] - 9.433) > 0.01 or abs(data[k, 0] + 0.557) > 0.01:
+        return None, data
+    return k, data
 
 
 def save_spectrum(nk, path, conv, output):
@@ -112,7 +116,9 @@ def save_spectrum(nk, path, conv, output):
     ok = flag > 0
     k, cdata = pair_row(conv)
     lead = ok & (np.abs(np.abs(omega) - cdata[0, 1]) < 1e-3)
-    pair = ok & (np.abs(np.abs(omega) - cdata[k, 1]) < 1e-3)
+    pair = ok & (np.abs(np.abs(omega) - cdata[k, 1]) < 1e-3) if k is not None else np.zeros_like(ok)
+    if k is None:
+        print("stable pair sigma = -0.557 +- 9.43 i not in the converged file; not marked")
     rest = ok & ~lead & ~pair
     fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.8))
     ax.axhspan(-1.6, 0, facecolor="gray", alpha=0.3, zorder=-1)
@@ -121,7 +127,7 @@ def save_spectrum(nk, path, conv, output):
     for sel, label, mk, col, ms in (
         (rest, "other converged", "d", "k", 3.5),
         (lead, rf"$\sigma={cdata[0, 0]:.4f}\pm{cdata[0, 1]:.3f}i$", "o", "tab:red", 5),
-        (pair, rf"$\sigma={cdata[k, 0]:.3f}\pm{cdata[k, 1]:.2f}i$", "s", "tab:blue", 5),
+        (pair, rf"$\sigma={cdata[k, 0]:.3f}\pm{cdata[k, 1]:.2f}i$" if k is not None else "_none", "s", "tab:blue", 5),
     ):
         ax.plot(f[sel], sigma[sel], ls="none", marker=mk, mfc=col, mec="k", mew=0.3,
                 ms=ms, label=label, zorder=3)
@@ -139,6 +145,9 @@ def save_spectrum(nk, path, conv, output):
 def save_modes(nk, conv, output):
     """(a) leading mode, (b) mode of the pair sigma = -0.557 +- 9.43 i; vy of the real part."""
     k, cdata = pair_row(conv)
+    if k is None:
+        print("stable pair sigma = -0.557 +- 9.43 i not in the converged file; plot_mode.png skipped")
+        return
     rows = ((0, "leading mode"), (k, "stable pair"))
     fig, axes = plt.subplots(2, 1, figsize=(nk.COL_WIDTH * 1.8, nk.COL_WIDTH * 1.5))
     for ax, (row, name), letter in zip(axes, rows, "ab"):

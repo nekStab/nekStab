@@ -83,7 +83,7 @@ def main():
         data = np.genfromtxt(str(spec_ns))
         if data.ndim == 1:
             data = data.reshape(1, -1)
-        # Columns: sigma (growth), omega (angular frequency, in U/D), residual; check headers
+        # Columns (no header line): sigma (growth), omega (angular frequency, in U/D), residual, converged flag
         if data.shape[1] >= 3:
             sig = data[:, 0]
             freq = data[:, 1] / (2 * np.pi)

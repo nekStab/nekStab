@@ -71,6 +71,9 @@ def save_field(nk, path, output):
 
 def save_residual(nk, path, gate, output):
     """Plot the residual history of the run with the gate as a horizontal line."""
+    missing = [k for k in ("userParam11", "userParam12", "userParam13") if par_value(k) is None]
+    if missing:
+        sys.exit(f"plot.py: {', '.join(missing)} not found in the .par file; the legend needs the DMT settings")
     data = np.genfromtxt(path)
     time, residual = data[:, 0], data[:, 1]
     fig, ax = plt.subplots(1, 1, figsize=(nk.COL_WIDTH, nk.COL_WIDTH * 0.67))
