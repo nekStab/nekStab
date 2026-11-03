@@ -18,8 +18,17 @@ Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
   advanced by the DNS, POD, DMD, SPOD and the Floquet energy budget.
 - Several passive scalars, conjugate heat transfer, a moving mesh in the direct
   solver and a finite-difference RANS operator (experimental).
-- The examples are numbered stages with reference data, a check script and a
-  published validation gallery.
+- 80 validated example stages in 15 flow families (1.0.1 had 8 example cases),
+  from the cylinder and the lid-driven cavity to the cubic cavity, the flip-flop
+  wake, the forced jet, the NACA 0012 and a thermosyphon. Each stage has reference
+  data and a check script, and each family has a numbered workflow from DNS to
+  stability and modal analysis.
+- A website shows every case: the validation gallery at
+  https://nekstab.github.io/nekStab/validation/ has the figures, reference values
+  and description of each stage, built from the example folders.
+- `auto_restart/` runs a long DNS to a target time through a chain of jobs. Each
+  job restarts from the last one, the histories are joined, and a job that fails
+  stops the chain. Its README teaches the use on your own case.
 
 ### Upgrading from 1.x
 
@@ -39,6 +48,14 @@ Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
   `bin/c0check` finds them in field files.
 
 ### Added
+
+Tools
+- `auto_restart/`: a DNS to a target time through a chain of restart jobs, on Slurm
+  or on a local machine, with two ready cylinder cases (Re = 50 and 150). On a test of
+  4 jobs up to t = 20 the probe stays within 4e-4 of its peak-to-peak value of an
+  unbroken run.
+- Validation gallery at https://nekstab.github.io/nekStab/validation/, one card per
+  stage, built by `python validation/build_gallery.py`.
 
 Code structure and modes
 - The sources are free-form Fortran modules. The entry points that Nek5000 calls
