@@ -43,7 +43,7 @@ and that the residual of the leading pair is below 1e-5. A run about the steady 
 (b) about the steady flow of `../310_stability_direct/direct`. Both panels have the same window, the same colour scale and the same normalisation (maximum of |v| equal to 1, positive sign there). The subtitles give σ and f = ω/2π of the leading pair
 (mean flow 0.0022 and 0.1638, steady flow 0.1248 and 0.1168). `ref/meanflow_stability.png` is the figure of the run named in `ref/reference.json`.
 `plot_bf.png` (`ref/bf.png`) is the velocity magnitude of the mean flow, drawn the way stage 310 draws its steady base flow.
-`plot_spectrum.png` (`ref/spectrum.png`) is the full Ritz spectrum of this stage as sigma against f, with the steady-flow spectrum of stage 310 in gray. Converged values are stars and the legend gives σ and f of the leading one.
+`plot_spectrum.png` (`ref/spectrum.png`) is the full Ritz spectrum of this stage as sigma against f, with the steady-flow spectrum of stage 310 in gray when its file `Spectre_NSd.dat` is present. Converged values are stars and the legend gives σ and f of the leading one.
 
 ## Run
 

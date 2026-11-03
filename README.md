@@ -145,7 +145,8 @@ source ~/nekStab/exports.sh
 
 It sets `NEKSTAB_SOURCE_ROOT` to the folder that holds `exports.sh`, keeps a
 `NEK_SOURCE_ROOT` that you set before (an existing Nek5000), puts both `bin/` folders
-on `PATH`, removes the stack limit and turns on tab completion of `mks`. Type it in
+on `PATH`, removes the stack limit and, in bash, turns on tab completion of `mks` (for zsh see
+"Shell completion" below). Type it in
 each new terminal, or add that same line once to the end of `~/.bashrc` (or
 `~/.zshrc`) to have it always. Use `source`, not `bash exports.sh`: a script that runs
 as a program cannot change the terminal that started it.
