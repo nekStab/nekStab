@@ -5,7 +5,7 @@ All notable changes to nekStab are listed here, newest first. The format follows
 [Semantic Versioning](https://semver.org/). `RELEASE.md` describes the 2.0 series
 in more detail and `DOC.md` is the user documentation.
 
-## [2.0.0] - 2026-11-02
+## [2.0.0] - 2026-11-03
 
 Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
 
