@@ -273,6 +273,8 @@ contains
       integer :: io_unit, ierr, kk, idx
       character(len=132) :: line, fname
       real :: time_sav, param10_sav
+      real, allocatable, dimension(:, :, :, :) :: vx_sav, vy_sav, vz_sav, pr_sav
+      real, allocatable, dimension(:, :, :, :, :) :: t_sav
 
       exists = .false.
       if (nid == 0) then
@@ -318,6 +320,13 @@ contains
       ! load_fld also sets the time and endTime of the run from each file.
       time_sav = time
       param10_sav = param(10)
+      ! It also leaves the last mode in the flow fields. The time loop of matvec advances
+      ! once before it restores the orbit, so the first matvec would linearize about Im(c_K).
+      vx_sav = vx
+      vy_sav = vy
+      vz_sav = vz
+      pr_sav = pr
+      t_sav = t
       do idx = 1, 2*K + 1
          write (fname, '(A,A,"0.f",I5.5)') 'FOU', trim(SESSION), idx
          call load_fld(fname)
@@ -326,6 +335,11 @@ contains
       end do
       time = time_sav
       param(10) = param10_sav
+      vx = vx_sav
+      vy = vy_sav
+      vz = vz_sav
+      pr = pr_sav
+      t = t_sav
       loaded = .true.
       if (nid == 0) write (6, "('Fourier orbit loaded: K =',I4,' N =',I6,' T =',1PE15.7,' missing energy =',1PE12.4)") &
          K, nsamples, period, missing_energy
