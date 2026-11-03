@@ -77,8 +77,9 @@ def load(folder, residual_file, tcol, rcol):
                 elapsed = float(m.group(1))
     if len(steps) >= len(t) and residual_file != "residu_newton.dat":
         wall = np.array(steps[: len(t)])
-    else:
+    elif elapsed is not None and t[-1] > 0:
         # No wall time per row: the cost of a run grows with the time integrated.
+        # Without the elapsed time (or a positive final time) wall stays zero and the caller skips the run.
         wall = elapsed * t / t[-1]
     return t, res, wall, elapsed
 
