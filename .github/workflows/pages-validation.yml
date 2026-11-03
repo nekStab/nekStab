@@ -3,7 +3,7 @@ name: Deploy Validation Gallery
 on:
   workflow_dispatch:
   push:
-    branches: [dev]
+    branches: [dev, main]
     paths:
       - validation/index.html
       - example/**/*.png

@@ -118,14 +118,20 @@ brew install mpich gfortran fftw wget git cmake htop
 **Installation**
 
 ```bash
-git clone --depth=1 https://github.com/nekStab/nekStab.git
+git clone --depth=1 --branch v2.0.0 https://github.com/nekStab/nekStab.git
 cd nekStab
 ./Nek5000setup.sh
 ```
 
+The branch `main` holds the releases. The branch `dev` is the development branch and stays the default branch of the repository, so a clone without `--branch` gives `dev`.
+
+The release was validated with Nek5000 commit `d083ef3`. `Nek5000setup.sh` clones the current Nek5000 `master`. The axisymmetric adjoint correction in `src/forcing.f90` is zero on a Nek5000 that already has the radius in its integration weights, so a newer `master` does not change the result of the adjoint runs.
+
+Use git for the install. A source archive from GitHub has no `.git` folder, and a build from it reports the version `unknown`.
+
 | Command | What it does |
 |---------|--------------|
-| `git clone --depth=1 ...` | Downloads only the latest version (fastest, minimal download) |
+| `git clone --depth=1 --branch v2.0.0 ...` | Downloads only the files of the release 2.0.0 (fastest, minimal download) |
 | `cd nekStab` | Enter the nekStab directory |
 | `./Nek5000setup.sh` | Downloads and configures Nek5000 inside `nekStab/Nek5000/` |
 
