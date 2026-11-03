@@ -7,28 +7,44 @@ in more detail and `DOC.md` is the user documentation.
 
 ## [2.0.0] - 2026-11-03
 
-Version 2.0.0 is a rewrite of the toolbox. It lists the changes against 1.0.1.
+### Highlights
 
-- The sources are Fortran modules, and a mode is chosen by name (`nekstab_mode`)
-  or by the `userParam01` code of 1.x, which still works.
+The first major release since 1.0.1 (March 2021): more than five years of work, and a
+rewrite of the toolbox. This section lists the changes against 1.0.1.
+
+**A new code base**
+- 43 Fortran modules in `src/`, about 19 500 lines, in place of the 18 files of `core/`.
+- A mode is chosen by name (`nekstab_mode`) or by the `userParam01` code of 1.x, which
+  still works.
+- 519 automatic tests, CI on Linux and macOS with GNU and Intel compilers.
+
+**More correct results**
 - The Krylov-Schur eigensolver stops on the leading eigenvalues and checks every
-  exported mode; Newton-GMRES has a line search; the Floquet adjoint, the thermal
-  adjoint and the axisymmetric adjoint are corrected.
-- New modes: Dynamic Mode Tracking, a DMT filter bank, OTD with a base flow
-  advanced by the DNS, POD, DMD, SPOD and the Floquet energy budget.
-- Several passive scalars, conjugate heat transfer, a moving mesh in the direct
-  solver and a finite-difference RANS operator (experimental).
-- 80 validated example stages in 15 flow families (1.0.1 had 8 example cases),
-  from the cylinder and the lid-driven cavity to the cubic cavity, the flip-flop
-  wake, the forced jet, the NACA 0012 and a thermosyphon. Each stage has reference
-  data and a check script, and each family has a numbered workflow from DNS to
-  stability and modal analysis.
-- A website shows every case: the validation gallery at
-  https://nekstab.github.io/nekStab/validation/ has the figures, reference values
-  and description of each stage, built from the example folders.
-- `auto_restart/` runs a long DNS to a target time through a chain of jobs. Each
-  job restarts from the last one, the histories are joined, and a job that fails
-  stops the chain. Its README teaches the use on your own case.
+  exported mode against the true operator.
+- False modes are gone: mu = 1 modes from element copies, the constant pressure in a
+  closed domain.
+- Intel MKL runs no longer freeze: all MPI ranks use one LAPACK result.
+- Newton-GMRES has a line search. The Floquet, thermal and axisymmetric adjoints are
+  corrected.
+
+**New analysis modes**
+- Dynamic Mode Tracking and a DMT filter bank.
+- OTD with a base flow advanced by the DNS, POD, DMD, SPOD, and the Floquet energy budget.
+- Several passive scalars, conjugate heat transfer, a moving mesh in the direct solver,
+  and a finite-difference RANS operator (experimental).
+
+**80 validated examples and a website**
+- 80 example stages in 15 flow families (1.0.1 had 8 example cases), from the cylinder
+  and the lid-driven cavity to the cubic cavity, the flip-flop wake, the forced jet, the
+  NACA 0012 and a thermosyphon. Each stage has reference data and a check script, and
+  each family has a numbered workflow from DNS to stability and modal analysis.
+- The website https://nekstab.github.io/nekStab/validation/ shows the figures, reference
+  values and description of every stage.
+
+**Long runs**
+- `auto_restart/` takes a long DNS to a target time through a chain of jobs: each job
+  restarts from the last, the histories are joined, and a failed job stops the chain.
+  Its README teaches the use on your own case.
 
 ### Upgrading from 1.x
 
