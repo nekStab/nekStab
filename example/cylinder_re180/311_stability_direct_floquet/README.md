@@ -35,6 +35,7 @@ vortex-shedding limit cycle — 2D proxy (see caveat above).
 ## Run
 ```bash
 makeneks 1cyl                     # compile (links this case's .usr)
+printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpiexec -np 8 ./nek5000 > logfile
 ```
 Wall time: 63 min on 8 ranks (`ifort`, 2026-10-09).

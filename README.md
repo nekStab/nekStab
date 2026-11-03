@@ -135,6 +135,10 @@ Use git for the install. A source archive from GitHub has no `.git` folder, and 
 | `cd nekStab` | Enter the nekStab directory |
 | `./Nek5000setup.sh` | Downloads and configures Nek5000 inside `nekStab/Nek5000/` |
 
+`./Nek5000setup.sh` asks four questions on a fresh clone (a fifth, about removing the folder, appears when `Nek5000/` already exists): install packages (default `n`), clone Nek5000 (default `y`), build `genmap` and `genbox` (default `y`), add the environment variables to your shell file (default `n`). The defaults work: press Enter four times, then load the environment with `source ~/nekStab/exports.sh` (see below).
+
+Its package list differs from the prerequisites above: it installs `libopenmpi-dev` (Linux) or `open-mpi` (macOS) and the X11 headers, and not MPICH, OpenBLAS, FFTW or `m4`. Use the prerequisites above (MPICH) and keep the default `n` for the package question. Do not install both MPI libraries: the script's choice is OpenMPI and this README's is MPICH, and two installs can leave `mpiexec` and the compiler wrapper `mpif90` from different MPI libraries.
+
 > **Already have Nek5000?** Skip `./Nek5000setup.sh` and point `NEK_SOURCE_ROOT` to your existing installation (see below).
 
 **Simplest way, no file to edit:** load the environment with one line.
@@ -201,7 +205,7 @@ mks 1cyl
 
 ### Compiler Selection
 
-nekStab supports multiple Fortran compilers. The build script auto-detects available compilers in this order: `ifx` → `ifort` → `gfortran`. To force a specific compiler:
+nekStab supports multiple Fortran compilers. The build script auto-detects available compilers in this order: `ifx` → `ifort` → `gfortran`. The Intel compilers are on the path only after `source /opt/intel/oneapi/setvars.sh` (the default install folder of oneAPI). When they are on the path, `mks` picks `ifx` over `gfortran` unless `NEKSTAB_FC` is set. To force a specific compiler:
 
 ```bash
 NEKSTAB_FC=ifx mks 1cyl    # Intel LLVM (recommended for Intel/AMD CPUs)
@@ -216,6 +220,8 @@ NEKSTAB_FC=gcc mks 1cyl    # GCC/gfortran
 | **ifx** (Intel LLVM) | Fastest | Requires Intel oneAPI 2024+, uses MKL |
 | **ifort** (Intel Classic) | Fast | Available on HPC systems, discontinued in oneAPI 2025 |
 | **gfortran** (GCC) | Good | Universal, uses system BLAS/LAPACK |
+
+gfortran 15.2 and ifx 2026.2 were tested and pass `cylinder_re100/310_stability_direct` (leading growth rate 0.1247875).
 
 > **Note:** Intel discontinued `ifort` in oneAPI 2025, but it remains available on many HPC systems. New installations should use `ifx`.
 
@@ -241,18 +247,29 @@ mks 1cyl --debug
 After successful compilation:
 
 ```bash
-nekbmpi 1cyl 4       # Run case "1cyl" on 4 MPI processes
+nekbmpi 1cyl 8       # Run case "1cyl" on 8 MPI processes
 tail -f logfile      # Monitor output in real-time
 killall nek5000      # Stop the simulation
 ```
 
 | Command | What it does |
 |---------|--------------|
-| `nekbmpi 1cyl 4` | Launches `nek5000` via `mpirun` with 4 processes (adjust to your CPU cores) |
+| `nekbmpi 1cyl 8` | Writes `SESSION.NAME`, then launches `nek5000` via `mpiexec` with 8 processes |
 | `tail -f logfile` | Streams solver output — watch convergence, time steps, diagnostics |
 | `killall nek5000` | Gracefully stops all running Nek5000 processes |
 
-> **Tip:** Use `nekbmpi 1cyl 4 &` to run in background, then `tail -f logfile` in the same terminal.
+> **Tip:** Use `nekbmpi 1cyl 8 &` to run in background, then `tail -f logfile` in the same terminal.
+
+**Rank count.** A run needs at least as many MPI ranks as `lpmin` in the `SIZE` file of the case. The array sizes of `SIZE` follow from `lelt = lelg/lpmin + 3`, so fewer ranks put more elements on one rank than `lelt` allows, and Nek5000 stops at start with a message like `requires lelt >= 532 for np = 4`. The cylinder examples have `lpmin = 8`, so use 8 ranks or more.
+
+**Running without `nekbmpi`.** `nek5000` reads the case name and the case directory from the file `SESSION.NAME`. `nekbmpi` and `run.local.slurm` write it. A bare `mpiexec -np 8 ./nek5000` does not, and stops with `Error while reading SESSION.NAME`. Write it first, in the case folder:
+
+```bash
+printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME    # line 1: case name, line 2: this folder
+mpiexec -np 8 ./nek5000
+```
+
+**Slurm memory.** `run.local.slurm` of the examples asks `--mem-per-cpu=2000`, which is 16 GB for 8 tasks. On a machine with less memory the job stays `PENDING` with reason `MaxMemPerLimit`, and `--mem` on the `sbatch` line is refused together with `--mem-per-cpu`. Lower the request on the `sbatch` line: `sbatch --mem-per-cpu=500 run.local.slurm` (500 worked for `cylinder_re100/310_stability_direct`). Check the queue with `squeue`.
 
 A DNS that needs more time than one job may run is advanced to a target time through a chain of restarts: see [`auto_restart/README.md`](auto_restart/README.md).
 

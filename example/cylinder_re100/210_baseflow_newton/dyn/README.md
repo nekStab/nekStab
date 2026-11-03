@@ -23,6 +23,7 @@ dealiasing N=8 (`lxd=9`).
 ## Run
 ```bash
 mks 1cyl
+printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpiexec -np 8 ./nek5000      # or: sbatch run.local.slurm
 python3 plot.py
 ```
