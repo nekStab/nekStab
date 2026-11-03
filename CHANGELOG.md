@@ -490,7 +490,8 @@ Code structure and modes
   froze, and in one, two ranks wrote the converged output while two went on. All
   LAPACK wrappers now return the result of rank 0. No freeze in 87 restarts of the
   three test runs, and 174 of 174 stored modes show no jump between ranks (largest
-  4.4e-11). gfortran results are byte-identical.
+  4.4e-11). `cylinder_re100/310` (8 ranks, `ifx`) froze after its third restart and now
+  finishes in 217 s at the reference value. gfortran results are byte-identical.
 - In a closed domain the Arnoldi method returned a constant pressure as a converged
   eigenvalue at sigma = 0: the solver leaves a constant unchanged and the norm does
   not see the pressure. `matvec` now removes the mean pressure through Nek5000

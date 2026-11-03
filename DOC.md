@@ -1819,10 +1819,12 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
   promise the same bits on each rank, because its result can depend on where the data
   sits in memory. On `thermosyphon_ra500/310` (4 ranks) the Schur vectors differed by
   2.0 between ranks and the kept counts by 2. A global sum of different sizes then
-  never ends. 7 of 8 runs froze.
+  never ends. 7 of 8 runs froze. `cylinder_re100/310` (8 ranks, `ifx`) froze after its
+  third restart and, with the fix, finished in 217 s at the reference value.
 - Fixed in 2.0.0: `src/lapack_wrapper.f90` gives all ranks the result of rank 0. For
   an older version, `export MKL_CBWR=AUTO,STRICT` before the run removes the
-  differences. The gfortran build uses the bundled LAPACK and did not show them.
+  differences. A gfortran build links the LAPACK of the system (`bin/makeneks`); the one
+  tested, with the reference LAPACK of Ubuntu, did not show them.
 
 **A converged eigenvalue at sigma = 0 whose mode has a huge mean pressure**
 - Seen in versions before 2.0.0 in a closed domain (all velocity boundaries are
