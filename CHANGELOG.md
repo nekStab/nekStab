@@ -10,7 +10,9 @@ in more detail and `DOC.md` is the user documentation.
 ### Highlights
 
 The first major release since 1.0.1 (March 2021): more than five years of work, and a
-rewrite of the toolbox. This section lists the changes against 1.0.1.
+rewrite of the toolbox. This section lists the changes against 1.0.1. The previous
+release is 1.1 (February 2023), whose own changes are in the 1.1 entry below; the
+comparison link at the end of this file shows the difference from 1.1.
 
 **A new code base**
 - 43 Fortran modules in `src/`, about 19 500 lines, in place of the 18 files of `core/`.
