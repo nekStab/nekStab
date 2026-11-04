@@ -62,7 +62,7 @@ def read_svd(path):
 def shedding_index(table, rows):
     """Return the row (0-based), among the given rows, of the saved mode with the lowest positive St."""
     positive = [row for row in rows if table[row, 4] > 0]
-    return min(positive, key=lambda row: table[row, 4])
+    return min(positive, key=lambda row: table[row, 4]) if positive else None
 
 
 def save_spectrum(nk, table, fundamental, output):
@@ -173,12 +173,12 @@ def main():
         # File number k holds row k of the table, and the stage ships only the shedding mode.
         # Without a mode file the shedding row is not known, so no multiples can be drawn.
         by_row = {int(mode.name[-5:]) - 1: mode for mode in modes}
-        if by_row:
-            index = shedding_index(table, by_row)
+        index = shedding_index(table, by_row)
+        if index is not None:
             save_spectrum(nk, table, table[index, 4], CASE_DIR / "plot_spectrum.png")
             save_mode(nk, by_row[index], CASE_DIR / "plot_mode.png")
         else:
-            print("no DMD mode file: spectrum and mode figures need a run")
+            print("no DMD mode file of positive frequency: spectrum and mode figures need a run")
 
     svd_file = CASE_DIR / "dmd_svd.dat"
     if svd_file.exists():
