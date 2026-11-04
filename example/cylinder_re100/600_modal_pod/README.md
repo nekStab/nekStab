@@ -14,13 +14,16 @@ Use `6.1`, `6.2`, or `6.3` to run POD, DMD, or SPOD individually.
 2. **Phase 2, modal analysis (`1cyl.par`, `userParam01 = 6`):** reads the snapshots and computes POD, DMD and SPOD. The `.usr` file selects the three methods only when `userParam01 >= 6`.
 
 ## Prerequisites
-- Restart file: `rst_1cyl0.f00001` (tracked; t = 150).
+- Restart file: `rst_1cyl0.f00001` (shipped; t = 150).
+- The 100 snapshots `1cyl0.f00001` ... `1cyl0.f00100` are not shipped. Phase 1 of `run.local.slurm` writes them, so run the script and not the modal phase alone.
 
 ## Run
 ```bash
 mks 1cyl                  # compile
 sbatch run.local.slurm    # both phases, 8 ranks
 ```
+
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it runs the DNS phase with `dns.par`, then the modal phase with `1cyl.par`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
 
 ## Result
 A cluster, 8 and 16 ranks, 2026-10-09 (identical to six digits at both rank counts):

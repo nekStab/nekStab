@@ -25,6 +25,8 @@ exact start on the invariant subspace. The run script first removes `r0?1cyl0.f*
 an earlier run, because a run writes files with these names and the driver reads the
 highest number it finds.
 
+Run `mks 1cyl`, then `sbatch run.local.slurm`. Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (`SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not make these copies and stops at the missing base flow.
+
 `OTD_SEED=0 sbatch run.local.slurm` starts from white noise instead. Set `endTime = 200`
 in `1cyl.par` for that start.
 

@@ -41,7 +41,9 @@ sit on the cylinder. The quasilaminar leading velocity field is the wake.
 ## Result
 
 Explicit-filter solve (`filterWeight = 1`, `filterCutoffRatio = 0.67`)
-on `base_converged.f00001`. Leading mode σ = 1.15 at St = 0, a stationary
+on `BF_1cyl0.f00001`, the file that `logfile` of the run shows the solver read.
+It is an SFD field at t = 200, written 2026-06-25, not `base_converged.f00001`
+(t = 100), which only starts the run; the two differ by up to 0.062 in velocity. Leading mode σ = 1.15 at St = 0, a stationary
 ring on the cylinder. A wake-frequency mode remains at St = 0.189,
 σ = 0.261, but it is not leading and was not written out. The hpfrt
 result, σ = 0.237 at St = 0.194, is in `spectre_hpfrt.tar`.

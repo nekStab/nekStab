@@ -11,10 +11,10 @@ pre-computed direct and adjoint eigenmodes.
 
 ## Prerequisites
 - Base flow: `BF_1cyl0.f00001` (shipped; the base flow of `../310_stability_direct/direct`)
-- Direct modes: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}` (copy from `../310_stability_direct/direct/`)
-- Adjoint modes: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}` (copy from `../320_stability_adjoint/`)
-- The code reads `dRe`, `dIm` from file `f00001` and `aRe`, `aIm` from file `f00002`. Only the `f00002` files are
-  tracked; run the two stability stages first and copy all eight mode files.
+- Direct modes: `dRe1cyl0.f00001`, `dIm1cyl0.f00001` (shipped; copies of the leading mode of `../310_stability_direct/direct/`)
+- Adjoint modes: `aRe1cyl0.f00002`, `aIm1cyl0.f00002` (shipped; `../320_stability_adjoint/` ships its `f00001` and a run of it writes `f00002`)
+- The code reads `dRe`, `dIm` from file `f00001` and `aRe`, `aIm` from file `f00002`. The stage ships these four files,
+  so nothing has to run first. To make them again, run the two stability stages and copy the same four files from them.
 - No restart-from-time-history needed (the case reads the eigenmodes directly).
 
 ## Mesh

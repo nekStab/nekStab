@@ -6,8 +6,8 @@ The steady k-tau solution is unstable under the Jacobian, but the bare forward
 march on this mesh does not shed -- see `../120_urans/`. SFD still provides a
 controlled way to hold the march on the SFD branch so `310_stability_direct/
 coupled/` and `quasilaminar/` have a base to linearise. The restart field
-those stages read, `base_converged.f00001`, is a local Nek field
-(`*.f?????` is gitignored). This field is a base flow, not a mean flow, and
+those stages read, `base_converged.f00001`, is tracked in both stage
+folders. This field is a base flow, not a mean flow, and
 the Reynolds stress of an SFD run is the residual fluctuation correlation,
 not k, tau, or eddy viscosity.
 
@@ -25,3 +25,9 @@ velocity exactly. Newton therefore does not reach a fixed point of the coupled
 k-tau map from this field, and the SFD field stays the base for the stability
 stages. The stage was removed from the release because it ends in this failure.
 `newton_vs_sfd.png` compares the Newton output with the SFD field.
+
+## Start field
+
+This stage starts from `restart_t150.f00001`, which is not tracked and which no stage writes under that name. To make it, set `endTime = 150` in `../000_dns/1cyl.par`, run that stage, and copy its snapshot at t = 150 here (`writeInterval` is 5, so `1cyl0.f00030`) as `restart_t150.f00001`.
+
+The field of the original run no longer exists, so the result of a new run has not been compared with the figures of this folder.

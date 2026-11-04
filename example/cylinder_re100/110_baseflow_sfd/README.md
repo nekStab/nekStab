@@ -34,8 +34,8 @@ the velocity in one time step) below which the run stops and writes `BF_1cyl0.f0
   exp(-0.0177 t) against exp(-0.0234 t) over the last fifth of the run.
 - OIFS takes steps about ten times larger. At the same gate, 1e-10, it stops after 7619 steps (`akervik_dyn_oifs`, 326 s) and
   9901 steps (`casacuberta_dyn_oifs`, 405 s), against 66464 and 86462 steps for the BDF3 dyn runs. The OIFS fields stay 3.4e-3 from
-  the Newton solution at any gate: at 1e-6, 1e-9 and 1e-10 the field is the same to 4e-6. The gap comes from the OIFS step at CFL 5,
-  not from the gate. The strict runs stay within 4e-5.
+  the Newton solution at the gate 1e-10. A run at the gate 1e-6 (an earlier source) differs from the run at 1e-10 by 9.5e-5 in the vx norm for Akervik and 1.3e-4 for
+  Casacuberta, and by up to 5.8e-3 and 7.9e-3 at one point, so these runs do not separate the OIFS step from the gate as the cause of the gap. The strict runs stay within 4e-5.
 
 ## Parameters
 

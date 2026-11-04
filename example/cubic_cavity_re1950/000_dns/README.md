@@ -54,3 +54,5 @@ mks cav
 sbatch run.local.slurm      # 36 min on 16 ranks of a cluster, 54 min on a 40-core node
 uv run --with numpy --with scipy --with matplotlib python plot.py
 ```
+
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=16 bash run.local.slurm > logfile 2>&1` (it copies `ic_sat.f00001` from `../000_dns_period`; `SLURM_NTASKS` must be at least `lpmin` = 16). A bare `mpiexec -np 16 ./nek5000` does not do that.

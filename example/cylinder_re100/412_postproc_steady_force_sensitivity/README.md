@@ -11,11 +11,11 @@ modifies the von Kármán instability.
 - `userParam07 = 50` — Krylov subspace size
 
 ## Prerequisites
-- Base flow: `BF_1cyl0.f00001` (from `../210_baseflow_newton/`)
-- Direct modes: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}` (from `../310_stability_direct/direct/`)
-- Adjoint modes: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}` (from `../320_stability_adjoint/`)
+- Base flow: `BF_1cyl0.f00001` (shipped; from `../210_baseflow_newton/`)
 - Wavemaker sensitivity inputs: `sr_1cyl0.f00001`, `si_1cyl0.f00001`
-  (written by the run of `../411_postproc_wavemaker/`; the stage ships a copy)
+  (shipped; written by the run of `../411_postproc_wavemaker/`)
+- The code reads no mode file. These three files are all it needs, so nothing has to run first.
+  To make `sr_` and `si_` again, run `../411_postproc_wavemaker/` and copy them from there.
 
 ## Mesh
 2128 elements (`lelg=2128` in `SIZE`). Same mesh as the rest of the cylinder
@@ -30,10 +30,10 @@ python3 plot.py
 ```
 
 ## Latest Result
-Run 2026-10-30 on 4 ranks (gfortran, source `dev` at 89770900), T = 1, `k_dim` = 50:
+Run 2026-10-30 on 4 ranks (gfortran, source at commit 89770900), T = 1, `k_dim` = 50:
 
 - The GMRES solve (`residu_gmres.dat`) ends at a squared relative residual of
-  9.2e-7 after 2 restarts (target 1e-6). The reference holds this as a gate:
+  9.2e-7 after 2 GMRES cycles of 50 and 42 iterations, so one restart (target 1e-6). The reference holds this as a gate:
   a fresh run must end below 1e-6.
 - The sensitivity field `fsr1cyl0.f00001` is concentrated in the recirculation
   bubble and the shear layers next to the cylinder.

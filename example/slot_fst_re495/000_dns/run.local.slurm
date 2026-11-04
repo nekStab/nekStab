@@ -9,7 +9,7 @@
 
 set -euo pipefail
 CASE=${CASE:-slot}
-NPROCS=${SLURM_NTASKS:-4}
+NPROCS=${SLURM_NTASKS:-16}
 EXE=${EXE:-./nek5000}
 
 if [[ -z "${SLURM_JOB_ID:-}" && -z "${LOGFILE_REDIRECTED:-}" ]]; then
@@ -28,7 +28,7 @@ echo "started=$(date --iso-8601=seconds)"
 
 printf "%s\n%s/\n" "${CASE}" "$(pwd)" > SESSION.NAME
 # hpts reads the probe list from the session .his file and writes the probe values after it, in the same file.
-# The file is gitignored, so each run writes it here.
+# Each run writes it here, also over a shipped file.
 printf '3\n8.3333 1.3333 0.0\n15 2 0\n20 2 0\n' > ${CASE}.his
 mpiexec -np "${NPROCS}" "${EXE}"
 echo "finished=$(date --iso-8601=seconds)"

@@ -17,6 +17,7 @@ location of a peak needs pymech:
 uv run --with numpy --with pymech python scripts/check_against_ref.py <stage>
 """
 from __future__ import annotations
+import hashlib
 import json
 import math
 import re
@@ -77,6 +78,25 @@ def _field_peak(path: Path, name: str, axis: int) -> float:
     return where
 
 
+def _is_shipped_copy(stage: Path, fname: str) -> bool:
+    """True when a file still has the bytes of the copy that the repository ships (example/shipped_results.tsv)."""
+    manifest = Path(__file__).resolve().parents[1] / "example" / "shipped_results.tsv"
+    if not manifest.exists():
+        return False
+    # The key comes from the reference, so a stage copied out of the repository is covered too.
+    key = json.loads((stage / "ref" / "reference.json").read_text()).get("case", "") + "/" + fname
+    path = stage / fname
+    with manifest.open() as fh:
+        for line in fh:
+            fields = line.split("\t")
+            if fields[0] == key and hashlib.md5(path.read_bytes()).hexdigest() == fields[1]:
+                # A run can repeat a short text file to the last digit: a file newer than the
+                # executable of the stage comes from a run.
+                exe = stage / "nek5000"
+                return not (exe.exists() and path.stat().st_mtime > exe.stat().st_mtime)
+    return False
+
+
 def extract(stage: Path, source: str) -> float:
     """Read a scalar from a fresh run output.
 
@@ -95,6 +115,9 @@ def extract(stage: Path, source: str) -> float:
     path = stage / fname
     if not path.exists():
         raise FileNotFoundError(f"run output not found: {path} (run the case first?)")
+    # The stages ship their results. A shipped file proves nothing about a run: a run that stopped at start would pass.
+    if _is_shipped_copy(stage, fname):
+        raise ValueError(f"{path} is the shipped copy, no run wrote it (run the case first?)")
 
     if op == "strouhal":
         return _strouhal(path, int(arg[3:]) - 1)

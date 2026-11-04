@@ -28,13 +28,20 @@ mks bfs                                  # build once
 sbatch run.local.slurm                   # 8 ranks, both phases in one job
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it runs both phases and restores `bfs_dns.par` at the end; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that: it runs only the phase of the `bfs.par` in the folder, which is the DNS phase (`bfs_dns.par`) in the shipped state, and writes no `BF_bfs0.f00001`. To run the phases by hand, after `mks bfs`:
+
+```bash
+cp bfs_dns.par bfs.par && mpiexec -np 8 ./nek5000      # phase 1
+cp bfs_newton.par bfs.par && mpiexec -np 8 ./nek5000   # phase 2, needs bfs0.f00004 from phase 1
+```
+
 `run.local.slurm` runs the two phases in order and leaves `bfs.par` as the
 phase-1 file when it ends:
 
 1. Phase 1 (DNS settle): `bfs_dns.par` — uniform IC to steady recirculation on
    this mesh, endTime 400, 483 s on 8 ranks, writes `bfs0.f00001..4`.
 2. Phase 2 (Newton polish): `bfs_newton.par` (`startFrom = bfs0.f00004`) —
-   converges in 4 iterations (639 s on 8 ranks of a cluster) and writes `BF_bfs0.f00001`.
+   converges in 4 iterations (639 s on 8 ranks) and writes `BF_bfs0.f00001`.
 
 The converged steady base flow is written to `BF_bfs0.f00001`.
 

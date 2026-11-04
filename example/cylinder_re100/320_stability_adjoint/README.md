@@ -44,7 +44,7 @@ Run of 2026-10-09 (`ifort`, 8 ranks), 2128 mesh, base flow of `../210_baseflow_n
 - Leading mode: sigma = 0.1247881, omega = 0.7336846 (matches the direct sigma to 6e-7)
 - Wall time: 229 s
 - Outputs: `aRe1cyl0.f0000{1,2}`, `aIm1cyl0.f0000{1,2}`,
-  `Spectre_NSa*.dat`, `Spectre_Ha*.dat`
+  `Spectre_NSa*.dat`, `Spectre_Ha*.dat`. The stage ships `aRe1cyl0.f00001` and `aIm1cyl0.f00001`, the leading mode; `f00002` is not shipped.
 
 ## Plot
 

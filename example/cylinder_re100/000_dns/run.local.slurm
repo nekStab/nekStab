@@ -10,7 +10,7 @@
 set -euo pipefail
 
 CASE=${CASE:-1cyl}
-NPROCS=${SLURM_NTASKS:-4}
+NPROCS=${SLURM_NTASKS:-8}
 EXE=${EXE:-./nek5000}
 
 # Slurm opens --output with truncation by default. Outside Slurm, re-exec
@@ -46,7 +46,7 @@ fi
 
 printf "%s\n%s/\n" "${CASE}" "$(pwd)" > SESSION.NAME
 # hpts reads the probe list from the session .his file and writes the probe values after it, in the same file.
-# The file is gitignored, so each run writes it here.
+# The stage ships this file with the data of an earlier run, and a run needs the probe list in it, so each run writes it here.
 printf '1\n5 0 0\n' > ${CASE}.his
 
 mpiexec -np "${NPROCS}" "${EXE}"

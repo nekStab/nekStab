@@ -46,7 +46,7 @@ not an eigenvalue. `Spectre_Hd.dat` lists every Ritz value with a flag (column 4
 
 The run prints `nekStab: WARNING: no converged multiplier within 1e-3 of 1`. An autonomous orbit has the multiplier 1 of
 its phase mode; an orbit locked to a forcing has none, so the message does not apply. The run took 33 min on 40 ranks
-of a cluster (`ifort`) and 56 min on 12 ranks of nexus-dev (`ifx`); both give `mu_1 = 0.9298793`.
+of a cluster (`ifort`) and 56 min on 12 ranks of a workstation (`ifx`); both give `mu_1 = 0.9298793`.
 
 ![Floquet multipliers, relaxation of the DNS and leading mode](ref/floquet.png)
 
@@ -69,13 +69,14 @@ export of the first values of the Ritz list (the behaviour before the fix of `ou
 ```bash
 printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME
 mks 1cyl
-sbatch --ntasks=12 run.local.slurm      # 56 min on 12 ranks of nexus-dev (ifx)
+sbatch --ntasks=12 run.local.slurm      # 56 min on 12 ranks of a workstation (ifx)
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
-`../210_baseflow_newton/BF_1cyl0.f00001` and `../010_dns_forced/lockin_history.dat` must exist (the field and data
-files are not tracked). `SIZE` has `lpmin = 8`, so the run needs at least 8 ranks.
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the orbit from `../210_baseflow_newton`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
+`BF_1cyl0.f00001` is a copy of `../210_baseflow_newton/BF_1cyl0.f00001`; the stage ships it, and the script copies it only when it is missing. The stage also ships the leading mode, `dRe1cyl0.f00001` and `dIm1cyl0.f00001`, which a run overwrites. `plot.py` reads `../010_dns_forced/lockin_history.dat`, which stage 010 ships. `SIZE` has `lpmin = 8`, so the run needs at least 8 ranks.
 
 ## Files
 

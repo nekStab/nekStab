@@ -54,8 +54,12 @@ a tolerance) or from the fit.
 ![DNS against Floquet](ref/floquet_vs_dns.png)
 
 ## Run
-The initial field `ic_floq.f00001` is built from the outputs of `../000_dns_period/` and
-`../311_stability_direct_floquet/` (field files are not tracked), so run those stages first.
+The initial field `ic_floq.f00001` is built from the base flow `BF_cav0.f00001` and the mode `dRecav0.f00001`
+of `../311_stability_direct_floquet/`. That stage ships neither. Make the base flow from the snapshot
+`../000_dns_period/cav0.f00017`, which that stage ships, with
+`python3 ../000_dns_period/stamp_period.py ../000_dns_period/cav0.f00017 10.78909 ../311_stability_direct_floquet/BF_cav0.f00001`.
+The mode comes from the run of `../311_stability_direct_floquet/` (12.9 h on 16 ranks), so run that stage first.
+`make_ic.py` writes `ic_floq.f00001` and the run writes the DNS fields; this stage ships none of them.
 ```bash
 mks cav
 python3 make_ic.py ../311_stability_direct_floquet/BF_cav0.f00001 ../311_stability_direct_floquet/dRecav0.f00001 1e-3 ic_floq.f00001

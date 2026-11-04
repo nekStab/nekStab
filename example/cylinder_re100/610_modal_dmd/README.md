@@ -13,8 +13,9 @@ Using `dmd_rank=20` avoids auto-rank truncation that would miss the subdominant 
 `run.local.slurm` first runs a DNS (`dns.par`, `userParam01 = 0`) from the restart file
 `rst_1cyl0.f00001` (a limit-cycle state at t = 150) to t = 200. It writes the 100 snapshots
 `1cyl0.f00001` ... `1cyl0.f00100` (one every 0.5 time units), then restores `1cyl.par` and runs the
-modal analysis on them. The restart file and `dns.par` are kept in `../600_modal_pod`; the script
-copies them when they are missing. The DNS takes about 100 s on 8 ranks.
+modal analysis on them. The stage ships the restart file; `dns.par` is kept in `../600_modal_pod`, and the script
+copies it, and the restart file, when they are missing. The snapshots are not shipped; the script writes them
+(the DNS takes about 100 s on 8 ranks), so run the script and not the modal phase alone.
 
 ## Expected outputs
 
@@ -43,6 +44,8 @@ the real part of the shedding mode). `ref/` holds copies as `spectrum.png`, `svd
 mks 1cyl
 sbatch run.local.slurm
 ```
+
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the restart file and `dns.par` from `../600_modal_pod` and runs the DNS phase, then the modal phase; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
 
 The modal phase reads `1cyl0.f00001` through `1cyl0.f00100` from the working directory
 (`modal_prefix='   '`, i.e. SESSION name, 100 snapshots at dt=0.5).

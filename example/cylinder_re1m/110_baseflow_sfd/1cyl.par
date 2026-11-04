@@ -6,7 +6,7 @@
 # different states. Small FIXED dt=5e-3 (CFL~0.5, no OIFS) for a CLEAN
 # converged solution + k-tau stability.
 # Restart continues the developed SFD field (sfdrst.f00001).
-startFrom = restart_t150.f00001 # continue from the developed t=150 field (job 868); SFD stays on to hold velocity steady while avg_all builds a long cumulative time-average of k,tau
+startFrom = restart_t150.f00001 # continue from the developed t=150 field; SFD stays on to hold velocity steady while avg_all builds a long cumulative time-average of k,tau
 
 stopAt = endTime
 endTime = 200.0           # time resets to 0 on restart -> 200 t.u. CUMULATIVE average

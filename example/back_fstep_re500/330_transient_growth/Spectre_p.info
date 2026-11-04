@@ -1,0 +1,43 @@
+Nek5000 version:unknown
+nekStab version:unknown
+[mesh]
+lx1=                            6
+polyOrder N=                    5
+tot elemts=                  1670
+tot points=                 60120
+MPI ranks=                      8
+e/rank=                       208
+[userParams]
+uparam01=          3.300000000000
+uparam02=          0.000000000000
+uparam03=          0.000000000000
+uparam04=          0.000000000000
+uparam05=          0.000000000000
+uparam06=          0.000000000000
+uparam07=         64.000000000000
+uparam08=          5.000000000000
+uparam09=          5.000000000000
+uparam10=          2.000000000000
+[solver]
+ctarg=                     0.4293
+nsteps=                      5983
+dt=                0.4999666E-02
+Re=                      500.0000
+residualTol PRE=    0.1000E-07
+residualTol VEL=    0.1000E-07
+[eigensolver]
+sampling period = 29.913000000000
+k_dim=                         64
+k_used=                        11
+eigentol=           0.1000E-05
+schur_target=                   2
+schur_del=                 0.1000
+schur_stop=                     0
+schur iterations=               0
+total matvecs=                 11
+check matvecs=                  2
+converged=                      4
+outp=                           2
+[vector residuals]
+mode    1 ritz=    0.2915E-11 vector=    0.1867E-04
+mode    2 ritz=    0.3594E-11 vector=    0.4882E-04

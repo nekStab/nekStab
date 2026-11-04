@@ -89,6 +89,8 @@ makeneks 1cyl                       # compile (links this case's .usr)
 printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME   # nek5000 reads the case name from here
 mpirun -np 8 ./nek5000 > logfile    # advances base flow one period T
 ```
+The routine calls `hpts` at every step, which reads the probe list from `1cyl.his`. `makeneks` writes that file from the tracked
+`1cyl.probes` when it builds the case, so the bare `mpirun` line needs no extra step.
 Output: `1cyl0.f00001 … f00100` — 100 snapshots of the evolving base flow
 over one period (vorticity-rate Ω_R carried in the temperature slot).
 

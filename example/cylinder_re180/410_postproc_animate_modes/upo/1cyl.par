@@ -35,7 +35,7 @@ writeToFieldFile = no
 residualTol = 1.0E-8
 residualProj = no
 density = 1.0
-viscosity = -180.0 # Re=180 (Barkley-Henderson Mode A threshold; was -100 historical)
+viscosity = -180.0 # Re=180 (Barkley-Henderson Mode A threshold)
 
 #[TEMPERATURE]
 #solver = none

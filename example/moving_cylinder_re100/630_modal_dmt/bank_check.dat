@@ -1,0 +1,5 @@
+# m  e_m_near  e_m_all  norm_uhat_m/norm_mean    (e_m = |u_orbit - mean - sum_k<=m Re uhat_k| / |u_orbit - mean|)
+0 1 1 1
+1 0.4011871 0.39684544 0.58458792
+2 0.23616374 0.23004535 0.219583
+3 0.14513581 0.14094967 0.13668041

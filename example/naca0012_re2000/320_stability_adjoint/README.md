@@ -27,7 +27,7 @@ sponge strength 1.7; wall time 1992 s (33 min 12 s, from the `logfile`).
   (`../310_stability_direct`; σ = -0.556786, ω = ±9.43325) to 4e-5.
 
 Outputs: the ten leading adjoint eigenmodes `aRenaca00120.f0000{1..10}` and
-`aImnaca00120.f0000{1..10}` (written by the run; field files are gitignored, not tracked). The mode
+`aImnaca00120.f0000{1..10}` (written by the run; the stage ships only `aRenaca00120.f00001` and `aImnaca00120.f00001`, the leading mode, and the run overwrites them). The mode
 file number is the row number in `Spectre_NSa_conv.dat`.
 
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged

@@ -12,7 +12,7 @@ timeStepper = bdf3
 targetCFL = 0.5
 
 writeControl = runTime
-writeInterval = 5  # snapshot every 5 T_c so we get ~20 frames for the limit-cycle GIF (D2)
+writeInterval = 5  # snapshot every 5 T_c so we get ~20 frames for the limit-cycle GIF
 writeDoublePrecision = no
 
 dealiasing = yes

@@ -18,7 +18,17 @@ else
 fi
 _nekstab_dir=$(cd "$(dirname "$_nekstab_file")" && pwd)
 
-if [ -n "${BASH_SOURCE:-}" ] && [ "${BASH_SOURCE[0]}" = "$0" ]; then
+# Executed, not sourced? bash: the file is $0. zsh: the evaluation context lacks "file".
+# Other shells (sh, dash): $0 is the file name when executed, the shell name when sourced.
+_nekstab_executed=
+if [ -n "${BASH_SOURCE:-}" ]; then
+    [ "${BASH_SOURCE[0]}" = "$0" ] && _nekstab_executed=1
+elif [ -n "${ZSH_VERSION:-}" ]; then
+    case $ZSH_EVAL_CONTEXT in *:file*) ;; *) _nekstab_executed=1 ;; esac
+else
+    case ${0##*/} in exports.sh) _nekstab_executed=1 ;; esac
+fi
+if [ -n "$_nekstab_executed" ]; then
     echo "exports.sh: run it with 'source $_nekstab_dir/exports.sh', not 'bash exports.sh'."
     exit 1
 fi
@@ -30,6 +40,8 @@ export PATH=$NEKSTAB_SOURCE_ROOT/bin:$NEK_SOURCE_ROOT/bin:$PATH
 
 # Large cases need a large stack; ignore the error where the limit is fixed.
 ulimit -s unlimited 2>/dev/null || true
+# The README says the stack limit is removed: say so when it is not.
+[ "$(ulimit -s)" = unlimited ] || echo "nekStab: stack limit stays at $(ulimit -s) kB, the system allows no more." >&2
 
 # Tab completion of mks (bash only).
 if [ -n "${BASH_VERSION:-}" ] && [ -f "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash" ]; then
@@ -38,4 +50,4 @@ fi
 
 echo "nekStab: NEKSTAB_SOURCE_ROOT=$NEKSTAB_SOURCE_ROOT"
 echo "nekStab: NEK_SOURCE_ROOT=$NEK_SOURCE_ROOT"
-unset _nekstab_file _nekstab_dir
+unset _nekstab_file _nekstab_dir _nekstab_executed

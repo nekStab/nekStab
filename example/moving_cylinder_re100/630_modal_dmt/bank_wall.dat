@@ -1,0 +1,5 @@
+# k  re_uhat_y  im_uhat_y    (mean over the wall nodes; exact: re_uhat_y = A 2 pi f for k = 1, 0 for the others)
+1 1.1147907 -0.0016635266
+2 6.1008592e-07 4.4732997e-06
+3 1.9706054e-07 1.6825377e-06
+4 1.3496581e-06 0

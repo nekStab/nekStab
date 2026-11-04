@@ -8,7 +8,7 @@ Leading eigenvalue of the linearised Navier-Stokes operator about the mean flow 
 - Mode `userParam01 = 3.1` (direct eigensolver, Krylov-Schur), `userParam03 = 2` (two eigenvalues, one complex pair), `userParam07 = 100` (size of the Krylov basis).
   The mesh, `1cyl.usr`, `SIZE` and the settings of the time stepper are those of `../310_stability_direct/direct`. That stage uses `userParam07 = 50` on purpose; the mean flow needs 100.
 - `endTime = 1` is the sampling period of the Krylov sequence: one Arnoldi step integrates the linearised equations over one time unit (105 steps of 9.5e-3).
-- Base flow: `BF_1cyl0.f00001`, a copy of `../140_baseflow_meanflow/BFA1cyl0.f00001` (`run.local.slurm` copies it). The field files are not tracked.
+- Base flow: `BF_1cyl0.f00001`, a copy of `../140_baseflow_meanflow/BFA1cyl0.f00001` (`run.local.slurm` copies it when the file is missing). The stage ships this copy and the real and imaginary parts of the leading mode, `dRe1cyl0.f00001` and `dIm1cyl0.f00001`; a run writes the modes again.
 - No sponge: the lines that set it in `1cyl.usr` are commented out, as in stage 310.
 
 ## Result (nd, `ifx`, 8 ranks)
@@ -53,6 +53,8 @@ sbatch run.local.slurm      # 8 ranks; run ../140_baseflow_meanflow first
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
+
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the base flow from `../140_baseflow_meanflow`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
 
 ## Literature
 

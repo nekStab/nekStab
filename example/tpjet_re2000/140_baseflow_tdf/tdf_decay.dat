@@ -1,0 +1,2 @@
+# p  residual(t=100)  residual(t=300)  residual(end)  residual(max)  t(max)    (residual = c t^p fitted over t >= 100)
+-2.488431e+00 5.316156e-06 3.811122e-07 6.531066e-08 3.242033e-04 2.145556e+01

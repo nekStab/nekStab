@@ -141,7 +141,7 @@ Intel's MKL includes FFTW3-compatible wrappers, so no additional installation is
 ### Clone and Setup
 
 ```bash
-git clone https://github.com/nekStab/nekStab.git
+git clone --depth=1 --branch v2.0.0 https://github.com/nekStab/nekStab.git
 cd nekStab
 ./Nek5000setup.sh
 ```
@@ -242,7 +242,7 @@ NEKSTAB_EXTRA_FFLAGS="-O3 -march=native" mks 1cyl
 ```bash
 cd example/cylinder_re100/000_dns
 mks 1cyl                    # Compile
-nekbmpi 1cyl 4              # Run on 4 MPI ranks
+nekbmpi 1cyl 8              # Run on 8 MPI ranks
 tail -f logfile             # Monitor output
 killall nek5000             # Stop if needed
 ```
@@ -250,19 +250,19 @@ killall nek5000             # Stop if needed
 ### 2. Base Flow (Newton-Krylov)
 
 ```bash
-cd example/cylinder_re100/210_baseflow_newton
+cd example/cylinder_re100/210_baseflow_newton/fp
 # Ensure userParam01 = 2.0 in 1cyl.par
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 # Output: BF_1cyl0.f00001 (converged base flow)
 ```
 
 ### 3. Direct Stability Analysis
 
 ```bash
-cd example/cylinder_re100/310_stability_direct
+cd example/cylinder_re100/310_stability_direct/direct
 # Ensure userParam01 = 3.1 in 1cyl.par
 # Ensure base flow file exists: BF_1cyl0.f00001
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 # Output: dRe*, dIm* (eigenmodes), eigenvalues in logfile
 ```
 
@@ -271,17 +271,17 @@ mks 1cyl && nekbmpi 1cyl 4
 ```bash
 cd example/cylinder_re100/320_stability_adjoint
 # Ensure userParam01 = 3.2 in 1cyl.par
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 # Output: aRe*, aIm* (adjoint eigenmodes)
 ```
 
 ### 5. Wavemaker Computation
 
 ```bash
-cd example/cylinder_re100/410_postproc_animate_modes
-# Ensure userParam01 = 4.2 in 1cyl.par
-# Requires both direct and adjoint modes
-mks 1cyl && nekbmpi 1cyl 4
+cd example/cylinder_re100/411_postproc_wavemaker
+# Ensure userParam01 = 4 (includes 4.2, the wavemaker) in 1cyl.par
+# Requires both direct and adjoint modes (the stage ships them)
+mks 1cyl && nekbmpi 1cyl 8
 ```
 
 ---
@@ -561,8 +561,8 @@ on the cylinder at Re = 100 (T = 1, `k_dim` = 50) and ends at a squared relative
 
 The boundary conditions of the case matter. The adjoint map needs the same conditions as the adjoint eigenproblem (mode 3.2):
 the outflow `O` becomes a Dirichlet condition `v` in `usrdat2`, and the inflow stays `v`. A case that also turns the inflow
-into `O` opens the upstream boundary; the adjoint map then grows like `exp(3 T)` and GMRES stalls near a squared residual of
-1e-2. The mode prints a warning when GMRES ends above its target, and it still writes the field. Treat that field as
+into `O` opens the upstream boundary; the squared norm of the adjoint map then grows from 0.10 at T = 1 to 19 at T = 4 and
+3.9e25 at T = 10, and GMRES stalls near a squared residual of 1e-2. The mode prints a warning when GMRES ends above its target, and it still writes the field. Treat that field as
 unverified.
 
 ### Mode 5: OTD
@@ -716,7 +716,7 @@ SPOD reduces to POD for a single block and to DMD for broadband-limited signals.
 # 1. Generate DNS snapshots (run DNS, save every 0.5 time units)
 cd example/cylinder_re100/000_dns
 # Edit 1cyl.par: writeInterval = 0.5, endTime = 50
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 
 # 2. Run modal analysis
 cd ../modal
@@ -725,7 +725,7 @@ ln -s ../dns/1cyl0.f* .     # Link snapshots
 #   modal_prefix = '   '
 #   modal_nsnap = 100
 #   modal_dt = 0.5
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 
 # 3. Plot spectra
 python plot_modal.py
@@ -1374,7 +1374,7 @@ genmap
 | 5 | OTD | `500_otd` |
 | 6 | modal decomposition | POD, DMD, SPOD, DMT filter bank |
 
-A stage folder is a complete case: `.par`, `.usr`, `SIZE`, the mesh (`.re2`, `.ma2`), `run.local.slurm`, a `README.md`, a `plot.py` and a `ref/` folder with `reference.json` and the figures. The field files (base flows, restart files, modes) are not tracked. A stage that needs the field of an earlier stage says so in its README, and its run script copies the file from the sibling folder. [`EXAMPLES.md`](EXAMPLES.md) gives the rationale of each kind of stage, the case catalog and the verified results.
+A stage folder is a complete case: `.par`, `.usr`, `SIZE`, the mesh (`.re2`, `.ma2`), `run.local.slurm`, a `README.md`, a `plot.py` and a `ref/` folder with `reference.json` and the figures. A stage also ships its start fields and its main result, so a reader sees them without running: [`example/REFERENCE_RESULTS.md`](example/REFERENCE_RESULTS.md) gives the list and the file format. A run overwrites these files. The other fields are written by a run. A stage that needs a field it does not ship says so in its README. [`EXAMPLES.md`](EXAMPLES.md) gives the rationale of each kind of stage, the case catalog and the verified results.
 
 ### Available Cases
 
@@ -1753,8 +1753,8 @@ grep "run successful" logfile      # Verify completion
 ### Triggering CI
 
 CI runs automatically on:
-- Push to `dev` branch
-- Pull requests to `dev` branch
+- Push to `main` branch
+- Pull requests to `main` branch
 - Manual dispatch via Actions page
 
 ### Adding New Test Cases
@@ -1791,7 +1791,7 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 
 **Eigenvalues not converging**
 - Increase `k_dim` (more Krylov vectors)
-- Decrease `eigen_tol` (looser tolerance initially)
+- Increase `eigen_tol` (looser tolerance initially)
 - Check time step: too large can miss fast modes
 
 **Newton not converging**
@@ -1803,12 +1803,13 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - A seed from a filtered DNS can start at a residual 40 times that of the DNS (see the explicit velocity filter under Base Flow), and the residual can stay flat or rise for three iterations in a row before it falls (`lid_driven_re3600`: 14 iterations in all). The loop ends only after six iterations without progress.
 
 **Run stops with `k_normalize non-finite norm` in a Newton or Krylov mode**
-- Set `residualProj = no` in `[VELOCITY]`. Each matvec starts from an unrelated
-  vector, so the velocity residual projection has no history to use, and on
-  `naca0012_re2000` its Helmholtz solve produced a non-finite norm at 24 or more
-  ranks on a cluster (ifort). With `residualProj = no` the Newton run gave identical
-  residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
-  the projection is on in these modes.
+- Set `residualProj = no` in `[VELOCITY]`. On `naca0012_re2000` a run with the
+  projection on stopped with a non-finite norm at 24 or more ranks on a cluster
+  (ifort). With `residualProj = no` the Newton run gave identical residuals at 8,
+  16, 24 and 32 ranks. Each matvec starts from an unrelated vector, so the velocity
+  residual projection has no useful history in these modes; that this is the cause
+  was not shown. `nekStab` prints a note at start-up when the projection is on in
+  these modes.
 
 **An eigenvalue run stops writing to the log while all ranks use 100 % CPU**
 - Seen in versions before 2.0.0 with Intel MKL (`ifx` or `ifort`). The stack of each
@@ -1902,10 +1903,15 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 **Run stops with `Cannot open history file in subroutine hpts()`**
 - `hpts` reads the probe list from `<session>.his` and writes the probe values
   after it, in the same file. The file name ends in `.his`, which `.gitignore`
-  excludes, so a fresh clone does not have it. Each `run.local.slurm` of the
-  examples writes the probe list before the run. In your own case, create the
-  file: the first line holds the number of points, then one line per point with
-  `x y z` (`x y` in 2D).
+  excludes, so a fresh clone does not have it. Every example stage that uses
+  history points tracks the probe list as `<case>.probes` (a few stages track a
+  ready `<case>.his` instead), and `mks <case>` copies the `.probes` file to
+  `<case>.his` when the build starts, if `<case>.his` does not exist. It never overwrites an
+  existing `.his`, which can hold the history of a run. Change the probes in
+  `<case>.probes`, delete `<case>.his` and run `mks` again. In your own case,
+  create `<case>.probes`: the first line holds the number of points, then one
+  line per point with `x y z` (`x y` in 2D). When the `.usr` calls `hpts` and
+  neither file exists, `mks` prints a warning with this format.
 
 **History points hold zeros**
 - Set `lhis` in `SIZE` to a value that does not divide the number of probes. When

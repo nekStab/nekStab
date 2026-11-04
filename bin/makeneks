@@ -116,6 +116,48 @@ validate_target () {
     return 0
 }
 
+# Nek5000 hpts stops with "Cannot open history file in subroutine hpts()" when
+# <case>.his is missing: hpts reads its probe list (first line the number of
+# probes, then one line of coordinates per probe) from that file and appends the
+# probe values after it. The .his file is gitignored because a run fills it with
+# data, so a case ships its probe list as <case>.probes and this step copies it
+# when the build starts. Users change the probes in <case>.probes. An existing
+# .his is never overwritten: it can hold the history of a run.
+# The copy does not depend on the .usr: nekStab routines (mode 4.52) call hpts
+# too, so a case that has a .probes file always gets its .his.
+ensure_probe_file () {
+    local c=$1
+    local calls_hpts=false
+
+    if [ -f "$c.usr" ]; then
+        # fixed form: column 1 of c, C, * or ! makes a comment line; a later ! starts a comment
+        if sed -e '/^[cC*!]/d' -e 's/!.*//' "$c.usr" \
+            | grep -qiE '(^|[^[:alnum:]_])call[[:space:]]+hpts([^[:alnum:]_]|$)'; then
+            calls_hpts=true
+        fi
+    fi
+
+    [ -f "$c.his" ] && return 0
+
+    if [ -f "$c.probes" ]; then
+        if ! cp "$c.probes" "$c.his"; then
+            # a part-written file would pass the -f check above at the next build;
+            # a link stays: it names the place where the user keeps the history
+            [ -L "$c.his" ] || rm -f "$c.his"
+            echo "Error: cannot copy $c.probes to $c.his; hpts would stop without the history file." >&2
+            return 1
+        fi
+        echo "$c.his written from $c.probes (hpts reads its probe list from it)"
+    elif [ "$calls_hpts" = true ]; then
+        echo "Warning: $c.usr calls hpts, but neither $c.his nor $c.probes exists, and hpts stops without it." >&2
+        echo "  Write $c.probes: the first line is the number of probes, then one line of coordinates per probe," >&2
+        echo "  for example (one probe at x = 5, y = 0, z = 0):" >&2
+        echo "    1" >&2
+        echo "    5 0 0" >&2
+    fi
+    return 0
+}
+
 # Check if gslib is compatible with current compiler; clean if not
 check_gslib_compat () {
     local gslib_dir="$NEK_SOURCE_ROOT/3rd_party/gslib"
@@ -507,6 +549,9 @@ echo "NEKSTAB_SOURCE_ROOT = $NEKSTAB_SOURCE_ROOT" > "$FILE"
 echo 'include $(NEKSTAB_SOURCE_ROOT)/src/makefile_nekStab' >> "$FILE"
 
 : ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
+
+# The probe list file of the case, before the build
+ensure_probe_file "$target" || exit 1
 
 # Check gslib compatibility before building dependencies
 check_gslib_compat

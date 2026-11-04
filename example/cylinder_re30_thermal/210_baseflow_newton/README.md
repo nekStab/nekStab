@@ -41,10 +41,11 @@ references:
 
 - `BFre25t_1cyl0.f00001` and `BFre25t_1cyl.nek5000`
   Legacy seed thermal base flow at `Re = 25`, mesh `nelg = 1996`. Not loaded
-  by the current `.par`.
+  by the current `.par`. The stage does not ship it.
 - `BF_1cyl0.f00001` and `BF_1cyl.nek5000`
-  Solved thermal base flow at `Re = 30`, produced before the mesh
-  unification. Kept for plot regeneration.
+  Solved thermal base flow at `Re = 30` on the current mesh (`nelg = 2128`),
+  written by the cold-start run. The stage ships `BF_1cyl0.f00001` (single
+  precision, without pressure); a run overwrites it. `plot.py` reads it.
 
 ## Files In This Folder
 
@@ -56,7 +57,7 @@ Case-defining files:
 - `1cyl.ma2`
 - `SIZE`
 
-Saved solution files:
+Saved solution files (the stage ships only `BF_1cyl0.f00001`):
 
 - `BFre25t_1cyl0.f00001`
 - `BFre25t_1cyl.nek5000`
@@ -73,8 +74,8 @@ Generated helper state:
 - `.state`
 
 The archived convergence figure is kept in the folder. A run writes
-`residu_newton.dat`, `residu_gmres.dat`, and `residu_arnoldi.dat`; they are
-not tracked in git. The cold-start run converges in 14 Newton iterations to a
+`residu_newton.dat`, `residu_gmres.dat`, and `residu_arnoldi.dat`; the stage
+ships the three files of the validated run and a run overwrites them. The cold-start run converges in 14 Newton iterations to a
 residual of 8.9e-9 (`ref/reference.json`).
 
 ## What `1cyl.usr` Is Testing

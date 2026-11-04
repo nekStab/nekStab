@@ -32,6 +32,12 @@ maintainability, numerical robustness, and HPC performance.
    the copies of a shared point in another order. In `cylinder_re100/310`
    (8 ranks) the leading growth rate moved by at most 5e-9. With the method
    forced, repeat runs are byte-identical (`DOC.md`, Troubleshooting).
+6. **The zero-crossing period probe can log one wrong period.** With
+   `ifzerocross`, when the new level is below the signal at the crossing, the
+   next period spans crossings of two levels. For a sine of period 1 and mean
+   -0.25, with start level 0 and dt = 0.017, the logged periods are 1.0000,
+   0.9597, 0.9992, 1.0008, 1.0000. Read the period from a later line of the log.
+   A fix is planned for a later version.
 
 
 ## What changed
@@ -462,7 +468,7 @@ jumps of 1e-8 or less, which Nek5000 averages when it reads the file.
 The source changed once more after that: the step count of Newton for
 periodic orbits (`893a1140`, `bed493ba`, `557c991c`), the weak-form dissipation of
 the energy budget (`98c78542`) and some options that are off by default.  So
-27 of the now 80 stages ran again on the final `src/` (commit `9cbe7538`): the Newton,
+27 of the now 80 stages ran again on `src/` as of commit `9cbe7538`, before the last changes below: the Newton,
 Floquet and budget stages of the periodic orbits, the stages that a change
 reverted in that commit had reached, and the restored stage
 `cylinder_re100/412_postproc_steady_force_sensitivity`.  Two of the 27, Newton on
@@ -546,53 +552,6 @@ shift of the expected value by five tolerances makes the check fail.
 - **6.2**: DMD
 - **6.3**: SPOD
 - **6.4**: DMT filter bank (online, on the DNS)
-
-
-## TODO before tagging 2.0
-
-- [x] Run validation suite across examples — 24 validated at rc2, 15 deferred
-- [x] Tag `v2.0.0-rc2` and run rc cycle
-- [x] Adjoint correctness: Floquet orbit replay + thermal adjoint — fixed
-      and validated (rc3)
-- [x] Tag `v2.0.0-rc3`
-- [x] `ref/` reference data for every stage outside the experimental
-      `cylinder_re1m` (cubic cavity, moving cylinder, thermal cylinder,
-      wavemakers, forced jet)
-- [x] `check_against_ref.py` sweep across the stages of the final rerun
-      as the regression gate (78 of 79 stages had a passing result before
-      the eigensolver change of `0ca2a0e1`)
-- [x] Six stages ran again because their folders lost tracked log and
-      output files (150 figure copies, four `plot.out` logs and twelve
-      wavemaker output fields were removed): `back_fstep_re500/210_baseflow_newton`,
-      `flip_flop_re62/210_baseflow_newton`,
-      `thermosyphon_ra500/210_baseflow_newton`,
-      `thermosyphon_ra500/310_stability_direct/direct`,
-      `cylinder_re100/411_postproc_wavemaker` and
-      `naca0012_re2000/411_postproc_wavemaker` (1 s to 20 min each, on
-      a cluster; all six pass)
-- [x] Results of the source of commit `6c122882` for
-      `back_fstep_re500/330_transient_growth` (6.3 h on 8 ranks of c8) and
-      `cylinder_re100/210_baseflow_newton/fp` (55 min on 8 ranks of c8)
-- [x] Rerun of the 23 stages that run the Krylov-Schur eigensolver (every
-      stage numbered 310, 311, 315, 320, 321 or 330) and the 9 stages that
-      read their modes, on the source of `01f69c2e`: all 32 pass (about
-      630 core-hours on a cluster, c8, x1 and x3, both passes included)
-- [x] Check of the averaging of `fd684c48` against the results:
-      `bin/c0check` on every exported mode, and a rerun of
-      `flip_flop_re62` 311, 321 and 411 (the only stages with jumps)
-- [x] `cubic_cavity_re1950/350_dns_unstable_orbit` (13.7 h on 16 ranks,
-      220 core-hours) keeps the reference of its earlier run: the probe file is
-      byte-identical on the final source over the first 3 time units
-- [x] Update `DOC.md` with string-mode documentation
-- [x] Update copyright year (2020-2026) in `main.f90`
-- [x] Review SPOD streaming module: it ran on `cylinder_re100/620_modal_spod`
-      (8 ranks of a cluster), after a fix of the implicit real `spod_s_nfreq` in
-      its external routines (they now import it and declare `implicit none`). Its eigenvalues equal those of the batch
-      routine `spod_compute` to six digits in all 33 frequency bins, and the
-      three eigenvalues of each bin sum to the total power of the POD-FFT
-      analysis to four digits. The driver calls the streaming routine only;
-      `spod_compute` is kept as the reference implementation.
-- [ ] Tag `v2.0.0` and merge `dev` → `main`
 
 
 ---

@@ -9,10 +9,12 @@ paths from existing mode files.
 
 - Base flow: `BF_naca00120.f00001`
 - Direct modes: `dRenaca00120.f0000{1,2}` and `dImnaca00120.f0000{1,2}`
-- Adjoint modes: `aRenaca00120.f0000{1,2}` and `aImnaca00120.f0000{1,2}`
+- Adjoint modes: `aRenaca00120.f00002` and `aImnaca00120.f00002`
 
-The stage-local `maxmodes` is set to 2 because only the two shipped direct
-mode snapshots are present.
+The wavemaker and the base-flow sensitivity read the direct modes from `f00001` and the adjoint modes from `f00002`. The energy
+budget loops over `maxmodes = 2` (in `naca0012.usr`) and reads both direct files. The stage ships these seven files, so it runs
+without another stage. Stage 320 ships the adjoint modes `f00001`;
+a run of `../320_stability_adjoint/` writes the `f00002` files too.
 
 ## Run
 

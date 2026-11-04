@@ -79,6 +79,8 @@ uv run --with numpy --with pymech --with matplotlib python plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=16 bash run.local.slurm > logfile 2>&1` (it stamps the base flow with `stamp_period.py` and copies the mode files from `../311_stability_direct_floquet`; `SLURM_NTASKS` must be at least `lpmin` = 16). A bare `mpiexec -np 16 ./nek5000` does not do that.
+
 ## Outputs
 
 - `PKE_floquet_cav0.f00001`: the budget, one number per line. Lines 1 to 9: integrals of the nine production fields. Line 10: −D̄. Line 11: P̄.

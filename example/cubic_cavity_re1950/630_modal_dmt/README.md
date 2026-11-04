@@ -82,6 +82,8 @@ uv run --with numpy --with matplotlib --with pymech python plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=16 bash run.local.slurm > logfile 2>&1` (it copies the start field from `../000_dns` or `../000_dns_period`; `SLURM_NTASKS` must be at least `lpmin` = 16). A bare `mpiexec -np 16 ./nek5000` does not do that.
+
 ## Outputs
 
 - `bRecav0.f0000k`, `bImcav0.f0000k`: Re û_k and Im û_k of filter k, averaged over the last 4 periods. The time stamp is the end of the run.

@@ -8,6 +8,8 @@ This case is not validated. Its stages have no `ref/` baseline, they were not re
 validation gallery does not list them. The numbers below come from earlier runs on this mesh and are not checked by
 any test. Use the case as a starting point for RANS stability work, not as a check of the code.
 
+The start fields of this case are older than the validated runs of the other cases: `120_urans/steady_wake.f00001` (2026-10-01) `310_stability_direct/*/base_converged.f00001` and `coupled/BF_1cyl0.f00001` (2026-06-24), and `quasilaminar/BF_1cyl0.f00001` (2026-06-25). The figures in the stage folders come from those earlier runs.
+
 ## Case note
 
 This directory is the high-Reynolds-number cylinder. The point of the case is the gap between a base flow and a mean flow. That gap is small near onset and large far above it. Thesis source for the cylinder wake: chapter 2, `sec:ex:1cyl`. Method source: chapter 2, `Large-scale eigensolvers`.
@@ -40,7 +42,7 @@ The force is off unless `nekStab_usrchk` calls `reynolds_enable`. That call is n
 
 ### Base, steady
 
-`110_baseflow_sfd/` holds the SFD field `base_converged.f00001`. It is not a fixed point. The SFD residual floors near 5e-4, and transverse velocity is not zero. Figures: `110_baseflow_sfd/base_fields.png`, `110_baseflow_sfd/sfd_residual.png`.
+`110_baseflow_sfd/` writes the SFD field `base_converged.f00001` and does not ship it; `310_stability_direct/coupled/` and `310_stability_direct/quasilaminar/` ship a copy. It is not a fixed point. The SFD residual floors near 5e-4, and transverse velocity is not zero. Figures: `110_baseflow_sfd/base_fields.png`, `110_baseflow_sfd/sfd_residual.png`.
 
 `310_stability_direct/coupled/` and `quasilaminar/` linearize about that field. Those spectra are base-flow spectra of an imperfect steady base. Coupled versus quasilaminar is a choice about the closure perturbation. It is not the base-versus-mean choice, and it is not a Reynolds stress.
 
@@ -78,7 +80,7 @@ The run mesh is each stage's `1cyl.re2` (1480 elements, body-fitted, closest nod
 
 ## Tests
 
-`120_urans/check_force.py` reads the 20-time-unit moments. Pass is `|R_uu|`, `|R_vv|`, and `|R_uv|` below `1e-2` in the box `1 < x < 12`, `|y| < 2`, and centerline `u` at `x = 5` in `[0.5, 0.75]`. A missing subtraction leaves `O(1)`. On the moments now on disk the check prints `|Ruu|=6.5e-4`, `|Rvv|=1.4e-4`, `|Ruv|=1.7e-4`, `u(5,0)=0.604`, and `PASS`. The same window is `120_urans/states.png` and `120_urans/stress.png`.
+`120_urans/check_force.py` reads the 20-time-unit moments. Pass is `|R_uu|`, `|R_vv|`, and `|R_uv|` below `1e-2` in the box `1 < x < 12`, `|y| < 2`, and centerline `u` at `x = 5` in `[0.5, 0.75]`. A missing subtraction leaves `O(1)`. The moment files are not shipped, so on a clone the check prints `SKIP`, which is not a pass: it needs a run of the stage. On the moments of a run it prints `|Ruu|=6.5e-4`, `|Rvv|=1.4e-4`, `|Ruv|=1.7e-4`, `u(5,0)=0.604`, and `PASS`. The same window is `120_urans/states.png` and `120_urans/stress.png`.
 
 ```bash
 python3 example/cylinder_re1m/120_urans/check_force.py

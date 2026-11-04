@@ -25,4 +25,4 @@ field. Verify with `scripts/check_against_ref.py example/cubic_cavity_re1920/210
 the base flow on the plane z = 0. `ref/newton.png` is the figure of the run named in
 `ref/reference.json`.
 
-**Run**: `sbatch run.local.slurm`. Field files are not tracked.
+**Run**: `sbatch run.local.slurm`. The stage ships `BF_cav0.f00001`, the converged base flow of the validated run (single precision, without pressure), not the seed: Newton started from it fails the first-residual check. To run Newton again, run `../../000_dns/` first and copy its last field `cav0.f00010` (the snapshots are not shipped) over `BF_cav0.f00001`; the run overwrites that file and writes `nwtcav0.f*` and `rescav0.f*` (not shipped). The shipped file is the base flow that the later stages copy.
