@@ -266,7 +266,7 @@ killall nek5000      # Stop the simulation
 
 > **Tip:** Use `nekbmpi 1cyl 8 &` to run in background, then `tail -f logfile` in the same terminal.
 
-**Rank count.** A run needs at least as many MPI ranks as `lpmin` in the `SIZE` file of the case. The array sizes of `SIZE` follow from `lelt = lelg/lpmin + 3`, so fewer ranks put more elements on one rank than `lelt` allows, and Nek5000 stops at start with a message like `requires lelt >= 532 for np = 4`. The cylinder examples have `lpmin = 8`, so use 8 ranks or more.
+**Rank count.** A run needs at least as many MPI ranks as `lpmin` in the `SIZE` file of the case. The array sizes of `SIZE` follow from `lelt = lelg/lpmin + 3`, so fewer ranks put more elements on one rank than `lelt` allows, and Nek5000 stops at start with a message like `requires lelt >= 532 for np = 4`. Stages differ: most cylinder stages have `lpmin = 8` and `cylinder_re100/412_postproc_steady_force_sensitivity` has `lpmin = 4`, so read `lpmin` in the `SIZE` file of the stage you run.
 
 **Running without `nekbmpi`.** `nek5000` reads the case name and the case directory from the file `SESSION.NAME`. `nekbmpi` and `run.local.slurm` write it. A bare `mpiexec -np 8 ./nek5000` does not, and stops with `Error while reading SESSION.NAME`. Write it first, in the case folder:
 
