@@ -6,10 +6,12 @@
 This stage has multiple variants that share the same dispatch subroutine but
 use different parameter choices. Each variant lives in its own subdirectory.
 
-The two variants are the two RANS stability operators, run on the same
-imperfect SFD field (`base_converged.f00001`). Both spectra are base-flow
-spectra of that field, not mean-flow spectra. Coupled versus quasilaminar is
-a choice about the closure linearization, not a Reynolds stress:
+The two variants are the two RANS stability operators, each run on an
+imperfect SFD field: `BF_1cyl0.f00001` of each variant is the base flow that
+the solver reads. In `coupled/` it is `base_converged.f00001` (t = 100). In
+`quasilaminar/` it is another field (t = 200), up to 0.062 away in velocity.
+Both spectra are base-flow spectra, not mean-flow spectra. Coupled versus
+quasilaminar is a choice about the closure linearization, not a Reynolds stress:
 
 - `coupled/` — full RANS Frechet. Explicit-filter solve (`filterWeight = 1`,
   `filterCutoffRatio = 0.67`): leading mode σ = 3.41 at St = 0.491, on the

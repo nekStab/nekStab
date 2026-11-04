@@ -22,7 +22,7 @@ leading velocity field is the wake.
 
 ## Status
 
-Run on the SFD field `base_converged.f00001`. Explicit-filter solve
+Run on the SFD field `BF_1cyl0.f00001`, a copy of `base_converged.f00001`. Explicit-filter solve
 (`filterWeight = 1`, `filterCutoffRatio = 0.67`): leading mode σ = 3.41
 at St = 0.491, on the cylinder. A converged mode is at St = 0.193 with
 σ = 3.35. The hpfrt spectrum is in `spectre_hpfrt.tar`.
