@@ -147,8 +147,8 @@ def test_real_file_smoke() -> None:
 
     assert result.returncode == 0, result.stderr
     # Header and vx norm of the tracked cylinder_re100 restart field.
-    assert "nelt=2128" in result.stdout
-    assert "time=1.000000e+02" in result.stdout
-    assert "istep=9948" in result.stdout
+    # Each key is matched as a whole token: "nelt=21280" must not pass for "nelt=2128".
+    for token in ("nelt=2128", "time=1.000000e+02", "istep=9948"):
+        assert re.search(rf"(?<!\S){re.escape(token)}(?!\S)", result.stdout), token
     vx_line = next(line for line in result.stdout.splitlines() if line.split()[:1] == ["vx"])
     assert "norm= 2.664943e+02" in vx_line
