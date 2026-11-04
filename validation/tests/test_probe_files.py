@@ -194,7 +194,8 @@ def test_mks_stops_when_the_copy_fails(tmp_path: Path) -> None:
     assert r.returncode != 0
     assert "c.his written" not in r.stdout
     assert "cannot copy c.probes" in r.stderr
-    assert not (tmp_path / "c.his").exists()
+    # the failed copy keeps the link
+    assert (tmp_path / "c.his").is_symlink()
 
 
 def test_mks_removes_a_part_written_history(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
