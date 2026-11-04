@@ -561,8 +561,8 @@ on the cylinder at Re = 100 (T = 1, `k_dim` = 50) and ends at a squared relative
 
 The boundary conditions of the case matter. The adjoint map needs the same conditions as the adjoint eigenproblem (mode 3.2):
 the outflow `O` becomes a Dirichlet condition `v` in `usrdat2`, and the inflow stays `v`. A case that also turns the inflow
-into `O` opens the upstream boundary; the adjoint map then grows like `exp(3 T)` and GMRES stalls near a squared residual of
-1e-2. The mode prints a warning when GMRES ends above its target, and it still writes the field. Treat that field as
+into `O` opens the upstream boundary; the squared norm of the adjoint map then grows from 0.10 at T = 1 to 19 at T = 4 and
+3.9e25 at T = 10, and GMRES stalls near a squared residual of 1e-2. The mode prints a warning when GMRES ends above its target, and it still writes the field. Treat that field as
 unverified.
 
 ### Mode 5: OTD
@@ -1803,12 +1803,13 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 - A seed from a filtered DNS can start at a residual 40 times that of the DNS (see the explicit velocity filter under Base Flow), and the residual can stay flat or rise for three iterations in a row before it falls (`lid_driven_re3600`: 14 iterations in all). The loop ends only after six iterations without progress.
 
 **Run stops with `k_normalize non-finite norm` in a Newton or Krylov mode**
-- Set `residualProj = no` in `[VELOCITY]`. Each matvec starts from an unrelated
-  vector, so the velocity residual projection has no history to use, and on
-  `naca0012_re2000` its Helmholtz solve produced a non-finite norm at 24 or more
-  ranks on a cluster (ifort). With `residualProj = no` the Newton run gave identical
-  residuals at 8, 16, 24 and 32 ranks. `nekStab` prints a note at start-up when
-  the projection is on in these modes.
+- Set `residualProj = no` in `[VELOCITY]`. On `naca0012_re2000` a run with the
+  projection on stopped with a non-finite norm at 24 or more ranks on a cluster
+  (ifort). With `residualProj = no` the Newton run gave identical residuals at 8,
+  16, 24 and 32 ranks. Each matvec starts from an unrelated vector, so the velocity
+  residual projection has no useful history in these modes; that this is the cause
+  was not shown. `nekStab` prints a note at start-up when the projection is on in
+  these modes.
 
 **An eigenvalue run stops writing to the log while all ranks use 100 % CPU**
 - Seen in versions before 2.0.0 with Intel MKL (`ifx` or `ifort`). The stack of each
