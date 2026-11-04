@@ -571,6 +571,12 @@ Code structure and modes
   2000 time units (2087 time steps, 16 ranks, `gfortran`).
 - RANS stability (`example/cylinder_re1m`) is experimental, and mode 4.42 is not
   validated.
+- The zero-crossing period probe (`ifzerocross`) can log one wrong period after
+  its level changes. When the new level is below the signal at the crossing, the
+  next period spans crossings of two levels: for a sine of period 1 and mean
+  -0.25, with start level 0 and dt = 0.017, the logged periods are 1.0000, 0.9597,
+  0.9992, 1.0008, 1.0000. Read the period from a later line of the log. A fix is
+  planned for a later version.
 - Two runs of one binary on the same input and rank count can differ in the last
   digits. gslib times its exchange methods at start-up and keeps the fastest, and
   each method adds the copies of a shared point in another order. In
