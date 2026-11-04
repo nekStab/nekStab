@@ -32,7 +32,9 @@ amplified while the flow carries it downstream (Cantwell & Barkley 2010).
 `BF_1cyl0.f00001` is the steady Newton solution at Re = 40. Make it with
 `../210_baseflow_newton/fp/` after you set `viscosity = -40.0` in its
 `1cyl.par`: Newton converges in 5 iterations to 9.8e-10 (73 min on
-8 ranks). Copy the result here. Field files are not tracked.
+8 ranks). Copy the result here. The stage ships that file, `BF_1cyl0.f00001`, and the first optimal perturbation
+`pRe1cyl0.f00001`, `pIm1cyl0.f00001` and its response `ore1cyl0.f00001`; a run writes the optimals again and
+overwrites them.
 
 Run: `sbatch run.local.slurm`. G is the first value in
 `Spectre_Hp_conv.dat`. The optimal perturbation is `pRe1cyl0.f00001`,

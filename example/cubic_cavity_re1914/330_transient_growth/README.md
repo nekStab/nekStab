@@ -14,8 +14,9 @@ adjoint. Each Krylov step is one forward and one adjoint integration over tau.
 
 ## Setup
 
-- Base flow: `BF_cav0.f00001`, the Newton solution of `../210_baseflow_newton/fp/`. Copy it here;
-  field files are not tracked.
+- Base flow: `BF_cav0.f00001`, the Newton solution of `../210_baseflow_newton/fp/`. This stage ships no
+  field. Copy the base flow that `../210_baseflow_newton/fp/` ships, or run that stage first and copy
+  the file it writes. The run writes `pRecav0.f*`, `pImcav0.f*` and `orecav0.f*`; they are not shipped.
 - `endTime = 10.0` is the horizon tau. `userParam07 = 30` is the size of the Krylov basis: one
   Arnoldi pass of 30 vectors converges 13 eigenvalues of M^H M, and `userParam03 = 2` writes the
   two leading optimal perturbations.

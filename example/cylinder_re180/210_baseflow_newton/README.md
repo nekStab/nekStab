@@ -34,9 +34,12 @@ base flow + Floquet in 3D.
 ## Physics
 
 - 2D cylinder, Re=180 (`viscosity = -180.0` in `.par`)
-- Seed `rstcyl0.f00001`: copy `../000_dns_seed/1cyl0.f00003` (the t = 300
-  checkpoint of the Re=180 DNS from rest, on the limit cycle). Field files
-  are not tracked; run `000_dns_seed` first (17 min). `startFrom = ... time=0`.
+- Seed `rstcyl0.f00001`: a copy of `../000_dns_seed/1cyl0.f00003` (the t = 300
+  checkpoint of the Re=180 DNS from rest, on the limit cycle). The stage ships
+  the seed, and `000_dns_seed` ships that checkpoint; the other snapshots of the DNS
+  are not shipped, so run `000_dns_seed` (17 min) only to make the checkpoint again.
+  The stage also ships the converged orbit start `BF_1cyl0.f00001`, which a run overwrites.
+  `startFrom = ... time=0`.
 - Period guess `endTime = 5.19022`, from the wake probe of the same DNS
   (`fft_period.py`, 28 cycles).
 - `userParam01 = 2.1` — Newton-GMRES UPO shooting

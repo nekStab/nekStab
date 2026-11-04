@@ -9,10 +9,11 @@ is the product of the amplitude of the direct mode and the amplitude of the adjo
 and Luchini, J. Fluid Mech. 581, 2007). It marks where a local change of the flow moves the eigenvalue most.
 
 ## Inputs
-The run reads these files from its own folder. None of them is tracked: each file is 6 to 12 MB.
-- Base flow `BF_cav0.f00001`: copy it from `../210_baseflow_newton/fp/`.
-- Direct modes `dRecav0.f0000{1,2}` and `dImcav0.f0000{1,2}`: copy them from `../310_stability_direct/`.
-- Adjoint modes `aRecav0.f0000{1,2}` and `aImcav0.f0000{1,2}`: copy them from `../320_stability_adjoint/`.
+The run reads these files from its own folder. The 3D fields are large (6 to 12 MB each), so the cubic cavity stages ship
+one base flow and no mode file. This stage ships none of the files below.
+- Base flow `BF_cav0.f00001`: copy the file that `../210_baseflow_newton/fp/` ships.
+- Direct modes `dRecav0.f0000{1,2}` and `dImcav0.f0000{1,2}`: run `../310_stability_direct/` first and copy them from there.
+- Adjoint modes `aRecav0.f0000{1,2}` and `aImcav0.f0000{1,2}`: run `../320_stability_adjoint/` first and copy them from there.
 
 The code reads the real and the imaginary part of the direct mode from `f00001` and those of the adjoint
 mode from `f00002`.
@@ -33,7 +34,7 @@ Run on a cluster, 2026-10-10, 16 ranks, with the modes of the runs of 310 and 32
   region under the lid at 0.1 < x < 0.4. The direct mode lies along the left and bottom walls, the adjoint
   mode under the lid and along the left and right walls; the wavemaker is large where the two overlap.
 - The run also writes the base-flow sensitivity fields `sr`, `si`, `pr`, `pi`, `tr`, `ti` and the
-  energy-budget fields `K01`, `K02` and `PKE_dRecav0.f0000{1,2}`.
+  energy-budget fields `K01` and `K02`, and the budget integrals `PKE_dRecav0.f0000{1,2}` (text files; the stage ships these two).
 
 ## Reference
 `ref/reference.json` checks the maximum and the norm of the wavemaker field (1e-3). They are regression

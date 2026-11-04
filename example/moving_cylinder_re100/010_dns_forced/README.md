@@ -34,8 +34,7 @@ sbatch --ntasks=8 run.local.slurm       # 17.5 min on 12 ranks (ifx, nexus-dev)
 python plot.py
 ```
 
-`plot.py` reads `1cyl.his` and the 30 fields `1cyl0.f000NN` and writes `lockin.dat` and `plot_lockin.png`. The fields are
-not tracked; `210_baseflow_newton` copies the last one.
+`plot.py` reads `1cyl.his` and the 30 fields `1cyl0.f000NN` and writes `lockin.dat` and `plot_lockin.png`. The stage ships the last field, `1cyl0.f00030`, which `210_baseflow_newton` copies; the other 29 fields are written by a run and are not shipped.
 
 ## Result
 

@@ -9,9 +9,9 @@ leading direct eigenmode over one oscillation period (T = 2π/ω ≈ 8.56 with
 `userParam01 = 4.5` — Animate modes (period-step reconstruction)
 
 ## Prerequisites
-- Base flow: `BF_1cyl0.f00001` (tracked here; the base flow of `../310_stability_direct/direct/`)
-- Direct eigenmodes: `dRe1cyl0.f00002`, `dIm1cyl0.f00002` (tracked here; the eigenmode of `../310_stability_direct/direct/`)
-- Eigenvalue file `Spectre_NSd_conv.dat`: not tracked. The routine reads the growth rate and the frequency from it and stops with `ABORT: Could not open Spectre_NSd_conv.dat` when it is missing. Run `../310_stability_direct/direct/` (about 4 min on 8 ranks) and copy `Spectre_NSd_conv.dat` from there.
+- Base flow: `BF_1cyl0.f00001` (shipped here; the base flow of `../310_stability_direct/direct/`)
+- Direct eigenmode: `dRe1cyl0.f00001`, `dIm1cyl0.f00001` (shipped here; the leading mode of `../310_stability_direct/direct/`, which is the only one the routine reads)
+- Eigenvalue file `Spectre_NSd_conv.dat` (shipped here, a copy of the file of `../310_stability_direct/direct/`). The routine reads the growth rate and the frequency from it and stops with `ABORT: Could not open Spectre_NSd_conv.dat` when it is missing. To make the three inputs again, run `../310_stability_direct/direct/` (about 4 min on 8 ranks) and copy `BF_1cyl0.f00001`, `dRe1cyl0.f00001`, `dIm1cyl0.f00001` and `Spectre_NSd_conv.dat` from there.
 
 ## Mesh
 2128 elements (`lelg=2128` in `SIZE`). Same mesh as the rest of the cylinder
@@ -26,7 +26,7 @@ python3 plot.py
 ```
 
 ## Outputs (regenerated per run)
-- `dQ_1cyl0.f00001` … `dQ_1cyl0.f00092` — eigenmode snapshots over one period (spacing 0.0931 = T/92, first snapshot at 0.0931)
+- `dQ_1cyl0.f00001` … `dQ_1cyl0.f00092` — eigenmode snapshots over one period (spacing 0.0931 = T/92, first snapshot at 0.0931); the stage ships the last one, `dQ_1cyl0.f00092`
 - `dQ_1cyl.nek5000` — collection file for ParaView
 
 ## Latest Result

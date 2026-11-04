@@ -20,8 +20,7 @@ from theory. It says nothing about Mode A or Mode B, which need a 3D flow.
 
 ## Start
 
-`run.local.slurm` copies `BF_1cyl0.f00001` from `../210_baseflow_newton/` (the field file is
-not tracked) and removes `r0?1cyl0.f*` files of an earlier run. With no such file the driver
+`run.local.slurm` copies `BF_1cyl0.f00001` from `../210_baseflow_newton/`, which ships it (the stage ships its own copy too), and removes `r0?1cyl0.f*` files of an earlier run. With no such file the driver
 starts from white noise, which this stage uses. `SIZE` has `lpert = 1` and the polynomial
 order of the Newton stage (`lx1 = 8`), so the orbit is read without interpolation.
 
@@ -156,7 +155,7 @@ cp 1cyl.par.orig 1cyl.par
 - `otd_ftle.dat` — time, running exponent from t = 0
 - `otd_eigenvalues.dat`, `otd_growth_rates.dat` — time, eigenvalues of the reduced operator and of its symmetric part
 - `p1_otd_*.dat` — the same files for phase 1 (40 periods)
-- `r011cyl0.f00001` to `f00008`, `1cyl0.f00001` to `f00008` — OTD mode and orbit every T/8 in phase 2 (field files, not tracked)
+- `r011cyl0.f00001` to `f00008`, `1cyl0.f00001` to `f00008` — OTD mode and orbit every T/8 in phase 2 (field files; the stage ships only `r011cyl0.f00003`, the others are written by a run)
 - `plot_otd*.png`, `plot_otd_mode.gif` — figures from `python3 plot.py`
 
 ## Reference

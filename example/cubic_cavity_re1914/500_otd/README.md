@@ -65,7 +65,9 @@ Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=
 
 `run.local.slurm` copies `BF_cav0.f00001` from `../210_baseflow_newton/fp/` and the two mode files
 `dRecav0.f00001` and `dImcav0.f00001` from `../310_stability_direct/` as the first and second
-basis vector (the field files are not tracked), and writes the probe list `cav.his`. It removes
+basis vector, and writes the probe list `cav.his`. The base flow is the file that `../210_baseflow_newton/fp/`
+ships. This stage ships no field and `../310_stability_direct/` ships no mode file, so run the 310 stage
+first. The run writes `r01cav0.f*` and `r02cav0.f*` (not shipped). It removes
 the `r0?cav0.f*` files of an earlier run first, because the driver reads the highest number it
 finds. `OTD_SEED=0` starts from white noise; the reference does not apply to that start.
 `endTime = 30` is 2.8 periods of the pair. The sponge is off, as in the 310 stage.

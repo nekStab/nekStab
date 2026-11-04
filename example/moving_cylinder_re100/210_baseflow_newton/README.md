@@ -81,7 +81,7 @@ python3 ../../../scripts/check_against_ref.py .
 
 Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the seed from `../010_dns_forced`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
 
-`../010_dns_forced/1cyl0.f00030` must exist (the field files are not tracked). `SIZE` has `lx1 = 6` and `lpmin = 8`, so the
+The seed `BF_seed_1cyl0.f00001` is a copy of `../010_dns_forced/1cyl0.f00030`. This stage ships the copy and stage 010 ships the original, so nothing needs to run first; the script copies the original only when the seed is missing. The stage also ships the converged `BF_1cyl0.f00001`, which a run overwrites. `SIZE` has `lx1 = 6` and `lpmin = 8`, so the
 run needs at least 8 ranks, which is also what the run script asks for.
 
 ## Files

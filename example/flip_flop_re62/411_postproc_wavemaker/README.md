@@ -36,16 +36,17 @@ from the outflow. The header of `src/energy_budget.f90` has the derivation and t
 
 ## Inputs
 
-`BF_2cyl0.f00001` and `Spectre_NSd_conv.dat` are in the folder. The modes come from the two Floquet stages; run these commands from this folder
-(the modes of the committed stages are in the repository, and the eigenvalue file of 311 exists after that stage has run):
+The stage ships everything it reads: `BF_2cyl0.f00001`, `Spectre_NSd_conv.dat` and the mode files `f00001` and `f00002` of the four
+names `dRe2cyl0`, `dIm2cyl0`, `aRe2cyl0` and `aIm2cyl0`, so nothing has to run first. Stages 311 and 321 ship only `f00001` of their
+modes. To make the files again, run both stages and copy from this folder:
 
 ```bash
 cp ../311_stability_direct_floquet/d{Re,Im}2cyl0.f0000{1,2} .
 cp ../321_stability_adjoint_floquet/a{Re,Im}2cyl0.f0000{1,2} .
-cp ../311_stability_direct_floquet/Spectre_NSd_conv.dat .     # only after a new run of 311
+cp ../311_stability_direct_floquet/Spectre_NSd_conv.dat .
 ```
 
-The budget reads the direct modes and rows 1 and 2 of `Spectre_NSd_conv.dat` (σ, ω of each mode). The adjoint modes are only used by `plot.py`.
+The budget reads the direct modes `f00001` and `f00002` and rows 1 and 2 of `Spectre_NSd_conv.dat` (σ, ω of each mode). The adjoint modes are only used by `plot.py`, which reads `aRe2cyl0.f00001`.
 
 ## Result (2026-10-23, `ifort`, 40 ranks)
 

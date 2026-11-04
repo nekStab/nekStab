@@ -45,7 +45,7 @@ Run of 2026-10-09 (`ifort`, 8 ranks), 2128 mesh, base flow of `../../210_baseflo
 - Leading mode: σ = 0.1247875, ω = 0.7336851  (St = 0.1168)
 - Wall time: 231 s
 - Outputs: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}`, `Spectre_NSd*.dat`,
-  `Spectre_Hd*.dat`
+  `Spectre_Hd*.dat`. The stage ships `dRe1cyl0.f00001` and `dIm1cyl0.f00001`, the leading mode; `f00002` is not shipped.
 
 The eigenvalue is slightly different from earlier 1996-mesh runs
 (σ ≈ 0.1275 + 0.7447i) — the refined 2128 mesh gives a more accurate

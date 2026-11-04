@@ -33,7 +33,7 @@ wall time 2480 s (41 min 20 s, from the `logfile`).
   to 4e-5.
 
 Outputs: the ten leading direct eigenmodes `dRenaca00120.f0000{1..10}` and
-`dImnaca00120.f0000{1..10}` (written by the run; field files are gitignored, not tracked). The mode
+`dImnaca00120.f0000{1..10}` (written by the run; the stage ships only `dRenaca00120.f00001` and `dImnaca00120.f00001`, the leading mode, and the run overwrites them). The mode
 file number is the row number in `Spectre_NSd_conv.dat`.
 
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged

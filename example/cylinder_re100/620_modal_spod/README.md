@@ -14,8 +14,9 @@ shedding, St = 0.1657.
 `run.local.slurm` first runs a DNS (`dns.par`, `userParam01 = 0`) from the restart file
 `rst_1cyl0.f00001` (a limit-cycle state at t = 150) to t = 200. It writes the 100 snapshots
 `1cyl0.f00001` ... `1cyl0.f00100` (one every 0.5 time units), then restores `1cyl.par` and runs the
-modal analysis on them. The restart file and `dns.par` are kept in `../600_modal_pod`; the script
-copies them when they are missing. The DNS takes about 100 s on 8 ranks.
+modal analysis on them. The stage ships the restart file; `dns.par` is kept in `../600_modal_pod`, and the script
+copies it, and the restart file, when they are missing. The snapshots are not shipped; the script writes them
+(the DNS takes about 100 s on 8 ranks), so run the script and not the modal phase alone.
 
 ## Expected outputs
 
