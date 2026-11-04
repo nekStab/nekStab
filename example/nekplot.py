@@ -118,13 +118,14 @@ def modal_lowpass(fname, keys=('vx',), top=(0.25, 0.0), passes=1):
     written to disk. The file is only read.
 
     Weights per element and per direction, for the polynomial order N = lx1 - 1:
-        modes 0 .. N-2  weight 1    (the resolved content is untouched)
+        modes 0 .. N-len(top)  weight 1    (the resolved content is untouched; N-2 for the default top)
         mode  N-1       weight 0.25   (defaults; `top` gives the weights of the highest modes,
         mode  N         weight 0       lowest of them first, and `passes` repeats filter and average)
     Reason: the top two Legendre modes of a spectral-element field carry the
     grid-scale noise of an eigenvector from a Krylov method; they are the
-    modes with the largest truncation error. A roll-off (0.25, 0)
-    removes the element-scale stripes of the tpjet adjoint mode (0.5, 0.1 left them visible), keeps the plotted shape and avoids the ringing of a sharp cut at N-1.
+    modes with the largest truncation error. The default (0.25, 0)
+    cuts mode N completely and scales mode N-1 by 0.25, so the filtered field differs from the file;
+    the tpjet READMEs give the size of the change. Weights (0.5, 0.1) left the element-scale stripes of the tpjet adjoint mode visible.
     Filtering breaks the C0 continuity across elements, so values at the
     shared GLL points are averaged afterwards (the dsavg of Nek5000).
     """
@@ -152,6 +153,7 @@ def modal_lowpass(fname, keys=('vx',), top=(0.25, 0.0), passes=1):
         q = np.array([e.vel[comp[key]].reshape(ny, nx) for e in field.elem])
         # Each pass filters every element, then averages the shared points; the averaging couples
         # neighbouring elements, so repeated passes also damp streaks that span several elements.
+        qa = q.ravel()  # passes < 1 returns the field unfiltered instead of raising UnboundLocalError
         for _ in range(passes):
             qf = np.einsum('ij,ejk,lk->eil', filt, q, filt).ravel()
             qa = (np.bincount(inv, weights=qf) / count)[inv]
@@ -532,8 +534,10 @@ def plot_newton_convergence(ax, directory='.'):
             # Arnoldi k restarts at 1 in each GMRES cycle; residu_gmres.dat column 0 is the Newton iteration.
             cycle_starts = np.append(np.flatnonzero(ar_k == 1), len(ar_k))
             n_cycles_before = np.array([np.sum(gm[:, 0] < i) for i in data[:, 0]])
-            k_sum = cycle_starts[n_cycles_before]
-            res_nwt = data[:, 6]
+            # A count past the last cycle (cycle_starts ends with a sentinel) means the two files disagree: drop those markers.
+            inside = n_cycles_before < len(cycle_starts)
+            k_sum = cycle_starts[n_cycles_before[inside]]
+            res_nwt = data[inside, 6]
             dtol = data[0, 7]
             ax.semilogy(k_sum, res_nwt, 'bs', ms=4, mfc='none', lw=0.8,
                         label='Newton', zorder=4)
