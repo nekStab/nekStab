@@ -106,12 +106,49 @@ are these figures from the run above, without the `plot_` prefix.
 
 ```bash
 mks 1cyl
-sbatch run.local.slurm      # 8 ranks on a cluster
+sbatch run.local.slurm      # 8 ranks, one job of 50 periods (endTime = 260)
 python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
 Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the orbit from `../210_baseflow_newton`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
+`run.local.slurm` and `1cyl.par` run one job of 50 periods (`endTime = 260`) from a white-noise start. It writes `otd_ftle_period.dat`, and a run of these files gave 6.7e-6 for the last period, which `ref/reference.json` accepts (tolerance 1e-4). It does not write the phase 1 files, the restart basis at 40 T or the eight snapshots per period, so `python3 plot.py` skips the figures of the mode and the comparison with dU/dt on such a run. The result above comes from two phases in one job. This is the procedure of that run, started from this folder after `mks 1cyl`; it changes `1cyl.par` during the run and `1cyl.par.orig` keeps the original:
+
+```bash
+NP=8                  # at least lpmin
+T=5.1896284145        # period, in the time stamp of BF_1cyl0.f00001
+T40=207.58513658      # 40 T
+T8=0.648703551813     # T/8
+cp ../210_baseflow_newton/BF_1cyl0.f00001 .
+printf '1cyl\n%s/\n' "$(pwd)" > SESSION.NAME
+printf '1\n5 0 0\n' > 1cyl.his
+rm -f r[0-9][0-9]1cyl0.f* ip[0-9][0-9]1cyl0.f* bf0[0-9]1cyl0.f*
+cp 1cyl.par 1cyl.par.orig
+
+# Phase 1: white-noise start, 40 periods, one OTD field at the end
+sed -E "s/^endTime = .*/endTime = $T40/; s/^writeInterval = .*/writeInterval = $T40/" 1cyl.par.orig > 1cyl.par
+mpiexec -np $NP ./nek5000
+
+# Restart basis: the r01 file whose time stamp (field 8 of its header) is 40 T
+best=""
+for f in r011cyl0.f*; do
+  t=$(head -c 136 "$f" | awk '{print $8}')
+  if awk -v t="$t" -v r="$T40" 'BEGIN{d=t-r; if (d<0) d=-d; exit !(d<1e-3)}'; then best=$f; fi
+done
+[ -n "$best" ] || { echo "no r01 file at 40 T"; exit 3; }
+mv "$best" start40T_r011cyl0.f00001
+rm -f r[0-9][0-9]1cyl0.f*
+cp start40T_r011cyl0.f00001 r011cyl0.f00001
+for f in otd_*.dat; do mv "$f" "p1_$f"; done
+for f in ip011cyl0.f* bf01cyl0.f*; do [ -e "$f" ] && mv "$f" "p1_$f"; done || true
+
+# Phase 2: restart from the basis at 40 T (the base flow is at orbit phase 0 again),
+# one period, r01 and the orbit written every T/8
+sed -E "s/^endTime = .*/endTime = $T/; s/^writeInterval = .*/writeInterval = $T8/" 1cyl.par.orig > 1cyl.par
+mpiexec -np $NP ./nek5000
+cp 1cyl.par.orig 1cyl.par
+```
 
 ## Files
 
