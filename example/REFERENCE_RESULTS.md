@@ -72,3 +72,30 @@ Re-extracts each `reference.json` quantity from the freshly produced output,
 prints `PASS`/`FAIL` per quantity with relative error vs tolerance, and exits
 non-zero if any quantity is out of tolerance — usable both as a user smoke test
 and a CI gate.
+
+## What a stage ships
+
+These are the rules for the files next to `ref/`, so that the repository stays small and each stage still shows its result.
+`validation/shipped_results.tsv` lists each file, its md5 and where it came from.
+
+| Stage | Result field |
+|:---|:---|
+| 000, 010 (DNS) | last snapshot |
+| 110 to 140, 210 (base flow) | `BF_*` (140: the mean `BFA*`) |
+| 310, 311, 315, 320, 321 (eigenmodes) | real and imaginary part of `f00001`, the leading mode |
+| 330 (transient growth) | first optimal: `pRe*`, `pIm*`, `ore*` |
+| 410 (animation) | last frame |
+| 411, 412 (sensitivity) | `wm_*` or `fsr*`; the budget stages: `F01*` and the `PKE_*` tables |
+| 500 (OTD) | `BF_*` and the last `r01*` |
+| 600, 610, 620 (POD, DMD, SPOD) | mean and leading mode: first `pod*`, shedding `dm1*` and `dm2*`, saved `sRe*` and `sIm*` of the largest eigenvalue |
+| 630 (DMT bank) | last snapshot and filter 1 |
+
+- **Start fields.** A stage also ships the fields it opens at start, except in the cubic cavity cases. Git stores identical files once, so a copy in a later stage adds nothing to a clone.
+- **Cubic cavity.** The 3D fields are large: text, figures and one start field per case.
+- **Text and figures.** All figures. `.his` and `.dat` files up to 1 MB. `residu_dmt.dat` stays out, because a run appends to an existing file.
+- **Never:** `logfile`, `.nek5000`, `SPG*`, `KRY*`, snapshot series. `.gitignore` blocks most shipped names, so add a shipped file with `git add -f`.
+
+**File format.** Results and frozen base flows are single precision without pressure. Modes and other results have no coordinates; base flows and other start fields keep them, because `plot.py` and field viewers read them from the file.
+The start field of a stage that marches in time (000, 010, 110 to 140, 210, 600 to 630) stays as the run wrote it. A restart without pressure moved `snapshot_vy_max` of `cylinder_re100/000_dns` by 1.1e-6, above its tolerance of 1e-6. With the original field the change was 4e-10. A frozen base flow in this format moved the leading eigenvalues by 1e-7 or less.
+
+**After a run.** A run overwrites these files, and `git status` lists what changed. Fields and figures are binary, so compare the values with `scripts/check_against_ref.py`.

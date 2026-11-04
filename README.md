@@ -123,6 +123,8 @@ cd nekStab
 ./Nek5000setup.sh
 ```
 
+Use `--depth=1`: a full clone also downloads the history of the repository, about 1 GB. To develop, fetch the history later with `git fetch --unshallow`.
+
 The branch `main` is the default branch and holds the releases. Changes reach it by pull request.
 
 The release was validated with Nek5000 commit `d083ef3`. `Nek5000setup.sh` clones the current Nek5000 `master`. The axisymmetric adjoint correction in `src/forcing.f90` is zero on a Nek5000 that already has the radius in its integration weights, so a newer `master` does not change the result of the adjoint runs.
@@ -277,7 +279,9 @@ mpiexec -np 8 ./nek5000
 
 The history file `1cyl.his` needs no extra step: `mks` wrote it from `1cyl.probes` when it built the case.
 
-**Stages that need field files from an earlier stage.** Field files (`BF_*`, `dRe*`, `dIm*`, restart and snapshot files) are mostly not tracked, because they are large. A stage whose `startFrom` or mode files are missing stops at start with `byte_read() :: fopen failure2!` and `Error reading restart header` (or `Could not open <file>`). The README of the stage lists the files under Prerequisites or Inputs and names the stage that produces them: run that stage first and copy the files. `run.local.slurm` of many stages does these copies, and the two-phase stages (DNS, then Newton or modal analysis) swap the `.par` file between the phases. A bare `mpiexec` does neither. Without Slurm, run the script as a shell script from the stage folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1`. `SLURM_NTASKS` is the rank count, at least the `lpmin` of the stage. A few scripts default to 4 ranks when it is unset, which is below `lpmin` for the cylinder stages.
+**Stages that need field files from an earlier stage.** Each stage ships its start fields and its main result: see [`example/REFERENCE_RESULTS.md`](example/REFERENCE_RESULTS.md). The other fields are written by a run. The cubic cavity stages ship one start field per case, in the stage that makes it. A stage whose `startFrom` or mode files are missing stops at start with `byte_read() :: fopen failure2!` and `Error reading restart header` (or `Could not open <file>`). The README of the stage lists the files under Prerequisites or Inputs and names the stage that produces them: run that stage first and copy the files. `run.local.slurm` of many stages does these copies, and the two-phase stages (DNS, then Newton or modal analysis) swap the `.par` file between the phases. A bare `mpiexec` does neither. Without Slurm, run the script as a shell script from the stage folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1`. `SLURM_NTASKS` is the rank count, at least the `lpmin` of the stage. A few scripts default to 4 ranks when it is unset, which is below `lpmin` for the cylinder stages.
+
+**A run overwrites the shipped results.** After a run, `git status` and `git diff --stat` list the files that changed. A field or a figure is binary, so git shows only that it changed: `scripts/check_against_ref.py <stage>` compares the values with the reference. `git checkout -- <stage>` brings the shipped files back.
 
 **Slurm memory.** `run.local.slurm` of the examples asks `--mem-per-cpu=2000`, which is 16 GB for 8 tasks. On a machine with less memory the job stays `PENDING` with reason `MaxMemPerLimit`, and `--mem` on the `sbatch` line is refused together with `--mem-per-cpu`. Lower the request on the `sbatch` line: `sbatch --mem-per-cpu=500 run.local.slurm` (500 worked for `cylinder_re100/310_stability_direct`). Check the queue with `squeue`.
 

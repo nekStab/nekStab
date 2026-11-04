@@ -141,7 +141,7 @@ Intel's MKL includes FFTW3-compatible wrappers, so no additional installation is
 ### Clone and Setup
 
 ```bash
-git clone https://github.com/nekStab/nekStab.git
+git clone --depth=1 --branch v2.0.0 https://github.com/nekStab/nekStab.git
 cd nekStab
 ./Nek5000setup.sh
 ```
@@ -1374,7 +1374,7 @@ genmap
 | 5 | OTD | `500_otd` |
 | 6 | modal decomposition | POD, DMD, SPOD, DMT filter bank |
 
-A stage folder is a complete case: `.par`, `.usr`, `SIZE`, the mesh (`.re2`, `.ma2`), `run.local.slurm`, a `README.md`, a `plot.py` and a `ref/` folder with `reference.json` and the figures. The field files (base flows, restart files, modes) are not tracked. A stage that needs the field of an earlier stage says so in its README, and its run script copies the file from the sibling folder. [`EXAMPLES.md`](EXAMPLES.md) gives the rationale of each kind of stage, the case catalog and the verified results.
+A stage folder is a complete case: `.par`, `.usr`, `SIZE`, the mesh (`.re2`, `.ma2`), `run.local.slurm`, a `README.md`, a `plot.py` and a `ref/` folder with `reference.json` and the figures. A stage also ships its start fields and its main result, so a reader sees them without running: [`example/REFERENCE_RESULTS.md`](example/REFERENCE_RESULTS.md) gives the list and the file format. A run overwrites these files. The other fields are written by a run. A stage that needs a field it does not ship says so in its README. [`EXAMPLES.md`](EXAMPLES.md) gives the rationale of each kind of stage, the case catalog and the verified results.
 
 ### Available Cases
 
