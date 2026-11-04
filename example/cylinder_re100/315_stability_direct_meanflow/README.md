@@ -54,6 +54,8 @@ python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the base flow from `../140_baseflow_meanflow`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
 ## Literature
 
 Barkley (2006), Europhys. Lett. 75, 750. Marquet & Carini (2020), arXiv:2008.10002.

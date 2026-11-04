@@ -44,5 +44,7 @@ mks 1cyl
 sbatch run.local.slurm
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the restart file and `dns.par` from `../600_modal_pod` and runs the DNS phase, then the modal phase; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
 The modal phase reads `1cyl0.f00001` through `1cyl0.f00100` from the working directory
 (`modal_prefix='   '`, i.e. SESSION name, 100 snapshots at dt=0.5).

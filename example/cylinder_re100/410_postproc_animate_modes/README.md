@@ -9,8 +9,9 @@ leading direct eigenmode over one oscillation period (T = 2π/ω ≈ 8.56 with
 `userParam01 = 4.5` — Animate modes (period-step reconstruction)
 
 ## Prerequisites
-- Base flow: `BF_1cyl0.f00001` (from `../../baseflow/newton/`)
-- Direct eigenmodes: `dRe1cyl0.f0000{1,2}`, `dIm1cyl0.f0000{1,2}` (from `../direct/`)
+- Base flow: `BF_1cyl0.f00001` (tracked here; the base flow of `../310_stability_direct/direct/`)
+- Direct eigenmodes: `dRe1cyl0.f00002`, `dIm1cyl0.f00002` (tracked here; the eigenmode of `../310_stability_direct/direct/`)
+- Eigenvalue file `Spectre_NSd_conv.dat`: not tracked. The routine reads the growth rate and the frequency from it and stops with `ABORT: Could not open Spectre_NSd_conv.dat` when it is missing. Run `../310_stability_direct/direct/` (about 4 min on 8 ranks) and copy `Spectre_NSd_conv.dat` from there.
 
 ## Mesh
 2128 elements (`lelg=2128` in `SIZE`). Same mesh as the rest of the cylinder

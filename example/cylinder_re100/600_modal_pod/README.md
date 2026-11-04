@@ -22,6 +22,8 @@ mks 1cyl                  # compile
 sbatch run.local.slurm    # both phases, 8 ranks
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it runs the DNS phase with `dns.par`, then the modal phase with `1cyl.par`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
 ## Result
 A cluster, 8 and 16 ranks, 2026-10-09 (identical to six digits at both rank counts):
 - POD: the leading pair holds 49.87 % and 47.72 % of the fluctuation energy

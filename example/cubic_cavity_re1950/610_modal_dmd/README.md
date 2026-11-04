@@ -56,3 +56,5 @@ mks cav
 sbatch run.local.slurm
 uv run --with numpy --with matplotlib --with pymech python plot.py
 ```
+
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=16 bash run.local.slurm > logfile 2>&1` (it links the 100 snapshots from `../000_dns`; `SLURM_NTASKS` must be at least `lpmin` = 16). A bare `mpiexec -np 16 ./nek5000` does not do that.

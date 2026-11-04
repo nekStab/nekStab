@@ -61,6 +61,8 @@ python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=16 bash run.local.slurm > logfile 2>&1` (it copies the base flow and the two seed modes from the sibling stages; `SLURM_NTASKS` must be at least `lpmin` = 16). A bare `mpiexec -np 16 ./nek5000` does not do that.
+
 `run.local.slurm` copies `BF_cav0.f00001` from `../210_baseflow_newton/fp/` and the two mode files
 `dRecav0.f00001` and `dImcav0.f00001` from `../310_stability_direct/` as the first and second
 basis vector (the field files are not tracked), and writes the probe list `cav.his`. It removes

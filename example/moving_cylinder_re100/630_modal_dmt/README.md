@@ -94,6 +94,8 @@ uv run --with numpy --with matplotlib --with pymech python plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the orbit from `../210_baseflow_newton`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
 ## Outputs
 
 - `bRe1cyl0.f0000k`, `bIm1cyl0.f0000k`: Re û_k and Im û_k of filter k, averaged over the last 2 periods. The time stamp is the end

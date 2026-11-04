@@ -111,6 +111,8 @@ python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the orbit from `../210_baseflow_newton`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
 ## Files
 
 - `otd_ftle_period.dat` — time at the end of the period, exponent of the mode in that period

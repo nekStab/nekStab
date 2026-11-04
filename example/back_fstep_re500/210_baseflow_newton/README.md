@@ -28,6 +28,8 @@ mks bfs                                  # build once
 sbatch run.local.slurm                   # 8 ranks, both phases in one job
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it runs both phases and restores `bfs_dns.par` at the end; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
 `run.local.slurm` runs the two phases in order and leaves `bfs.par` as the
 phase-1 file when it ends:
 

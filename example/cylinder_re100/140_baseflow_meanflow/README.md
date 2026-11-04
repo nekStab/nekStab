@@ -63,6 +63,8 @@ python3 plot.py
 python3 ../../../scripts/check_against_ref.py .
 ```
 
+Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies `rst_1cyl0.f00001` from `../000_dns`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
+
 Then run `../315_stability_direct_meanflow`.
 
 ## Literature

@@ -11,6 +11,10 @@ paths from existing mode files.
 - Direct modes: `dRenaca00120.f0000{1,2}` and `dImnaca00120.f0000{1,2}`
 - Adjoint modes: `aRenaca00120.f0000{1,2}` and `aImnaca00120.f0000{1,2}`
 
+The code reads the direct modes from `f00001` and the adjoint modes from `f00002`. This folder tracks only the `f00002`
+files, so a run stops with `Error reading restart header` for `dRenaca00120.f00001`. Run `../310_stability_direct/` and
+`../320_stability_adjoint/` first and copy all eight mode files from them into this folder.
+
 The stage-local `maxmodes` is set to 2 because only the two shipped direct
 mode snapshots are present.
 
