@@ -76,7 +76,7 @@ and a CI gate.
 ## What a stage ships
 
 These are the rules for the files next to `ref/`, so that the repository stays small and each stage still shows its result.
-`validation/shipped_results.tsv` lists each file, its md5 and where it came from.
+`example/shipped_results.tsv` lists each file, its md5 and where it came from.
 
 | Stage | Result field |
 |:---|:---|
@@ -90,7 +90,7 @@ These are the rules for the files next to `ref/`, so that the repository stays s
 | 600, 610, 620 (POD, DMD, SPOD) | mean and leading mode: first `pod*`, shedding `dm1*` and `dm2*`, saved `sRe*` and `sIm*` of the largest eigenvalue |
 | 630 (DMT bank) | last snapshot and filter 1 |
 
-- **Start fields.** A stage also ships the fields it opens at start, except in the cubic cavity cases. Git stores identical files once, so a copy in a later stage adds nothing to a clone.
+- **Start fields.** A stage also ships the fields it opens at start. The cubic cavity cases do not: their READMEs name the stage to run first and the copy. Git stores identical files once, so a copy in a later stage adds nothing to a clone.
 - **Cubic cavity.** The 3D fields are large: text, figures and one start field per case.
 - **Text and figures.** All figures. `.his` and `.dat` files up to 1 MB. `residu_dmt.dat` stays out, because a run appends to an existing file.
 - **Never:** `logfile`, `.nek5000`, `SPG*`, `KRY*`, snapshot series. `.gitignore` blocks most shipped names, so add a shipped file with `git add -f`.
@@ -98,4 +98,4 @@ These are the rules for the files next to `ref/`, so that the repository stays s
 **File format.** Results and frozen base flows are single precision without pressure. Modes and other results have no coordinates; base flows and other start fields keep them, because `plot.py` and field viewers read them from the file.
 The start field of a stage that marches in time (000, 010, 110 to 140, 210, 600 to 630) stays as the run wrote it. A restart without pressure moved `snapshot_vy_max` of `cylinder_re100/000_dns` by 1.1e-6, above its tolerance of 1e-6. With the original field the change was 4e-10. A frozen base flow in this format moved the leading eigenvalues by 1e-7 or less.
 
-**After a run.** A run overwrites these files, and `git status` lists what changed. Fields and figures are binary, so compare the values with `scripts/check_against_ref.py`.
+**After a run.** A run overwrites these files, and `git status` lists what changed. Fields and figures are binary, so compare the values with `scripts/check_against_ref.py`. It refuses a file that still has the shipped bytes, because no run wrote it.

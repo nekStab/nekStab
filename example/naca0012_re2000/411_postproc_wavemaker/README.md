@@ -8,15 +8,12 @@ paths from existing mode files.
 ## Inputs
 
 - Base flow: `BF_naca00120.f00001`
-- Direct modes: `dRenaca00120.f00001` and `dImnaca00120.f00001` (the wavemaker and the base-flow sensitivity read these)
+- Direct modes: `dRenaca00120.f0000{1,2}` and `dImnaca00120.f0000{1,2}`
 - Adjoint modes: `aRenaca00120.f00002` and `aImnaca00120.f00002`
 
-The code reads the direct modes from `f00001` and the adjoint modes from `f00002`. The stage ships exactly these five
-files, so the wavemaker and the base-flow sensitivity run without another stage. The energy budget loops over
-`maxmodes = 2` (in `naca0012.usr`) and reads `dRenaca00120.f00001` and `f00002` and the two `dIm` files; the stage
-does not ship the `f00002` direct files (`../310_stability_direct/` ships only `f00001`), so a run stops with
-`Error reading restart header` for `dRenaca00120.f00002` unless you copy `dRenaca00120.f00002` and
-`dImnaca00120.f00002` from a run of `../310_stability_direct/`. Stage 320 ships the adjoint modes `f00001`;
+The wavemaker and the base-flow sensitivity read the direct modes from `f00001` and the adjoint modes from `f00002`. The energy
+budget loops over `maxmodes = 2` (in `naca0012.usr`) and reads both direct files. The stage ships these seven files, so it runs
+without another stage. Stage 320 ships the adjoint modes `f00001`;
 a run of `../320_stability_adjoint/` writes the `f00002` files too.
 
 ## Run

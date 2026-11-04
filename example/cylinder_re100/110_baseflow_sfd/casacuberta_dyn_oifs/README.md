@@ -30,7 +30,7 @@ Compare with ../casacuberta_dyn (the same case with BDF3); the family README (`.
 | vx.norm | 264.4054 | 264.3375 | 2.6e-04 |
 | vy.max | 0.6022515 | 0.6032416 | 1.6e-03 |
 
-The gate of this variant is 1e-10, the same as the strict variants. The field still differs from the Newton solution by up to 3.4e-03, against 4e-05 for the strict variants. The gap is not a gate effect: at gates 1e-6, 1e-9 and 1e-10 the field is the same to 4e-6. It comes from the OIFS step at CFL 5.
+The gate of this variant is 1e-10, the same as the strict variants. The field still differs from the Newton solution by up to 3.4e-03, against 4e-05 for the strict variants. The runs at hand do not separate the OIFS step at CFL 5 from the gate as its cause (see `../README.md`).
 
 ## Reference
 

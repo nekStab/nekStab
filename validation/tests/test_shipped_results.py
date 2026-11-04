@@ -1,4 +1,4 @@
-"""Each field and each figure at a stage root is listed in validation/shipped_results.tsv with its md5.
+"""Each field and each figure at a stage root is listed in example/shipped_results.tsv with its md5.
 
 The rules for what a stage ships are in example/REFERENCE_RESULTS.md. A file that a run overwrote fails this test
 until `git checkout -- <stage>` brings the shipped file back, so run the test on a clean checkout.
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-MANIFEST = REPO / "validation" / "shipped_results.tsv"
+MANIFEST = REPO / "example" / "shipped_results.tsv"
 
 if not (REPO / ".git").exists():
     pytest.skip("needs a git checkout", allow_module_level=True)
@@ -38,3 +38,13 @@ def test_each_field_and_root_figure_is_listed() -> None:
     shipped = [t for t in TRACKED if re.search(r"\.f\d{5}$", t) or (re.search(r"\.(png|gif)$", t) and "/ref/" not in t)]
     missing = [t for t in shipped if t not in listed]
     assert not missing, missing
+
+
+def test_the_checker_refuses_a_shipped_copy() -> None:
+    row = next(r for r in ROWS if r["path"].endswith("cylinder_re100/310_stability_direct/direct/Spectre_NSd_conv.dat"))
+    stage = REPO / "example" / row["path"].rsplit("/", 1)[0]
+    result = subprocess.run(
+        ["python3", str(REPO / "scripts" / "check_against_ref.py"), str(stage)], capture_output=True, text=True
+    )
+    assert result.returncode != 0
+    assert "shipped copy" in result.stdout + result.stderr
