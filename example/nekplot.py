@@ -9,6 +9,7 @@ Provides reusable functions for:
 - Plotting residual convergence histories
 - Plotting OTD Lyapunov exponents
 """
+import re
 from pathlib import Path
 
 import matplotlib
@@ -66,7 +67,7 @@ def read_with_coordinates(fname):
         if other.var[0] > 0 and other.nel == field.nel and list(other.lr1) == list(field.lr1):
             for elem, source in zip(field.elem, other.elem):
                 elem.pos = source.pos
-            field.var[0] = other.var[0]
+            field.var = (other.var[0], *field.var[1:])
             return field
     raise FileNotFoundError(f"{fname} has no coordinates and no field in {folder} has them: run the stage first")
 
@@ -154,8 +155,6 @@ def modal_lowpass(fname, keys=('vx',), top=(0.25, 0.0), passes=1):
     Filtering breaks the C0 continuity across elements, so values at the
     shared GLL points are averaged afterwards (the dsavg of Nek5000).
     """
-    from pymech.neksuite import readnek
-
     field = read_with_coordinates(fname)
     nx, ny, nz = field.lr1
     assert nz == 1, 'modal_lowpass handles 2-D files only'

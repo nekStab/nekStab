@@ -9,7 +9,9 @@ from __future__ import annotations
 import csv
 import hashlib
 import re
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -59,3 +61,22 @@ def test_the_checker_refuses_a_shipped_copy(from_stage: bool) -> None:
     )
     assert result.returncode != 0
     assert "shipped copy" in result.stdout + result.stderr
+
+
+def test_a_shipped_mode_gets_its_coordinates_from_the_stage() -> None:
+    # The shipped modes have no coordinates, and every stage README runs plot.py on them.
+    sys.path.insert(0, str(REPO / "example"))
+    nekplot = pytest.importorskip("nekplot")
+    stage = REPO / "example" / "cylinder_re100" / "310_stability_direct" / "direct"
+    x, y, _, _ = nekplot.read_field(stage / "dRe1cyl0.f00001")
+    assert x.max() - x.min() > 10.0 and y.max() - y.min() > 10.0
+
+
+def test_a_field_without_any_coordinates_is_refused(tmp_path: Path) -> None:
+    sys.path.insert(0, str(REPO / "example"))
+    nekplot = pytest.importorskip("nekplot")
+    source = REPO / "example" / "cylinder_re100" / "310_stability_direct" / "direct" / "dRe1cyl0.f00001"
+    alone = tmp_path / source.name
+    shutil.copyfile(source, alone)
+    with pytest.raises(FileNotFoundError, match="no coordinates"):
+        nekplot.read_field(alone)
