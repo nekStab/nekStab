@@ -8,6 +8,8 @@ This case is not validated. Its stages have no `ref/` baseline, they were not re
 validation gallery does not list them. The numbers below come from earlier runs on this mesh and are not checked by
 any test. Use the case as a starting point for RANS stability work, not as a check of the code.
 
+The start fields of this case are older than the validated runs of the other cases: `120_urans/steady_wake.f00001` (2026-10-01) and `310_stability_direct/*/base_converged.f00001` (2026-06-24). The figures in the stage folders come from those earlier runs.
+
 ## Case note
 
 This directory is the high-Reynolds-number cylinder. The point of the case is the gap between a base flow and a mean flow. That gap is small near onset and large far above it. Thesis source for the cylinder wake: chapter 2, `sec:ex:1cyl`. Method source: chapter 2, `Large-scale eigensolvers`.

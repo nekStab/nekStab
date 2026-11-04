@@ -1,0 +1,5 @@
+# m  e_m  norm_uhat_m/norm_mean    (e_m = |u_end - mean - sum_k<=m Re uhat_k exp(i k omega t_end)| / |u_end - mean|)
+0 1 1
+1 0.22741233 0.086923156
+2 0.059123431 0.021074569
+3 0.019239505 0.0056924913

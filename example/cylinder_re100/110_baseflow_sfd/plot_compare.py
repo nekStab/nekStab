@@ -52,7 +52,7 @@ GATES = [
     (1e-10, ":", "gate 1e-10 (SFD, BDF3)"),
     (1e-9, "-.", "gate 1e-9 (Newton)"),
     (1e-7, (0, (5, 1, 1, 1, 1, 1)), "gate 1e-7 (DMT)"),
-    (1e-6, "--", "gate 1e-6 (SFD OIFS, BoostConv)"),
+    (1e-6, "--", "gate 1e-6 (BoostConv)"),
 ]
 
 
