@@ -1,7 +1,7 @@
 [GENERAL]
 # Phase 1 of 2 -- clean DNS from the uniform IC (useric ux=1) to settle the
 # steady recirculation on THIS mesh. The settled field is the native seed for
-# the Newton solve (Phase 2: bfs.par.newton). Re=500 BFS is 2D-steady (first
+# the Newton solve (Phase 2: bfs_newton.par). Re=500 BFS is 2D-steady (first
 # 3D instability ~Re 750, Barkley 2008), so DNS relaxes monotonically to the
 # steady state -- no foreign restart, no mesh reload, no corruption.
 stopAt = endTime
