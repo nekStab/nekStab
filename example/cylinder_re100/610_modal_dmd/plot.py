@@ -171,12 +171,13 @@ def main():
     modes = sorted(CASE_DIR.glob(MODE_GLOB))
     if spectrum_file.exists():
         table = read_spectrum(spectrum_file)
-        n_saved = len(modes) or 1
-        fundamental = table[shedding_index(table, n_saved), 4]
-        save_spectrum(nk, table, fundamental, CASE_DIR / "plot_spectrum.png")
-        if modes:
-            index = shedding_index(table, len(modes))
-            save_mode(nk, modes[index], CASE_DIR / "plot_mode.png")
+        # File number k holds row k of the table. The stage ships only the shedding mode, so count by
+        # the number of the last file, not by how many files there are.
+        by_row = {int(mode.name[-5:]) - 1: mode for mode in modes}
+        index = shedding_index(table, max(by_row, default=0) + 1)
+        save_spectrum(nk, table, table[index, 4], CASE_DIR / "plot_spectrum.png")
+        if index in by_row:
+            save_mode(nk, by_row[index], CASE_DIR / "plot_mode.png")
 
     svd_file = CASE_DIR / "dmd_svd.dat"
     if svd_file.exists():

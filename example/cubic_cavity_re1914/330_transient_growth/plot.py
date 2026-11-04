@@ -91,8 +91,10 @@ def main() -> None:
     """Check the optimal response, write growth_check.dat and draw G(tau) and the two fields."""
     tau = horizon(CASE_DIR / "cav.par")
     gain = float(np.loadtxt(CASE_DIR / "Spectre_Hp_conv.dat", ndmin=2)[0, 0])
-    perturbation = sorted(CASE_DIR.glob("pRecav0.f*"))[0]
-    response = sorted(CASE_DIR.glob("orecav0.f*"))[0]
+    fields = sorted(CASE_DIR.glob("pRecav0.f*")), sorted(CASE_DIR.glob("orecav0.f*"))
+    if not all(fields):
+        raise SystemExit("pRecav0 and orecav0 fields not found: run the stage first")
+    perturbation, response = fields[0][0], fields[1][0]
     energy_in = kinetic_energy(perturbation)
     energy_out = kinetic_energy(response)
     ratio = energy_out / energy_in
