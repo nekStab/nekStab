@@ -9,7 +9,7 @@
 
 set -euo pipefail
 CASE=${CASE:-1cyl}
-NPROCS=${SLURM_NTASKS:-4}
+NPROCS=${SLURM_NTASKS:-8}
 EXE=${EXE:-./nek5000}
 
 if [[ -z "${SLURM_JOB_ID:-}" && -z "${LOGFILE_REDIRECTED:-}" ]]; then

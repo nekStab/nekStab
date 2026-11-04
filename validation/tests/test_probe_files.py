@@ -238,3 +238,17 @@ def test_mks_finds_a_call_after_an_if(tmp_path: Path) -> None:
     (tmp_path / "c.usr").write_text("      if (istep.gt.0) call HPTS\n")
     r = run_mks_step(tmp_path)
     assert "c.probes" in r.stderr
+
+
+def _slurm_scripts():
+    return sorted(p for p in (REPO / "example").rglob("run.local.slurm") if (p.parent / "SIZE").exists())
+
+
+@pytest.mark.parametrize("script", _slurm_scripts(), ids=lambda p: str(p.parent.relative_to(REPO / "example")))
+def test_rank_default_of_the_script_is_not_below_lpmin(script):
+    # Without Slurm, SLURM_NTASKS is unset and the script's default decides the
+    # rank count. Below lpmin, Nek5000 stops at start-up with a message about the
+    # array sizes, which tells a new user nothing about the script.
+    lpmin = int(re.search(r"lpmin\s*=\s*(\d+)", (script.parent / "SIZE").read_text()).group(1))
+    for default in re.findall(r"SLURM_NTASKS:-(\d+)", script.read_text()):
+        assert int(default) >= lpmin
