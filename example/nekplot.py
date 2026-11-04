@@ -44,6 +44,33 @@ def configure_style():
 
 # ── Field I/O ──────────────────────────────────────────────────────────
 
+def read_with_coordinates(fname):
+    """Read a Nek5000 field with pymech and fill in its coordinates when the file has none.
+
+    A run writes coordinates only in some of its files, and the shipped modes and results of a
+    stage have none (example/REFERENCE_RESULTS.md). pymech then returns zeros, which plot as one point.
+    The coordinates come from a field of the same folder with the same elements, a BF_ file first.
+    """
+    from pymech.neksuite import readnek
+
+    fname = Path(fname)
+    field = readnek(str(fname))
+    if field.var[0] > 0:
+        return field
+    folder = fname.resolve().parent
+    named = sorted(folder.glob('BF*.f[0-9]*')) + sorted(folder.glob('*.f[0-9]*'))
+    for other_name in named:
+        if not re.search(r'\.f\d{5}$', other_name.name) or other_name.name.startswith('PKE_'):
+            continue
+        other = readnek(str(other_name))
+        if other.var[0] > 0 and other.nel == field.nel and list(other.lr1) == list(field.lr1):
+            for elem, source in zip(field.elem, other.elem):
+                elem.pos = source.pos
+            field.var[0] = other.var[0]
+            return field
+    raise FileNotFoundError(f"{fname} has no coordinates and no field in {folder} has them: run the stage first")
+
+
 def read_field(fname):
     """Read a Nek5000 field file via pymech.
 
@@ -51,10 +78,8 @@ def read_field(fname):
     fields is a dict with keys 'vx', 'vy', 'vz' (if present), 'p',
     't' (temperature, if present).
     """
-    from pymech.neksuite import readnek
-
     fname = str(fname)
-    field = readnek(fname)
+    field = read_with_coordinates(fname)
     nel = field.nel
     nx, ny, nz = field.lr1
     npe = nx * ny * max(nz, 1)
@@ -131,7 +156,7 @@ def modal_lowpass(fname, keys=('vx',), top=(0.25, 0.0), passes=1):
     """
     from pymech.neksuite import readnek
 
-    field = readnek(str(fname))
+    field = read_with_coordinates(fname)
     nx, ny, nz = field.lr1
     assert nz == 1, 'modal_lowpass handles 2-D files only'
     nel, n = field.nel, nx - 1
