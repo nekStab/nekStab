@@ -4,7 +4,7 @@
   "description": "Leading eigenvalues of the lid-driven cavity at Re = 3600 (lx1 = 12), direct problem. The flow is linearly stable: a real eigenvalue -0.01679 and a complex pair -0.04192 +- 0.77156 i. The values depend on the resolution (table in the family README); the tolerance of 1e-4 is below the change between lx1 = 10 and 12. Base flow: the t = 100 Newton state of 210_baseflow_newton (tolerance 1e-12); the t = 600 base flow gave -0.04198 +- 0.77165 i.",
   "produced": {
     "nekstab": "v2.0.0",
-    "date": "2026-10-09",
+    "date": "2026-10-28",
     "ranks": "4",
     "compiler": "ifort",
     "mode": "userParam01=3.1 (direct)"

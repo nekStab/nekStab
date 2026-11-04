@@ -1,8 +1,8 @@
 # lid_driven_re3600 / 310_stability_direct
 
 **Stage**: 310_stability_direct · **uparam01**: 3.1 · **Re**: 3600 · **Ranks**: 4
-**Start from**: `BF_cav0.f00001`, the Newton base flow of `../210_baseflow_newton/fp` (copy the
-result `BF_cav0.f00001` here). Stage rationale: repo-root `EXAMPLES.md`.
+**Start from**: `BF_cav0.f00001`, the Newton base flow of `../210_baseflow_newton/fp`. The stage ships
+the file, so no copy is needed. Stage rationale: repo-root `EXAMPLES.md`.
 
 Direct eigenvalue problem (Krylov-Schur, at most `k_dim = 120` vectors; the run stops when the 3 leading
 values have converged, at step 114) of the regularized lid-driven cavity at
@@ -12,7 +12,7 @@ gives the same spectrum; the regularized lid has no corner singularity, so the a
 is valid. `ref/reference.json` holds the values of this run. The spectrum depends on the
 resolution (`../README.md`).
 
-Run of 2026-10-09 (`ifort`, 4 ranks, base flow of the 210 run of that day): wall time 619 s.
+The reference values come from the base flow of the t = 100 seed (2026-10-28). The shipped results come from the rerun on the final source of 2026-11-03: wall time 569 s.
 `plot.py` writes `plot_bf.png` (velocity magnitude of the base flow), `plot_spectrum.png` (converged eigenvalues,
 growth rate against frequency) and `plot_mode.png` (vx (a) and vy (b) of the leading direct mode, sign fixed so that vy is positive where |vy| is largest); `ref/` holds copies as
 `bf.png`, `spectrum.png` and `mode.png`. The direct and adjoint modes look alike but differ: after matching norm and sign, the relative L2 difference is 0.30 in vx and 0.44 in vy (correlation 0.95 and 0.90).
