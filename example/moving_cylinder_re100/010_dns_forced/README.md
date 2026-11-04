@@ -30,7 +30,7 @@ The forcing frequency lies 1.2 % below the Strouhal number of the static cylinde
 ```bash
 printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME
 mks 1cyl
-sbatch --ntasks=8 run.local.slurm       # 17.5 min on 12 ranks (ifx, nexus-dev)
+sbatch --ntasks=8 run.local.slurm       # 17.5 min on 12 ranks (ifx, a workstation)
 python plot.py
 ```
 

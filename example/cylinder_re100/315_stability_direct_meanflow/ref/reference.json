@@ -6,7 +6,7 @@
     "nekstab": "v2.0.0",
     "date": "2026-10-10",
     "ranks": "8",
-    "compiler": "ifx on nexus-dev",
+    "compiler": "ifx on a workstation",
     "mode": "direct eigensolver (userParam01 = 3.1)",
     "wall_s": 179.65
   },
