@@ -112,9 +112,10 @@ python3 ../../../scripts/check_against_ref.py .
 
 Without Slurm, run the script as a shell script from this folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1` (it copies the orbit from `../210_baseflow_newton`; `SLURM_NTASKS` must be at least `lpmin` = 8). A bare `mpiexec -np 8 ./nek5000` does not do that.
 
-`run.local.slurm` and `1cyl.par` run one job of 50 periods (`endTime = 260`) from a white-noise start. It writes `otd_ftle_period.dat`, and a run of these files gave 6.7e-6 for the last period, which `ref/reference.json` accepts (tolerance 1e-4). It does not write the phase 1 files, the restart basis at 40 T or the eight snapshots per period, so `python3 plot.py` skips the figures of the mode and the comparison with dU/dt on such a run. The result above comes from two phases in one job. This is the procedure of that run, started from this folder after `mks 1cyl`; it changes `1cyl.par` during the run and `1cyl.par.orig` keeps the original:
+`run.local.slurm` and `1cyl.par` run one job of 50 periods (`endTime = 260`) from a white-noise start. It writes `otd_ftle_period.dat`, and a run of these files gave 6.7e-6 for the last period, which `ref/reference.json` accepts (tolerance 1e-4). It does not write the phase 1 files, the restart basis at 40 T or the eight snapshots per period, so `python3 plot.py` skips the figures of the mode and the comparison with dU/dt on such a run. The result above comes from two phases in one job. This is the procedure of that run. Save it as a script and run it with `bash` from this folder after `mks 1cyl`: it stops at the first failed command, and it puts `1cyl.par` back from `1cyl.par.orig` when it ends, also after a failure or an interruption.
 
 ```bash
+set -e
 NP=8                  # at least lpmin
 T=5.1896284145        # period, in the time stamp of BF_1cyl0.f00001
 T40=207.58513658      # 40 T
@@ -124,6 +125,7 @@ printf '1cyl\n%s/\n' "$(pwd)" > SESSION.NAME
 printf '1\n5 0 0\n' > 1cyl.his
 rm -f r[0-9][0-9]1cyl0.f* ip[0-9][0-9]1cyl0.f* bf0[0-9]1cyl0.f*
 cp 1cyl.par 1cyl.par.orig
+trap 'cp 1cyl.par.orig 1cyl.par' EXIT
 
 # Phase 1: white-noise start, 40 periods, one OTD field at the end
 sed -E "s/^endTime = .*/endTime = $T40/; s/^writeInterval = .*/writeInterval = $T40/" 1cyl.par.orig > 1cyl.par
@@ -146,7 +148,6 @@ for f in ip011cyl0.f* bf01cyl0.f*; do [ -e "$f" ] && mv "$f" "p1_$f"; done || tr
 # one period, r01 and the orbit written every T/8
 sed -E "s/^endTime = .*/endTime = $T/; s/^writeInterval = .*/writeInterval = $T8/" 1cyl.par.orig > 1cyl.par
 mpiexec -np $NP ./nek5000
-cp 1cyl.par.orig 1cyl.par
 ```
 
 ## Files
