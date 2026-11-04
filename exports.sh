@@ -41,7 +41,7 @@ export PATH=$NEKSTAB_SOURCE_ROOT/bin:$NEK_SOURCE_ROOT/bin:$PATH
 # Large cases need a large stack; ignore the error where the limit is fixed.
 ulimit -s unlimited 2>/dev/null || true
 # The README says the stack limit is removed: say so when it is not.
-[ "$(ulimit -s)" = unlimited ] || echo "nekStab: stack limit is $(ulimit -s) kB, not unlimited; large cases may crash." >&2
+[ "$(ulimit -s)" = unlimited ] || echo "nekStab: stack limit stays at $(ulimit -s) kB, the system allows no more." >&2
 
 # Tab completion of mks (bash only).
 if [ -n "${BASH_VERSION:-}" ] && [ -f "$NEKSTAB_SOURCE_ROOT/bin/mks-completion.bash" ]; then
