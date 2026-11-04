@@ -10,7 +10,7 @@
 set -euo pipefail
 printf "%s\n%s/\n" "cav" "$(pwd)" > SESSION.NAME
 # hpts reads the probe list from the session .his file and writes the probe values after it, in the same file.
-# The file is gitignored, so each run writes it here.
+# Each run writes it here, also over a shipped file.
 printf '1\n0.25 0.25 0.0\n' > cav.his
 
 # The 100 snapshots are the fields 80 to 179 of ../000_dns (t = 1740 to 1789.5, one every 0.5 time units).

@@ -9,7 +9,7 @@
 
 set -euo pipefail
 printf "%s\n%s/\n" "1cyl" "$(pwd)" > SESSION.NAME
-# hpts reads the probe list from the session .his file. The file is gitignored, so each run writes it here.
+# hpts reads the probe list from the session .his file. Each run writes it here, also over a shipped file.
 printf '1\n5 0 0\n' > 1cyl.his
 
 # The periodic orbit is the output of the Newton stage. The field files are not tracked.
