@@ -59,11 +59,10 @@ def read_svd(path):
     return np.array(rows)[:, 1], rank
 
 
-def shedding_index(table, n_saved):
-    """Return the row (0-based) of the saved mode with the lowest positive St."""
-    saved = table[:n_saved]
-    positive = np.flatnonzero(saved[:, 4] > 0)
-    return int(positive[np.argmin(saved[positive, 4])])
+def shedding_index(table, rows):
+    """Return the row (0-based), among the given rows, of the saved mode with the lowest positive St."""
+    positive = [row for row in rows if table[row, 4] > 0]
+    return min(positive, key=lambda row: table[row, 4])
 
 
 def save_spectrum(nk, table, fundamental, output):
@@ -171,13 +170,15 @@ def main():
     modes = sorted(CASE_DIR.glob(MODE_GLOB))
     if spectrum_file.exists():
         table = read_spectrum(spectrum_file)
-        # File number k holds row k of the table. The stage ships only the shedding mode, so count by
-        # the number of the last file, not by how many files there are.
+        # File number k holds row k of the table, and the stage ships only the shedding mode.
+        # Without a mode file the shedding row is not known, so no multiples can be drawn.
         by_row = {int(mode.name[-5:]) - 1: mode for mode in modes}
-        index = shedding_index(table, max(by_row, default=0) + 1)
-        save_spectrum(nk, table, table[index, 4], CASE_DIR / "plot_spectrum.png")
-        if index in by_row:
+        if by_row:
+            index = shedding_index(table, by_row)
+            save_spectrum(nk, table, table[index, 4], CASE_DIR / "plot_spectrum.png")
             save_mode(nk, by_row[index], CASE_DIR / "plot_mode.png")
+        else:
+            print("no DMD mode file: spectrum and mode figures need a run")
 
     svd_file = CASE_DIR / "dmd_svd.dat"
     if svd_file.exists():

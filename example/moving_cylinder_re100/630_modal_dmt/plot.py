@@ -60,7 +60,12 @@ def load_nekplot():
 
 def read_field(path: Path) -> dict[str, np.ndarray]:
     """Return x, y, vx, vy, pr and the time stamp of a field file; a field that is zero stays zero."""
-    data = load_nekplot().read_with_coordinates(path)
+    from pymech.neksuite import readnek
+
+    data = readnek(str(path))
+    # The mesh moves: coordinates of another file would make the mesh check below pass without testing anything.
+    if data.var[0] == 0:
+        raise SystemExit(f"{path.name} has no coordinates (a shipped file): run the stage first")
     out = {
         "x": np.concatenate([e.pos[0].ravel() for e in data.elem]),
         "y": np.concatenate([e.pos[1].ravel() for e in data.elem]),
