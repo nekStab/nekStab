@@ -462,7 +462,7 @@ jumps of 1e-8 or less, which Nek5000 averages when it reads the file.
 The source changed once more after that: the step count of Newton for
 periodic orbits (`893a1140`, `bed493ba`, `557c991c`), the weak-form dissipation of
 the energy budget (`98c78542`) and some options that are off by default.  So
-27 of the now 80 stages ran again on the final `src/` (commit `9cbe7538`): the Newton,
+27 of the now 80 stages ran again on `src/` as of commit `9cbe7538`, before the last changes below: the Newton,
 Floquet and budget stages of the periodic orbits, the stages that a change
 reverted in that commit had reached, and the restored stage
 `cylinder_re100/412_postproc_steady_force_sensitivity`.  Two of the 27, Newton on
