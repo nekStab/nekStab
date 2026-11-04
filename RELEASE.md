@@ -592,7 +592,7 @@ shift of the expected value by five tolerances makes the check fail.
       three eigenvalues of each bin sum to the total power of the POD-FFT
       analysis to four digits. The driver calls the streaming routine only;
       `spod_compute` is kept as the reference implementation.
-- [ ] Tag `v2.0.0` and merge `dev` → `main`
+- [x] Tag `v2.0.0` on `main`
 
 
 ---

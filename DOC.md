@@ -1753,8 +1753,8 @@ grep "run successful" logfile      # Verify completion
 ### Triggering CI
 
 CI runs automatically on:
-- Push to `dev` branch
-- Pull requests to `dev` branch
+- Push to `main` branch
+- Pull requests to `main` branch
 - Manual dispatch via Actions page
 
 ### Adding New Test Cases

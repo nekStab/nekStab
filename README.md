@@ -2,9 +2,9 @@
 
 | OS | Arch | Compiler | MPI | Status |
 |:---|:----:|:---------|:----|:------:|
-| Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI / MPICH | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| Ubuntu 24.04 | x86_64 | ifort 2024 / ifx 2025 | Intel MPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| macOS 15 | ARM64 | gfortran 14 | OpenMPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=dev&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI / MPICH | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu 24.04 | x86_64 | ifort 2024 / ifx 2025 | Intel MPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 15 | ARM64 | gfortran 14 | OpenMPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 
 **nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
@@ -123,7 +123,7 @@ cd nekStab
 ./Nek5000setup.sh
 ```
 
-The branch `main` holds the releases. The branch `dev` is the development branch and stays the default branch of the repository, so a clone without `--branch` gives `dev`.
+The branch `main` is the default branch and holds the releases. Changes reach it by pull request.
 
 The release was validated with Nek5000 commit `d083ef3`. `Nek5000setup.sh` clones the current Nek5000 `master`. The axisymmetric adjoint correction in `src/forcing.f90` is zero on a Nek5000 that already has the radius in its integration weights, so a newer `master` does not change the result of the adjoint runs.
 
