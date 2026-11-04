@@ -18,6 +18,7 @@ script and run it in a temporary folder, so they need no compiler.
 from __future__ import annotations
 
 import codecs
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -193,6 +194,20 @@ def test_mks_stops_when_the_copy_fails(tmp_path: Path) -> None:
     assert r.returncode != 0
     assert "c.his written" not in r.stdout
     assert "cannot copy c.probes" in r.stderr
+    assert not (tmp_path / "c.his").exists()
+
+
+def test_mks_removes_a_part_written_history(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "c.usr").write_text("      call hpts\n")
+    (tmp_path / "c.probes").write_text("1\n5 0 0\n")
+    # a cp that stops halfway, as on a full disk
+    fake = tmp_path / "fake_bin"
+    fake.mkdir()
+    (fake / "cp").write_text('#!/bin/sh\nprintf 1 > "$2"\nexit 1\n')
+    (fake / "cp").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake}:{os.environ['PATH']}")
+    r = run_mks_step(tmp_path)
+    assert r.returncode != 0
     assert not (tmp_path / "c.his").exists()
 
 

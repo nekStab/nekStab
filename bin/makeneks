@@ -141,6 +141,8 @@ ensure_probe_file () {
 
     if [ -f "$c.probes" ]; then
         if ! cp "$c.probes" "$c.his"; then
+            # a part-written file would pass the -f check above at the next build
+            rm -f "$c.his"
             echo "Error: cannot copy $c.probes to $c.his; hpts would stop without the history file." >&2
             return 1
         fi
