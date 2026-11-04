@@ -1,18 +1,28 @@
 #!/bin/bash
 # Benchmark script: Compare GCC vs ifort vs ifx performance and accuracy
 # Runs the cylinder DNS test case with all three compilers
+#
+# The numbers in BENCHMARK_REPORT.md come from one workstation (Intel Core
+# i7-14700, 8 P-cores + 12 E-cores, Linux, February 2025), and the defaults
+# below describe it: 8 ranks pinned to CPUs 0-15 (the P-cores), ifort from
+# oneAPI 2024.2 and ifx from oneAPI 2025. On another machine set NPROCS,
+# PIN_CPUS and ONEAPI_DIR (the oneAPI install folder that holds setvars.sh).
+# ifort (Classic) exists only in oneAPI 2024.2 and earlier, so the ifort
+# build needs ONEAPI_DIR to point to such an install.
 
 set -e
 
 CASE="1cyl"
-NPROCS=8          # 8 P-cores (i7-14700: 8P + 12E hybrid)
+NPROCS="${NPROCS:-8}"   # 8 P-cores (i7-14700: 8P + 12E hybrid)
 ENDTIME=100       # Simulation end time
 RESULTS_DIR="benchmark_results"
 
 # Pin MPI to P-cores only (CPUs 0-15, avoid E-cores 16-27)
 export I_MPI_PIN_DOMAIN=auto
-export I_MPI_PIN_PROCESSOR_LIST=0-15
+export I_MPI_PIN_PROCESSOR_LIST="${PIN_CPUS:-0-15}"
 export OMP_NUM_THREADS=1
+# oneAPI install folder, read before clean_intel_env unsets ONEAPI_ROOT
+ONEAPI_DIR="${ONEAPI_DIR:-${ONEAPI_ROOT:-/opt/intel/oneapi}}"
 NEKSTAB_ROOT="${NEKSTAB_SOURCE_ROOT:-$HOME/nekStab}"
 NEK_ROOT="${NEK_SOURCE_ROOT:-$NEKSTAB_ROOT/Nek5000}"
 
@@ -51,15 +61,13 @@ setup_gcc_env() {
 
 setup_ifort_env() {
     clean_intel_env
-    source /opt/intel/oneapi/compiler/2024.2/env/vars.sh 2>/dev/null || error "Intel 2024.2 compiler not found"
-    source /opt/intel/oneapi/mkl/2024.2/env/vars.sh 2>/dev/null || true
-    source /opt/intel/oneapi/mpi/2021.13/env/vars.sh 2>/dev/null || error "Intel MPI 2021.13 not found"
-    command -v ifort > /dev/null 2>&1 || error "ifort not found"
+    source "$ONEAPI_DIR/setvars.sh" --force 2>/dev/null || error "$ONEAPI_DIR/setvars.sh not found: set ONEAPI_DIR"
+    command -v ifort > /dev/null 2>&1 || error "ifort not found: it exists only in oneAPI 2024.2 and earlier, set ONEAPI_DIR to such an install"
 }
 
 setup_ifx_env() {
     clean_intel_env
-    source /opt/intel/oneapi/setvars.sh --force 2>/dev/null || error "Intel oneAPI not found"
+    source "$ONEAPI_DIR/setvars.sh" --force 2>/dev/null || error "$ONEAPI_DIR/setvars.sh not found: set ONEAPI_DIR"
     command -v ifx > /dev/null 2>&1 || error "ifx not found"
 }
 
