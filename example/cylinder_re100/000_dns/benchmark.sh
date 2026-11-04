@@ -7,8 +7,9 @@
 # below describe it: 8 ranks pinned to CPUs 0-15 (the P-cores), ifort from
 # oneAPI 2024.2 and ifx from oneAPI 2025. On another machine set NPROCS,
 # PIN_CPUS and ONEAPI_DIR (the oneAPI install folder that holds setvars.sh).
-# ifort (Classic) exists only in oneAPI 2024.2 and earlier, so the ifort
-# build needs ONEAPI_DIR to point to such an install.
+# ifort (Classic) exists only in oneAPI 2024.2 and earlier, so one install
+# cannot serve both builds at the versions of the report: IFORT_ONEAPI_DIR and
+# IFX_ONEAPI_DIR set the install of each build, and both default to ONEAPI_DIR.
 
 set -e
 
@@ -23,6 +24,8 @@ export I_MPI_PIN_PROCESSOR_LIST="${PIN_CPUS:-0-15}"
 export OMP_NUM_THREADS=1
 # oneAPI install folder, read before clean_intel_env unsets ONEAPI_ROOT
 ONEAPI_DIR="${ONEAPI_DIR:-${ONEAPI_ROOT:-/opt/intel/oneapi}}"
+IFORT_ONEAPI_DIR="${IFORT_ONEAPI_DIR:-$ONEAPI_DIR}"
+IFX_ONEAPI_DIR="${IFX_ONEAPI_DIR:-$ONEAPI_DIR}"
 NEKSTAB_ROOT="${NEKSTAB_SOURCE_ROOT:-$HOME/nekStab}"
 NEK_ROOT="${NEK_SOURCE_ROOT:-$NEKSTAB_ROOT/Nek5000}"
 
@@ -61,13 +64,13 @@ setup_gcc_env() {
 
 setup_ifort_env() {
     clean_intel_env
-    source "$ONEAPI_DIR/setvars.sh" --force 2>/dev/null || error "$ONEAPI_DIR/setvars.sh not found: set ONEAPI_DIR"
-    command -v ifort > /dev/null 2>&1 || error "ifort not found: it exists only in oneAPI 2024.2 and earlier, set ONEAPI_DIR to such an install"
+    source "$IFORT_ONEAPI_DIR/setvars.sh" --force 2>/dev/null || error "$IFORT_ONEAPI_DIR/setvars.sh not found: set IFORT_ONEAPI_DIR"
+    command -v ifort > /dev/null 2>&1 || error "ifort not found: it exists only in oneAPI 2024.2 and earlier, set IFORT_ONEAPI_DIR to such an install"
 }
 
 setup_ifx_env() {
     clean_intel_env
-    source "$ONEAPI_DIR/setvars.sh" --force 2>/dev/null || error "$ONEAPI_DIR/setvars.sh not found: set ONEAPI_DIR"
+    source "$IFX_ONEAPI_DIR/setvars.sh" --force 2>/dev/null || error "$IFX_ONEAPI_DIR/setvars.sh not found: set IFX_ONEAPI_DIR"
     command -v ifx > /dev/null 2>&1 || error "ifx not found"
 }
 
