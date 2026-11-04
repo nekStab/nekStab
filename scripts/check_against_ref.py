@@ -80,6 +80,8 @@ def _field_peak(path: Path, name: str, axis: int) -> float:
 
 def _is_shipped_copy(path: Path) -> bool:
     """True when a file still has the bytes of the copy that the repository ships (example/shipped_results.tsv)."""
+    # The stage is usually given as ".": the parents of a relative path never reach the manifest.
+    path = path.resolve()
     for folder in path.parents:
         manifest = folder / "shipped_results.tsv"
         if manifest.exists():

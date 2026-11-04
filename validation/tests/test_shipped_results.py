@@ -1,7 +1,7 @@
 """Each field and each figure at a stage root is listed in example/shipped_results.tsv with its md5.
 
 The rules for what a stage ships are in example/REFERENCE_RESULTS.md. A file that a run overwrote fails this test
-until `git checkout -- <stage>` brings the shipped file back, so run the test on a clean checkout.
+until `git restore -- <file>` brings the shipped file back, so run the test on a clean checkout.
 """
 
 from __future__ import annotations
@@ -17,11 +17,17 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 MANIFEST = REPO / "example" / "shipped_results.tsv"
 
-if not (REPO / ".git").exists():
-    pytest.skip("needs a git checkout", allow_module_level=True)
-
 ROWS = list(csv.DictReader(MANIFEST.open(), delimiter="\t"))
-TRACKED = subprocess.run(["git", "-C", str(REPO), "ls-files", "example"], capture_output=True, text=True, check=True).stdout.split("\n")
+
+
+def _tracked() -> list[str]:
+    # An unpacked source has no .git: every file under example/ is then a shipped file.
+    if not (REPO / ".git").exists():
+        return [p.relative_to(REPO).as_posix() for p in (REPO / "example").rglob("*") if p.is_file()]
+    return subprocess.run(["git", "-C", str(REPO), "ls-files", "example"], capture_output=True, text=True, check=True).stdout.split("\n")
+
+
+TRACKED = _tracked()
 
 
 def test_manifest_has_rows() -> None:
@@ -40,11 +46,16 @@ def test_each_field_and_root_figure_is_listed() -> None:
     assert not missing, missing
 
 
-def test_the_checker_refuses_a_shipped_copy() -> None:
+# Every stage README runs the checker from the stage folder with ".", so both forms of the path count.
+@pytest.mark.parametrize("from_stage", [False, True])
+def test_the_checker_refuses_a_shipped_copy(from_stage: bool) -> None:
     row = next(r for r in ROWS if r["path"].endswith("cylinder_re100/310_stability_direct/direct/Spectre_NSd_conv.dat"))
     stage = REPO / "example" / row["path"].rsplit("/", 1)[0]
     result = subprocess.run(
-        ["python3", str(REPO / "scripts" / "check_against_ref.py"), str(stage)], capture_output=True, text=True
+        ["python3", str(REPO / "scripts" / "check_against_ref.py"), "." if from_stage else str(stage)],
+        capture_output=True,
+        text=True,
+        cwd=stage if from_stage else None,
     )
     assert result.returncode != 0
     assert "shipped copy" in result.stdout + result.stderr
