@@ -64,8 +64,8 @@ python3 plot.py
 ## Reference
 `ref/reference.json` checks the three estimates of the period (1e-5 for the fit, 1e-4 for the FFT peak,
 2e-5 for the zero crossings), the rms residual of the fit (below 1.4e-6), the mean of the probe signal
-(1e-3) and its half-range (2e-3). `plot.py` writes `period_fit.dat`, so the check fails on a clean
-checkout until the run has been made.
+(1e-3) and its half-range (2e-3). `plot.py` writes `period_fit.dat`. The stage ships a copy, which no run wrote: the check
+refuses it on a clean checkout until the run has been made.
 
 ## Figure
 `python3 plot.py` writes `plot_period.png`: (a) the maximum and the minimum of the probe signal in each

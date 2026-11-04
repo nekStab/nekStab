@@ -30,7 +30,7 @@ python3 plot.py
 ```
 
 ## Latest Result
-Run 2026-10-30 on 4 ranks (gfortran, source `dev` at 89770900), T = 1, `k_dim` = 50:
+Run 2026-10-30 on 4 ranks (gfortran, source at commit 89770900), T = 1, `k_dim` = 50:
 
 - The GMRES solve (`residu_gmres.dat`) ends at a squared relative residual of
   9.2e-7 after 2 GMRES cycles of 50 and 42 iterations, so one restart (target 1e-6). The reference holds this as a gate:

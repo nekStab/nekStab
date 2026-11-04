@@ -15,7 +15,7 @@ release is 1.1 (February 2023), whose own changes are in the 1.1 entry below; th
 comparison link at the end of this file shows the difference from 1.1.
 
 **A new code base**
-- 43 Fortran modules in `src/`, about 19 500 lines, in place of the 18 files of `core/`.
+- 43 `.f90` files in `src/`, about 19 500 lines, in place of the 18 files of `core/`.
 - A mode is chosen by name (`nekstab_mode`) or by the `userParam01` code of 1.x, which
   still works.
 - 519 automatic tests, CI on Linux and macOS with GNU and Intel compilers.
@@ -241,10 +241,12 @@ Code structure and modes
   exactly one tolerance.
 - Example layout: numbered stages (`000_dns` to `6x0_modal_*`) for all families
   and `example/_templates`, with no runnable files at the root of a family.
-  There are 16 families (`example/` lists them). The unified isothermal cylinder
-  mesh has 2128 elements. Stages that call `hpts` write their probe list
-  `<session>.his` in the run script, because `hpts` reads the probe list from
-  that file and `.gitignore` excludes `*.his`. Run scripts use the default Slurm
+  There are 16 family folders in `example/`: the 15 families of the validated
+  examples and `cylinder_re1m`, which has no reference data. The unified isothermal cylinder
+  mesh has 2128 elements. Stages that call `hpts` track their probe list as
+  `<session>.probes`, and `mks` copies it to `<session>.his` when no `.his` exists,
+  because `hpts` reads the probe list from that file and `.gitignore` excludes `*.his`.
+  45 run scripts also write a one-probe list to `<session>.his` before the run. Run scripts use the default Slurm
   partition. `example/cylinder_re1m` (2D RANS) is experimental: finite-difference
   operator only, no reference data and no gallery card.
 - `example/cylinder_re100/130_baseflow_dmt`: the Re = 100 base flow by DMT. With
@@ -459,10 +461,9 @@ Code structure and modes
   `ulimit -s`. The README explains each line and has a Disclaimer section.
 - The Newton and Arnoldi loop tools in `tools/` use the current mode codes.
   `plot_compare.py` of the SFD stage also draws Newton, BoostConv and DMT.
-- The stage folders of `example/` track no run output: figures at the root of a
-  folder (`ref/` holds the maintained copy), `plot.out` logs and the output
-  fields `pr_`, `pi_`, `sr_`, `si_`, `tr_` and `ti_` of the wavemaker stages are
-  not tracked.
+- Older output files left the stage folders of `example/`: old copies of figures at the
+  root of a folder (`ref/` holds the maintained copy), `plot.out` logs and the output
+  fields `pr_`, `pi_`, `sr_`, `si_`, `tr_` and `ti_` of the wavemaker stages.
 
 ### Fixed
 

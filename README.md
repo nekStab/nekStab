@@ -2,9 +2,9 @@
 
 | OS | Arch | Compiler | MPI | Status |
 |:---|:----:|:---------|:----|:------:|
-| Ubuntu 24.04 | x86_64 | gfortran 14 | OpenMPI / MPICH | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| Ubuntu 24.04 | x86_64 | ifort 2024 / ifx 2025 | Intel MPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
-| macOS 15 | ARM64 | gfortran 14 | OpenMPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu (latest runner) | x86_64 | gfortran 14 | OpenMPI / MPICH | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| Ubuntu (latest runner) | x86_64 | ifx 2025.2 | Intel MPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
+| macOS 26 | ARM64 | gfortran 14 | OpenMPI | [![CI](https://img.shields.io/github/actions/workflow/status/nekStab/nekStab/ci.yml?branch=main&label=)](https://github.com/nekStab/nekStab/actions/workflows/ci.yml) |
 
 **nekStab** is a toolbox for global stability and bifurcation analysis using the spectral element solver [Nek5000](https://github.com/Nek5000/Nek5000). Released under BSD-3-Clause license.
 
@@ -53,7 +53,7 @@
 - **Krylov-based**: Time-stepper as linear operator — eigenvalues from snapshots
 - **Spectral accuracy**: Leverages Nek5000's high-order elements
 - **MPI parallel**: Efficient on laptops to supercomputers
-- **Validated**: Automated test suite covering 9 solver modes across 4 geometries (cylinder, backstep, flip-flop, jet)
+- **Validated**: 80 example stages in 15 flow families, each with reference results (see [`EXAMPLES.md`](EXAMPLES.md)). CI builds one case, the cylinder DNS `example/cylinder_re100/000_dns/ci_test`, and runs it for 10 time steps as a smoke test; it does not run the stages.
 - **FFT included**: Smart linking to FFTW3 (GCC) or MKL (Intel) — no manual setup
 
 ## Quick Reference
@@ -112,7 +112,7 @@ sudo apt -y install build-essential gfortran libmpich-dev libopenblas-dev libfft
 
 macOS
 ```bash
-brew install mpich gfortran fftw wget git cmake htop
+brew install open-mpi gfortran fftw wget git cmake htop
 ```
 
 **Installation**
@@ -141,7 +141,7 @@ Use git for the install. A source archive from GitHub has no `.git` folder, and 
 
 `./Nek5000setup.sh` asks four questions on a fresh clone (a fifth, about removing the folder, appears when `Nek5000/` already exists): install packages (default `n`), clone Nek5000 (default `y`), build `genmap` and `genbox` (default `y`), add the environment variables to your shell file (default `n`). The defaults work: press Enter four times, then load the environment with `source exports.sh` from the `nekStab` folder (`source ~/nekStab/exports.sh` if you cloned into your home directory; see below).
 
-Its package list differs from the prerequisites above: it installs `libopenmpi-dev` (Linux) or `open-mpi` (macOS) and the X11 headers, and not MPICH, OpenBLAS, FFTW or `m4`. Use the prerequisites above (MPICH) and keep the default `n` for the package question. Do not install both MPI libraries: the script's choice is OpenMPI and this README's is MPICH, and two installs can leave `mpiexec` and the compiler wrapper `mpif90` from different MPI libraries.
+Its package list differs from the prerequisites above: it installs `libopenmpi-dev` (Linux) or `open-mpi` (macOS) and the X11 headers, and not MPICH, OpenBLAS, FFTW or `m4`. Use the prerequisites above (MPICH on Linux, OpenMPI on macOS) and keep the default `n` for the package question. Do not install both MPI libraries: on Linux the script's choice is OpenMPI and this README's is MPICH, and two installs can leave `mpiexec` and the compiler wrapper `mpif90` from different MPI libraries. On macOS install `open-mpi` and not `mpich`: the FFTW formula of Homebrew depends on `open-mpi` and conflicts with `mpich`.
 
 > **Already have Nek5000?** Skip `./Nek5000setup.sh` and point `NEK_SOURCE_ROOT` to your existing installation (see below).
 
@@ -277,13 +277,13 @@ printf "1cyl\n%s/\n" "$(pwd)" > SESSION.NAME    # line 1: case name, line 2: thi
 mpiexec -np 8 ./nek5000
 ```
 
-A stage whose `.usr` calls `hpts` holds a probe list `<case>.probes`. Its history file `<case>.his` needs no extra step: `mks` writes it from that list when it builds the case.
+A stage whose `.usr` calls `hpts` holds a probe list `<case>.probes`. Its history file `<case>.his` needs no extra step: `mks` writes it from that list when the stage has no `.his` file. A stage that ships a `.his` with data uses that file as the probe list, because `hpts` rewrites the file after the coordinates.
 
-**Stages that need field files from an earlier stage.** Each stage ships its start fields and its main result: see [`example/REFERENCE_RESULTS.md`](example/REFERENCE_RESULTS.md). The other fields are written by a run. The cubic cavity stages ship one start field per case, in the stage that makes it. A stage whose `startFrom` or mode files are missing stops at start with `byte_read() :: fopen failure2!` and `Error reading restart header` (or `Could not open <file>`). The README of the stage lists the files under Prerequisites or Inputs and names the stage that produces them: run that stage first and copy the files. `run.local.slurm` of many stages does these copies, and the two-phase stages (DNS, then Newton or modal analysis) swap the `.par` file between the phases. A bare `mpiexec` does neither. Without Slurm, run the script as a shell script from the stage folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1`. `SLURM_NTASKS` is the rank count, at least the `lpmin` of the stage. A few scripts default to 4 ranks when it is unset, which is below `lpmin` for the cylinder stages.
+**Stages that need field files from an earlier stage.** Each stage ships its start fields and its main result: see [`example/REFERENCE_RESULTS.md`](example/REFERENCE_RESULTS.md). The other fields are written by a run. The cubic cavity stages ship one start field per case, in the stage that makes it. A stage whose `startFrom` or mode files are missing stops at start with `byte_read() :: fopen failure2!` and `Error reading restart header` (or `Could not open <file>`). The README of the stage lists the files under Prerequisites or Inputs and names the stage that produces them: run that stage first and copy the files. `run.local.slurm` of many stages does these copies, and the two-phase stages (DNS, then Newton or modal analysis) swap the `.par` file between the phases. A bare `mpiexec` does neither. Without Slurm, run the script as a shell script from the stage folder: `SLURM_NTASKS=8 bash run.local.slurm > logfile 2>&1`. `SLURM_NTASKS` is the rank count, at least the `lpmin` of the stage.
 
 **A run overwrites the shipped results.** After a run, `git status` and `git diff --stat` list the files that changed. A field or a figure is binary, so git shows only that it changed. From the repository root, `python3 scripts/check_against_ref.py example/<stage>` compares the run with the quantities in `ref/reference.json`; it does not compare the other fields or the figures. `git restore -- <file>` brings a shipped file back. Name each changed field or figure: a restore of the whole stage folder also discards your own edits to `.par`, `.usr` and `plot.py`.
 
-**Slurm memory.** `run.local.slurm` of the examples asks `--mem-per-cpu=2000`, which is 16 GB for 8 tasks. On a machine with less memory the job stays `PENDING` with reason `MaxMemPerLimit`, and `--mem` on the `sbatch` line is refused together with `--mem-per-cpu`. Lower the request on the `sbatch` line: `sbatch --mem-per-cpu=500 run.local.slurm` (500 worked for `cylinder_re100/310_stability_direct`). Check the queue with `squeue`.
+**Slurm memory.** `run.local.slurm` of the examples asks `--mem-per-cpu=2000` in 65 of 84 scripts, which is 16 GB for 8 tasks; the cubic cavity scripts ask 3000 or 4000. On a machine with less memory the job stays `PENDING` with reason `MaxMemPerLimit`, and `--mem` on the `sbatch` line is refused together with `--mem-per-cpu`. Lower the request on the `sbatch` line: `sbatch --mem-per-cpu=500 run.local.slurm` (500 worked for `cylinder_re100/310_stability_direct`). Check the queue with `squeue`.
 
 A DNS that needs more time than one job may run is advanced to a target time through a chain of restarts: see [`auto_restart/README.md`](auto_restart/README.md).
 

@@ -57,9 +57,11 @@ linear-stability result.
 python3 plot.py
 ```
 
-Produces a 2-panel figure:
-- (a) σ vs f spectrum from `Spectre_NSd.dat`; the converged pair is a star, a vertical line marks its f, and the legend gives σ, ω and f
-- (b) Leading direct eigenmode (real part) overlaid on the cylinder geometry
+Writes five single-panel files:
+- `plot_bf.png`: base flow (velocity magnitude)
+- `plot_spectrum_circle.png`: Hessenberg eigenvalues on the unit circle
+- `plot_spectrum_ns_log.png`: σ vs f spectrum from `Spectre_NSd.dat`; the converged pair is a star, a vertical line marks its f, and the legend gives σ, ω and f
+- `plot_mode_vx.png`, `plot_mode_vy.png`: leading direct eigenmode (real part), streamwise and transverse component, overlaid on the cylinder geometry
 
 ## Reference
 Barkley & Henderson (1996), J. Fluid Mech. 322.

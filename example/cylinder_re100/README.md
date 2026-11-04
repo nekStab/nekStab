@@ -35,6 +35,7 @@ Re_c = 46.6). The Reynolds number of a stage is the (negative) `viscosity` in it
 | `320_stability_adjoint/` | adjoint eigenvalue problem |
 | `330_transient_growth/` | optimal transient growth of the stable wake at Re = 40 |
 | `410_postproc_animate_modes/`, `411_postproc_wavemaker/` | mode animation, wavemaker |
+| `412_postproc_steady_force_sensitivity/` | sensitivity of the leading eigenvalue to a steady force (4.41), real part |
 | `500_otd/` | optimally time-dependent modes about the steady wake |
 | `600_modal_pod/`, `610_modal_dmd/`, `620_modal_spod/` | POD, DMD and SPOD of the shedding wake |
 

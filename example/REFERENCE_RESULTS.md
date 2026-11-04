@@ -1,14 +1,15 @@
 # Reference results (`ref/`) convention
 
-Every example stage ships a `ref/` folder so a user can **reproduce** the case on
-their own machine and **verify** their output against a known-good baseline.
+Every validated example stage ships a `ref/` folder so a user can **reproduce** the case on
+their own machine and **verify** their output against a known-good baseline. The experimental
+`cylinder_re1m` and the smoke test `cylinder_re100/000_dns/ci_test` have no `ref/` folder.
 
 ## Layout
 
 ```
 example/<case>/<stage>/
 ├─ INPUTS — everything needed to RUN the case
-│   *.par  *.usr  SIZE  SESSION.NAME      config
+│   *.par  *.usr  SIZE                    config
 │   *.re2  *.ma2                          mesh
 │   <seed>0.f00001                        initial condition / startFrom checkpoint
 │   plot.py  README.md  run.local.slurm
@@ -23,15 +24,16 @@ figures are the single source of truth for both user verification and the galler
 
 ## What is committed vs regenerated
 
-| Committed (reproduction ingredients) | Regenerated locally (never committed) |
+| Committed (reproduction ingredients) | Regenerated locally (not committed) |
 |---|---|
-| config: `*.par *.usr SIZE SESSION.NAME` | `logfile`, `*.log*` |
+| config: `*.par *.usr SIZE` | `SESSION.NAME` (gitignored; `nekbmpi` and `run.local.slurm` write it), `logfile`, `*.log*` |
 | mesh: `*.re2 *.ma2` | build artifacts: `nek5000`, `obj/`, `*.o`, `makefile`, `libnek5000.a` |
-| IC / seed checkpoints (`startFrom`; `<seed>*.f00001`, `BF_*`, `rst*`) | bulk run output (`<session>0.f0000N`), `residu.dat`, `*.his` |
+| IC / seed checkpoints (`startFrom`; `<seed>*.f00001`, `BF_*`, `rst*`) | bulk run output (`<session>0.f0000N`), except the result fields of "What a stage ships" |
 | `ref/reference.json`, `ref/*.png` | `*.npz` snapshot archives, `*.state` |
+| `.his` and `.dat` files (`residu.dat`) up to 1 MB, as listed in `shipped_results.tsv` | other `.his` and `.dat` files |
 
 Rationale: source lives in `src/` and is compiled per case via `mks`, so build
-artifacts are never committed. Field dumps and residual histories are large and
+artifacts are never committed. Field dumps are large and
 regenerable; their *physics* is captured compactly in `reference.json` + figures.
 
 ## `reference.json`

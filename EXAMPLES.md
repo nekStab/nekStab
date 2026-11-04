@@ -100,8 +100,8 @@ Each row below is a stage whose run `scripts/check_against_ref.py` compares with
 `python validation/build_gallery.py` from the summary of each reference; a stage without a complete reference is
 not in it.
 
-All rows hold for release 2.0.0. `RELEASE.md` (section on validation) says which stages ran on its final
-source and which keep an earlier result.
+All rows hold for release 2.0.0. `RELEASE.md` (Known issues, and the paragraph on which stages keep an earlier run in the section
+"Examples") says which stages ran on its final source and which keep an earlier result.
 
 ### Verified
 
@@ -199,7 +199,7 @@ relevant, base-flow files.
 ```bash
 cd example/<path>
 mks <casename>
-nekbmpi <casename> <N>     # or sbatch <case>.slurm on a cluster
+nekbmpi <casename> <N>     # or sbatch run.local.slurm on a cluster
 python3 plot.py            # regenerate the evidence figure
 ```
 

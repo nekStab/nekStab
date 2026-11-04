@@ -242,7 +242,7 @@ NEKSTAB_EXTRA_FFLAGS="-O3 -march=native" mks 1cyl
 ```bash
 cd example/cylinder_re100/000_dns
 mks 1cyl                    # Compile
-nekbmpi 1cyl 4              # Run on 4 MPI ranks
+nekbmpi 1cyl 8              # Run on 8 MPI ranks
 tail -f logfile             # Monitor output
 killall nek5000             # Stop if needed
 ```
@@ -250,19 +250,19 @@ killall nek5000             # Stop if needed
 ### 2. Base Flow (Newton-Krylov)
 
 ```bash
-cd example/cylinder_re100/210_baseflow_newton
+cd example/cylinder_re100/210_baseflow_newton/fp
 # Ensure userParam01 = 2.0 in 1cyl.par
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 # Output: BF_1cyl0.f00001 (converged base flow)
 ```
 
 ### 3. Direct Stability Analysis
 
 ```bash
-cd example/cylinder_re100/310_stability_direct
+cd example/cylinder_re100/310_stability_direct/direct
 # Ensure userParam01 = 3.1 in 1cyl.par
 # Ensure base flow file exists: BF_1cyl0.f00001
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 # Output: dRe*, dIm* (eigenmodes), eigenvalues in logfile
 ```
 
@@ -271,17 +271,17 @@ mks 1cyl && nekbmpi 1cyl 4
 ```bash
 cd example/cylinder_re100/320_stability_adjoint
 # Ensure userParam01 = 3.2 in 1cyl.par
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 # Output: aRe*, aIm* (adjoint eigenmodes)
 ```
 
 ### 5. Wavemaker Computation
 
 ```bash
-cd example/cylinder_re100/410_postproc_animate_modes
-# Ensure userParam01 = 4.2 in 1cyl.par
-# Requires both direct and adjoint modes
-mks 1cyl && nekbmpi 1cyl 4
+cd example/cylinder_re100/411_postproc_wavemaker
+# Ensure userParam01 = 4 (includes 4.2, the wavemaker) in 1cyl.par
+# Requires both direct and adjoint modes (the stage ships them)
+mks 1cyl && nekbmpi 1cyl 8
 ```
 
 ---
@@ -716,7 +716,7 @@ SPOD reduces to POD for a single block and to DMD for broadband-limited signals.
 # 1. Generate DNS snapshots (run DNS, save every 0.5 time units)
 cd example/cylinder_re100/000_dns
 # Edit 1cyl.par: writeInterval = 0.5, endTime = 50
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 
 # 2. Run modal analysis
 cd ../modal
@@ -725,7 +725,7 @@ ln -s ../dns/1cyl0.f* .     # Link snapshots
 #   modal_prefix = '   '
 #   modal_nsnap = 100
 #   modal_dt = 0.5
-mks 1cyl && nekbmpi 1cyl 4
+mks 1cyl && nekbmpi 1cyl 8
 
 # 3. Plot spectra
 python plot_modal.py
@@ -1791,7 +1791,7 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
 
 **Eigenvalues not converging**
 - Increase `k_dim` (more Krylov vectors)
-- Decrease `eigen_tol` (looser tolerance initially)
+- Increase `eigen_tol` (looser tolerance initially)
 - Check time step: too large can miss fast modes
 
 **Newton not converging**
