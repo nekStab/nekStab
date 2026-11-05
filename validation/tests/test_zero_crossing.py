@@ -50,8 +50,10 @@ def driver(build_driver) -> Path:
     )
 
 
-def run_sine(exe: Path, n: int, dt: float, period: float, offset: float, v_init: float):
+def run_sine(exe: Path, n: int, dt: float, period: float, offset: float, v_init: float, switch=None):
     text = f"sine\n{n} {dt!r} {period!r} {offset!r} {v_init!r}\n"
+    if switch:
+        text = f"switch\n{n} {dt!r} {period!r} {offset!r} {v_init!r} {switch[0]!r} {switch[1]!r}\n"
     run = subprocess.run([str(exe)], input=text, capture_output=True, text=True)
     assert run.returncode == 0, run.stdout + run.stderr
     rows = []
@@ -96,6 +98,28 @@ def test_mean_over_the_first_period_removes_the_offset(driver):
     assert abs(estimated - period) <= bound
     assert v_used == 0.0
     assert abs(v_new - offset) <= mean_bound(period, dt)
+
+
+def test_signal_on_one_side_of_zero_needs_a_level_from_the_signal(driver):
+    # vx in a wake: the signal never crosses zero. The probe starts from the first sample.
+    period, dt, n = 1.0, 0.017, 400
+    offset = 3.0
+    silent, (n_cross, _) = run_sine(driver, n, dt, period, offset, 0.0)
+    assert not silent and n_cross == 0
+    rows, _ = run_sine(driver, n, dt, period, offset, offset)
+    assert len(rows) >= 3
+    for estimated, _, _ in rows:
+        assert abs(estimated - period) <= 2.0 * math.pi * dt**2
+
+
+def test_long_first_gap_does_not_stop_the_log(driver):
+    # A transient of period 12, then the settled period 5. Every later gap is below half
+    # the first one; the log must go on and find the new period.
+    dt = 0.01
+    rows, _ = run_sine(driver, 20000, dt, 12.0, 0.0, 0.0, switch=(24.5, 5.0))
+    assert len(rows) > 20
+    for estimated, _, _ in rows[-10:]:
+        assert abs(estimated - 5.0) <= 2.0 * math.pi / 5.0 * dt**2
 
 
 def test_new_level_below_the_signal_keeps_the_period(driver):

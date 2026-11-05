@@ -27,6 +27,7 @@ module nekstab_zero_cross
       real :: t_cross_old = 0.0d0
       real :: p_old = 0.0d0
       integer :: n_cross = 0
+      logical :: restart = .false.
    end type crossing_state
 
 contains
@@ -74,6 +75,7 @@ contains
       state%t_cross_old = 0.0d0
       state%p_old = 0.0d0
       state%n_cross = 0
+      state%restart = .false.
 
    end subroutine crossing_reset
 
@@ -107,20 +109,20 @@ contains
 
       hit = active .and. v_prev < state%v_mean .and. v_now >= state%v_mean &
             .and. v_now > v_prev
-      if (hit .and. state%n_cross >= 2) then
-         ! A period closes with a new level. When that level is above the signal at
-         ! the crossing, the same rising edge crosses it a few steps later. That is
-         ! not a period: it is the same orbit point seen at another level. Make it
-         ! the start of the next period (phase 3) and close nothing. A real period
-         ! is not shorter than half the last one while the orbit is periodic.
+      if (hit .and. state%restart) then
+         ! A period closed with a new level above the signal, so this is the same
+         ! rising edge crossing it a few steps later. That is not a period: it is the
+         ! same orbit point seen at another level. Make it the start of the next
+         ! period (phase 3) and close nothing. Testing the time since the last crossing
+         ! instead would stop the probe for good when the first gap is much longer
+         ! than the period of the settled flow.
          theta = crossing_theta(v_prev, v_now, state%v_mean)
          t_hit = crossing_time(t_now, dt, theta)
-         if (t_hit - state%t_cross < 0.5d0*state%p_old) then
-            phase = 3
-            state%t_cross = t_hit
-            state%v_sum = 0.5d0*(state%v_mean + v_now)*(1.0d0 - theta)*dt
-            return
-         end if
+         phase = 3
+         state%restart = .false.
+         state%t_cross = t_hit
+         state%v_sum = 0.5d0*(state%v_mean + v_now)*(1.0d0 - theta)*dt
+         return
       end if
 
       if (hit) then
@@ -153,6 +155,8 @@ contains
             if (state%v_mean < v_now) then
                state%t_cross = max(t_hit + (state%v_mean - v_logged)*dt/(v_now - v_prev), &
                                    t_hit - 0.5d0*period)
+            else
+               state%restart = .true.
             end if
          end if
       else

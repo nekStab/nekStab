@@ -11,7 +11,10 @@ in more detail and `DOC.md` is the user documentation.
 
 - Zero-crossing period probe (`ifzerocross`): a new level below the signal at the
   crossing no longer gives one wrong period. For a sine of period 1 and mean -0.25,
-  with start level 0 and dt = 0.017, the second line read 0.9597.
+  with start level 0 and dt = 0.017, the second line read 0.9597. The first level
+  is now the first sample, not zero, so a probe whose signal never crosses zero gets
+  a period; such a probe logged nothing and gave no message. A first gap much longer
+  than the settled period no longer stops the log.
 - Periodic orbits with a fixed `dt`: a step of exactly T/N could give N + 1 steps
   through rounding (T = 1, N = 49). It now gives N.
 
