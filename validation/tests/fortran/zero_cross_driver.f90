@@ -3,6 +3,8 @@
 ! Line 2: n dt period offset v_mean_init
 ! Or line 1: switch, for a sine that changes period at t_switch without a jump.
 ! Line 2: n dt period offset v_mean_init t_switch period_after
+! Or line 1: cosine, which starts at its maximum, with the level from the samples.
+! Line 2: n dt period offset
 ! One line per closed period: period, level used, level stored for the next period.
 ! Last line: done, crossing count, stored level.
 program zero_cross_driver
@@ -24,13 +26,21 @@ program zero_cross_driver
       read (*, *) n, dt, period, offset, v_init
    case ('switch')
       read (*, *) n, dt, period, offset, v_init, t_switch, period_after
+   case ('cosine')
+      read (*, *) n, dt, period, offset
+      v_init = offset + 1.0d0
    case default
       stop 1
    end select
    if (n < 2 .or. dt <= 0.0d0 .or. period <= 0.0d0) stop 1
 
-   call crossing_reset(state, v_init)
-   v_prev = offset
+   if (cmd == 'cosine') then
+      call crossing_reset(state, v_init, running=.true.)
+      v_prev = v_init
+   else
+      call crossing_reset(state, v_init)
+      v_prev = offset
+   end if
    do i = 1, n - 1
       t = real(i, kind(t))*dt
       if (t < t_switch) then
@@ -39,6 +49,7 @@ program zero_cross_driver
          angle = 2.0d0*pi*(t_switch/period + (t - t_switch)/period_after)
       end if
       v_now = offset + sin(angle)
+      if (cmd == 'cosine') v_now = offset + cos(angle)
       call crossing_update(state, v_prev, v_now, t, dt, .true., &
                            phase, theta, t_hit, p, v_logged, dp)
       if (phase == 2) write (6, '(3es24.16)') p, v_logged, state%v_mean

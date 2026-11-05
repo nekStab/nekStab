@@ -91,7 +91,7 @@ contains
 !
 ! Arguments:
 !   v_mean_init [in] — optional initial estimate of mean velocity at probe;
-!                      the first sample when absent
+!                      the mean of the samples until the first crossing when absent
 !-----------------------------------------------------------------------
    subroutine zero_crossing(v_mean_init)
       use nekstab_krylov_subspace, only: lv
@@ -133,13 +133,13 @@ contains
 
       if (istep == 0) then
          velp(:) = vel_now
-         ! Without a given level, start from the first sample: a periodic signal comes
-         ! back to it. A level of zero gives no period and no message for a probe whose
-         ! signal stays on one side of zero, such as vx in a wake.
+         ! Without a given level, start from the mean of the samples so far. A level of
+         ! zero gives no period and no message for a probe whose signal stays on one
+         ! side of zero, such as vx in a wake.
          if (present(v_mean_init)) then
             call crossing_reset(zc, v_mean_init)
          else
-            call crossing_reset(zc, vel_now)
+            call crossing_reset(zc, vel_now, running=.true.)
          end if
       else
          velp(plor) = vel_now

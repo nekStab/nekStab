@@ -9,14 +9,18 @@ in more detail and `DOC.md` is the user documentation.
 
 ### Fixed
 
-- Zero-crossing period probe (`ifzerocross`): a new level below the signal at the
-  crossing no longer gives one wrong period. For a sine of period 1 and mean -0.25,
-  with start level 0 and dt = 0.017, the second line read 0.9597. The first level
-  is now the first sample, not zero, so a probe whose signal never crosses zero gets
-  a period; such a probe logged nothing and gave no message. A first gap much longer
-  than the settled period no longer stops the log.
-- Periodic orbits with a fixed `dt`: a step of exactly T/N could give N + 1 steps
-  through rounding (T = 1, N = 49). It now gives N.
+- Zero-crossing period probe (`ifzerocross`): a period starts and ends on one level.
+  For a sine of period 1 and mean -0.25, with start level 0 and dt = 0.017, the
+  second line read 0.9597. When the last step of a period does not cross the new
+  level, the next line is not logged.
+- Zero-crossing period probe: when no start level is given, the level is the mean of
+  the samples until the first crossing, not zero. A probe whose signal never crossed
+  zero logged nothing and gave no message.
+- Zero-crossing period probe: a first gap more than twice the settled period no
+  longer stops the log.
+- Periodic orbits with a fixed `dt`: a quotient `T/dt` within 4 rounding units of an
+  integer N gives N steps. A step of exactly T/N could give N + 1 through rounding
+  (T = 1, N = 49).
 
 ## [2.0.0] - 2026-11-03
 
