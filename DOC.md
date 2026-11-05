@@ -1864,6 +1864,11 @@ Ensure you have the latest nekStab with ifx compatibility fixes (trim() on assum
   comparison of two eigensolver runs says something only when both logs show the
   same methods.
 
+**A mode refused or warned at the vector check on a large domain, or an eigenvalue that moves with `residualTol`**
+- Nek5000 stops its pressure and velocity solves on a residual averaged over the volume of the domain, and a Krylov vector has norm 1 over the domain. A unit-norm mode on a large domain has a small mean amplitude, so the same `residualTol` is looser relative to it. The Ritz residual comes from the Hessenberg matrix and needs no new solve. The vector residual comes from one more solve, so it holds that error too.
+- A residual below `eigen_tol` does not show this error in the eigenvalue. On an ellipse of aspect ratio 2 at Re = 70 with a domain of volume 60000, sigma is -0.0144116 at `residualTol = 1e-9` and -0.0144268 at `4e-12`, with both residuals below 1e-6.
+- The error depends on the case and not only on the volume, so no formula sets the tolerance. Lower `residualTol` for pressure and velocity and keep `eigen_tol`. Repeat the run ten times lower. The tolerance is enough when the Ritz and vector residuals agree and sigma moves less than the accuracy you need.
+
 **A converged eigenvalue at mu = 1.0000000 whose mode is a set of spikes**
 - Seen in versions up to v2.0.0-rc4 (v1.0.1 included), most often below the
   critical Reynolds number and on many MPI ranks with few elements per rank.

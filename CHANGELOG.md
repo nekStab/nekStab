@@ -562,8 +562,10 @@ Code structure and modes
   refused, and the eigenvalue can differ between runs at different
   `residualTol`: on an ellipse with V = 60000 the leading sigma is -0.0144116 at
   `1e-9` and -0.0144268 at `4e-12`, both with residuals below 1e-6. The values
-  differ between these runs. Workaround: lower `residualTol` by hand. Version
-  2.0.0 ships no change of the tolerance; a fix is planned for a later version.
+  differ between these runs. The error depends on the case and not only on the
+  volume, so nekStab does not choose the tolerance. Lower `residualTol` by hand and
+  repeat the run ten times lower to see whether sigma moves (DOC.md,
+  Troubleshooting).
 - The norm has zero weight in the sponge zone: the inner product uses the mass
   matrix without the sponge, which is zero where the sponge function is not zero.
 - Stage `cubic_cavity_re1950/350_dns_unstable_orbit` keeps the reference of an

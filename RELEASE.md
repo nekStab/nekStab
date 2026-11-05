@@ -13,8 +13,9 @@ maintainability, numerical robustness, and HPC performance.
    with different `residualTol`: on an ellipse with V = 60000 the leading
    sigma is -0.0144116 at `residualTol = 1e-9` and -0.0144268 at `4e-12`, and
    the residuals of both runs are below 1e-6. The two values differ between
-   these runs. Workaround: lower `residualTol` by hand. Version 2.0.0 ships no
-   change of the tolerance; a fix is planned for a later version.
+   these runs. The error depends on the case and not only on the volume, so
+   nekStab does not choose the tolerance. Lower `residualTol` by hand and repeat
+   the run ten times lower to see whether sigma moves (`DOC.md`, Troubleshooting).
 2. **The norm has zero weight in the sponge zone.** The inner product of the
    Krylov vectors uses the mass matrix without the sponge (`bm1s`), which is
    zero where the sponge function is not zero. A perturbation inside the
