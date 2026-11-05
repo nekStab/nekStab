@@ -98,6 +98,25 @@ def test_mean_over_the_first_period_removes_the_offset(driver):
     assert abs(v_new - offset) <= mean_bound(period, dt)
 
 
+def test_new_level_below_the_signal_keeps_the_period(driver):
+    # Mean -0.25, start level 0. The first period closes at level 0 and stores -0.25,
+    # which this rising edge has already crossed. Before the fix the next line read
+    # 0.9597: a period from a crossing of 0 to a crossing of -0.25.
+    period, dt, n = 1.0, 0.017, 400
+    offset = -0.25
+    rows, _ = run_sine(driver, n, dt, period, offset, 0.0)
+    assert len(rows) >= 4
+    omega = 2.0 * math.pi / period
+    slope = omega * math.sqrt(1.0 - offset**2)
+    shift = abs(offset) / slope
+    # The start moves along a straight edge: its error is curvature * shift**2 / (2*slope).
+    curvature = omega**2 * abs(offset)
+    bound = curvature * shift**2 / (2.0 * slope) + omega * dt**2 / 2.0
+    for estimated, _, _ in rows:
+        assert abs(estimated - period) <= bound
+    assert abs(rows[1][0] - period) < 0.1 * abs(0.9597 - period)
+
+
 def test_new_level_above_the_signal_gives_no_short_period(driver):
     # The first period uses the level 0 and stores the mean +0.25. At that
     # step the signal is still on its rising edge below 0.25, so it would

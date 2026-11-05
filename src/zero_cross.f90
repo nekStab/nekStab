@@ -145,6 +145,15 @@ contains
             if (period > 0.0d0) state%v_mean = state%v_sum/period
             state%p_old = period
             state%v_sum = 0.5d0*(v_logged + v_now)*(1.0d0 - theta)*dt
+            ! When the new level is below the signal, this rising edge has already
+            ! crossed it and no later crossing marks the start of the period. Without
+            ! this the next period spans crossings of two levels (0.9597 for a sine of
+            ! period 1 and mean -0.25). Move the start along the edge to the new level;
+            ! the edge is linear only near the crossing, so half a period is the limit.
+            if (state%v_mean < v_now) then
+               state%t_cross = max(t_hit + (state%v_mean - v_logged)*dt/(v_now - v_prev), &
+                                   t_hit - 0.5d0*period)
+            end if
          end if
       else
          if (state%n_cross >= 1) then
