@@ -27,7 +27,7 @@ module nekstab_eigensolvers
                                       nt, nv
    use nekstab_nek_bridge, only: ctarg, dt, eigen_tol, evop, if3D, if3d, ifheat, ifldbf, &
                                  ifpo, ifpsco, idpss, ifres, ifseed_load, ifseed_nois, &
-                                 ifseed_symm, ifto, iforthocheck, isFloquetAdjoint, isFloquetDirect, &
+                                 iffindiff, ifseed_symm, ifto, iforthocheck, isFloquetAdjoint, isFloquetDirect, &
                                  isFloquetTransientGrowth, isNewtonPO, istep, isDirect, &
                                  isTransientGrowth, isAdjoint, k_dim, ldim, ldimt, lelt, lelv, lx1, &
                                  lx2, ly1, ly2, lz1, lz2, maxmodes, nekStab_dp, &
@@ -197,6 +197,8 @@ contains
       call bound_solver_tols(eigen_tol/MATVEC_NOISE_RATIO)
       if (nid == 0) write (6, '(A,E10.3,A,E10.3,A,E10.3)') ' nekStab: solver tolerance', &
          max(abs(param(21)), abs(param(22))), ' for eigen_tol', eigen_tol, ' and volume', volvm1
+      if (nid == 0 .and. any(param(21:22) <= 0.0d0)) write (6, *) &
+         'nekStab: WARNING: a residualTol of zero (automatic) or below (relative) is not bound by eigen_tol.'
 
       !     ----- First vector (new from noise or restart) -----
 
@@ -884,10 +886,17 @@ contains
    !
    !   Velocity solves read restol, not only param(22). Rank 0 decides and
    !   broadcasts: all ranks must stop a solve at the same iteration.
+   !
+   !   A finite-difference matvec (iffindiff) keeps residualTol. Its solves run on
+   !   the full flow field, not on a unit-norm vector, so the estimate of
+   !   bound_solver_tol does not describe them. Its error is the solver error
+   !   divided by epsilon0 = 1e-6*||base flow||, and a target of target_err*epsilon0
+   !   is about 4e-15 for the check: below what a solve can reach.
    !-----------------------------------------------------------------------
    subroutine bound_solver_tols(target_err)
       real, intent(in) :: target_err
 
+      if (iffindiff) return
       param(21:22) = bound_solver_tol(param(21:22), target_err, volvm1)
       restol = bound_solver_tol(restol, target_err, volvm1)
       call bcast(param(21:22), 2*wdsize)

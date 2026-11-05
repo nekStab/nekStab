@@ -87,6 +87,7 @@ def test_bound_solver_tol(build_driver) -> None:
             -1.0e-6,  # relative tolerance of Nek5000
         ],
         rel=1.0e-14,
+        abs=0.0,
     )
 
 

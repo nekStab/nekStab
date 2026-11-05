@@ -17,7 +17,8 @@ in more detail and `DOC.md` is the user documentation.
   `eigen_tol/(25*sqrt(volume))`, with a volume below 1 counted as 1, and prints it
   at start-up. Domains of volume above 1600 at `residualTol = 1e-9` change. The
   bound also applies to the mesh, temperature and passive-scalar tolerances
-  (`restol`). The vector check of the exported modes runs at the tolerance of
+  (`restol`). Finite-difference matvecs (`iffindiff`) keep `residualTol` and the
+  check does not reach `eigen_tol/100` for them. The vector check of the exported modes runs at the tolerance of
   `eigen_tol/100`, so a good mode no longer fails it because of the solver. On that
   domain the leading sigma moves from -0.0144116 to -0.0144271. See DOC.md,
   Troubleshooting.
