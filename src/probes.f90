@@ -90,7 +90,8 @@ contains
 !   section data to files.
 !
 ! Arguments:
-!   v_mean_init [in] — initial estimate of mean velocity at probe
+!   v_mean_init [in] — optional initial estimate of mean velocity at probe;
+!                      the mean of the samples until the first crossing when absent
 !-----------------------------------------------------------------------
    subroutine zero_crossing(v_mean_init)
       use nekstab_krylov_subspace, only: lv
@@ -104,20 +105,13 @@ contains
       type(crossing_state), save :: zc
       integer, save :: probe_nel, probe_nid
       integer :: i, phase
-      real :: vel_now, v_mean_start
+      real :: vel_now
       real :: theta, t_hit, period, v_logged, period_change
-
-      if (present(v_mean_init)) then
-         v_mean_start = v_mean_init
-      else
-         v_mean_start = 0.0d0
-      end if
 
       if (istep == 0) then
          call nekStab_log('Initializing zero-crossing routine...')
          probe_nel = 0; probe_nid = 0; vdot = 0.0d0; vddot = 0.0d0
          l2 = 0.0d0
-         call crossing_reset(zc, v_mean_start)
          call pointcheck(probe_nel, probe_nid) !alter xck, yck, zck in usrchk
          if (nid == 0) open (unit=NEKSTAB_UNIT_ZC1, file='zc_period.dat')
          if (nid == 0) open (unit=NEKSTAB_UNIT_ZC2, file='zc_poincare.dat')
@@ -139,6 +133,14 @@ contains
 
       if (istep == 0) then
          velp(:) = vel_now
+         ! Without a given level, start from the mean of the samples so far. A level of
+         ! zero gives no period and no message for a probe whose signal stays on one
+         ! side of zero, such as vx in a wake.
+         if (present(v_mean_init)) then
+            call crossing_reset(zc, v_mean_init)
+         else
+            call crossing_reset(zc, vel_now, running=.true.)
+         end if
       else
          velp(plor) = vel_now
       end if

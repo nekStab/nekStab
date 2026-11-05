@@ -53,6 +53,15 @@ def test_kept_count_sets_dt_to_period_over_n(driver):
     assert float(dt) == 0.125
 
 
+@pytest.mark.parametrize("period,count", [(1.0, 49), (8.815177, 35), (0.1, 3)])
+def test_step_of_period_over_n_gives_n(driver, period, count):
+    # The quotient rounds above the integer for the first two.
+    dt_in = period / count
+    dt, nsteps = ask(driver, f"step\n{period!r} 0 {dt_in!r}\n")
+    assert int(nsteps) == count
+    assert float(dt) == pytest.approx(period / count, rel=1.0e-14, abs=0.0)
+
+
 def test_unfrozen_branch_sets_dt_to_period_over_count(driver):
     # The provisional step 0.25 already divides the period.
     dt, nsteps = ask(driver, "step\n1 0 0.25\n")

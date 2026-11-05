@@ -31,21 +31,26 @@ contains
 !
 !   n_kept > 0 gives nsteps = n_kept and dt = period/n_kept; the value of
 !   dt on entry is not used in that case.
-!   n_kept = 0 keeps the provisional step dt on entry.
-!   The count is ceiling(period/dt). The final step is period/count.
+!   n_kept = 0 uses the provisional step dt on entry only to form the count,
+!   ceiling(period/dt). The final step is period/count.
+!   A quotient a few rounding units above an integer counts as that integer:
+!   dt = period/N must give N (period 1 with N = 49 gives 49.000000000000007).
 !-----------------------------------------------------------------------
    pure subroutine newton_po_set_step(period, n_kept, dt, nsteps)
       real, intent(in) :: period
       integer, intent(in) :: n_kept
       real, intent(inout) :: dt
       integer, intent(out) :: nsteps
+      real :: ratio
 
       if (n_kept > 0) then
          ! Not ceiling(period/(period/n_kept)): rounding can give n_kept + 1,
          ! and Newton keeps n_kept (period 1.0 and count 49 give 50).
          nsteps = n_kept
       else
-         nsteps = ceiling(period/dt)
+         ratio = period/dt
+         nsteps = ceiling(ratio)
+         if (abs(ratio - nint(ratio)) <= 4.0d0*epsilon(ratio)*ratio) nsteps = nint(ratio)
       end if
       dt = period/nsteps
 

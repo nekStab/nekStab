@@ -27,6 +27,9 @@ module nekstab_zero_cross
       real :: t_cross_old = 0.0d0
       real :: p_old = 0.0d0
       integer :: n_cross = 0
+      logical :: restart = .false.
+      logical :: running = .false.
+      integer :: n_samples = 1
    end type crossing_state
 
 contains
@@ -62,11 +65,15 @@ contains
 !-----------------------------------------------------------------------
 ! crossing_reset — Set the state at the first step
 !
-!   v_mean_init is the level used until the first period closes.
+!   v_mean_init is the level used until the first period closes. With running,
+!   it is the first sample and the level follows the mean of the samples until the
+!   first crossing: a fixed first sample can be an extremum that the signal never
+!   rises through again.
 !-----------------------------------------------------------------------
-   pure subroutine crossing_reset(state, v_mean_init)
+   pure subroutine crossing_reset(state, v_mean_init, running)
       type(crossing_state), intent(out) :: state
       real, intent(in) :: v_mean_init
+      logical, intent(in), optional :: running
 
       state%v_mean = v_mean_init
       state%v_sum = 0.0d0
@@ -74,6 +81,10 @@ contains
       state%t_cross_old = 0.0d0
       state%p_old = 0.0d0
       state%n_cross = 0
+      state%restart = .false.
+      state%running = .false.
+      if (present(running)) state%running = running
+      state%n_samples = 1
 
    end subroutine crossing_reset
 
@@ -107,20 +118,20 @@ contains
 
       hit = active .and. v_prev < state%v_mean .and. v_now >= state%v_mean &
             .and. v_now > v_prev
-      if (hit .and. state%n_cross >= 2) then
-         ! A period closes with a new level. When that level is above the signal at
-         ! the crossing, the same rising edge crosses it a few steps later. That is
-         ! not a period: it is the same orbit point seen at another level. Make it
-         ! the start of the next period (phase 3) and close nothing. A real period
-         ! is not shorter than half the last one while the orbit is periodic.
+      if (hit .and. state%restart) then
+         ! A period closed with a new level that its last step did not cross. This
+         ! crossing, on the same edge or one period later, is the first of the new
+         ! level. Make it the start of the next period (phase 3) and close nothing.
+         ! Testing the time since the last crossing
+         ! instead would stop the probe for good when the first gap is much longer
+         ! than the period of the settled flow.
          theta = crossing_theta(v_prev, v_now, state%v_mean)
          t_hit = crossing_time(t_now, dt, theta)
-         if (t_hit - state%t_cross < 0.5d0*state%p_old) then
-            phase = 3
-            state%t_cross = t_hit
-            state%v_sum = 0.5d0*(state%v_mean + v_now)*(1.0d0 - theta)*dt
-            return
-         end if
+         phase = 3
+         state%restart = .false.
+         state%t_cross = t_hit
+         state%v_sum = 0.5d0*(state%v_mean + v_now)*(1.0d0 - theta)*dt
+         return
       end if
 
       if (hit) then
@@ -145,10 +156,24 @@ contains
             if (period > 0.0d0) state%v_mean = state%v_sum/period
             state%p_old = period
             state%v_sum = 0.5d0*(v_logged + v_now)*(1.0d0 - theta)*dt
+            ! A period must start and end on one level, or it spans crossings of two
+            ! (0.9597 for a sine of period 1 and mean -0.25). When this step crosses the
+            ! new level too, as it does once the mean has settled, the period starts
+            ! there. Otherwise the next crossing of the new level starts the period
+            ! (phase 3) and one line is not logged. Moving the start back along the edge
+            ! would extrapolate: 1.15 periods for a sine with mean -0.9.
+            if (state%v_mean >= v_prev .and. state%v_mean < v_now) then
+               state%t_cross = crossing_time(t_now, dt, crossing_theta(v_prev, v_now, state%v_mean))
+            else
+               state%restart = .true.
+            end if
          end if
       else
          if (state%n_cross >= 1) then
             state%v_sum = state%v_sum + 0.5d0*(v_prev + v_now)*dt
+         else if (state%running .and. active) then
+            state%n_samples = state%n_samples + 1
+            state%v_mean = state%v_mean + (v_now - state%v_mean)/state%n_samples
          end if
       end if
 

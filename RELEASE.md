@@ -33,12 +33,6 @@ maintainability, numerical robustness, and HPC performance.
    the copies of a shared point in another order. In `cylinder_re100/310`
    (8 ranks) the leading growth rate moved by at most 5e-9. With the method
    forced, repeat runs are byte-identical (`DOC.md`, Troubleshooting).
-6. **The zero-crossing period probe can log one wrong period.** With
-   `ifzerocross`, when the new level is below the signal at the crossing, the
-   next period spans crossings of two levels. For a sine of period 1 and mean
-   -0.25, with start level 0 and dt = 0.017, the logged periods are 1.0000,
-   0.9597, 0.9992, 1.0008, 1.0000. Read the period from a later line of the log.
-   A fix is planned for a later version.
 
 
 ## What changed
